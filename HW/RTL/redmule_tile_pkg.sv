@@ -25,8 +25,8 @@
   parameter int unsigned N_HWPE_TILE  = 1;                                                   // Number of HWPEs attached to the port
   parameter int unsigned N_CORE_TILE  = 1;                                                   // Number of Core ports
   parameter int unsigned N_DMA_TILE   = 0;                                                   // Number of DMA ports /*TODO: add DMA and update interconnect parameter*/
-  parameter int unsigned N_EXT_TILE   = 0;                                                   // Number of External ports /*TODO: can this be 0? Will it not cause problems? Is the HCI Interconnect robust?*/
-  parameter int unsigned AWC_TILE     = 32;                                                  // Address Width Core   (slave ports)
+  parameter int unsigned N_EXT_TILE   = 0;                                                   // Number of External ports - LEAVE TO 0 UNLESS YOU KNOW WHAT YOU ARE DOING
+  parameter int unsigned AWC_TILE     = 32;                                                  // Address width core   (slave ports)
   parameter int unsigned AWM_TILE     = 32;                                                  // Address width memory (master ports)
   parameter int unsigned DW_LIC_TILE  = 32;                                                  // Data Width for Log Interconnect
   parameter int unsigned BW_LIC_TILE  = 8;                                                   // Byte Width for Log Interconnect

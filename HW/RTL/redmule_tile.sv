@@ -25,26 +25,26 @@
   import hci_package::*;
  #(
   // parameters used by redmule_complex
-  parameter  redmule_pkg::core_type_e CoreType    = redmule_pkg::CV32X           , // CV32E40P, IBEX, SNITCH, CVA6
-  parameter  int unsigned             ID_WIDTH    = 8                            ,
-  parameter  int unsigned             N_CORES     = 8                            ,
-  parameter  int unsigned             DW          = redmule_pkg::DATA_W          , // TCDM port dimension (in bits)
-  parameter  int unsigned             MP          = DW/redmule_pkg::MemDw        ,
-  parameter  int unsigned             NumIrqs     = 32                           ,
-  parameter  int unsigned             AddrWidth   = 32                           ,
-  parameter  int unsigned             XPulp       = 0                            ,
-  parameter  int unsigned             FpuPresent  = 0                            ,
-  parameter  int unsigned             Zfinx       = 0                            ,
-  localparam fpnew_pkg::fp_format_e   FpFormat    = redmule_pkg::FPFORMAT        , // Data format (default is FP16)
-  localparam int unsigned             Height      = redmule_pkg::ARRAY_HEIGHT    , // Number of PEs within a row
-  localparam int unsigned             Width       = redmule_pkg::ARRAY_WIDTH     , // Number of parallel rows
-  localparam int unsigned             NumPipeRegs = redmule_pkg::PIPE_REGS       , // Number of pipeline registers within each PE
-  localparam fpnew_pkg::pipe_config_t PipeConfig  = fpnew_pkg::DISTRIBUTED       ,
-  localparam int unsigned             BITW        = fpnew_pkg::fp_width(FpFormat), // Number of bits for the given format
+  parameter  redmule_pkg::core_type_e CoreType          = redmule_pkg::CV32X           , // CV32E40P, IBEX, SNITCH, CVA6
+  parameter  int unsigned             ID_WIDTH          = 8                            ,
+  parameter  int unsigned             N_CORES           = 8                            ,
+  parameter  int unsigned             DW                = redmule_pkg::DATA_W          , // TCDM port dimension (in bits)
+  parameter  int unsigned             MP                = DW/redmule_pkg::MemDw        ,
+  parameter  int unsigned             NumIrqs           = 32                           ,
+  parameter  int unsigned             AddrWidth         = 32                           ,
+  parameter  int unsigned             XPulp             = 0                            ,
+  parameter  int unsigned             FpuPresent        = 0                            ,
+  parameter  int unsigned             Zfinx             = 0                            ,
+  localparam fpnew_pkg::fp_format_e   FpFormat          = redmule_pkg::FPFORMAT        , // Data format (default is FP16)
+  localparam int unsigned             Height            = redmule_pkg::ARRAY_HEIGHT    , // Number of PEs within a row
+  localparam int unsigned             Width             = redmule_pkg::ARRAY_WIDTH     , // Number of parallel rows
+  localparam int unsigned             NumPipeRegs       = redmule_pkg::PIPE_REGS       , // Number of pipeline registers within each PE
+  localparam fpnew_pkg::pipe_config_t PipeConfig        = fpnew_pkg::DISTRIBUTED       ,
+  localparam int unsigned             BITW              = fpnew_pkg::fp_width(FpFormat), // Number of bits for the given format
 
-  // parameters used by hci_interconnect
-  parameter int unsigned              N_MEM_TILE  = 16                           , // Number of memory banks 
-  parameter int unsigned              N_WORDS     = 256                            // Number of words per memory bank      
+  // parameters used by hci_interconnect and l1_spm
+  parameter int unsigned              N_MEM_BANKS_TILE  = 16                           , // Number of memory banks 
+  parameter int unsigned              N_WORDS_BANK      = 256                            // Number of words per memory bank      
 )(
   input  logic                        clk_i         ,
   input  logic                        rstn_i        ,
@@ -106,25 +106,25 @@
 //TODO
 
   hci_mem_intf #(
-    .AW ( /*TODO*/ ),
-    .DW ( /*TODO*/ ),
-    .BW ( /*TODO*/ ),
+    .AW ( redmule_tile_pkg::AWM_TILE    ),
+    .DW ( redmule_tile_pkg::DW_LIC_TILE ),
+    .BW ( redmule_tile_pkg::BW_LIC_TILE ),
     .IW ( /*TODO*/ )
-  ) tcdm_bus_sram[N_MEM_TILE-1:0] (
+  ) hci_tcdm_sram_if[N_MEM_BANKS_TILE-1:0] (
     .clk ( clk_i )
   );
   
   hci_core_intf #(
-    .DW ( /*TODO*/ ),
-    .AW ( /*TODO*/ ),
+    .DW ( redmule_tile_pkg::DW_LIC_TILE ),
+    .AW ( redmule_tile_pkg::AWC_TILE    ),
     .OW ( /*TODO*/ )
   ) hci_core_if[N_CORE_TILE-1:0] (
     .clk( clk_i )
   );
 
   hci_core_intf #(
-    .DW ( /*TODO*/ ),
-    .AW ( /*TODO*/ ),
+    .DW ( redmule_tile_pkg::DW_LIC_TILE ),
+    .AW ( redmule_tile_pkg::AWC_TILE    ),
     .OW ( /*TODO*/ )
   ) hci_redmule_if[N_HWPE_TILE-1:0] (
     .clk( clk_i )
@@ -132,8 +132,8 @@
 
   //TODO: connect after integrating the DMA
   hci_core_intf #(
-    .DW ( /*TODO*/ ),
-    .AW ( /*TODO*/ ),
+    .DW ( redmule_tile_pkg::DW_LIC_TILE ),
+    .AW ( redmule_tile_pkg::AWC_TILE    ),
     .OW ( /*TODO*/ )
   ) hci_dma_if[N_DMA_TILE-1:0] (
     .clk( clk_i )
@@ -233,7 +233,7 @@
     .X_RFW_WIDTH ( XifRFWriteWidth ),
     .X_MISA      ( XifMisa         ),
     .X_ECS_XS    ( XifEcsXs        )
-  ) i_core       (
+  ) i_cv32e40x_core       (
     // Clock and Reset
     .clk_i               ( s_clk                      ),
     .rst_ni              ( rst_ni                     ),
@@ -312,37 +312,37 @@
 /*******************************************************/
 
   hci_interconnect #(
-    .N_HWPE  ( N_HWPE_TILE  ),
-    .N_CORE  ( N_CORE_TILE  ),
-    .N_DMA   ( N_DMA_TILE   ),
-    .N_EXT   ( N_EXT_TILE   ),
-    .N_MEM   ( N_MEM_TILE   ),
-    .AWC     ( AWC_TILE     ),
-    .AWM     ( AWM_TILE     ),
-    .DW_LIC  ( DW_LIC_TILE  ),
-    .BW_LIC  ( BW_LIC_TILE  ),
-    .UW_LIC  ( UW_LIC_TILE  ),
-    .DW_SIC  (              ),
-    .TS_BIT  ( TS_BIT_TILE  ),
-    .IW      ( IW_TILE      ),
-    .EXPFIFO ( EXPFIFO_TILE ),
-    .DWH     ( DWH_TILE     ),
-    .AWH     ( AWH_TILE     ),
-    .BWH     ( BWH_TILE     ),
-    .WWH     ( WWH_TILE     ),
-    .OWH     ( OWH_TILE     ),
-    .UWH     ( UWH_TILE     ),
-    .SEL_LIC ( SEL_LIC_TILE )
+    .N_HWPE  ( redmule_tile_pkg::N_HWPE_TILE  ),
+    .N_CORE  ( redmule_tile_pkg::N_CORE_TILE  ),
+    .N_DMA   ( redmule_tile_pkg::N_DMA_TILE   ),
+    .N_EXT   ( redmule_tile_pkg::N_EXT_TILE   ),
+    .N_MEM   ( N_MEM_BANKS_TILE               ),
+    .AWC     ( redmule_tile_pkg::AWC_TILE     ),
+    .AWM     ( redmule_tile_pkg::AWM_TILE     ),
+    .DW_LIC  ( redmule_tile_pkg::DW_LIC_TILE  ),
+    .BW_LIC  ( redmule_tile_pkg::BW_LIC_TILE  ),
+    .UW_LIC  ( redmule_tile_pkg::UW_LIC_TILE  ),
+    .DW_SIC  (                                ),
+    .TS_BIT  ( redmule_tile_pkg::TS_BIT_TILE  ),
+    .IW      ( redmule_tile_pkg::IW_TILE      ),
+    .EXPFIFO ( redmule_tile_pkg::EXPFIFO_TILE ),
+    .DWH     ( redmule_tile_pkg::DWH_TILE     ),
+    .AWH     ( redmule_tile_pkg::AWH_TILE     ),
+    .BWH     ( redmule_tile_pkg::BWH_TILE     ),
+    .WWH     ( redmule_tile_pkg::WWH_TILE     ),
+    .OWH     ( redmule_tile_pkg::OWH_TILE     ),
+    .UWH     ( redmule_tile_pkg::UWH_TILE     ),
+    .SEL_LIC ( redmule_tile_pkg::SEL_LIC_TILE )
   ) i_local_interconnect (
-    .clk_i                     ,
-    .rst_ni  ( rstn_i         ),
-    .clear_i ( hci_clear      ),
-    .ctrl_i  ( hci_ctrl       ),
-    .cores   ( hci_core_if    ),
-    .dma     ( hci_dma_if     ),
-    .ext     (                ),
-    .mems    ( tcdm_bus_sram  ),
-    .hwpe    ( hci_redmule_if )
+    .clk_i                       ,
+    .rst_ni  ( rstn_i           ),
+    .clear_i ( hci_clear        ),
+    .ctrl_i  ( hci_ctrl         ),
+    .cores   ( hci_core_if      ),
+    .dma     ( hci_dma_if       ),
+    .ext     (                  ),
+    .mems    ( hci_tcdm_sram_if ),
+    .hwpe    ( hci_redmule_if   )
   );
 
 /*******************************************************/
@@ -352,27 +352,27 @@
 /*******************************************************/
 
   l1_spm #(
-    .N_BANK   ( N_MEM_TILE ),
-    .N_WORDS  ( N_WORDS ),
-    .DATA_W   ( /*TODO*/ ),
-    .ID_W     ( /*TODO*/ ),
-    .SIM_INIT ( "ones" )
+    .N_BANK   ( N_MEM_BANKS_TILE              ),
+    .N_WORDS  ( N_WORDS_BANK                  ),
+    .DATA_W   ( redmule_tile_pkg::DW_LIC_TILE ),
+    .ID_W     ( /*TODO*/                      ),
+    .SIM_INIT ( "ones"                        )
   ) i_l1_spm (
-    .clk_i      ( clk_i         ),
-    .rstn_i     ( rstn_i        ),
-    .tcdm_slave ( tcdm_bus_sram )
+    .clk_i      ( clk_i            ),
+    .rstn_i     ( rstn_i           ),
+    .tcdm_slave ( hci_tcdm_sram_if )
   );
 
 /*******************************************************/
 /**                 L1 SPM (TCDM) End                 **/
 /*******************************************************/
-/**                   DMA Beginning                   **/
+/**                   iDMA Beginning                  **/
 /*******************************************************/
 
 //TODO
 
 /*******************************************************/
-/**                      DMA End                      **/
+/**                      iDMA End                     **/
 /*******************************************************/
 /**        Core - DMA IO Data Muxing Beginning        **/
 /*******************************************************/
