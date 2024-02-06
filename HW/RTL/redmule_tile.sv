@@ -65,28 +65,6 @@
 /*******************************************************/
 
 //TODO
-//TODO: maybe later add these parameters into a package?
-
-// parameters used by the HCI
-  parameter int unsigned N_HWPE_TILE  = 1;                                                   // Number of HWPEs attached to the port
-  parameter int unsigned N_CORE_TILE  = 1;                                                   // Number of Core ports
-  parameter int unsigned N_DMA_TILE   = 0;                                                   // Number of DMA ports /*TODO: add DMA and update interconnect parameter*/
-  parameter int unsigned N_EXT_TILE   = 0;                                                   // Number of External ports /*TODO: can this be 0? Will it not cause problems? Is the HCI Interconnect robust?*/
-  parameter int unsigned AWC_TILE     = 32;                                                  // Address Width Core   (slave ports)
-  parameter int unsigned AWM_TILE     = 32;                                                  // Address width memory (master ports)
-  parameter int unsigned DW_LIC_TILE  = 32;                                                  // Data Width for Log Interconnect
-  parameter int unsigned BW_LIC_TILE  = 8;                                                   // Byte Width for Log Interconnect
-  parameter int unsigned UW_LIC_TILE  = 0;                                                   // User Width for Log Interconnect
-  parameter int unsigned TS_BIT_TILE  = 21;                                                  // TEST_SET_BIT (for Log Interconnect)
-  parameter int unsigned IW_TILE      = N_HWPE_TILE + N_CORE_TILE + N_DMA_TILE + N_EXT_TILE; // ID Width
-  parameter int unsigned EXPFIFO_TILE = 0;                                                   // FIFO Depth for HWPE Interconnect
-  parameter int unsigned DWH_TILE     = 32;                                                  // Data Width for HWPE Interconnect
-  parameter int unsigned AWH_TILE     = 32;                                                  // Address Width for HWPE Interconnect
-  parameter int unsigned BWH_TILE     = 8;                                                   // Byte Width for HWPE Interconnect
-  parameter int unsigned WWH_TILE     = 32;                                                  // Word Width for HWPE Interconnect
-  parameter int unsigned OWH_TILE     = AWH_TILE;                                            // Offset Width for HWPE Interconnect
-  parameter int unsigned UWH_TILE     = 0;                                                   // User Width for HWPE Interconnect
-  parameter int unsigned SEL_LIC_TILE = 0;                                                   // Log interconnect type selector
 
 /*******************************************************/
 /**             Parameter Definitions End             **/
@@ -164,8 +142,36 @@
 /*******************************************************/
 /**             Interface Definitions End             **/
 /*******************************************************/
-/**             RedMulE Complex Beginning             **/
+/**                 RedMulE Beginning                 **/
 /*******************************************************/
+
+  //TODO
+  redmule_top #(
+    .ID_WIDTH           ( ID_WIDTH              ),
+    .N_CORES            ( 1                     ),
+    .DW                 ( DW                    ),
+    .X_EXT              ( XExt                  ),
+    .SysInstWidth       ( SysInstWidth          ),
+    .SysDataWidth       ( SysDataWidth          ),
+    .redmule_data_req_t ( redmule_data_req_t    ),
+    .redmule_data_rsp_t ( redmule_data_rsp_t    ),
+    .redmule_ctrl_req_t ( redmule_ctrl_req_t    ),
+    .redmule_ctrl_rsp_t ( redmule_ctrl_rsp_t    )
+  ) i_redmule_top       (
+    .clk_i              ( s_clk                      ),
+    .rst_ni             ( rst_ni                     ),
+    .test_mode_i        ( test_mode_i                ),
+    .evt_o              ( evt                        ),
+    .busy_o             ( busy                       ),
+    .data_rsp_i         ( redmule_data_rsp_i         ),
+    .data_req_o         ( redmule_data_req_o         ),
+    .ctrl_req_i         ( '0                         ),
+    .ctrl_rsp_o         (                            ),
+    .xif_issue_if_i     ( core_xif.coproc_issue      ),
+    .xif_result_if_o    ( core_xif.coproc_result     ),
+    .xif_compressed_if_i( core_xif.coproc_compressed ),
+    .xif_mem_if_o       ( core_xif.coproc_mem        )
+  );
 
   redmule_complex #(
     .CoreType           ( CoreType    ),
@@ -210,7 +216,97 @@
   );
 
 /*******************************************************/
-/**                RedMulE Complex End                **/
+/**                    RedMulE End                    **/
+/*******************************************************/
+/**                   Core Beginning                  **/
+/*******************************************************/
+
+//TODO
+
+  cv32e40x_core #(
+    .M_EXT       ( cv32e40x_pkg::M ),
+    .X_EXT       ( 1               ),
+    .X_NUM_RS    ( NumRs           ),
+    .X_ID_WIDTH  ( ID_WIDTH        ),
+    .X_MEM_WIDTH ( XifMemWidth     ),
+    .X_RFR_WIDTH ( XifRFReadWidth  ),
+    .X_RFW_WIDTH ( XifRFWriteWidth ),
+    .X_MISA      ( XifMisa         ),
+    .X_ECS_XS    ( XifEcsXs        )
+  ) i_core       (
+    // Clock and Reset
+    .clk_i               ( s_clk                      ),
+    .rst_ni              ( rst_ni                     ),
+    .scan_cg_en_i        ( 1'b0                       ),  // Enable all clock gates for testing
+    // Core ID, Cluster ID, debug mode halt address and boot address are considered more or less static
+    .boot_addr_i         ( boot_addr_i                ),
+    .dm_exception_addr_i ( '0                         ),
+    .dm_halt_addr_i      ( '0                         ),
+    .mhartid_i           ( '0                         ),
+    .mimpid_patch_i      ( '0                         ),
+    .mtvec_addr_i        ( '0                         ),
+    // Instruction memory interface
+    .instr_req_o         ( core_inst_req_o.req        ),
+    .instr_gnt_i         ( core_inst_rsp_i.gnt        ),
+    .instr_rvalid_i      ( core_inst_rsp_i.valid      ),
+    .instr_addr_o        ( core_inst_req_o.addr       ),
+    .instr_memtype_o     (                            ),
+    .instr_prot_o        (                            ),
+    .instr_dbg_o         (                            ),
+    .instr_rdata_i       ( core_inst_rsp_i.data       ),
+    .instr_err_i         ( '0                         ),
+    // Data memory interface
+    .data_req_o          ( core_data_req_o.req        ),
+    .data_gnt_i          ( core_data_rsp_i.gnt        ),
+    .data_rvalid_i       ( core_data_rsp_i.valid      ),
+    .data_addr_o         ( core_data_req_o.addr       ),
+    .data_be_o           ( core_data_req_o.be         ),
+    .data_we_o           ( core_data_req_o.we         ),
+    .data_wdata_o        ( core_data_req_o.data       ),
+    .data_memtype_o      (                            ),
+    .data_prot_o         (                            ),
+    .data_dbg_o          (                            ),
+    .data_atop_o         (                            ),
+    .data_rdata_i        ( core_data_rsp_i.data       ),
+    .data_err_i          ( '0                         ),
+    .data_exokay_i       ( '1                         ),
+    // Cycle, Time
+    .mcycle_o            (                            ),
+    .time_i              ( '0                         ),
+    // eXtension interface
+    .xif_compressed_if   ( core_xif.cpu_compressed    ),
+    .xif_issue_if        ( core_xif.cpu_issue         ),
+    .xif_commit_if       ( core_xif.cpu_commit        ),
+    .xif_mem_if          ( core_xif.cpu_mem           ),
+    .xif_mem_result_if   ( core_xif.cpu_mem_result    ),
+    .xif_result_if       ( core_xif.cpu_result        ),
+    // Basic interrupt architecture
+    .irq_i               ( {27'd0 ,evt, 3'd0}         ),
+    // Event wakeup signals
+    .wu_wfe_i            ( '0                         ), // Wait-for-event wakeup
+    // CLIC interrupt architecture
+    .clic_irq_i          ( '0                         ),
+    .clic_irq_id_i       ( '0                         ),
+    .clic_irq_level_i    ( '0                         ),
+    .clic_irq_priv_i     ( '0                         ),
+    .clic_irq_shv_i      ( '0                         ),
+    // Fence.i flush handshake
+    .fencei_flush_req_o  (                            ),
+    .fencei_flush_ack_i  ( '0                         ),
+    // Debug Interface
+    .debug_req_i         ( '0                         ),
+    .debug_havereset_o   (                            ),
+    .debug_running_o     (                            ),
+    .debug_halted_o      (                            ),
+    .debug_pc_valid_o    (                            ),
+    .debug_pc_o          (                            ),
+    // CPU Control Signals
+    .fetch_enable_i      ( fetch_enable_i             ),
+    .core_sleep_o        ( core_sleep_o               )
+  );
+
+/*******************************************************/
+/**                      Core End                     **/
 /*******************************************************/
 /**         Local Interconnect (HCI) Beginning        **/
 /*******************************************************/

@@ -33,6 +33,7 @@ dependencies:
 sources:
   files:
   # RedMulE Mesh
+    - HW/RTL/redmule_tile_pkg.sv
     - HW/RTL/redmule_tile.sv
     - HW/RTL/l1_spm.sv
 
