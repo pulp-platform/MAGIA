@@ -255,7 +255,7 @@
 /**              L1 SPM (TCDM) Beginning              **/
 /*******************************************************/
 
-  l1_mem_wrap #(
+  l1_spm #(
     .N_BANK   ( N_MEM_TILE ),
     .N_WORDS  ( N_WORDS ),
     .DATA_W   ( /*TODO*/ ),

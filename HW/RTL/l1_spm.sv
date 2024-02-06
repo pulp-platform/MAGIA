@@ -19,7 +19,7 @@
  * L1 SPM
  */
 
-module l1_mem_wrap #(
+module l1_spm #(
   parameter int unsigned N_BANK    = 16    ,  // Number of memory banks
   parameter int unsigned N_WORDS   = 256   ,  // Number of words in a bank
   parameter int unsigned DATA_W    = 32    ,  // Data width
@@ -67,4 +67,4 @@ module l1_mem_wrap #(
     assign tcdm_slave[i].gnt = 1'b1;
   end
 
-endmodule: l1_mem_wrap
+endmodule: l1_spm
