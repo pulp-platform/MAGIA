@@ -52,6 +52,7 @@
   // signals used by redmule_complex
   input  logic                        test_mode_i   ,
   input  logic                        fetch_enable_i,
+  input  logic                        tile_enable_i ,
   input  logic  [      AddrWidth-1:0] boot_addr_i   ,
   input  logic  [        NumIrqs-1:0] irq_i         ,  //TODO: Add irq support
   output logic  [$clog2(NumIrqs)-1:0] irq_id_o      ,
@@ -97,6 +98,9 @@
   logic                                hci_clear; //TODO: figure out who should clear the hci
   hci_package::hci_interconnect_ctrl_t hci_ctrl;  //TODO: figure out who should control the hci
 
+  logic sys_clk;
+  logic sys_clk_en;
+
 /*******************************************************/
 /**           Internal Signal Definitions End         **/
 /*******************************************************/
@@ -111,7 +115,7 @@
     .BW ( redmule_tile_pkg::BW_LIC_TILE ),
     .IW ( /*TODO*/ )
   ) hci_tcdm_sram_if[N_MEM_BANKS_TILE-1:0] (
-    .clk ( clk_i )
+    .clk ( sys_clk )
   );
   
   hci_core_intf #(
@@ -119,7 +123,7 @@
     .AW ( redmule_tile_pkg::AWC_TILE    ),
     .OW ( /*TODO*/ )
   ) hci_core_if[N_CORE_TILE-1:0] (
-    .clk( clk_i )
+    .clk( sys_clk )
   );
 
   hci_core_intf #(
@@ -127,7 +131,7 @@
     .AW ( redmule_tile_pkg::AWC_TILE    ),
     .OW ( /*TODO*/ )
   ) hci_redmule_if[N_HWPE_TILE-1:0] (
-    .clk( clk_i )
+    .clk( sys_clk )
   );
 
   //TODO: connect after integrating the DMA
@@ -136,11 +140,29 @@
     .AW ( redmule_tile_pkg::AWC_TILE    ),
     .OW ( /*TODO*/ )
   ) hci_dma_if[N_DMA_TILE-1:0] (
-    .clk( clk_i )
+    .clk( sys_clk )
   );
 
 /*******************************************************/
 /**             Interface Definitions End             **/
+/*******************************************************/
+/**               Clock gating Beginning              **/
+/*******************************************************/
+
+  always_ff @ (posedge clk_i, negedge rstn_i) begin: sys_clk_en
+    if (~rstn_i) sys_clk_en <= 1'b0;
+    else         sys_clk_en <= tile_enable_i;
+  end
+
+  tc_clk_gating sys_clock_gating (
+    .clk_i                    ,
+    .en_i      ( sys_clk_en  ),
+    .test_en_i ( test_mode_i ),
+    .clk_o     ( sys_clk     )
+  );
+
+/*******************************************************/
+/**                  Clock gating End                 **/
 /*******************************************************/
 /**                 RedMulE Beginning                 **/
 /*******************************************************/
@@ -158,7 +180,7 @@
     .redmule_ctrl_req_t ( redmule_ctrl_req_t    ),
     .redmule_ctrl_rsp_t ( redmule_ctrl_rsp_t    )
   ) i_redmule_top       (
-    .clk_i              ( s_clk                      ),
+    .clk_i              ( sys_clk                    ),
     .rst_ni             ( rst_ni                     ),
     .test_mode_i        ( test_mode_i                ),
     .evt_o              ( evt                        ),
@@ -197,21 +219,21 @@
     .PipeConfig         ( PipeConfig  ),
     .BITW               ( BITW        )
   ) i_redmule_complex (
-    .clk_i                        ,
-    .rst_ni             ( rstn_i ),
-    .test_mode_i                  ,
-    .fetch_enable_i               ,
-    .boot_addr_i                  ,
-    .irq_i                        ,
-    .irq_id_o                     ,
-    .irq_ack_o                    ,
-    .core_sleep_o                 ,
-    .core_inst_rsp_i    (        ),
-    .core_inst_req_o    (        ),
-    .core_data_rsp_i    (        ),
-    .core_data_req_o    (        ),
-    .redmule_data_rsp_i (        ),
-    .redmule_data_req_o (        )
+    .clk_i              ( sys_clk ),
+    .rst_ni             ( rstn_i  ),
+    .test_mode_i                   ,
+    .fetch_enable_i                ,
+    .boot_addr_i                   ,
+    .irq_i                         ,
+    .irq_id_o                      ,
+    .irq_ack_o                     ,
+    .core_sleep_o                  ,
+    .core_inst_rsp_i    (         ),
+    .core_inst_req_o    (         ),
+    .core_data_rsp_i    (         ),
+    .core_data_req_o    (         ),
+    .redmule_data_rsp_i (         ),
+    .redmule_data_req_o (         )
     //TODO: add communication channels with the DMA
   );
 
@@ -235,7 +257,7 @@
     .X_ECS_XS    ( XifEcsXs        )
   ) i_cv32e40x_core       (
     // Clock and Reset
-    .clk_i               ( s_clk                      ),
+    .clk_i               ( sys_clk                    ),
     .rst_ni              ( rst_ni                     ),
     .scan_cg_en_i        ( 1'b0                       ),  // Enable all clock gates for testing
     // Core ID, Cluster ID, debug mode halt address and boot address are considered more or less static
@@ -334,7 +356,7 @@
     .UWH     ( redmule_tile_pkg::UWH_TILE     ),
     .SEL_LIC ( redmule_tile_pkg::SEL_LIC_TILE )
   ) i_local_interconnect (
-    .clk_i                       ,
+    .clk_i   ( sys_clk          ),
     .rst_ni  ( rstn_i           ),
     .clear_i ( hci_clear        ),
     .ctrl_i  ( hci_ctrl         ),
@@ -358,7 +380,7 @@
     .ID_W     ( /*TODO*/                      ),
     .SIM_INIT ( "ones"                        )
   ) i_l1_spm (
-    .clk_i      ( clk_i            ),
+    .clk_i      ( sys_clk          ),
     .rstn_i     ( rstn_i           ),
     .tcdm_slave ( hci_tcdm_sram_if )
   );
