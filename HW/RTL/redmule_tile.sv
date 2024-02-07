@@ -34,59 +34,55 @@
   parameter cv32e40x_pkg::b_ext_e CORE_B        = cv32e40x_pkg::B_NONE , // Bit Manipulation support (dafault: not enabled)
   parameter cv32e40x_pkg::m_ext_e CORE_M        = cv32e40x_pkg::ZMMUL  , // Multiply and Divide support (dafault: only Multiply upported)
 )(
-  input  logic                                  clk_i               ,
-  input  logic                                  rstn_i              ,
-  input  logic                                  test_mode_i         ,
-  input  logic                                  tile_enable_i       ,
+  input  logic                                     clk_i               ,
+  input  logic                                     rstn_i              ,
+  input  logic                                     test_mode_i         ,
+  input  logic                                     tile_enable_i       ,
   //TODO: add tile data in/out channel(s)
 
   // Signals used by the core
-  input  logic                                  scan_cg_en_i        ,
+  input  logic                                     scan_cg_en_i        ,
 
-  input  logic [32:0]                           boot_addr_i         ,
-  input  logic [32:0]                           mtvec_addr_i        ,
-  input  logic [32:0]                           dm_halt_addr_i      ,
-  input  logic [32:0]                           dm_exception_addr_i ,
-  input  logic [32:0]                           mhartid_i           ,
-  input  logic [ 3:0]                           mimpid_patch_i      ,
+  input  logic [31:0]                              boot_addr_i         ,
+  input  logic [31:0]                              mtvec_addr_i        ,
+  input  logic [31:0]                              dm_halt_addr_i      ,
+  input  logic [31:0]                              dm_exception_addr_i ,
+  input  logic [31:0]                              mhartid_i           ,
+  input  logic [ 3:0]                              mimpid_patch_i      ,
 
-  output logic [63:0]                           mcycle_o            ,
-  input  logic [63:0]                           time_i              ,
+  output logic [63:0]                              mcycle_o            ,
+  input  logic [63:0]                              time_i              ,
 
-  input  logic [redmule_tile_pkg::N_IRQ-1   :0] irq_i               ,  //TODO: Add IRQ support
+  input  logic [redmule_tile_pkg::N_IRQ-1:0]       irq_i               ,  //TODO: Add IRQ support
   
-  output logic                                  fencei_flush_req_o  ,
-  input  logic                                  fencei_flush_ack_i  ,
+  output logic                                     fencei_flush_req_o  ,
+  input  logic                                     fencei_flush_ack_i  ,
 
-  input  logic                                  debug_req_i         ,
-  output logic                                  debug_havereset_o   ,
-  output logic                                  debug_running_o     ,
-  output logic                                  debug_halted_o      ,
-  output logic                                  debug_pc_valid_o    ,
-  output logic                                  debug_pc_o          ,
+  input  logic                                     debug_req_i         ,
+  output logic                                     debug_havereset_o   ,
+  output logic                                     debug_running_o     ,
+  output logic                                     debug_halted_o      ,
+  output logic                                     debug_pc_valid_o    ,
+  output logic                                     debug_pc_o          ,
 
-  input  logic                                  fetch_enable_i      ,
-  output logic                                  core_sleep_o        ,
-  input  logic                                  wu_wfe_i
+  input  logic                                     fetch_enable_i      ,
+  output logic                                     core_sleep_o        ,
+  input  logic                                     wu_wfe_i            ,
+
+  // Signals used by RedMulE
+  output logic                                     busy_o              ,  //TODO: Manage backpressure
+  output logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt_o                  //TODO: Manage RedMulE event to Core IRQ mapping
 );
 
-/*******************************************************/
-/**             Type Definitions Beginning            **/
-/*******************************************************/
-
-//TODO: package
-//TODO: define the redmule data types
-// redmule_data_req_t
-// redmule_data_rsp_t
-
-/*******************************************************/
-/**                Type Definitions End               **/
 /*******************************************************/
 /**        Internal Signal Definitions Beginning      **/
 /*******************************************************/
 
-//TODO
-//TODO: define the redmul data signals
+  redmule_tile_pkg::redmule_data_req_t redmule_data_req;
+  redmule_tile_pkg::redmule_data_rsp_t redmule_data_rsp;
+
+  redmule_tile_pkg::redmule_ctrl_req_t redmule_ctrl_req;
+  redmule_tile_pkg::redmule_ctrl_rsp_t redmule_ctrl_rsp;
 
   redmule_tile_pkg::core_instr_req_t   core_instr_req;
   redmule_tile_pkg::core_instr_rsp_t   core_instr_rsp;
@@ -106,13 +102,11 @@
 /**           Interface Definitions Beginning         **/
 /*******************************************************/
 
-//TODO
-
   hci_mem_intf #(
     .AW ( redmule_tile_pkg::AWM    ),
     .DW ( redmule_tile_pkg::DW_LIC ),
     .BW ( redmule_tile_pkg::BW_LIC ),
-    .IW ( /*TODO*/ )
+    .IW ( redmule_tile_pkg::IW     )
   ) hci_tcdm_sram_if[N_MEM_BANKS-1:0] (
     .clk ( sys_clk )
   );
@@ -120,7 +114,7 @@
   hci_core_intf #(
     .DW ( redmule_tile_pkg::DW_LIC ),
     .AW ( redmule_tile_pkg::AWC    ),
-    .OW ( /*TODO*/ )
+    .OW ( redmule_tile_pkg::AWC    )
   ) hci_core_if[redmule_tile_pkg::N_CORE-1:0] (
     .clk( sys_clk )
   );
@@ -128,7 +122,7 @@
   hci_core_intf #(
     .DW ( redmule_tile_pkg::DW_LIC ),
     .AW ( redmule_tile_pkg::AWC    ),
-    .OW ( /*TODO*/ )
+    .OW ( redmule_tile_pkg::AWC    )
   ) hci_redmule_if[redmule_tile_pkg::N_HWPE-1:0] (
     .clk( sys_clk )
   );
@@ -137,7 +131,7 @@
   hci_core_intf #(
     .DW ( redmule_tile_pkg::DW_LIC ),
     .AW ( redmule_tile_pkg::AWC    ),
-    .OW ( /*TODO*/ )
+    .OW ( redmule_tile_pkg::AWC    )
   ) hci_dma_if[redmule_tile_pkg::N_DMA-1:0] (
     .clk( sys_clk )
   );
@@ -176,38 +170,36 @@
 /**                 RedMulE Beginning                 **/
 /*******************************************************/
 
-  //TODO
-
   redmule_top #(
-    .ID_WIDTH           (  ),
-    .N_CORES            (  ),
-    .DW                 (  ),
-    .UW                 (  ),
-    .X_EXT              (  ),
-    .SysInstWidth       (  ),
-    .SysDataWidth       (  ),
-    .redmule_data_req_t (  ),
-    .redmule_data_rsp_t (  ),
-    .redmule_ctrl_req_t (  ),
-    .redmule_ctrl_rsp_t (  )
+    .ID_WIDTH           ( redmule_tile_pkg::REDMULE_ID_W       ),
+    .N_CORES            ( redmule_tile_pkg::N_CORE             ),
+    .DW                 ( redmule_tile_pkg::AWM                ),
+    .UW                 ( redmule_tile_pkg::REDMULE_UW         ),
+    .X_EXT              ( redmule_tile_pkg::X_EXT_EN           ),
+    .SysInstWidth       ( redmule_tile_pkg::INSTR_W            ),
+    .SysDataWidth       ( redmule_tile_pkg::DATA_W             ),
+    .redmule_data_req_t ( redmule_tile_pkg::redmule_data_req_t ),
+    .redmule_data_rsp_t ( redmule_tile_pkg::redmule_data_rsp_t ),
+    .redmule_ctrl_req_t ( redmule_tile_pkg::redmule_ctrl_req_t ),
+    .redmule_ctrl_rsp_t ( redmule_tile_pkg::redmule_ctrl_rsp_t )
   ) i_redmule_top (
-    .clk_i               (  ),
-    .rst_ni              (  ),
-    .test_mode_i         (  ),
+    .clk_i               ( sys_clk                  ),
+    .rst_ni              ( rstn_i                   ),
+    .test_mode_i                                     ,
 
-    .busy_o              (  ),
-    .evt_o               (  ),
+    .busy_o                                          ,  //TODO: do not interface with the outside, interface with the core
+    .evt_o                                           ,  //TODO: do not interface with the outside, interface with the core
 
-    .xif_issue_if_i      (  ),
-    .xif_result_if_o     (  ),
-    .xif_compressed_if_i (  ),
-    .xif_mem_if_o        (  ),
+    .xif_issue_if_i      ( xif_if.coproc_issue      ),
+    .xif_result_if_o     ( xif_if.coproc_result     ),
+    .xif_compressed_if_i ( xif_if.coproc_compressed ),
+    .xif_mem_if_o        ( xif_if.coproc_mem        ),
 
-    .data_req_o          (  ),
-    .data_rsp_i          (  ),
+    .data_req_o          ( redmule_data_req         ),
+    .data_rsp_i          ( redmule_data_rsp         ),
 
-    .ctrl_req_i          (  ),
-    .ctrl_rsp_o          (  ),
+    .ctrl_req_i          ( redmule_ctrl_req         ),
+    .ctrl_rsp_o          ( redmule_ctrl_rsp         ),
   );
 
 /*******************************************************/
@@ -224,7 +216,7 @@
     .A_EXT            ( CORE_A                            ),
     .B_EXT            ( CORE_B                            ),
     .M_EXT            ( CORE_M                            ),
-    .X_EXT            ( 1                                 ),    // Enable eXtension Interface (X) support 
+    .X_EXT            ( redmule_tile_pkg::X_EXT_EN        ),    // Support for eXtension Interface (X) 
     .X_NUM_RS         ( redmule_tile_pkg::X_NUM_RS        ),    // RF read ports that can be used by the eXtension interface
     .X_ID_WIDTH       ( redmule_tile_pkg::X_ID_W          ),    // ID width of eXtension interface
     .X_MEM_WIDTH      ( redmule_tile_pkg::X_MEM_W         ),    // MEM width for loads/stores of eXtension interface
@@ -373,7 +365,7 @@
     .N_BANK   ( N_MEM_BANKS              ),
     .N_WORDS  ( N_WORDS_BANK             ),
     .DATA_W   ( redmule_tile_pkg::DW_LIC ),
-    .ID_W     ( /*TODO*/                 ),
+    .ID_W     ( redmule_tile_pkg::IW     ),
     .SIM_INIT ( "ones"                   )
   ) i_l1_spm (
     .clk_i      ( sys_clk          ),

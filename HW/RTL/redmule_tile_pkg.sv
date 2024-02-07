@@ -21,8 +21,13 @@
 
  package redmule_tile_pkg;
 
+  `include "hci/typedef.svh"
+  `include "hwpe-ctrl/typedef.svh"
+  
+  // Global constants
   localparam int unsigned ADDR_W         = 32;                              // System-wide address Width
   localparam int unsigned DATA_W         = 32;                              // System-wide data Width
+  localparam int unsigned INSTR_W        = 32;                              // System-wide instruction Width
   localparam int unsigned N_IRQ          = 32;                              // Number of IRQs
   localparam int unsigned IRQ_ID_W       = $clog2(N_IRQ);                   // IRQ ID Width
   
@@ -46,20 +51,26 @@
   parameter int unsigned OWH             = AWH;                             // Offset Width for HWPE Interconnect
   parameter int unsigned UWH             = 0;                               // User Width for HWPE Interconnect
   parameter int unsigned SEL_LIC         = 0;                               // Log interconnect type selector
+  localparam int unsigned STRB_W         = DW_LIC/BW_LIC;                   // Strobe Width for HWPE Interconnect
+  localparam int unsigned WORDS_DATA     = DW_LIC/WWH;                      // Number of words per data
 
   // Parameters used by the core
+  parameter bit          X_EXT_EN        = 1;                               // Enable eXtension Interface (X) support, see eXtension Interface        
   parameter int unsigned X_NUM_RS        = 2;                               // Number of register file read ports that can be used by the eXtension interface
   parameter int unsigned X_ID_W          = 4;                               // Identification width for the eXtension interface
   parameter int unsigned X_MEM_W         = 32;                              // Memory access width for loads/stores via the eXtension interface
   parameter int unsigned X_RFR_W         = 32;                              // Register file read access width for the eXtension interface
   parameter int unsigned X_RFW_W         = 32;                              // Register file write access width for the eXtension interface
-  parameter logic [31:0] X_MISA          = 32'h0;                           // MISA extensions implemented on the eXtension interface, see Machine ISA (misa). X_MISA can only be used to set a subset of the following: {P, V, F, M}
-  parameter logic [1 :0] X_ECS_XS        = 2'b0;                            // Default value for mstatus.XS if X_EXT = 1, see Machine Status (mstatus)
-  parameter logic [31:0] DM_REGION_START = 32'hF0000000;                    // Start address of Debug Module region, see Debug & Trigger
-  parameter logic [31:0] DM_REGION_END   = 32'hF0003FFF;                    // End address of Debug Module region, see Debug & Trigger
-  parameter logic        CLIC_EN         = 1'b0;                            // Specifies whether Smclic, Smclicshv and Smclicconfig are supported
+  parameter bit [31:0]   X_MISA          = 32'h0;                           // MISA extensions implemented on the eXtension interface, see Machine ISA (misa). X_MISA can only be used to set a subset of the following: {P, V, F, M}
+  parameter bit [1 :0]   X_ECS_XS        = 2'b0;                            // Default value for mstatus.XS if X_EXT = 1, see Machine Status (mstatus)
+  parameter bit [31:0]   DM_REGION_START = 32'hF0000000;                    // Start address of Debug Module region, see Debug & Trigger
+  parameter bit [31:0]   DM_REGION_END   = 32'hF0003FFF;                    // End address of Debug Module region, see Debug & Trigger
+  parameter bit          CLIC_EN         = 1'b0;                            // Specifies whether Smclic, Smclicshv and Smclicconfig are supported
   parameter int unsigned CLIC_ID_W       = 0;                               // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
 
+  // Parameters used by RedMulE
+  parameter int unsigned REDMULE_ID_W    = 8;                               // RedMulE ID Width
+  
   typedef struct packed {
     logic        req;
     logic [31:0] addr;
@@ -94,5 +105,11 @@
     logic        err;
     logic        exokay;
   } core_data_rsp_t;
+
+  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic [AWC-1:0], logic [DW_LIC-1:0], logic [STRB_W-1:0], logic [IW-1:0])
+  `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic [DW_LIC-1:0], logic [IW-1:0])
+  
+  `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic [AWM-1:0], logic [DW_LIC-1:0], logic [STRB_W-1:0], logic signed [WORDS_DATA-1:0][AWH:0], logic [UWH-1:0])
+  `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic [DW_LIC-1:0], logic [UWH-1:0])
 
  endpackage: redmule_tile_pkg
