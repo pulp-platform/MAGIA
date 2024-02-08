@@ -23,6 +23,8 @@
 
   `include "hci/typedef.svh"
   `include "hwpe-ctrl/typedef.svh"
+
+  `define TARGET_REDMULE_COMPLEX
   
   // Global constants
   localparam int unsigned ADDR_W         = 32;                              // System-wide address Width

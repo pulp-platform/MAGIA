@@ -53,7 +53,7 @@
   output logic [63:0]                              mcycle_o            ,
   input  logic [63:0]                              time_i              ,
 
-  input  logic [redmule_tile_pkg::N_IRQ-1:0]       irq_i               ,  //TODO: Add IRQ support
+  input  logic [redmule_tile_pkg::N_IRQ-1:0]       irq_i               ,  //TODO: Add IRQ support: look also at redmule_complex
   
   output logic                                     fencei_flush_req_o  ,
   input  logic                                     fencei_flush_ack_i  ,
@@ -98,6 +98,24 @@
 
 /*******************************************************/
 /**           Internal Signal Definitions End         **/
+/*******************************************************/
+/**               Clock gating Beginning              **/
+/*******************************************************/
+
+  always_ff @ (posedge clk_i, negedge rstn_i) begin: sys_clk_en
+    if (~rstn_i) sys_clk_en <= 1'b0;
+    else         sys_clk_en <= tile_enable_i;
+  end
+
+  tc_clk_gating sys_clock_gating (
+    .clk_i                    ,
+    .en_i      ( sys_clk_en  ),
+    .test_en_i ( test_mode_i ),
+    .clk_o     ( sys_clk     )
+  );
+
+/*******************************************************/
+/**                  Clock gating End                 **/
 /*******************************************************/
 /**           Interface Definitions Beginning         **/
 /*******************************************************/
@@ -149,31 +167,13 @@
 /*******************************************************/
 /**             Interface Definitions End             **/
 /*******************************************************/
-/**               Clock gating Beginning              **/
-/*******************************************************/
-
-  always_ff @ (posedge clk_i, negedge rstn_i) begin: sys_clk_en
-    if (~rstn_i) sys_clk_en <= 1'b0;
-    else         sys_clk_en <= tile_enable_i;
-  end
-
-  tc_clk_gating sys_clock_gating (
-    .clk_i                    ,
-    .en_i      ( sys_clk_en  ),
-    .test_en_i ( test_mode_i ),
-    .clk_o     ( sys_clk     )
-  );
-
-/*******************************************************/
-/**                  Clock gating End                 **/
-/*******************************************************/
 /**                 RedMulE Beginning                 **/
 /*******************************************************/
 
   redmule_top #(
     .ID_WIDTH           ( redmule_tile_pkg::REDMULE_ID_W       ),
     .N_CORES            ( redmule_tile_pkg::N_CORE             ),
-    .DW                 ( redmule_tile_pkg::AWM                ),
+    .DW                 ( redmule_tile_pkg::DWH                ),
     .UW                 ( redmule_tile_pkg::REDMULE_UW         ),
     .X_EXT              ( redmule_tile_pkg::X_EXT_EN           ),
     .SysInstWidth       ( redmule_tile_pkg::INSTR_W            ),
@@ -287,7 +287,7 @@
     .xif_result_if       ( xif_if.cpu_result      ),
 
      // Interrupt interface
-    .irq_i                                         ,  //TODO: manage IRQs
+    .irq_i                                         ,  //TODO: manage IRQs - look at redmule_complex for an idea
 
     .clic_irq_i          ( '0                     ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
     .clic_irq_id_i       ( '0                     ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
