@@ -81,17 +81,17 @@
   redmule_tile_pkg::redmule_data_req_t redmule_data_req;
   redmule_tile_pkg::redmule_data_rsp_t redmule_data_rsp;
 
-  redmule_tile_pkg::redmule_ctrl_req_t redmule_ctrl_req;
-  redmule_tile_pkg::redmule_ctrl_rsp_t redmule_ctrl_rsp;
+  redmule_tile_pkg::redmule_ctrl_req_t redmule_ctrl_req;  //TODO: figure out what to do with RedMulE control
+  redmule_tile_pkg::redmule_ctrl_rsp_t redmule_ctrl_rsp;  //TODO: figure out what to do with RedMulE control
 
-  redmule_tile_pkg::core_instr_req_t   core_instr_req;
-  redmule_tile_pkg::core_instr_rsp_t   core_instr_rsp;
+  redmule_tile_pkg::core_instr_req_t   core_instr_req;    //TODO: figure out how to implement instruction cacheing
+  redmule_tile_pkg::core_instr_rsp_t   core_instr_rsp;    //TODO: figure out how to implement instruction cacheing
 
   redmule_tile_pkg::core_data_req_t    core_data_req;
   redmule_tile_pkg::core_data_rsp_t    core_data_rsp;
   
-  logic                                hci_clear; //TODO: figure out who should clear the hci
-  hci_package::hci_interconnect_ctrl_t hci_ctrl;  //TODO: figure out who should control the hci
+  logic                                hci_clear;         //TODO: figure out who should clear the hci
+  hci_package::hci_interconnect_ctrl_t hci_ctrl;          //TODO: figure out who should control the hci
 
   logic                                sys_clk;
   logic                                sys_clk_en;
@@ -166,6 +166,17 @@
 
 /*******************************************************/
 /**             Interface Definitions End             **/
+/*******************************************************/
+/**          Interface Assignments Beginning          **/
+/*******************************************************/
+
+  `HCI_ASSIGN_TO_INTF(hci_core_if, core_data_req, core_data_rsp)
+  `HCI_ASSIGN_TO_INTF(hci_redmule_if, redmule_data_req, redmule_data_rsp)
+  //TODO: add DMA - HCI interfaceing 
+  //`HCI_ASSIGN_TO_INTF(hci_dma_if, , )
+
+/*******************************************************/
+/**             Interface Assignments End             **/
 /*******************************************************/
 /**                 RedMulE Beginning                 **/
 /*******************************************************/

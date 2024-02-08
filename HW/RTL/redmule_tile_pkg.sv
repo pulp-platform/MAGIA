@@ -24,6 +24,9 @@
   `include "hci/typedef.svh"
   `include "hwpe-ctrl/typedef.svh"
 
+  `include "hci/assign.svh"
+
+  // The following parameter is need to specify to the redmule_top module to include the Xif interface
   `define TARGET_REDMULE_COMPLEX
   
   // Global constants
