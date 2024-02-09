@@ -35,6 +35,7 @@
   localparam int unsigned INSTR_W        = 32;                              // System-wide instruction Width
   localparam int unsigned N_IRQ          = 32;                              // Number of IRQs
   localparam int unsigned IRQ_ID_W       = $clog2(N_IRQ);                   // IRQ ID Width
+  localparam int unsigned ID_W_OFFSET    = 4;                               // Offset to be added to ID Width 
   
   // Parameters used by the HCI
   parameter int unsigned N_HWPE          = 1;                               // Number of HWPEs attached to the port
@@ -62,7 +63,7 @@
   // Parameters used by the core
   parameter bit          X_EXT_EN        = 1;                               // Enable eXtension Interface (X) support, see eXtension Interface        
   parameter int unsigned X_NUM_RS        = 2;                               // Number of register file read ports that can be used by the eXtension interface
-  parameter int unsigned X_ID_W          = 4;                               // Identification width for the eXtension interface
+  parameter int unsigned X_ID_W          = IW + ID_W_OFFSET;                // Identification width for the eXtension interface
   parameter int unsigned X_MEM_W         = 32;                              // Memory access width for loads/stores via the eXtension interface
   parameter int unsigned X_RFR_W         = 32;                              // Register file read access width for the eXtension interface
   parameter int unsigned X_RFW_W         = 32;                              // Register file write access width for the eXtension interface
@@ -74,7 +75,7 @@
   parameter int unsigned CLIC_ID_W       = 0;                               // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
 
   // Parameters used by RedMulE
-  parameter int unsigned REDMULE_ID_W    = 8;                               // RedMulE ID Width
+  parameter int unsigned REDMULE_ID_W    = IW + ID_W_OFFSET;                // RedMulE ID Width
   
   typedef struct packed {
     logic        req;
