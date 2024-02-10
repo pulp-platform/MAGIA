@@ -19,11 +19,11 @@
  * RedMulE Tile
  */
 
- module redemule_tile;
+module redemule_tile;
   import redmule_tile_pkg::*;
   import hci_package::*;
   import cv32e40x_pkg::*;
- #(
+#(
   // Parameters used by hci_interconnect and l1_spm
   parameter int unsigned          N_MEM_BANKS   = 16                   , // Number of memory banks 
   parameter int unsigned          N_WORDS_BANK  = 256                  , // Number of words per memory bank      
@@ -244,7 +244,7 @@
     .PMA_CFG          (                                   ),    // No array of PMA configurations
     .CLIC             ( redmule_tile_pkg::CLIC_EN         ),    // Support for Smclic, Smclicshv and Smclicconfig
     .CLIC_ID_WIDTH    ( redmule_tile_pkg::CLIC_ID_W       )     // Width of clic_irq_id_i and clic_irq_id_o
-) i_cv32e40x_core (
+  ) i_cv32e40x_core (
     // Clock and reset
     .clk_i               ( sys_clk                ),
     .rst_ni              ( rstn_i                 ),

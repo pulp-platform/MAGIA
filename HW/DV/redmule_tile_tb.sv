@@ -19,6 +19,117 @@
  * RedMulE Tile Testbench
  */
 
- module redmule_tile_tb;
+module redmule_tile_tb;
 
- endmodule: redmule_tile_tb
+  import redmule_tile_tb_pkg::*;
+  import redmule_tile_pkg::*;
+
+/*******************************************************/
+/**       Internal Signal Definitions Beginning       **/
+/*******************************************************/
+
+  bit clk;
+  bit rstn;
+
+  event start_test;
+
+/*******************************************************/
+/**          Internal Signal Definitions End          **/
+/*******************************************************/
+/**             Clock and Reset Beginning             **/
+/*******************************************************/
+
+  // Clock generator
+  always #(CLK_PERIOD/2) clk = ~clk;
+
+  // Reset generator
+  initial begin
+    rstn = 0;
+    #(2*CLK_PERIOD);
+    rstn = 1;
+    ->start_test;
+  end
+
+/*******************************************************/
+/**                Clock and Reset End                **/
+/*******************************************************/
+/**            DUT (RedMulE Tile) Beginning           **/
+/*******************************************************/
+
+  redmule_tile #(
+    .N_MEM_BANKS  (  ),
+    .N_WORDS_BANK (  ),
+
+    .CORE_ISA     (  ),
+    .CORE_A       (  ),
+    .CORE_B       (  ),
+    .CORE_M       (  )
+  ) i_redmule_tile (
+    .clk_i               (  ),
+    .rstn_i              (  ),
+    .test_mode_i         (  ),
+    .tile_enable_i       (  ),
+
+    .scan_cg_en_i        (  ),
+
+    .boot_addr_i         (  ),
+    .mtvec_addr_i        (  ),
+    .dm_halt_addr_i      (  ),
+    .dm_exception_addr_i (  ),
+    .mhartid_i           (  ),
+    .mimpid_patch_i      (  ),
+
+    .mcycle_o            (  ),
+    .time_i              (  ),
+
+    .irq_i               (  ),
+
+    .fencei_flush_req_o  (  ),
+    .fencei_flush_ack_i  (  ),
+
+    .debug_req_i         (  ),
+    .debug_havereset_o   (  ),
+    .debug_running_o     (  ),
+    .debug_halted_o      (  ),
+    .debug_pc_valid_o    (  ),
+    .debug_pc_o          (  ),
+
+    .fetch_enable_i      (  ),
+    .core_sleep_o        (  ),
+    .wu_wfe_i            (  ),
+
+    .busy_o              (  ),
+    .evt_o               (  )
+  );
+
+/*******************************************************/
+/**               DUT (RedMulE Tile) End              **/
+/*******************************************************/
+/**             Test Environment Beginning            **/
+/*******************************************************/
+
+//TODO
+
+/*******************************************************/
+/**                Test Environment End               **/
+/*******************************************************/
+/**                   Test Beginning                  **/
+/*******************************************************/
+
+//TODO
+
+/*******************************************************/
+/**                      Test End                     **/
+/*******************************************************/
+/**           Testbench Execution Beginning           **/
+/*******************************************************/
+
+  initial begin: testbench_execution
+    
+  end
+
+/*******************************************************/
+/**              Testbench Execution End              **/
+/*******************************************************/
+
+endmodule: redmule_tile_tb

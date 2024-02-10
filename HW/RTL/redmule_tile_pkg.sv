@@ -19,7 +19,7 @@
  * RedMulE Tile Package
  */
 
- package redmule_tile_pkg;
+package redmule_tile_pkg;
 
   `include "hci/typedef.svh"
   `include "hwpe-ctrl/typedef.svh"
@@ -118,4 +118,4 @@
   `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic [AWM-1:0], logic [DW_LIC-1:0], logic [STRB_W-1:0], logic signed [WORDS_DATA-1:0][AWH:0], logic [UWH-1:0])
   `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic [DW_LIC-1:0], logic [UWH-1:0])
 
- endpackage: redmule_tile_pkg
+endpackage: redmule_tile_pkg
