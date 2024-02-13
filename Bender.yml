@@ -22,6 +22,7 @@ package:
     - "Victor Isachi (victor.isachi@unibo.it)"
 
 dependencies:
+  redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 4b74428d82a40eb42ed38ce0eefc1803620a32f4 } # branch: vi/scale_up
   cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: "redmule-v1.0"                           }
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: c35d5b0886ab549fb9144c3c14a4682112330e21 } # branch: yt/reqrsp
