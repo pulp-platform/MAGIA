@@ -16,5 +16,9 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * RedMulE Tile Test Environment
+ * RedMulE Tile Testbench
  */
+
+ module redmule_tile_tb;
+
+ endmodule: redmule_tile_tb

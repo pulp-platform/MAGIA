@@ -16,5 +16,9 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * RedMulE Tile Test
+ * RedMulE Tile Verification IP
  */
+
+ module redmule_tile_vip;
+
+ endmodule: redmule_tile_vip

@@ -19,11 +19,6 @@
  * RedMulE Tile Testbench Package
  */
 
-package redmule_tile_tb_pkg;
+ package redmule_tile_tb_pkg;
 
-  timeunit      1ps;
-  timeprecision 1ps;
-
-  parameter int unsigned CLK_PERIOD = 10;   // NOTE: Must be divisible by 2
-
-endpackage: redmule_tile_tb_pkg
+ endpackage: redmule_tile_tb_pkg
