@@ -21,4 +21,10 @@
 
  module redmule_tile_tb;
 
+  initial begin
+
+
+    $finish;
+  end
+
  endmodule: redmule_tile_tb
