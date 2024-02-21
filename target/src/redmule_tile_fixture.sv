@@ -19,7 +19,7 @@
  * RedMulE Tile Fixture
  */
 
- module redmule_tile_fixture;
+module redmule_tile_fixture;
 
   import redmule_tile_pkg::*;
   import redmule_tile_tb_pkg::*;
@@ -28,7 +28,41 @@
 /**        Internal Signal Definitions Beginning      **/
 /*******************************************************/
 
-//TODO
+  logic                                     clk;
+  logic                                     rst_n;
+  logic                                     test_mode;
+  logic                                     tile_enable;
+
+  logic                                     scan_cg_en;
+
+  logic [31:0]                              boot_addr;
+  logic [31:0]                              mtvec_addr;
+  logic [31:0]                              dm_halt_addr;
+  logic [31:0]                              dm_exception_addr;
+  logic [31:0]                              mhartid;
+  logic [ 3:0]                              mimpid_patch;
+
+  logic [63:0]                              mcycle;
+  logic [63:0]                              time_var;
+
+  logic [redmule_tile_pkg::N_IRQ-1:0]       irq;
+
+  logic                                     fencei_flush_req;
+  logic                                     fencei_flush_ack;
+
+  logic                                     debug_req;
+  logic                                     debug_havereset;
+  logic                                     debug_running;
+  logic                                     debug_halted;
+  logic                                     debug_pc_valid;
+  logic                                     debug_pc;
+
+  logic                                     fetch_enable;
+  logic                                     core_sleep;
+  logic                                     wu_wfe;
+
+  logic                                     busy;
+  logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt;
 
 /*******************************************************/
 /**           Internal Signal Definitions End         **/
@@ -36,51 +70,51 @@
 /**                   DUT Beginning                   **/
 /*******************************************************/
 
-redemule_tile #(
-  .N_MEM_BANKS  (  ),
-  .N_WORDS_BANK (  ),
+  redemule_tile #(
+    .N_MEM_BANKS  ( redmule_tile_tb_pkg::N_MEM_BANKS  ),
+    .N_WORDS_BANK ( redmule_tile_tb_pkg::N_WORDS_BANK ),
 
-  .CORE_ISA     (  ),
-  .CORE_A       (  ),
-  .CORE_B       (  ),
-  .CORE_M       (  )
-) dut (
-  .clk_i               (  ),
-  .rstn_i              (  ),
-  .test_mode_i         (  ),
-  .tile_enable_i       (  ),
+    .CORE_ISA     (                                   ),
+    .CORE_A       (                                   ),
+    .CORE_B       (                                   ),
+    .CORE_M       (                                   )
+  ) dut (
+    .clk_i               ( clk               ),
+    .rstn_i              ( rst_n             ),
+    .test_mode_i         ( test_mode         ),
+    .tile_enable_i       ( tile_enable       ),
 
-  .scan_cg_en_i        (  ),
+    .scan_cg_en_i        ( scan_cg_en        ),
 
-  .boot_addr_i         (  ),
-  .mtvec_addr_i        (  ),
-  .dm_halt_addr_i      (  ),
-  .dm_exception_addr_i (  ),
-  .mhartid_i           (  ),
-  .mimpid_patch_i      (  ),
+    .boot_addr_i         ( boot_addr         ),
+    .mtvec_addr_i        ( mtvec_addr        ),
+    .dm_halt_addr_i      ( dm_halt_addr      ),
+    .dm_exception_addr_i ( dm_exception_addr ),
+    .mhartid_i           ( mhartid           ),
+    .mimpid_patch_i      ( mimpid_patch      ),
 
-  .mcycle_o            (  ),
-  .time_i              (  ),
+    .mcycle_o            ( mcycle            ),
+    .time_i              ( time_var          ),
 
-  .irq_i               (  ),
+    .irq_i               ( irq               ),
 
-  .fencei_flush_req_o  (  ),
-  .fencei_flush_ack_i  (  ),
+    .fencei_flush_req_o  ( fencei_flush_req  ),
+    .fencei_flush_ack_i  ( fencei_flush_ack  ),
 
-  .debug_req_i         (  ),
-  .debug_havereset_o   (  ),
-  .debug_running_o     (  ),
-  .debug_halted_o      (  ),
-  .debug_pc_valid_o    (  ),
-  .debug_pc_o          (  ),
+    .debug_req_i         ( debug_req         ),
+    .debug_havereset_o   ( debug_havereset   ),
+    .debug_running_o     ( debug_running     ),
+    .debug_halted_o      ( debug_halted      ),
+    .debug_pc_valid_o    ( debug_pc_valid    ),
+    .debug_pc_o          ( debug_pc          ),
 
-  .fetch_enable_i      (  ),
-  .core_sleep_o        (  ),
-  .wu_wfe_i            (  ),
+    .fetch_enable_i      ( fetch_enable      ),
+    .core_sleep_o        ( core_sleep        ),
+    .wu_wfe_i            ( wu_wfe            ),
 
-  .busy_o              (  ),
-  .evt_o               (  )
-);
+    .busy_o              ( busy              ),
+    .evt_o               ( evt               )
+  );
 
 /*******************************************************/
 /**                      DUT End                      **/
@@ -88,14 +122,10 @@ redemule_tile #(
 /**                   VIP Beginning                   **/
 /*******************************************************/
 
-redmule_tile_vip #(
-
-) vip (
-
-);
+  redmule_tile_vip vip (.*);
 
 /*******************************************************/
 /**                      VIP End                      **/
 /*******************************************************/
 
- endmodule: redmule_tile_fixture
+endmodule: redmule_tile_fixture

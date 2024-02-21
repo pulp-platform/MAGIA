@@ -19,12 +19,31 @@
  * RedMulE Tile Testbench
  */
 
- module redmule_tile_tb;
+module redmule_tile_tb;
+
+  string     preload_elf;
+  string     boot_hex;
+  bit [31:0] exit_code;
+
+  redmule_tile_fixture fixture();
 
   initial begin
+    // Fetch plusargs or use safe (fail-fast) defaults
+    if (!$value$plusargs("BINARY=%s", preload_elf)) preload_elf = "";
+    if (!$value$plusargs("IMAGE=%s",  boot_hex))    boot_hex    = "";
 
+    // Set preload boot image if there is one
+    fixture.vip.preload(boot_hex);
+
+    // Wait for reset
+    fixture.vip.wait_for_reset();
+
+    // Preload in idle mode
+    fixture.vip.init();
+    fixture.vip.elf_run(preload_elf);
+    fixture.vip.wait_for_eoc(exit_code);
 
     $finish;
   end
 
- endmodule: redmule_tile_tb
+endmodule: redmule_tile_tb
