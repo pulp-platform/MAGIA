@@ -35,7 +35,8 @@ package redmule_tile_pkg;
   localparam int unsigned INSTR_W        = 32;                              // System-wide instruction Width
   localparam int unsigned N_IRQ          = 32;                              // Number of IRQs
   localparam int unsigned IRQ_ID_W       = $clog2(N_IRQ);                   // IRQ ID Width
-  localparam int unsigned ID_W_OFFSET    = 4;                               // Offset to be added to ID Width 
+  localparam int unsigned ID_W_OFFSET    = 4;                               // Offset to be added to ID Width
+  localparam int unsigned ID_W           = 4;                               // Default ID Width
   
   // Parameters used by the HCI
   parameter int unsigned N_HWPE          = 1;                               // Number of HWPEs attached to the port

@@ -71,7 +71,10 @@ module redemule_tile;
 
   // Signals used by RedMulE
   output logic                                     busy_o              ,  //TODO: Manage backpressure
-  output logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt_o                  //TODO: Manage RedMulE event to Core IRQ mapping
+  output logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt_o               ,  //TODO: Manage RedMulE event to Core IRQ mapping
+
+  output redmule_tile_pkg::core_instr_req_t        core_instr_req_o    ,
+  input  redmule_tile_pkg::core_instr_rsp_t        core_instr_rsp_i
 );
 
 /*******************************************************/
@@ -83,9 +86,6 @@ module redemule_tile;
 
   redmule_tile_pkg::redmule_ctrl_req_t redmule_ctrl_req;  //TODO: figure out what to do with RedMulE control
   redmule_tile_pkg::redmule_ctrl_rsp_t redmule_ctrl_rsp;  //TODO: figure out what to do with RedMulE control
-
-  redmule_tile_pkg::core_instr_req_t   core_instr_req;    //TODO: figure out how to implement instruction cacheing
-  redmule_tile_pkg::core_instr_rsp_t   core_instr_rsp;    //TODO: figure out how to implement instruction cacheing
 
   redmule_tile_pkg::core_data_req_t    core_data_req;
   redmule_tile_pkg::core_data_rsp_t    core_data_rsp;
@@ -259,15 +259,15 @@ module redemule_tile;
     .mimpid_patch_i                                ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
 
     // Instruction memory interface
-    .instr_req_o         ( core_instr_req.req     ),
-    .instr_gnt_i         ( core_instr_rsp.gnt     ),
-    .instr_addr_o        ( core_instr_req.addr    ),
-    .instr_memtype_o     ( core_instr_req.memtype ),
-    .instr_prot_o        ( core_instr_req.prot    ),
-    .instr_dbg_o         ( core_instr_req.dbg     ),
-    .instr_rvalid_i      ( core_instr_rsp.rvalid  ),
-    .instr_rdata_i       ( core_instr_rsp.rdata   ),
-    .instr_err_i         ( core_instr_rsp.err     ),
+    .instr_req_o         ( core_instr_req_o.req     ),
+    .instr_gnt_i         ( core_instr_rsp_i.gnt     ),
+    .instr_addr_o        ( core_instr_req_o.addr    ),
+    .instr_memtype_o     ( core_instr_req_o.memtype ),
+    .instr_prot_o        ( core_instr_req_o.prot    ),
+    .instr_dbg_o         ( core_instr_req_o.dbg     ),
+    .instr_rvalid_i      ( core_instr_rsp_i.rvalid  ),
+    .instr_rdata_i       ( core_instr_rsp_i.rdata   ),
+    .instr_err_i         ( core_instr_rsp_i.err     ),
 
     // Data memory interface
     .data_req_o          ( core_data_req.req      ),

@@ -24,10 +24,10 @@ module redmule_tile_vip
   import redmule_tile_tb_pkg::*;
 #(
   // Timing
-  parameter time         ClkPeriodSys = 5ns,
-  parameter int unsigned RstCycles    = 5,
-  parameter real         TAppl        = 0.1,
-  parameter real         TTest        = 0.9
+  parameter time         CLK_PERIOD        = 5ns,
+  parameter int unsigned RST_CYCLES        = 5,
+  parameter real         T_APPL            = 0.1,
+  parameter real         T_TEST            = 0.9
 )(
   output logic                                     clk,
   output logic                                     rst_n,
@@ -36,7 +36,7 @@ module redmule_tile_vip
 
   output logic                                     scan_cg_en,
 
-  output logic [31:0]                              boot_addr,
+  output logic [31:0]                              boot_addr, //TODO: manage signal
   output logic [31:0]                              mtvec_addr,
   output logic [31:0]                              dm_halt_addr,
   output logic [31:0]                              dm_exception_addr,
@@ -46,7 +46,7 @@ module redmule_tile_vip
   input  logic [63:0]                              mcycle,
   output logic [63:0]                              time_var,
 
-  output logic [redmule_tile_pkg::N_IRQ-1:0]       irq,
+  output logic [redmule_tile_pkg::N_IRQ-1:0]       irq, //TODO: manage signal
 
   input  logic                                     fencei_flush_req,
   output logic                                     fencei_flush_ack,
@@ -58,12 +58,15 @@ module redmule_tile_vip
   input  logic                                     debug_pc_valid,
   input  logic                                     debug_pc,
 
-  output logic                                     fetch_enable,
+  output logic                                     fetch_enable,  //TODO: manage signal
   input  logic                                     core_sleep,
   output logic                                     wu_wfe,
 
   input  logic                                     busy,
-  input  logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt
+  input  logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt,
+
+  input  redmule_tile_pkg::core_instr_req_t        core_instr_req,
+  output redmule_tile_pkg::core_instr_rsp_t        core_instr_rsp
 );
 
 /*******************************************************/
@@ -78,7 +81,18 @@ module redmule_tile_vip
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
 
-//TODO
+  assign test_mode         = 1'b0;
+  assign tile_enable       = 1'b1;
+  assign scan_cg_en        = 1'b0;
+  assign mtvec_addr        = '0;
+  assign dm_halt_addr      = '0;
+  assign dm_exception_addr = '0;
+  assign mhartid           = '0;
+  assign mimpid_patch      = '0;
+  assign time_var          = '0;
+  assign fencei_flush_ack  = 1'b0;
+  assign debug_req         = 1'b0;
+  assign wu_wfe            = 1'b0;
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -86,7 +100,13 @@ module redmule_tile_vip
 /**             Clock and Reset Beginning             **/
 /*******************************************************/
 
-//TODO
+  clk_rst_gen #(
+    .ClkPeriod    ( CLK_PERIOD ),
+    .RstClkCycles ( RST_CYCLES )
+  ) i_clk_rst_sys (
+    .clk_o  ( clk   ),
+    .rst_no ( rst_n )
+  );
 
 /*******************************************************/
 /**                Clock and Reset End                **/
@@ -121,7 +141,37 @@ module redmule_tile_vip
 /**                    I$ Beginning                   **/
 /*******************************************************/
 
-//TODO
+  axi_sim_mem #(
+    .AddrWidth          ( redmule_tile_pkg::ADDR_W           ),
+    .DataWidth          ( redmule_tile_pkg::DATA_W           ),
+    .IdWidth            ( 1                                  ),
+    .UserWidth          ( 0                                  ),
+    .axi_req_t          ( redmule_tile_pkg::core_instr_req_t ),
+    .axi_rsp_t          ( redmule_tile_pkg::core_instr_rsp_t ),
+    .WarnUninitialized  ( 0                                  ),
+    .ClearErrOnAccess   ( 1                                  ),
+    .ApplDelay          ( CLK_PERIOD * T_APPL                ),
+    .AcqDelay           ( CLK_PERIOD * T_TEST                )
+  ) i_instr_cache (
+    .clk_i              ( clk            ),
+    .rst_ni             ( rst_n          ),
+    .axi_req_i          ( core_instr_req ),
+    .axi_rsp_o          ( core_instr_rsp ),
+    .mon_w_valid_o      (                ),
+    .mon_w_addr_o       (                ),
+    .mon_w_data_o       (                ),
+    .mon_w_id_o         (                ),
+    .mon_w_user_o       (                ),
+    .mon_w_beat_count_o (                ),
+    .mon_w_last_o       (                ),
+    .mon_r_valid_o      (                ),
+    .mon_r_addr_o       (                ),
+    .mon_r_data_o       (                ),
+    .mon_r_id_o         (                ),
+    .mon_r_user_o       (                ),
+    .mon_r_beat_count_o (                ),
+    .mon_r_last_o       (                )
+  );
 
 /*******************************************************/
 /**                       I$ End                      **/

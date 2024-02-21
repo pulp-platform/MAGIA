@@ -64,6 +64,9 @@ module redmule_tile_fixture;
   logic                                     busy;
   logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt;
 
+  redmule_tile_pkg::core_instr_req_t        core_instr_req;
+  redmule_tile_pkg::core_instr_rsp_t        core_instr_rsp;
+
 /*******************************************************/
 /**           Internal Signal Definitions End         **/
 /*******************************************************/
@@ -113,7 +116,10 @@ module redmule_tile_fixture;
     .wu_wfe_i            ( wu_wfe            ),
 
     .busy_o              ( busy              ),
-    .evt_o               ( evt               )
+    .evt_o               ( evt               ),
+    
+    .core_instr_req_o    ( core_instr_req    ),
+    .core_instr_rsp_i    ( core_instr_rsp    )
   );
 
 /*******************************************************/
