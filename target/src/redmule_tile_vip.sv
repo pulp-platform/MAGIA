@@ -24,10 +24,10 @@ module redmule_tile_vip
   import redmule_tile_tb_pkg::*;
 #(
   // Timing
-  parameter time         CLK_PERIOD        = 5ns,
-  parameter int unsigned RST_CYCLES        = 5,
-  parameter real         T_APPL            = 0.1,
-  parameter real         T_TEST            = 0.9
+  parameter time         CLK_PERIOD = 5ns,
+  parameter int unsigned RST_CYCLES = 5,
+  parameter real         T_APPL     = 0.1,
+  parameter real         T_TEST     = 0.9
 )(
   output logic                                     clk,
   output logic                                     rst_n,
@@ -114,7 +114,17 @@ module redmule_tile_vip
 /**              TB Subroutines Beginning             **/
 /*******************************************************/
 
-  task automatic preload(input string image);
+  // Preload instruction cache subroutine
+  task automatic inst_preload(input string image);
+    $readmemh(image, i_instr_cache.mem);
+  endtask: inst_preload
+
+  // Preload data subroutine
+  task automatic data_preload(input string image);
+    //TODO
+  endtask: data_preload
+
+  task automatic preload(input string image, input int unsigned entry);
     //TODO
   endtask: preload
 
@@ -127,7 +137,7 @@ module redmule_tile_vip
     //TODO
   endtask: init
 
-  task automatic elf_run(input string binary);
+  task automatic elf_run;
     //TODO
   endtask: elf_run
 

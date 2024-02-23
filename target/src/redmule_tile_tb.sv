@@ -21,27 +21,42 @@
 
 module redmule_tile_tb;
 
-  string     preload_elf;
-  string     boot_hex;
+  string     inst;
+  string     data;
+  string     mem;
   bit [31:0] exit_code;
 
   redmule_tile_fixture fixture();
 
   initial begin
+    
+  `ifdef SEP_INSTR_DATA_MEM
     // Fetch plusargs or use safe (fail-fast) defaults
-    if (!$value$plusargs("BINARY=%s", preload_elf)) preload_elf = "";
-    if (!$value$plusargs("IMAGE=%s",  boot_hex))    boot_hex    = "";
+    if (!$value$plusargs("INST=%s", inst)) inst = "";
+    if (!$value$plusargs("DATA=%s", data)) data = "";
 
-    // Set preload boot image if there is one
-    fixture.vip.preload(boot_hex);
+    // Preload data (in the L1SPM) and instructions (dummy I$)
+    fixture.vip.inst_preload(inst);
+    fixture.vip.data_preload(data);
+  `elsif SIN_INSTR_DATA_MEM
+    // Fetch plusargs or use safe (fail-fast) defaults
+    if (!$value$plusargs("MEM=%s" , mem))  mem  = "";
+
+    // Preload data and instructions in common memory
+    fixture.vip.preload(mem, entry);
+  `else
+    $fatal("UNRECOGNIZED MEMORY STRUCTURE");
+  `endif
 
     // Wait for reset
     fixture.vip.wait_for_reset();
 
     // Preload in idle mode
     fixture.vip.init();
-    fixture.vip.elf_run(preload_elf);
+    fixture.vip.elf_run();
     fixture.vip.wait_for_eoc(exit_code);
+
+    $display("SIMULATION FINISHED WITH EXIT CODE: %0d\n", exit_code);
 
     $finish;
   end
