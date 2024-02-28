@@ -21,9 +21,6 @@
 
 package redmule_tile_tb_pkg;
 
-  `define SIN_INSTR_DATA_MEM
-  // `define SEP_INSTR_DATA_MEM
-
   parameter int unsigned N_MEM_BANKS  = 16;   // Number of memory banks 
   parameter int unsigned N_WORDS_BANK = 1024; // Number of words per memory bank   
 

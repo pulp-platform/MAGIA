@@ -21,32 +21,24 @@
 
 module redmule_tile_tb;
 
-  string     inst;
-  string     data;
-  string     mem;
+  string       inst_hex;
+  string       data_hex;
+  int unsigned inst_entry;
+  int unsigned data_entry;
   bit [31:0] exit_code;
 
   redmule_tile_fixture fixture();
 
   initial begin
-    
-  `ifdef SEP_INSTR_DATA_MEM
     // Fetch plusargs or use safe (fail-fast) defaults
-    if (!$value$plusargs("INST=%s", inst)) inst = "";
-    if (!$value$plusargs("DATA=%s", data)) data = "";
+    if (!$value$plusargs("INST_HEX=%s",   inst_hex))   inst_hex = "";
+    if (!$value$plusargs("DATA_HEX=%s",   data_hex))   data_hex = "";
+    if (!$value$plusargs("INST_ENTRY=%s", inst_entry)) inst_entry = 0;
+    if (!$value$plusargs("DATA_ENTRY=%s", data_entry)) data_entry = 0;
 
-    // Preload data (in the L1SPM) and instructions (dummy I$)
-    fixture.vip.inst_preload(inst);
-    fixture.vip.data_preload(data);
-  `elsif SIN_INSTR_DATA_MEM
-    // Fetch plusargs or use safe (fail-fast) defaults
-    if (!$value$plusargs("MEM=%s" , mem))  mem  = "";
-
-    // Preload data and instructions in common memory
-    fixture.vip.preload(mem, entry);
-  `else
-    $fatal("UNRECOGNIZED MEMORY STRUCTURE");
-  `endif
+    // Preload data (dummy L2 MEM) and instructions (dummy I$)
+    fixture.vip.inst_preload(inst_hex, inst_entry);
+    fixture.vip.data_preload(data_hex, data_entry);
 
     // Wait for reset
     fixture.vip.wait_for_reset();

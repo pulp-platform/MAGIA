@@ -73,8 +73,11 @@ module redemule_tile;
   output logic                                     busy_o              ,  //TODO: Manage backpressure
   output logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt_o               ,  //TODO: Manage RedMulE event to Core IRQ mapping
 
-  output redmule_tile_pkg::core_instr_req_t        core_instr_req_o    ,
-  input  redmule_tile_pkg::core_instr_rsp_t        core_instr_rsp_i
+  output redmule_tile_pkg::core_instr_req_t        core_instr_req_o    ,  //TODO: Remove, this should be managed internally by the AXI xbar
+  input  redmule_tile_pkg::core_instr_rsp_t        core_instr_rsp_i    ,  //TODO: Remove, this should be managed internally by the AXI xbar
+
+  output redmule_tile_pkg::core_data_req_t         core_data_req_o     ,
+  input  redmule_tile_pkg::core_data_rsp_t         core_data_rsp_i     
 );
 
 /*******************************************************/
@@ -87,14 +90,14 @@ module redemule_tile;
   redmule_tile_pkg::redmule_ctrl_req_t redmule_ctrl_req;  //TODO: figure out what to do with RedMulE control
   redmule_tile_pkg::redmule_ctrl_rsp_t redmule_ctrl_rsp;  //TODO: figure out what to do with RedMulE control
 
-  redmule_tile_pkg::core_data_req_t    core_data_req;
-  redmule_tile_pkg::core_data_rsp_t    core_data_rsp;
+  redmule_tile_pkg::core_data_req_t    core_data_req   ;
+  redmule_tile_pkg::core_data_rsp_t    core_data_rsp   ;
   
-  logic                                hci_clear;         //TODO: figure out who should clear the hci
-  hci_package::hci_interconnect_ctrl_t hci_ctrl;          //TODO: figure out who should control the hci
+  logic                                hci_clear       ;  //TODO: figure out who should clear the hci
+  hci_package::hci_interconnect_ctrl_t hci_ctrl        ;  //TODO: figure out who should control the hci
 
-  logic                                sys_clk;
-  logic                                sys_clk_en;
+  logic                                sys_clk         ;
+  logic                                sys_clk_en      ;
 
 /*******************************************************/
 /**           Internal Signal Definitions End         **/
@@ -327,6 +330,14 @@ module redemule_tile;
 /*******************************************************/
 /**                      Core End                     **/
 /*******************************************************/
+/**      Core Data Demuxing (OBI XBAR) Beginning      **/
+/*******************************************************/
+
+//TODO
+
+/*******************************************************/
+/**         Core Data Demuxing (OBI XBAR) End         **/
+/*******************************************************/
 /**         Local Interconnect (HCI) Beginning        **/
 /*******************************************************/
 
@@ -396,13 +407,13 @@ module redemule_tile;
 /*******************************************************/
 /**                      iDMA End                     **/
 /*******************************************************/
-/**         Core - DMA IO Data XBAR Beginning         **/
+/**         Core - iDMA IO Data XBAR Beginning        **/
 /*******************************************************/
 
 //TODO
 
 /*******************************************************/
-/**            Core - DMA IO Data XBAR End            **/
+/**            Core - iDMA IO Data XBAR End           **/
 /*******************************************************/
 
 endmodule: redemule_tile

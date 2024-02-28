@@ -67,6 +67,9 @@ module redmule_tile_fixture;
   redmule_tile_pkg::core_instr_req_t        core_instr_req;
   redmule_tile_pkg::core_instr_rsp_t        core_instr_rsp;
 
+  redmule_tile_pkg::core_data_req_t         core_data_req;
+  redmule_tile_pkg::core_data_rsp_t         core_data_rsp;
+
 /*******************************************************/
 /**           Internal Signal Definitions End         **/
 /*******************************************************/
@@ -119,7 +122,10 @@ module redmule_tile_fixture;
     .evt_o               ( evt               ),
     
     .core_instr_req_o    ( core_instr_req    ),
-    .core_instr_rsp_i    ( core_instr_rsp    )
+    .core_instr_rsp_i    ( core_instr_rsp    ),
+
+    .core_data_req_o     ( core_data_req     ),
+    .core_data_rsp_i     ( core_data_rsp     ) 
   );
 
 /*******************************************************/

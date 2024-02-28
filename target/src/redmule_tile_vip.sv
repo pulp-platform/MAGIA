@@ -66,7 +66,10 @@ module redmule_tile_vip
   input  logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt,
 
   input  redmule_tile_pkg::core_instr_req_t        core_instr_req,
-  output redmule_tile_pkg::core_instr_rsp_t        core_instr_rsp
+  output redmule_tile_pkg::core_instr_rsp_t        core_instr_rsp,
+
+  input  redmule_tile_pkg::core_data_req_t         core_data_req,
+  output redmule_tile_pkg::core_data_rsp_t         core_data_rsp
 );
 
 /*******************************************************/
@@ -115,18 +118,14 @@ module redmule_tile_vip
 /*******************************************************/
 
   // Preload instruction cache subroutine
-  task automatic inst_preload(input string image);
-    $readmemh(image, i_instr_cache.mem);
+  task automatic inst_preload(input string image, input int unsigned entry);
+    $readmemh(image, i_instr_cache.mem, entry);
   endtask: inst_preload
 
   // Preload data subroutine
-  task automatic data_preload(input string image);
-    //TODO
+  task automatic data_preload(input string image, input int unsigned entry);
+    $readmemh(image, i_l2_mem.mem, entry);
   endtask: data_preload
-
-  task automatic preload(input string image, input int unsigned entry);
-    //TODO
-  endtask: preload
 
   task wait_for_reset;
     @(posedge rst_n);
@@ -185,6 +184,44 @@ module redmule_tile_vip
 
 /*******************************************************/
 /**                       I$ End                      **/
+/*******************************************************/
+/**                  L2 MEM Beginning                 **/
+/*******************************************************/
+
+  axi_sim_mem #(
+    .AddrWidth          ( redmule_tile_pkg::ADDR_W          ),
+    .DataWidth          ( redmule_tile_pkg::DATA_W          ),
+    .IdWidth            ( 1                                 ),
+    .UserWidth          ( 0                                 ),
+    .axi_req_t          ( redmule_tile_pkg::core_data_req_t ),
+    .axi_rsp_t          ( redmule_tile_pkg::core_data_rsp_t ),
+    .WarnUninitialized  ( 0                                 ),
+    .ClearErrOnAccess   ( 1                                 ),
+    .ApplDelay          ( CLK_PERIOD * T_APPL               ),
+    .AcqDelay           ( CLK_PERIOD * T_TEST               )
+  ) i_l2_mem (
+    .clk_i              ( clk           ),
+    .rst_ni             ( rst_n         ),
+    .axi_req_i          ( core_data_req ),
+    .axi_rsp_o          ( core_data_rsp ),
+    .mon_w_valid_o      (               ),
+    .mon_w_addr_o       (               ),
+    .mon_w_data_o       (               ),
+    .mon_w_id_o         (               ),
+    .mon_w_user_o       (               ),
+    .mon_w_beat_count_o (               ),
+    .mon_w_last_o       (               ),
+    .mon_r_valid_o      (               ),
+    .mon_r_addr_o       (               ),
+    .mon_r_data_o       (               ),
+    .mon_r_id_o         (               ),
+    .mon_r_user_o       (               ),
+    .mon_r_beat_count_o (               ),
+    .mon_r_last_o       (               )
+  );
+
+/*******************************************************/
+/**                     L2 MEM End                    **/
 /*******************************************************/
 
 endmodule: redmule_tile_vip
