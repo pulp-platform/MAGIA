@@ -76,31 +76,79 @@ module redemule_tile;
   output redmule_tile_pkg::core_instr_req_t        core_instr_req_o    ,  //TODO: Remove, this should be managed internally by the AXI xbar
   input  redmule_tile_pkg::core_instr_rsp_t        core_instr_rsp_i    ,  //TODO: Remove, this should be managed internally by the AXI xbar
 
-  output redmule_tile_pkg::core_data_req_t         core_data_req_o     ,
-  input  redmule_tile_pkg::core_data_rsp_t         core_data_rsp_i     
+  output redmule_tile_pkg::core_data_req_t         core_data_req_o     ,  //TODO: Convert to AXI and add to the AXI xbar
+  input  redmule_tile_pkg::core_data_rsp_t         core_data_rsp_i        //TODO: Convert to AXI and add to the AXI xbar
 );
 
 /*******************************************************/
 /**        Internal Signal Definitions Beginning      **/
 /*******************************************************/
 
-  redmule_tile_pkg::redmule_data_req_t redmule_data_req;
-  redmule_tile_pkg::redmule_data_rsp_t redmule_data_rsp;
+  redmule_tile_pkg::redmule_data_req_t                                 redmule_data_req       ;
+  redmule_tile_pkg::redmule_data_rsp_t                                 redmule_data_rsp       ;
 
-  redmule_tile_pkg::redmule_ctrl_req_t redmule_ctrl_req;  //TODO: figure out what to do with RedMulE control
-  redmule_tile_pkg::redmule_ctrl_rsp_t redmule_ctrl_rsp;  //TODO: figure out what to do with RedMulE control
+  redmule_tile_pkg::redmule_ctrl_req_t                                 redmule_ctrl_req       ;  //TODO: figure out what to do with RedMulE control
+  redmule_tile_pkg::redmule_ctrl_rsp_t                                 redmule_ctrl_rsp       ;  //TODO: figure out what to do with RedMulE control
 
-  redmule_tile_pkg::core_data_req_t    core_data_req   ;
-  redmule_tile_pkg::core_data_rsp_t    core_data_rsp   ;
+  redmule_tile_pkg::core_data_req_t                                    core_data_req          ;
+  redmule_tile_pkg::core_data_rsp_t                                    core_data_rsp          ;
+
+  redmule_tile_pkg::core_data_req_t[redmule_tile_pkg::N_SBR]           core_mem_data_req      ; // Index 0 -> L1SPM, Index 1 -> L2
+  redmule_tile_pkg::core_data_rsp_t[redmule_tile_pkg::N_SBR]           core_mem_data_rsp      ; // Index 0 -> L1SPM, Index 1 -> L2
+
+  redmule_tile_pkg::core_hci_data_req_t                                core_l1_data_req       ;
+  redmule_tile_pkg::core_hci_data_rsp_t                                core_l1_data_rsp       ;
   
-  logic                                hci_clear       ;  //TODO: figure out who should clear the hci
-  hci_package::hci_interconnect_ctrl_t hci_ctrl        ;  //TODO: figure out who should control the hci
+  logic                                                                hci_clear              ;  //TODO: figure out who should clear the hci
+  hci_package::hci_interconnect_ctrl_t                                 hci_ctrl               ;  //TODO: figure out who should control the hci
 
-  logic                                sys_clk         ;
-  logic                                sys_clk_en      ;
+  redmule_tile_pkg::obi_xbar_rule_t[redmule_tile_pkg::N_ADDR_RULE-1:0] obi_xbar_rule_t        ;
+  
+  logic[redmule_tile_pkg::N_SBR-1:0]                                   obi_xbar_en_default_idx;
+  logic[redmule_tile_pkg::N_SBR-1:0][redmule_tile_pkg::N_BIT_MGR-1:0]  obi_xbar_default_idx   ;
+
+  logic                                                                sys_clk                ;
+  logic                                                                sys_clk_en             ;
 
 /*******************************************************/
 /**           Internal Signal Definitions End         **/
+/*******************************************************/
+/**            Hardwired Signals Beginning            **/
+/*******************************************************/
+
+  assign obi_xbar_rule_t[0] = '{idx: 32'd0, start_addr: redmule_tile_pkg::L1_ADDR_START, end_addr: redmule_tile_pkg::L1_ADDR_END};
+  assign obi_xbar_rule_t[1] = '{idx: 32'd1, start_addr: redmule_tile_pkg::L2_ADDR_START, end_addr: redmule_tile_pkg::L2_ADDR_END};
+  
+  assign obi_xbar_en_default_idx = '0;
+  assign obi_xbar_default_idx    = '0;
+
+  assign core_data_req_o = core_mem_data_req[1];  //TODO: add the AXI XBAR and route data out through it
+  assign core_data_rsp_i = core_mem_data_rsp[1];  //TODO: add the AXI XBAR and route data out through it
+
+/*******************************************************/
+/**               Hardwired Signals End               **/
+/*******************************************************/
+/**             Type Conversions Beginning            **/
+/*******************************************************/
+
+  obi2hci_req #(
+    .obi_req_t ( redmule_tile_pkg::core_data_req_t     ),
+    .hci_req_t ( redmule_tile_pkg::core_hci_data_req_t )
+  ) i_core_data_obi2hci_req (
+    .obi_req_i ( core_mem_data_req[0] ),
+    .hci_req_o ( core_l1_data_req     )
+  );
+
+  hci2obi_rsp #(
+    .hci_rsp_t ( redmule_tile_pkg::core_hci_data_rsp_t ),
+    .obi_rsp_t ( redmule_tile_pkg::core_data_rsp_t     )
+  ) i_core_data_hci2obi_rsp (
+    .hci_rsp_i ( core_l1_data_rsp     ),
+    .obi_rsp_o ( core_mem_data_rsp[0] )
+  );
+
+/*******************************************************/
+/**                Type Conversions End               **/
 /*******************************************************/
 /**               Clock gating Beginning              **/
 /*******************************************************/
@@ -173,7 +221,7 @@ module redemule_tile;
 /**          Interface Assignments Beginning          **/
 /*******************************************************/
 
-  `HCI_ASSIGN_TO_INTF(hci_core_if, core_data_req, core_data_rsp)
+  `HCI_ASSIGN_TO_INTF(hci_core_if, core_l1_data_req, core_l1_data_rsp)
   `HCI_ASSIGN_TO_INTF(hci_redmule_if, redmule_data_req, redmule_data_rsp)
   //TODO: add DMA - HCI interfaceing 
   //`HCI_ASSIGN_TO_INTF(hci_dma_if, , )
@@ -213,7 +261,7 @@ module redemule_tile;
     .data_rsp_i          ( redmule_data_rsp         ),
 
     .ctrl_req_i          ( redmule_ctrl_req         ),
-    .ctrl_rsp_o          ( redmule_ctrl_rsp         ),
+    .ctrl_rsp_o          ( redmule_ctrl_rsp         )
   );
 
 /*******************************************************/
@@ -249,17 +297,17 @@ module redemule_tile;
     .CLIC_ID_WIDTH    ( redmule_tile_pkg::CLIC_ID_W       )     // Width of clic_irq_id_i and clic_irq_id_o
   ) i_cv32e40x_core (
     // Clock and reset
-    .clk_i               ( sys_clk                ),
-    .rst_ni              ( rstn_i                 ),
-    .scan_cg_en_i                                  ,
+    .clk_i               ( sys_clk                  ),
+    .rst_ni              ( rstn_i                   ),
+    .scan_cg_en_i                                    ,
 
     // Configuration
-    .boot_addr_i                                   ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .mtvec_addr_i                                  ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .dm_halt_addr_i                                ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .dm_exception_addr_i                           ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .mhartid_i                                     ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .mimpid_patch_i                                ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .boot_addr_i                                     ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .mtvec_addr_i                                    ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .dm_halt_addr_i                                  ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .dm_exception_addr_i                             ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .mhartid_i                                       ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .mimpid_patch_i                                  ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
 
     // Instruction memory interface
     .instr_req_o         ( core_instr_req_o.req     ),
@@ -273,57 +321,57 @@ module redemule_tile;
     .instr_err_i         ( core_instr_rsp_i.err     ),
 
     // Data memory interface
-    .data_req_o          ( core_data_req.req      ),
-    .data_gnt_i          ( core_data_rsp.gnt      ),
-    .data_addr_o         ( core_data_req.addr     ),
-    .data_atop_o         ( core_data_req.atop     ),
-    .data_be_o           ( core_data_req.be       ),
-    .data_memtype_o      ( core_data_req.memtype  ),
-    .data_prot_o         ( core_data_req.prot     ),
-    .data_dbg_o          ( core_data_req.dbg      ),
-    .data_wdata_o        ( core_data_req.wdata    ),
-    .data_we_o           ( core_data_req.we       ),
-    .data_rvalid_i       ( core_data_rsp.rvalid   ),
-    .data_rdata_i        ( core_data_rsp.rdata    ),
-    .data_err_i          ( core_data_rsp.err      ),
-    .data_exokay_i       ( core_data_rsp.exokay   ),
+    .data_req_o          ( core_data_req.req        ),
+    .data_gnt_i          ( core_data_rsp.gnt        ),
+    .data_addr_o         ( core_data_req.addr       ),
+    .data_atop_o         ( core_data_req.atop       ),
+    .data_be_o           ( core_data_req.be         ),
+    .data_memtype_o      ( core_data_req.memtype    ),
+    .data_prot_o         ( core_data_req.prot       ),
+    .data_dbg_o          ( core_data_req.dbg        ),
+    .data_wdata_o        ( core_data_req.wdata      ),
+    .data_we_o           ( core_data_req.we         ),
+    .data_rvalid_i       ( core_data_rsp.rvalid     ),
+    .data_rdata_i        ( core_data_rsp.rdata      ),
+    .data_err_i          ( core_data_rsp.err        ),
+    .data_exokay_i       ( core_data_rsp.exokay     ),
 
     // Cycle, Time
-    .mcycle_o                                      ,  //TODO: do we need these or can we hardwire them?
-    .time_i                                        ,  //TODO: do we need these or can we hardwire them?
+    .mcycle_o                                        ,  //TODO: do we need these or can we hardwire them?
+    .time_i                                          ,  //TODO: do we need these or can we hardwire them?
 
     // eXtension interface
-    .xif_compressed_if   ( xif_if.cpu_compressed  ),
-    .xif_issue_if        ( xif_if.cpu_issue       ),
-    .xif_commit_if       ( xif_if.cpu_commit      ),
-    .xif_mem_if          ( xif_if.cpu_mem         ),
-    .xif_mem_result_if   ( xif_if.cpu_mem_result  ),
-    .xif_result_if       ( xif_if.cpu_result      ),
+    .xif_compressed_if   ( xif_if.cpu_compressed    ),
+    .xif_issue_if        ( xif_if.cpu_issue         ),
+    .xif_commit_if       ( xif_if.cpu_commit        ),
+    .xif_mem_if          ( xif_if.cpu_mem           ),
+    .xif_mem_result_if   ( xif_if.cpu_mem_result    ),
+    .xif_result_if       ( xif_if.cpu_result        ),
 
      // Interrupt interface
-    .irq_i                                         ,  //TODO: manage IRQs - look at redmule_complex for an idea
+    .irq_i                                           ,  //TODO: manage IRQs - look at redmule_complex for an idea
 
-    .clic_irq_i          ( '0                     ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
-    .clic_irq_id_i       ( '0                     ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
-    .clic_irq_level_i    ( '0                     ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
-    .clic_irq_priv_i     ( '0                     ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
-    .clic_irq_shv_i      ( '0                     ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
+    .clic_irq_i          ( '0                       ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
+    .clic_irq_id_i       ( '0                       ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
+    .clic_irq_level_i    ( '0                       ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
+    .clic_irq_priv_i     ( '0                       ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
+    .clic_irq_shv_i      ( '0                       ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
 
     // Fencei flush handshake
-    .fencei_flush_req_o                            ,  //TODO: manage Fence.i flushing in the future or hardwire?  
-    .fencei_flush_ack_i                            ,  //TODO: manage Fence.i flushing in the future or hardwire?
+    .fencei_flush_req_o                              ,  //TODO: manage Fence.i flushing in the future or hardwire?  
+    .fencei_flush_ack_i                              ,  //TODO: manage Fence.i flushing in the future or hardwire?
 
     // Debug interface
-    .debug_req_i                                   ,  //TODO: do we need these or can we hardwire them?
-    .debug_havereset_o                             ,  //TODO: do we need these or can we hardwire them?
-    .debug_running_o                               ,  //TODO: do we need these or can we hardwire them?
-    .debug_halted_o                                ,  //TODO: do we need these or can we hardwire them?
-    .debug_pc_valid_o                              ,  //TODO: do we need these or can we hardwire them?
-    .debug_pc_o                                    ,  //TODO: do we need these or can we hardwire them?
+    .debug_req_i                                     ,  //TODO: do we need these or can we hardwire them?
+    .debug_havereset_o                               ,  //TODO: do we need these or can we hardwire them?
+    .debug_running_o                                 ,  //TODO: do we need these or can we hardwire them?
+    .debug_halted_o                                  ,  //TODO: do we need these or can we hardwire them?
+    .debug_pc_valid_o                                ,  //TODO: do we need these or can we hardwire them?
+    .debug_pc_o                                      ,  //TODO: do we need these or can we hardwire them?
 
     // Special control signals
-    .fetch_enable_i                                ,
-    .core_sleep_o                                  ,
+    .fetch_enable_i                                  ,
+    .core_sleep_o                                    ,
     .wu_wfe_i            
   );
 
@@ -333,7 +381,37 @@ module redemule_tile;
 /**      Core Data Demuxing (OBI XBAR) Beginning      **/
 /*******************************************************/
 
-//TODO
+  obi_xbar #(
+    .SbrPortObiCfg      (                                   ),
+    .MgrPortObiCfg      (                                   ),
+    .sbr_port_obi_req_t ( redmule_tile_pkg::core_data_req_t ),
+    .sbr_port_a_chan_t  ( redmule_tile_pkg::obi_a_chan_t    ),
+    .sbr_port_obi_rsp_t ( redmule_tile_pkg::core_data_rsp_t ),
+    .sbr_port_r_chan_t  ( redmule_tile_pkg::obi_r_cnah_t    ),
+    .mgr_port_obi_req_t (                                   ),
+    .mgr_port_obi_rsp_t (                                   ),
+    .NumSbrPorts        ( redmule_tile_pkg::N_SBR           ),
+    .NumMgrPorts        ( redmule_tile_pkg::N_MGR           ),
+    .NumMaxTrans        ( redmule_tile_pkg::N_MAX_TRAN      ),
+    .NumAddrRules       ( redmule_tile_pkg::N_ADDR_RULE     ),
+    .addr_map_rule_t    ( redmule_tile_pkg::obi_xbar_rule_t ),
+    .UseIdForRouting    (                                   ),
+    .Connectivity       (                                   )
+  ) i_obi_xbar (
+    .clk_i            ( sys_clk                 ),
+    .rst_ni           ( rstn_i                  ),
+    .testmode_i       ( test_mode_i             ),
+
+    .sbr_ports_req_i  ( core_mem_data_req       ),
+    .sbr_ports_rsp_o  ( core_mem_data_rsp       ),
+
+    .mgr_ports_req_o  ( core_data_req           ),
+    .mgr_ports_rsp_i  ( core_data_rsp           ),
+
+    .addr_map_i       ( obi_xbar_rule_t         ),
+    .en_default_idx_i ( obi_xbar_en_default_idx ),
+    .default_idx_i    ( obi_xbar_default_idx    )
+  );
 
 /*******************************************************/
 /**         Core Data Demuxing (OBI XBAR) End         **/
