@@ -41,9 +41,9 @@ package redmule_tile_pkg;
 
   // Address map
   localparam logic [ADDR_W-1: 0] L1_ADDR_START = 32'h1000_0000;
-  localparam logic [ADDR_W-1: 0] L1_ADDR_END   = 32'h1000_1000;
+  localparam logic [ADDR_W-1: 0] L1_ADDR_END   = 32'h2000_0000;
   localparam logic [ADDR_W-1: 0] L2_ADDR_START = 32'h2000_0000;
-  localparam logic [ADDR_W-1: 0] L2_ADDR_END   = 32'h2000_1000;
+  localparam logic [ADDR_W-1: 0] L2_ADDR_END   = 32'h3000_0000;
 
   
   // Parameters used by the HCI
