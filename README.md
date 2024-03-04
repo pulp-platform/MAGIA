@@ -6,27 +6,27 @@ RedMulE Mesh is developed as part of the [PULP](https://pulp-platform.org/) proj
 
 
 ## Getting Started
-**1)**Setup the environment (`redmule-mesh` folder):
+**1)** Setup the environment (`redmule-mesh` folder):
 ```
 source setup_env.sh
 ```
-**2)**Download Bender (`redmule-mesh` folder):
+**2)** Download Bender (`redmule-mesh` folder):
 ```
 make bender
 ```
-**3)**Clone the dependencies and generate the compilation script (`redmule-mesh` folder):
+**3)** Clone the dependencies and generate the compilation script (`redmule-mesh` folder):
 ```
 make update-ips
 ```
-**4)**Build the hardware (`redmule-mesh` folder):
+**4)** Build the hardware (`redmule-mesh` folder):
 ```
 make build-hw
 ```
-**5)**Comile the test code (`redmule-mesh` folder):
+**5)** Comile the test code (`redmule-mesh` folder):
 ```
 make all
 ```
-**6)**Run test (`redmule-mesh` folder):
+**6)** Run test (`redmule-mesh` folder):
 ```
 make run (gui=1 to open the Questasim Graphic User Interface)
 ```
