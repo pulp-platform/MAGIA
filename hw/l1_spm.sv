@@ -24,10 +24,10 @@ module l1_spm #(
   parameter int unsigned N_WORDS   = 256   ,  // Number of words in a bank
   parameter int unsigned DATA_W    = 32    ,  // Data width
   parameter int unsigned ID_W      = 1     ,  // ID width
-  parameter              SIM_INIT  = "ones",  // Simulation initialization value
+  parameter              SIM_INIT  = "ones"   // Simulation initialization value
 ) (
-  input logic        clk_i,
-  input logic        rstn_i,
+  input logic        clk_i                 ,
+  input logic        rstn_i                ,
   hci_mem_intf.slave tcdm_slave[N_BANK-1:0]   // Memory interface
 );
 

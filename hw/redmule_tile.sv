@@ -19,7 +19,7 @@
  * RedMulE Tile
  */
 
-module redemule_tile;
+module redemule_tile
   import redmule_tile_pkg::*;
   import hci_package::*;
   import cv32e40x_pkg::*;
@@ -32,7 +32,7 @@ module redemule_tile;
   parameter cv32e40x_pkg::rv32_e  CORE_ISA      = cv32e40x_pkg::RV32I  , // RV32I (default) 32 registers in the RF - RV32E 16 registers in the RF
   parameter cv32e40x_pkg::a_ext_e CORE_A        = cv32e40x_pkg::A_NONE , // Atomic Istruction (A) support (dafault: not enabled)
   parameter cv32e40x_pkg::b_ext_e CORE_B        = cv32e40x_pkg::B_NONE , // Bit Manipulation support (dafault: not enabled)
-  parameter cv32e40x_pkg::m_ext_e CORE_M        = cv32e40x_pkg::ZMMUL  , // Multiply and Divide support (dafault: only Multiply upported)
+  parameter cv32e40x_pkg::m_ext_e CORE_M        = cv32e40x_pkg::ZMMUL    // Multiply and Divide support (dafault: only Multiply upported)
 )(
   input  logic                                     clk_i               ,
   input  logic                                     rstn_i              ,
@@ -153,7 +153,7 @@ module redemule_tile;
 /**               Clock gating Beginning              **/
 /*******************************************************/
 
-  always_ff @ (posedge clk_i, negedge rstn_i) begin: sys_clk_en
+  always_ff @ (posedge clk_i, negedge rstn_i) begin: sys_clk_en_ff
     if (~rstn_i) sys_clk_en <= 1'b0;
     else         sys_clk_en <= tile_enable_i;
   end

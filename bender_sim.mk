@@ -21,3 +21,5 @@ ifeq ($(REDMULE_COMPLEX),1)
 else
 	sim_targs += -t redmule_test_hwpe
 endif
+
+sim_targs += -t redmule_mesh_dv

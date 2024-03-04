@@ -88,13 +88,13 @@ package redmule_tile_pkg;
   
   // Parameters used by OBI
   parameter int unsigned AUSER_WIDTH           = 0;                               // Width of the auser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsinged WUSER_WIDTH           = 0;                               // Width of the wuser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsinged ACHK_WIDTH            = 0;                               // Width of the achk  signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsinged RUSER_WIDTH           = 0;                               // Width of the ruser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsinged RCHK_WIDTH            = 0;                               // Width of the rchk  signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned WUSER_WIDTH           = 0;                               // Width of the wuser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned ACHK_WIDTH            = 0;                               // Width of the achk  signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned RUSER_WIDTH           = 0;                               // Width of the ruser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned RCHK_WIDTH            = 0;                               // Width of the rchk  signal (see OBI documentation): not used by the CV32E40X
   parameter int unsigned AID_WIDTH             = 0;                               // Width of the aid   signal (address channel identifier, see OBI documentation)
   parameter int unsigned RID_WIDTH             = 1;                               // Width of the rid   signal (response channel identifier, see OBI documentation)
-  parameter int unsinged MID_WIDTH             = 0;                               // Width of the mid   signal (manager identifier, see OBI documentation)
+  parameter int unsigned MID_WIDTH             = 0;                               // Width of the mid   signal (manager identifier, see OBI documentation)
   parameter int unsigned N_SBR                 = 2;                               // Number of slaves (HCI, AXI XBAR)
   parameter int unsigned N_MGR                 = 1;                               // Number of masters (Core)
   parameter int unsigned N_MAX_TRAN            = 1;                               // Number of maximum outstanding transactions
