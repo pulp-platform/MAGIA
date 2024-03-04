@@ -16,10 +16,12 @@
 sim_targs += -t rtl
 sim_targs += -t test
 
-ifeq ($(REDMULE_COMPLEX),1)
-	sim_targs += -t redmule_test_complex
-else
-	sim_targs += -t redmule_test_hwpe
-endif
+#ifeq ($(REDMULE_COMPLEX),1)
+#	sim_targs += -t redmule_test_complex
+#else
+#	sim_targs += -t redmule_test_hwpe
+#endif
+
+sim_targs += -t redmule_tile_test
 
 sim_targs += -t redmule_mesh_dv

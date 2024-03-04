@@ -42,4 +42,7 @@ sources:
 
     - target: redmule_mesh_dv
       files:
-        - target/src
+        - target/src/redmule_tile_tb_pkg.sv
+        - target/src/redmule_tile_vip.sv
+        - target/src/redmule_tile_fixture.sv
+        - target/src/redmule_tile_tb.sv
