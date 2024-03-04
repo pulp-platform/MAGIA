@@ -44,7 +44,6 @@ package redmule_tile_pkg;
   localparam logic [ADDR_W-1: 0] L1_ADDR_END   = 32'h2000_0000;
   localparam logic [ADDR_W-1: 0] L2_ADDR_START = 32'h2000_0000;
   localparam logic [ADDR_W-1: 0] L2_ADDR_END   = 32'h3000_0000;
-
   
   // Parameters used by the HCI
   parameter int unsigned N_HWPE                = 1;                               // Number of HWPEs attached to the port
@@ -85,6 +84,7 @@ package redmule_tile_pkg;
 
   // Parameters used by RedMulE
   parameter int unsigned REDMULE_ID_W          = IW + ID_W_OFFSET;                // RedMulE ID Width
+  parameter int unsigned REDMULE_UW            = 0;                               // RedMulE User Width
   
   // Parameters used by OBI
   parameter int unsigned AUSER_WIDTH           = 0;                               // Width of the auser signal (see OBI documentation): not used by the CV32E40X

@@ -19,6 +19,8 @@
  * RedMulE Tile
  */
 
+`include "hci/assign.svh"
+
 module redemule_tile
   import redmule_tile_pkg::*;
   import hci_package::*;
@@ -321,20 +323,20 @@ module redemule_tile
     .instr_err_i         ( core_instr_rsp_i.err     ),
 
     // Data memory interface
-    .data_req_o          ( core_data_req.req        ),
-    .data_gnt_i          ( core_data_rsp.gnt        ),
-    .data_addr_o         ( core_data_req.addr       ),
-    .data_atop_o         ( core_data_req.atop       ),
-    .data_be_o           ( core_data_req.be         ),
-    .data_memtype_o      ( core_data_req.memtype    ),
-    .data_prot_o         ( core_data_req.prot       ),
-    .data_dbg_o          ( core_data_req.dbg        ),
-    .data_wdata_o        ( core_data_req.wdata      ),
-    .data_we_o           ( core_data_req.we         ),
-    .data_rvalid_i       ( core_data_rsp.rvalid     ),
-    .data_rdata_i        ( core_data_rsp.rdata      ),
-    .data_err_i          ( core_data_rsp.err        ),
-    .data_exokay_i       ( core_data_rsp.exokay     ),
+    .data_req_o          ( core_data_req.req                  ),
+    .data_gnt_i          ( core_data_rsp.gnt                  ),
+    .data_addr_o         ( core_data_req.a.addr               ),
+    .data_atop_o         ( core_data_req.a.a_optional.atop    ),
+    .data_be_o           ( core_data_req.a.be                 ),
+    .data_memtype_o      ( core_data_req.a.a_optional.memtype ),
+    .data_prot_o         ( core_data_req.a.a_optional.prot    ),
+    .data_dbg_o          ( core_data_req.a.a_optional.dbg     ),
+    .data_wdata_o        ( core_data_req.a.wdata              ),
+    .data_we_o           ( core_data_req.a.we                 ),
+    .data_rvalid_i       ( core_data_rsp.rvalid               ),
+    .data_rdata_i        ( core_data_rsp.r.rdata              ),
+    .data_err_i          ( core_data_rsp.r.err                ),
+    .data_exokay_i       ( core_data_rsp.r.r_optional.exokay  ),
 
     // Cycle, Time
     .mcycle_o                                        ,  //TODO: do we need these or can we hardwire them?

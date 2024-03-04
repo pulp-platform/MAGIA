@@ -143,15 +143,19 @@ bender_targs += -t rtl
 bender_targs += -t test
 bender_targs += -t cv32e40p_exclude_tracer
 
-ifeq ($(REDMULE_COMPLEX),1)
-	tb := redmule_complex_tb
-	WAVES := $(mkfile_path)/wave_complex_xif.do
-	bender_targs += -t redmule_complex
-else
-	tb := redmule_tb
-	WAVES := $(mkfile_path)/wave.do
-	bender_targs += -t redmule_hwpe
-endif
+#ifeq ($(REDMULE_COMPLEX),1)
+#	tb := redmule_complex_tb
+#	WAVES := $(mkfile_path)/wave_complex_xif.do
+#	bender_targs += -t redmule_complex
+#else
+#	tb := redmule_tb
+#	WAVES := $(mkfile_path)/wave.do
+#	bender_targs += -t redmule_hwpe
+#endif
+
+tb           := redmule_tile_tb
+WAVES        := $(mkfile_path)/wave.do
+bender_targs += -t redmule_tile
 
 update-ips:
 	$(BENDER) update
