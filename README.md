@@ -16,11 +16,11 @@ make bender
 ```
 **3)** Clone the dependencies and generate the compilation script (`redmule-mesh` folder):
 ```
-make update-ips
+make update-ips > update-ips.log
 ```
 **4)** Build the hardware (`redmule-mesh` folder):
 ```
-make build-hw
+make build-hw > build-hw.log
 ```
 **5)** Comile the test code (`redmule-mesh` folder):
 ```
