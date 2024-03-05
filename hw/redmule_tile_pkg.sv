@@ -68,7 +68,7 @@ package redmule_tile_pkg;
   parameter int unsigned OWH                   = AWH;                             // Offset Width for HWPE Interconnect
   parameter int unsigned UWH                   = 0;                               // User Width for HWPE Interconnect
   parameter int unsigned SEL_LIC               = 0;                               // Log interconnect type selector
-  localparam int unsigned STRB_W               = DW_LIC/BW_LIC;                   // Strobe Width for HWPE Interconnect
+  localparam int unsigned SW_LIC               = DW_LIC/BW_LIC;                   // Strobe Width for HWPE Interconnect
   localparam int unsigned WORDS_DATA           = DW_LIC/WWH;                      // Number of words per data
 
   // Parameters used by the core
@@ -86,6 +86,7 @@ package redmule_tile_pkg;
   parameter int unsigned CLIC_ID_W             = 0;                               // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
 
   // Parameters used by RedMulE
+  parameter int unsigned REDMULE_DW            = 544;                             // RedMulE Data Width
   parameter int unsigned REDMULE_ID_W          = IW + ID_W_OFFSET;                // RedMulE ID Width
   parameter int unsigned REDMULE_UW            = 0;                               // RedMulE User Width
   
@@ -109,21 +110,6 @@ package redmule_tile_pkg;
   parameter int unsigned AXI_INSTR_ID_W        = 0;                               // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
   parameter int unsigned AXI_DATA_U_W          = 0;                               // Width of the AXI Data User
   parameter int unsigned AXI_INSTR_U_W         = 0;                               // Width of the AXI Instruction User
-  
-  typedef struct packed {
-    logic               req;
-    logic [INSTR_W-1:0] addr;
-    logic [1        :0] memtype;
-    logic [2        :0] prot;
-    logic               dbg;
-  } core_instr_req_t;
-
-  typedef struct packed {
-    logic               gnt;
-    logic               rvalid;
-    logic [INSTR_W-1:0] rdata;
-    logic               err;
-  } core_instr_rsp_t;
 
   typedef struct packed {
     int unsigned       idx;
@@ -131,23 +117,45 @@ package redmule_tile_pkg;
     logic [ADDR_W-1:0] end_addr;
   } obi_xbar_rule_t;
 
-  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic [AWC-1:0], logic [DW_LIC-1:0], logic [STRB_W-1:0], logic [IW-1:0])
+  typedef struct packed {
+    logic               req;
+    logic [INSTR_W-1:0] addr;
+    logic [1        :0] memtype;
+    logic [2        :0] prot;
+    logic               dbg;
+  } instr_req_t;
+
+  typedef struct packed {
+    logic               gnt;
+    logic               rvalid;
+    logic [INSTR_W-1:0] rdata;
+    logic               err;
+  } instr_rsp_t;
+
+  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic [AWC-1:0], logic [DW_LIC-1:0], logic [SW_LIC-1:0], logic [IW-1:0])
   `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic [DW_LIC-1:0], logic [IW-1:0])
   
-  `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic [AWM-1:0], logic [DW_LIC-1:0], logic [STRB_W-1:0], logic signed [WORDS_DATA-1:0][AWH:0], logic [UWH-1:0])
+  `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic [AWM-1:0], logic [DW_LIC-1:0], logic [SW_LIC-1:0], logic signed [WORDS_DATA-1:0][AWH:0], logic [UWH-1:0])
   `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic [DW_LIC-1:0], logic [UWH-1:0])
 
-  `OBI_TYPEDEF_ALL_A_OPTIONAL(obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
-  `OBI_TYPEDEF_ALL_R_OPTIONAL(obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
-  `OBI_TYPEDEF_A_CHAN_T(obi_a_chan_t, ADDR_W, DATA_W, AID_WIDTH, obi_a_optional_t)
-  `OBI_TYPEDEF_R_CHAN_T(obi_r_cnah_t, DATA_W, RID_WIDTH, obi_r_optional_t)
-  `OBI_TYPEDEF_DEFAULT_REQ_T(core_data_req_t, obi_a_chan_t)
-  `OBI_TYPEDEF_RSP_T(core_data_rsp_t, obi_r_cnah_t)
+  `OBI_TYPEDEF_ALL_A_OPTIONAL(core_data_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
+  `OBI_TYPEDEF_ALL_R_OPTIONAL(core_data_obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
+  `OBI_TYPEDEF_A_CHAN_T(core_data_obi_a_chan_t, ADDR_W, DATA_W, AID_WIDTH, core_data_obi_a_optional_t)
+  `OBI_TYPEDEF_R_CHAN_T(core_data_obi_r_chan_t, DATA_W, RID_WIDTH, core_data_obi_r_optional_t)
+  `OBI_TYPEDEF_DEFAULT_REQ_T(core_data_req_t, core_data_obi_a_chan_t)
+  `OBI_TYPEDEF_RSP_T(core_data_rsp_t, core_data_obi_r_chan_t)
 
-  `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic [AWM-1:0], logic [DW_LIC-1:0], logic [STRB_W-1:0], logic signed [WORDS_DATA-1:0][AWH:0], logic [UWH-1:0])
+  `OBI_TYPEDEF_ALL_A_OPTIONAL(core_instr_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
+  `OBI_TYPEDEF_ALL_R_OPTIONAL(core_instr_obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
+  `OBI_TYPEDEF_A_CHAN_T(core_instr_obi_a_chan_t, ADDR_W, DATA_W, 0, core_instr_obi_a_optional_t)  // Direct Core - I$ connection: ID = 0
+  `OBI_TYPEDEF_R_CHAN_T(core_instr_obi_r_chan_t, DATA_W, 0, core_instr_obi_r_optional_t)          // Direct Core - I$ connection: ID = 0
+  `OBI_TYPEDEF_DEFAULT_REQ_T(core_instr_req_t, core_instr_obi_a_chan_t)
+  `OBI_TYPEDEF_RSP_T(core_instr_rsp_t, core_instr_obi_r_chan_t)
+
+  `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic [AWM-1:0], logic [DW_LIC-1:0], logic [SW_LIC-1:0], logic signed [WORDS_DATA-1:0][AWH:0], logic [UWH-1:0])
   `HCI_TYPEDEF_RSP_T(core_hci_data_rsp_t, logic [DW_LIC-1:0], logic [UWH-1:0])
 
-  `AXI_TYPEDEF_ALL(core_axi_data, logic[ADDR_W-1:0], logic[AXI_DATA_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_DATA_U_W-1:0])
-  `AXI_TYPEDEF_ALL(core_axi_instr, logic[ADDR_W-1:0], logic[AXI_INSTR_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_INSTR_U_W-1:0])
+  `AXI_TYPEDEF_ALL_CT(core_axi_data, core_axi_data_req_t, core_axi_data_rsp_t, logic[ADDR_W-1:0], logic[AXI_DATA_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_DATA_U_W-1:0])
+  `AXI_TYPEDEF_ALL_CT(core_axi_instr, core_axi_instr_req_t, core_axi_instr_rsp_t, logic[ADDR_W-1:0], logic[AXI_INSTR_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_INSTR_U_W-1:0])
 
 endpackage: redmule_tile_pkg
