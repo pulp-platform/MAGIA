@@ -39,6 +39,7 @@ sources:
   # RedMulE Mesh
     - hw/redmule_tile_pkg.sv
     - hw/l1_spm.sv
+    - hw/instr2obi.sv
     - hw/obi2hci.sv
     - hw/redmule_tile.sv
 
