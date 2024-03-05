@@ -25,6 +25,7 @@ module redemule_tile
   import redmule_tile_pkg::*;
   import hci_package::*;
   import cv32e40x_pkg::*;
+  import obi_pkg::*;
 #(
   // Parameters used by hci_interconnect and l1_spm
   parameter int unsigned          N_MEM_BANKS   = 16                   , // Number of memory banks 
@@ -40,7 +41,12 @@ module redemule_tile
   input  logic                                     rstn_i              ,
   input  logic                                     test_mode_i         ,
   input  logic                                     tile_enable_i       ,
-  //TODO: add tile data in/out channel(s)
+
+  output redmule_tile_pkg::core_axi_data_req_t     core_data_req_o     ,  //TODO: Go through the AXI xbar, not directly from the Core to out
+  input  redmule_tile_pkg::core_axi_data_rsp_t     core_data_rsp_i     ,  //TODO: Go through the AXI xbar, not directly from the Core to out
+  
+  output redmule_tile_pkg::core_axi_instr_req_t    core_instr_req_o    ,  //TODO: REMOVE, this should be managed internally by the AXI xbar
+  input  redmule_tile_pkg::core_axi_instr_rsp_t    core_instr_rsp_i    ,  //TODO: REMOVE, this should be managed internally by the AXI xbar
 
   // Signals used by the core
   input  logic                                     scan_cg_en_i        ,
@@ -73,13 +79,7 @@ module redemule_tile
 
   // Signals used by RedMulE
   output logic                                     busy_o              ,  //TODO: Manage backpressure
-  output logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt_o               ,  //TODO: Manage RedMulE event to Core IRQ mapping
-
-  output redmule_tile_pkg::core_instr_req_t        core_instr_req_o    ,  //TODO: Remove, this should be managed internally by the AXI xbar
-  input  redmule_tile_pkg::core_instr_rsp_t        core_instr_rsp_i    ,  //TODO: Remove, this should be managed internally by the AXI xbar
-
-  output redmule_tile_pkg::core_data_req_t         core_data_req_o     ,  //TODO: Convert to AXI and add to the AXI xbar
-  input  redmule_tile_pkg::core_data_rsp_t         core_data_rsp_i        //TODO: Convert to AXI and add to the AXI xbar
+  output logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt_o                  //TODO: Manage RedMulE event to Core IRQ mapping
 );
 
 /*******************************************************/
@@ -100,6 +100,15 @@ module redemule_tile
 
   redmule_tile_pkg::core_hci_data_req_t                                core_l1_data_req       ;
   redmule_tile_pkg::core_hci_data_rsp_t                                core_l1_data_rsp       ;
+
+  redmule_tile_pkg::core_axi_data_req_t                                core_l2_data_req       ;
+  redmule_tile_pkg::core_axi_data_rsp_t                                core_l2_data_rsp       ;
+
+  redmule_tile_pkg::core_instr_req_t                                   core_instr_req         ;
+  redmule_tile_pkg::core_instr_rsp_t                                   core_instr_rsp         ;
+
+  redmule_tile_pkg::core_axi_instr_req_t                               core_cache_instr_req   ;
+  redmule_tile_pkg::core_axi_instr_rsp_t                               core_cache_instr_rsp   ;
   
   logic                                                                hci_clear              ;  //TODO: figure out who should clear the hci
   hci_package::hci_interconnect_ctrl_t                                 hci_ctrl               ;  //TODO: figure out who should control the hci
@@ -108,6 +117,12 @@ module redemule_tile
   
   logic[redmule_tile_pkg::N_SBR-1:0]                                   obi_xbar_en_default_idx;
   logic[redmule_tile_pkg::N_SBR-1:0][redmule_tile_pkg::N_BIT_MGR-1:0]  obi_xbar_default_idx   ;
+
+  logic[redmule_tile_pkg::AXI_DATA_U_W-1:0]                            axi_data_user          ;
+  logic[obi_pkg::ObiDefaultConfig.OptionalCfg.RUserWidth-1:0]          obi_rsp_data_user      ;
+
+  logic[redmule_tile_pkg::AXI_INSTR_U_W-1:0]                           axi_instr_user         ;
+  logic[obi_pkg::ObiDefaultConfig.OptionalCfg.RUserWidth-1:0]          obi_rsp_instr_user     ;
 
   logic                                                                sys_clk                ;
   logic                                                                sys_clk_en             ;
@@ -124,8 +139,17 @@ module redemule_tile
   assign obi_xbar_en_default_idx = '0;
   assign obi_xbar_default_idx    = '0;
 
-  assign core_data_req_o = core_mem_data_req[1];  //TODO: add the AXI XBAR and route data out through it
-  assign core_data_rsp_i = core_mem_data_rsp[1];  //TODO: add the AXI XBAR and route data out through it
+  assign core_data_req_o = core_l2_data_req;  //TODO: add the AXI XBAR and route data out through it
+  assign core_data_rsp_i = core_l2_data_rsp;  //TODO: add the AXI XBAR and route data out through it
+
+  assign core_instr_req_o = core_cache_instr_req; //TODO: add the AXI XBAR and route data out through it
+  assign core_instr_rsp_i = core_cache_instr_rsp; //TODO: add the AXI XBAR and route data out through it
+
+  assign axi_data_user     = '0;
+  assign obi_rsp_data_user = '0;
+
+  assign axi_instr_user     = '0;
+  assign obi_rsp_instr_user = '0;
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -147,6 +171,58 @@ module redemule_tile
   ) i_core_data_hci2obi_rsp (
     .hci_rsp_i ( core_l1_data_rsp     ),
     .obi_rsp_o ( core_mem_data_rsp[0] )
+  );
+
+  obi_to_axi #(
+    .ObiCfg       (                                       ),
+    .obi_req_t    ( redmule_tile_pkg::core_data_req_t     ),
+    .obi_rsp_t    ( redmule_tile_pkg::core_data_rsp_t     ),
+    .AxiLite      (                                       ),
+    .AxiAddrWidth ( redmule_tile_pkg::ADDR_W              ),
+    .AxiDataWidth ( redmule_tile_pkg::DATA_W              ),
+    .AxiUserWidth ( redmule_tile_pkg::AXI_DATA_U_W        ),
+    .AxiBurstType (                                       ),
+    .axi_req_t    ( redmule_tile_pkg::core_axi_data_req_t ),
+    .axi_rsp_t    ( redmule_tile_pkg::core_axi_data_rsp_t ),
+    .MaxRequests  (                                       )
+  ) i_core_data_obi2axi (
+    .clk_i               ( sys_clk              ),
+    .rst_ni              ( rstn_i               ),
+    .obi_req_i           ( core_mem_data_req[1] ),
+    .obi_rsp_o           ( core_mem_data_rsp[1] ),
+    .user_i              ( axi_data_user        ),
+    .axi_req_o           ( core_l2_data_req     ),
+    .axi_rsp_i           ( core_l2_data_rsp     ),
+    .axi_rsp_channel_sel (                      ),
+    .axi_rsp_b_user_o    (                      ),
+    .axi_rsp_r_user_o    (                      ),
+    .obi_rsp_user_i      ( obi_rsp_data_user    ),
+  );
+
+  obi_to_axi #(
+    .ObiCfg       (                                        ),
+    .obi_req_t    ( redmule_tile_pkg::core_instr_req_t     ),
+    .obi_rsp_t    ( redmule_tile_pkg::core_instr_rsp_t     ),
+    .AxiLite      (                                        ),
+    .AxiAddrWidth ( redmule_tile_pkg::ADDR_W               ),
+    .AxiDataWidth ( redmule_tile_pkg::DATA_W               ),
+    .AxiUserWidth ( redmule_tile_pkg::AXI_INSTR_U_W        ),
+    .AxiBurstType (                                        ),
+    .axi_req_t    ( redmule_tile_pkg::core_axi_instr_req_t ),
+    .axi_rsp_t    ( redmule_tile_pkg::core_axi_instr_rsp_t ),
+    .MaxRequests  (                                        )
+  ) i_core_instr_obi2axi (
+    .clk_i               ( sys_clk              ),
+    .rst_ni              ( rstn_i               ),
+    .obi_req_i           ( core_instr_req       ),
+    .obi_rsp_o           ( core_instr_rsp       ),
+    .user_i              ( axi_instr_user       ),
+    .axi_req_o           ( core_cache_instr_req ),
+    .axi_rsp_i           ( core_cache_instr_rsp ),
+    .axi_rsp_channel_sel (                      ),
+    .axi_rsp_b_user_o    (                      ),
+    .axi_rsp_r_user_o    (                      ),
+    .obi_rsp_user_i      ( obi_rsp_instr_user   ),
   );
 
 /*******************************************************/
@@ -312,15 +388,15 @@ module redemule_tile
     .mimpid_patch_i                                  ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
 
     // Instruction memory interface
-    .instr_req_o         ( core_instr_req_o.req     ),
-    .instr_gnt_i         ( core_instr_rsp_i.gnt     ),
-    .instr_addr_o        ( core_instr_req_o.addr    ),
-    .instr_memtype_o     ( core_instr_req_o.memtype ),
-    .instr_prot_o        ( core_instr_req_o.prot    ),
-    .instr_dbg_o         ( core_instr_req_o.dbg     ),
-    .instr_rvalid_i      ( core_instr_rsp_i.rvalid  ),
-    .instr_rdata_i       ( core_instr_rsp_i.rdata   ),
-    .instr_err_i         ( core_instr_rsp_i.err     ),
+    .instr_req_o         ( core_instr_req.req     ),
+    .instr_gnt_i         ( core_instr_rsp.gnt     ),
+    .instr_addr_o        ( core_instr_req.addr    ),
+    .instr_memtype_o     ( core_instr_req.memtype ),
+    .instr_prot_o        ( core_instr_req.prot    ),
+    .instr_dbg_o         ( core_instr_req.dbg     ),
+    .instr_rvalid_i      ( core_instr_rsp.rvalid  ),
+    .instr_rdata_i       ( core_instr_rsp.rdata   ),
+    .instr_err_i         ( core_instr_rsp.err     ),
 
     // Data memory interface
     .data_req_o          ( core_data_req.req                  ),

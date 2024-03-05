@@ -34,6 +34,12 @@ module redmule_tile_vip
   output logic                                     test_mode,
   output logic                                     tile_enable,
 
+  input  redmule_tile_pkg::core_axi_data_req_t     core_data_req,
+  output redmule_tile_pkg::core_axi_data_rsp_t     core_data_rsp,
+
+  input  redmule_tile_pkg::core_axi_instr_req_t    core_instr_req,
+  output redmule_tile_pkg::core_axi_instr_rsp_t    core_instr_rsp,
+
   output logic                                     scan_cg_en,
 
   output logic [31:0]                              boot_addr, //TODO: manage signal
@@ -63,13 +69,7 @@ module redmule_tile_vip
   output logic                                     wu_wfe,
 
   input  logic                                     busy,
-  input  logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt,
-
-  input  redmule_tile_pkg::core_instr_req_t        core_instr_req,
-  output redmule_tile_pkg::core_instr_rsp_t        core_instr_rsp,
-
-  input  redmule_tile_pkg::core_data_req_t         core_data_req,
-  output redmule_tile_pkg::core_data_rsp_t         core_data_rsp
+  input  logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt
 );
 
 /*******************************************************/
@@ -151,16 +151,16 @@ module redmule_tile_vip
 /*******************************************************/
 
   axi_sim_mem #(
-    .AddrWidth          ( redmule_tile_pkg::ADDR_W           ),
-    .DataWidth          ( redmule_tile_pkg::DATA_W           ),
-    .IdWidth            ( 1                                  ),
-    .UserWidth          ( 0                                  ),
-    .axi_req_t          ( redmule_tile_pkg::core_instr_req_t ),
-    .axi_rsp_t          ( redmule_tile_pkg::core_instr_rsp_t ),
-    .WarnUninitialized  ( 0                                  ),
-    .ClearErrOnAccess   ( 1                                  ),
-    .ApplDelay          ( CLK_PERIOD * T_APPL                ),
-    .AcqDelay           ( CLK_PERIOD * T_TEST                )
+    .AddrWidth          ( redmule_tile_pkg::ADDR_W               ),
+    .DataWidth          ( redmule_tile_pkg::DATA_W               ),
+    .IdWidth            ( 1                                      ),
+    .UserWidth          ( 0                                      ),
+    .axi_req_t          ( redmule_tile_pkg::core_axi_instr_req_t ),
+    .axi_rsp_t          ( redmule_tile_pkg::core_axi_instr_rsp_t ),
+    .WarnUninitialized  ( 0                                      ),
+    .ClearErrOnAccess   ( 1                                      ),
+    .ApplDelay          ( CLK_PERIOD * T_APPL                    ),
+    .AcqDelay           ( CLK_PERIOD * T_TEST                    )
   ) i_instr_cache (
     .clk_i              ( clk            ),
     .rst_ni             ( rst_n          ),
@@ -189,16 +189,16 @@ module redmule_tile_vip
 /*******************************************************/
 
   axi_sim_mem #(
-    .AddrWidth          ( redmule_tile_pkg::ADDR_W          ),
-    .DataWidth          ( redmule_tile_pkg::DATA_W          ),
-    .IdWidth            ( 1                                 ),
-    .UserWidth          ( 0                                 ),
-    .axi_req_t          ( redmule_tile_pkg::core_data_req_t ),
-    .axi_rsp_t          ( redmule_tile_pkg::core_data_rsp_t ),
-    .WarnUninitialized  ( 0                                 ),
-    .ClearErrOnAccess   ( 1                                 ),
-    .ApplDelay          ( CLK_PERIOD * T_APPL               ),
-    .AcqDelay           ( CLK_PERIOD * T_TEST               )
+    .AddrWidth          ( redmule_tile_pkg::ADDR_W              ),
+    .DataWidth          ( redmule_tile_pkg::DATA_W              ),
+    .IdWidth            ( 1                                     ),
+    .UserWidth          ( 0                                     ),
+    .axi_req_t          ( redmule_tile_pkg::core_axi_data_req_t ),
+    .axi_rsp_t          ( redmule_tile_pkg::core_axi_data_rsp_t ),
+    .WarnUninitialized  ( 0                                     ),
+    .ClearErrOnAccess   ( 1                                     ),
+    .ApplDelay          ( CLK_PERIOD * T_APPL                   ),
+    .AcqDelay           ( CLK_PERIOD * T_TEST                   )
   ) i_l2_mem (
     .clk_i              ( clk           ),
     .rst_ni             ( rst_n         ),

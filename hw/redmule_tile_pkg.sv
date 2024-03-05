@@ -24,6 +24,7 @@ package redmule_tile_pkg;
   `include "hci/typedef.svh"
   `include "hwpe-ctrl/typedef.svh"
   `include "obi/typedef.svh"
+  `include "axi/typedef.svh"
 
   `include "hci/assign.svh"
 
@@ -34,6 +35,8 @@ package redmule_tile_pkg;
   localparam int unsigned ADDR_W               = 32;                              // System-wide address Width
   localparam int unsigned DATA_W               = 32;                              // System-wide data Width
   localparam int unsigned INSTR_W              = 32;                              // System-wide instruction Width
+  localparam int unsigned BYTE_W               = 8;                               // System-wide byte Width
+  localparam int unsigned STRB_W               = DATA_W/BYTE_W;                   // System-wide strobe Width
   localparam int unsigned N_IRQ                = 32;                              // Number of IRQs
   localparam int unsigned IRQ_ID_W             = $clog2(N_IRQ);                   // IRQ ID Width
   localparam int unsigned ID_W_OFFSET          = 4;                               // Offset to be added to ID Width
@@ -53,14 +56,14 @@ package redmule_tile_pkg;
   parameter int unsigned AWC                   = ADDR_W;                          // Address width core   (slave ports)
   parameter int unsigned AWM                   = ADDR_W;                          // Address width memory (master ports)
   parameter int unsigned DW_LIC                = DATA_W;                          // Data Width for Log Interconnect
-  parameter int unsigned BW_LIC                = 8;                               // Byte Width for Log Interconnect
+  parameter int unsigned BW_LIC                = BYTE_W;                          // Byte Width for Log Interconnect
   parameter int unsigned UW_LIC                = 0;                               // User Width for Log Interconnect
   parameter int unsigned TS_BIT                = 21;                              // TEST_SET_BIT (for Log Interconnect)
   parameter int unsigned IW                    = N_HWPE + N_CORE + N_DMA + N_EXT; // ID Width HCI
   parameter int unsigned EXPFIFO               = 0;                               // FIFO Depth for HWPE Interconnect
   parameter int unsigned DWH                   = DATA_W;                          // Data Width for HWPE Interconnect
   parameter int unsigned AWH                   = ADDR_W;                          // Address Width for HWPE Interconnect
-  parameter int unsigned BWH                   = 8;                               // Byte Width for HWPE Interconnect
+  parameter int unsigned BWH                   = BYTE_W;                          // Byte Width for HWPE Interconnect
   parameter int unsigned WWH                   = DWH;                             // Word Width for HWPE Interconnect
   parameter int unsigned OWH                   = AWH;                             // Offset Width for HWPE Interconnect
   parameter int unsigned UWH                   = 0;                               // User Width for HWPE Interconnect
@@ -101,6 +104,12 @@ package redmule_tile_pkg;
   parameter int unsigned N_ADDR_RULE           = 2;                               // Number of address rules
   localparam int unsigned N_BIT_MGR            = $clog2(redmule_tile_pkg::N_MGR); // Number of bits required to identify each master
 
+  // Parameters used by AXI
+  parameter int unsigned AXI_DATA_ID_W         = 2;                               // Width of the AXI Data ID (2 bits: Core, iDMA. I$)
+  parameter int unsigned AXI_INSTR_ID_W        = 0;                               // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
+  parameter int unsigned AXI_DATA_U_W          = 0;                               // Width of the AXI Data User
+  parameter int unsigned AXI_INSTR_U_W         = 0;                               // Width of the AXI Instruction User
+  
   typedef struct packed {
     logic               req;
     logic [INSTR_W-1:0] addr;
@@ -137,5 +146,8 @@ package redmule_tile_pkg;
 
   `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic [AWM-1:0], logic [DW_LIC-1:0], logic [STRB_W-1:0], logic signed [WORDS_DATA-1:0][AWH:0], logic [UWH-1:0])
   `HCI_TYPEDEF_RSP_T(core_hci_data_rsp_t, logic [DW_LIC-1:0], logic [UWH-1:0])
+
+  `AXI_TYPEDEF_ALL(core_axi_data, logic[ADDR_W-1:0], logic[AXI_DATA_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_DATA_U_W-1:0])
+  `AXI_TYPEDEF_ALL(core_axi_instr, logic[ADDR_W-1:0], logic[AXI_INSTR_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_INSTR_U_W-1:0])
 
 endpackage: redmule_tile_pkg

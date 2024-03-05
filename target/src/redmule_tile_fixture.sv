@@ -33,6 +33,12 @@ module redmule_tile_fixture;
   logic                                     test_mode;
   logic                                     tile_enable;
 
+  redmule_tile_pkg::core_axi_data_req_t     core_data_req;
+  redmule_tile_pkg::core_axi_data_rsp_t     core_data_rsp;
+
+  redmule_tile_pkg::core_axi_instr_req_t    core_instr_req;
+  redmule_tile_pkg::core_axi_instr_rsp_t    core_instr_rsp;
+
   logic                                     scan_cg_en;
 
   logic [31:0]                              boot_addr;
@@ -64,12 +70,6 @@ module redmule_tile_fixture;
   logic                                     busy;
   logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt;
 
-  redmule_tile_pkg::core_instr_req_t        core_instr_req;
-  redmule_tile_pkg::core_instr_rsp_t        core_instr_rsp;
-
-  redmule_tile_pkg::core_data_req_t         core_data_req;
-  redmule_tile_pkg::core_data_rsp_t         core_data_rsp;
-
 /*******************************************************/
 /**           Internal Signal Definitions End         **/
 /*******************************************************/
@@ -89,6 +89,12 @@ module redmule_tile_fixture;
     .rstn_i              ( rst_n             ),
     .test_mode_i         ( test_mode         ),
     .tile_enable_i       ( tile_enable       ),
+
+    .core_data_req_o     ( core_data_req     ),
+    .core_data_rsp_i     ( core_data_rsp     ), 
+
+    .core_instr_req_o    ( core_instr_req    ),
+    .core_instr_rsp_i    ( core_instr_rsp    ),
 
     .scan_cg_en_i        ( scan_cg_en        ),
 
@@ -119,13 +125,7 @@ module redmule_tile_fixture;
     .wu_wfe_i            ( wu_wfe            ),
 
     .busy_o              ( busy              ),
-    .evt_o               ( evt               ),
-    
-    .core_instr_req_o    ( core_instr_req    ),
-    .core_instr_rsp_i    ( core_instr_rsp    ),
-
-    .core_data_req_o     ( core_data_req     ),
-    .core_data_rsp_i     ( core_data_rsp     ) 
+    .evt_o               ( evt               )
   );
 
 /*******************************************************/
