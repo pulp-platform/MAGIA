@@ -52,16 +52,16 @@ module l1_spm #(
       .PrintSimCfg ( 0        ),
       .ImplKey     ( "none"   )
     ) i_tcdm_bank (
-      .clk_i   ( clk_i                                     ),
-      .rst_ni  ( rstn_i                                    ),
+      .clk_i   ( clk_i                                    ),
+      .rst_ni  ( rstn_i                                   ),
 
-      .req_i   ( tcdm_slave[i].req                         ),
-      .we_i    ( ~tcdm_slave[i].wen                        ),
-      .addr_i  ( tcdm_slave[i].add[$clog2(BankSize)+2-1:2] ),
-      .wdata_i ( tcdm_slave[i].data                        ),
-      .be_i    ( tcdm_slave[i].be                          ),
+      .req_i   ( tcdm_slave[i].req                        ),
+      .we_i    ( ~tcdm_slave[i].wen                       ),
+      .addr_i  ( tcdm_slave[i].add[$clog2(N_WORDS)+2-1:2] ),
+      .wdata_i ( tcdm_slave[i].data                       ),
+      .be_i    ( tcdm_slave[i].be                         ),
 
-      .rdata_o ( tcdm_slave[i].r_data                      )
+      .rdata_o ( tcdm_slave[i].r_data                     )
     );
 
     assign tcdm_slave[i].gnt = 1'b1;

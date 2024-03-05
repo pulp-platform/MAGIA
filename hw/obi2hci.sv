@@ -28,10 +28,10 @@ module obi2hci_req #(
 );
 
   assign hci_req_o.req   = obi_req_i.req;
-  assign hci_req_o.add   = obi_req_i.addr;
-  assign hci_req_o.wen   = ~obi_req_i.we;
-  assign hci_req_o.data  = obi_req_i.wdata;
-  assign hci_req_o.be    = obi_req_i.be;
+  assign hci_req_o.add   = obi_req_i.a.addr;
+  assign hci_req_o.wen   = ~obi_req_i.a.we;
+  assign hci_req_o.data  = obi_req_i.a.wdata;
+  assign hci_req_o.be    = obi_req_i.a.be;
   assign hci_req_o.boffs = '0;
   assign hci_req_o.lrdy  = 1'b1;
   assign hci_req_o.user  = '0;
@@ -46,11 +46,11 @@ module hci2obi_rsp #(
   output obi_rsp_t obi_rsp_o
 );
 
-  assign obi_rsp_o.gnt    = hci_rsp_i.gnt;
-  assign obi_rsp_o.rvalid = hci_rsp_i.r_valid;
-  assign obi_rsp_o.rdata  = hci_rsp_i.r_data;
-  assign obi_rsp_o.rid    = '0;
-  assign obi_rsp_o.err    = 1'b0;
-  assign obi_rsp_o.exokay = 1'b1;
+  assign obi_rsp_o.gnt                 = hci_rsp_i.gnt;
+  assign obi_rsp_o.rvalid              = hci_rsp_i.r_valid;
+  assign obi_rsp_o.r.rdata             = hci_rsp_i.r_data;
+  assign obi_rsp_o.r.rid               = '0;
+  assign obi_rsp_o.r.err               = 1'b0;
+  assign obi_rsp_o.r.r_optional.exokay = 1'b1;
 
 endmodule: hci2obi_rsp

@@ -444,17 +444,17 @@ module redemule_tile
     .UWH     ( redmule_tile_pkg::UWH     ),
     .SEL_LIC ( redmule_tile_pkg::SEL_LIC )
   ) i_local_interconnect (
-    .clk_i   ( sys_clk          ),
-    .rst_ni  ( rstn_i           ),
-    .clear_i ( hci_clear        ),
+    .clk_i   ( sys_clk           ),
+    .rst_ni  ( rstn_i            ),
+    .clear_i ( hci_clear         ),
 
-    .ctrl_i  ( hci_ctrl         ),
+    .ctrl_i  ( hci_ctrl          ),
     
-    .cores   ( hci_core_if      ),
-    .dma     ( hci_dma_if       ),
-    .ext     (                  ),
-    .mems    ( hci_tcdm_sram_if ),
-    .hwpe    ( hci_redmule_if   )
+    .cores   ( hci_core_if       ),
+    .dma     ( hci_dma_if        ),
+    .ext     (                   ),
+    .mems    ( hci_tcdm_sram_if  ),
+    .hwpe    ( hci_redmule_if[0] )
   );
 
 /*******************************************************/
