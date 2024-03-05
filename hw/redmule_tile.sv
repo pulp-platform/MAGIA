@@ -104,11 +104,11 @@ module redemule_tile
   redmule_tile_pkg::core_axi_data_req_t                                core_l2_data_req       ;
   redmule_tile_pkg::core_axi_data_rsp_t                                core_l2_data_rsp       ;
 
-  redmule_tile_pkg::instr_req_t                                        instr_req              ;
-  redmule_tile_pkg::instr_rsp_t                                        instr_rsp              ;
-  
   redmule_tile_pkg::core_instr_req_t                                   core_instr_req         ;
   redmule_tile_pkg::core_instr_rsp_t                                   core_instr_rsp         ;
+  
+  redmule_tile_pkg::core_obi_instr_req_t                               core_obi_instr_req     ;
+  redmule_tile_pkg::core_obi_instr_rsp_t                               core_obi_instr_rsp     ;
 
   redmule_tile_pkg::core_axi_instr_req_t                               core_cache_instr_req   ;
   redmule_tile_pkg::core_axi_instr_rsp_t                               core_cache_instr_rsp   ;
@@ -203,25 +203,25 @@ module redemule_tile
   );
 
   instr2obi_req #(
-    .instr_req_t ( redmule_tile_pkg::instr_req_t      ),
-    .obi_req_t   ( redmule_tile_pkg::core_instr_req_t )
+    .instr_req_t ( redmule_tile_pkg::core_instr_req_t     ),
+    .obi_req_t   ( redmule_tile_pkg::core_obi_instr_req_t )
   ) i_core_instr2obi_req (
-    .instr_req_i ( instr_req      ),
-    .obi_req_o   ( core_instr_req )
+    .instr_req_i ( core_instr_req     ),
+    .obi_req_o   ( core_obi_instr_req )
   );
 
   obi2instr_rsp #(
-    .obi_rsp_t   ( redmule_tile_pkg::core_instr_rsp_t ),
-    .instr_rsp_t ( redmule_tile_pkg::instr_rsp_t      )
+    .obi_rsp_t   ( redmule_tile_pkg::core_obi_instr_rsp_t ),
+    .instr_rsp_t ( redmule_tile_pkg::core_instr_rsp_t     )
   ) i_core_obi2instr_rsp (
-    .obi_rsp_i   ( core_instr_rsp ),
-    .instr_rsp_o ( instr_rsp      )
+    .obi_rsp_i   ( core_obi_instr_rsp ),
+    .instr_rsp_o ( core_instr_rsp     )
   );
   
   obi_to_axi #(
     .ObiCfg       (                                        ),
-    .obi_req_t    ( redmule_tile_pkg::core_instr_req_t     ),
-    .obi_rsp_t    ( redmule_tile_pkg::core_instr_rsp_t     ),
+    .obi_req_t    ( redmule_tile_pkg::core_obi_instr_req_t ),
+    .obi_rsp_t    ( redmule_tile_pkg::core_obi_instr_rsp_t ),
     .AxiLite      (                                        ),
     .AxiAddrWidth ( redmule_tile_pkg::ADDR_W               ),
     .AxiDataWidth ( redmule_tile_pkg::DATA_W               ),
@@ -233,8 +233,8 @@ module redemule_tile
   ) i_core_instr_obi2axi (
     .clk_i               ( sys_clk              ),
     .rst_ni              ( rstn_i               ),
-    .obi_req_i           ( core_instr_req       ),
-    .obi_rsp_o           ( core_instr_rsp       ),
+    .obi_req_i           ( core_obi_instr_req   ),
+    .obi_rsp_o           ( core_obi_instr_rsp   ),
     .user_i              ( axi_instr_user       ),
     .axi_req_o           ( core_cache_instr_req ),
     .axi_rsp_i           ( core_cache_instr_rsp ),
@@ -407,15 +407,15 @@ module redemule_tile
     .mimpid_patch_i                                  ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
 
     // Instruction memory interface
-    .instr_req_o         ( instr_req.req     ),
-    .instr_gnt_i         ( instr_rsp.gnt     ),
-    .instr_addr_o        ( instr_req.addr    ),
-    .instr_memtype_o     ( instr_req.memtype ),
-    .instr_prot_o        ( instr_req.prot    ),
-    .instr_dbg_o         ( instr_req.dbg     ),
-    .instr_rvalid_i      ( instr_rsp.rvalid  ),
-    .instr_rdata_i       ( instr_rsp.rdata   ),
-    .instr_err_i         ( instr_rsp.err     ),
+    .instr_req_o         ( core_instr_req.req     ),
+    .instr_gnt_i         ( core_instr_rsp.gnt     ),
+    .instr_addr_o        ( core_instr_req.addr    ),
+    .instr_memtype_o     ( core_instr_req.memtype ),
+    .instr_prot_o        ( core_instr_req.prot    ),
+    .instr_dbg_o         ( core_instr_req.dbg     ),
+    .instr_rvalid_i      ( core_instr_rsp.rvalid  ),
+    .instr_rdata_i       ( core_instr_rsp.rdata   ),
+    .instr_err_i         ( core_instr_rsp.err     ),
 
     // Data memory interface
     .data_req_o          ( core_data_req.req                  ),

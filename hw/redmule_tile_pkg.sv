@@ -123,14 +123,14 @@ package redmule_tile_pkg;
     logic [1        :0] memtype;
     logic [2        :0] prot;
     logic               dbg;
-  } instr_req_t;
+  } core_instr_req_t;
 
   typedef struct packed {
     logic               gnt;
     logic               rvalid;
     logic [INSTR_W-1:0] rdata;
     logic               err;
-  } instr_rsp_t;
+  } core_instr_rsp_t;
 
   `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic [AWC-1:0], logic [DW_LIC-1:0], logic [SW_LIC-1:0], logic [IW-1:0])
   `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic [DW_LIC-1:0], logic [IW-1:0])
@@ -149,8 +149,8 @@ package redmule_tile_pkg;
   `OBI_TYPEDEF_ALL_R_OPTIONAL(core_instr_obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
   `OBI_TYPEDEF_A_CHAN_T(core_instr_obi_a_chan_t, ADDR_W, DATA_W, 0, core_instr_obi_a_optional_t)  // Direct Core - I$ connection: ID = 0
   `OBI_TYPEDEF_R_CHAN_T(core_instr_obi_r_chan_t, DATA_W, 0, core_instr_obi_r_optional_t)          // Direct Core - I$ connection: ID = 0
-  `OBI_TYPEDEF_DEFAULT_REQ_T(core_instr_req_t, core_instr_obi_a_chan_t)
-  `OBI_TYPEDEF_RSP_T(core_instr_rsp_t, core_instr_obi_r_chan_t)
+  `OBI_TYPEDEF_DEFAULT_REQ_T(core_obi_instr_req_t, core_instr_obi_a_chan_t)
+  `OBI_TYPEDEF_RSP_T(core_obi_instr_rsp_t, core_instr_obi_r_chan_t)
 
   `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic [AWM-1:0], logic [DW_LIC-1:0], logic [SW_LIC-1:0], logic signed [WORDS_DATA-1:0][AWH:0], logic [UWH-1:0])
   `HCI_TYPEDEF_RSP_T(core_hci_data_rsp_t, logic [DW_LIC-1:0], logic [UWH-1:0])
