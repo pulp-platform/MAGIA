@@ -38,7 +38,7 @@ package redmule_tile_pkg;
   localparam int unsigned BYTE_W               = 8;                               // System-wide byte Width
   localparam int unsigned STRB_W               = DATA_W/BYTE_W;                   // System-wide strobe Width
   localparam int unsigned N_MEM_BANKS          = 16 + 1;                          // Number of TCDM banks (1 extra bank for missaligned accesses)
-  localparam int unsigned N_WORDS_BANK         = 256;                             // Number of words per TCDM bank
+  localparam int unsigned N_WORDS_BANK         = 1024;                            // Number of words per TCDM bank
   localparam int unsigned N_IRQ                = 32;                              // Number of IRQs
   localparam int unsigned IRQ_ID_W             = $clog2(N_IRQ);                   // IRQ ID Width
   localparam int unsigned ID_W_OFFSET          = 4;                               // Offset to be added to ID Width

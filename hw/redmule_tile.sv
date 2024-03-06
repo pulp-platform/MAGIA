@@ -269,7 +269,7 @@ module redemule_tile
 /*******************************************************/
 
   hci_mem_intf #(
-    .AW ( redmule_tile_pkg::AWM    ),
+    .AW ( redmule_tile_pkg::ADDR_W ),
     .DW ( redmule_tile_pkg::DW_LIC ),
     .BW ( redmule_tile_pkg::BW_LIC ),
     .IW ( redmule_tile_pkg::IW     )
@@ -278,7 +278,7 @@ module redemule_tile
   );
   
   hci_core_intf #(
-    .DW ( redmule_tile_pkg::DW_LIC ),
+    .DW ( redmule_tile_pkg::ADDR_W ),
     .AW ( redmule_tile_pkg::AWC    ),
     .OW ( redmule_tile_pkg::AWC    )
   ) hci_core_if[redmule_tile_pkg::N_CORE-1:0] (
@@ -286,7 +286,7 @@ module redemule_tile
   );
 
   hci_core_intf #(
-    .DW ( redmule_tile_pkg::DW_LIC ),
+    .DW ( redmule_tile_pkg::DWH    ),
     .AW ( redmule_tile_pkg::AWC    ),
     .OW ( redmule_tile_pkg::AWC    )
   ) hci_redmule_if[redmule_tile_pkg::N_HWPE-1:0] (
@@ -295,7 +295,7 @@ module redemule_tile
 
   //TODO: connect after integrating the DMA
   hci_core_intf #(
-    .DW ( redmule_tile_pkg::DW_LIC ),
+    .DW ( redmule_tile_pkg::ADDR_W ),
     .AW ( redmule_tile_pkg::AWC    ),
     .OW ( redmule_tile_pkg::AWC    )
   ) hci_dma_if[redmule_tile_pkg::N_DMA-1:0] (
