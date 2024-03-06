@@ -47,10 +47,9 @@ module obi2instr_rsp #(
   output instr_rsp_t instr_rsp_o
 );
 
-  assign instr_rsp_o.gnt                 = obi_rsp_i.gnt;
-  assign instr_rsp_o.rvalid              = obi_rsp_i.rvalid;
-  assign instr_rsp_o.r.rdata             = obi_rsp_i.rdata;
-  assign instr_rsp_o.r.err               = obi_rsp_i.err;
-  assign instr_rsp_o.r.r_optional.exokay = 1'b0;
+  assign instr_rsp_o.gnt    = obi_rsp_i.gnt;
+  assign instr_rsp_o.rvalid = obi_rsp_i.rvalid;
+  assign instr_rsp_o.rdata  = obi_rsp_i.r.rdata;
+  assign instr_rsp_o.err    = obi_rsp_i.r.err;
 
 endmodule: obi2instr_rsp

@@ -28,14 +28,14 @@ module redemule_tile
   import obi_pkg::*;
 #(
   // Parameters used by hci_interconnect and l1_spm
-  parameter int unsigned          N_MEM_BANKS   = 16                   , // Number of memory banks 
-  parameter int unsigned          N_WORDS_BANK  = 256                  , // Number of words per memory bank      
+  parameter int unsigned          N_MEM_BANKS   = redmule_tile_pkg::N_MEM_BANKS  , // Number of memory banks 
+  parameter int unsigned          N_WORDS_BANK  = redmule_tile_pkg::N_WORDS_BANK , // Number of words per memory bank      
 
   // Parameters used by the core
-  parameter cv32e40x_pkg::rv32_e  CORE_ISA      = cv32e40x_pkg::RV32I  , // RV32I (default) 32 registers in the RF - RV32E 16 registers in the RF
-  parameter cv32e40x_pkg::a_ext_e CORE_A        = cv32e40x_pkg::A_NONE , // Atomic Istruction (A) support (dafault: not enabled)
-  parameter cv32e40x_pkg::b_ext_e CORE_B        = cv32e40x_pkg::B_NONE , // Bit Manipulation support (dafault: not enabled)
-  parameter cv32e40x_pkg::m_ext_e CORE_M        = cv32e40x_pkg::ZMMUL    // Multiply and Divide support (dafault: only Multiply upported)
+  parameter cv32e40x_pkg::rv32_e  CORE_ISA      = cv32e40x_pkg::RV32I            , // RV32I (default) 32 registers in the RF - RV32E 16 registers in the RF
+  parameter cv32e40x_pkg::a_ext_e CORE_A        = cv32e40x_pkg::A_NONE           , // Atomic Istruction (A) support (dafault: not enabled)
+  parameter cv32e40x_pkg::b_ext_e CORE_B        = cv32e40x_pkg::B_NONE           , // Bit Manipulation support (dafault: not enabled)
+  parameter cv32e40x_pkg::m_ext_e CORE_M        = cv32e40x_pkg::ZMMUL              // Multiply and Divide support (dafault: only Multiply upported)
 )(
   input  logic                                     clk_i               ,
   input  logic                                     rstn_i              ,
@@ -479,21 +479,21 @@ module redemule_tile
 /*******************************************************/
 
   obi_xbar #(
-    .SbrPortObiCfg      (                                   ),
-    .MgrPortObiCfg      (                                   ),
-    .sbr_port_obi_req_t ( redmule_tile_pkg::core_data_req_t ),
-    .sbr_port_a_chan_t  ( redmule_tile_pkg::obi_a_chan_t    ),
-    .sbr_port_obi_rsp_t ( redmule_tile_pkg::core_data_rsp_t ),
-    .sbr_port_r_chan_t  ( redmule_tile_pkg::obi_r_cnah_t    ),
-    .mgr_port_obi_req_t (                                   ),
-    .mgr_port_obi_rsp_t (                                   ),
-    .NumSbrPorts        ( redmule_tile_pkg::N_SBR           ),
-    .NumMgrPorts        ( redmule_tile_pkg::N_MGR           ),
-    .NumMaxTrans        ( redmule_tile_pkg::N_MAX_TRAN      ),
-    .NumAddrRules       ( redmule_tile_pkg::N_ADDR_RULE     ),
-    .addr_map_rule_t    ( redmule_tile_pkg::obi_xbar_rule_t ),
-    .UseIdForRouting    (                                   ),
-    .Connectivity       (                                   )
+    .SbrPortObiCfg      (                                          ),
+    .MgrPortObiCfg      (                                          ),
+    .sbr_port_obi_req_t ( redmule_tile_pkg::core_data_req_t        ),
+    .sbr_port_a_chan_t  ( redmule_tile_pkg::core_data_obi_a_chan_t ),
+    .sbr_port_obi_rsp_t ( redmule_tile_pkg::core_data_rsp_t        ),
+    .sbr_port_r_chan_t  ( redmule_tile_pkg::core_data_obi_r_chan_t ),
+    .mgr_port_obi_req_t (                                          ),
+    .mgr_port_obi_rsp_t (                                          ),
+    .NumSbrPorts        ( redmule_tile_pkg::N_SBR                  ),
+    .NumMgrPorts        ( redmule_tile_pkg::N_MGR                  ),
+    .NumMaxTrans        ( redmule_tile_pkg::N_MAX_TRAN             ),
+    .NumAddrRules       ( redmule_tile_pkg::N_ADDR_RULE            ),
+    .addr_map_rule_t    ( redmule_tile_pkg::obi_xbar_rule_t        ),
+    .UseIdForRouting    (                                          ),
+    .Connectivity       (                                          )
   ) i_obi_xbar (
     .clk_i            ( sys_clk                 ),
     .rst_ni           ( rstn_i                  ),
