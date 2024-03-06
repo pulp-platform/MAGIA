@@ -45,10 +45,10 @@ package redmule_tile_pkg;
   localparam int unsigned ID_W                 = 4;                               // Default ID Width
 
   // Address map
-  localparam logic [ADDR_W-1: 0] L1_ADDR_START = 32'h1000_0000;
-  localparam logic [ADDR_W-1: 0] L1_ADDR_END   = 32'h2000_0000;
-  localparam logic [ADDR_W-1: 0] L2_ADDR_START = 32'h2000_0000;
-  localparam logic [ADDR_W-1: 0] L2_ADDR_END   = 32'h3000_0000;
+  localparam logic [ADDR_W-1:0] L1_ADDR_START  = 32'h1000_0000;
+  localparam logic [ADDR_W-1:0] L1_ADDR_END    = 32'h2000_0000;
+  localparam logic [ADDR_W-1:0] L2_ADDR_START  = 32'h2000_0000;
+  localparam logic [ADDR_W-1:0] L2_ADDR_END    = 32'h3000_0000;
   
   // Parameters used by the HCI
   parameter int unsigned N_HWPE                = 1;                               // Number of HWPEs attached to the port
@@ -105,7 +105,7 @@ package redmule_tile_pkg;
   parameter int unsigned N_MGR                 = 1;                               // Number of masters (Core)
   parameter int unsigned N_MAX_TRAN            = 1;                               // Number of maximum outstanding transactions
   parameter int unsigned N_ADDR_RULE           = 2;                               // Number of address rules
-  localparam int unsigned N_BIT_MGR            = $clog2(redmule_tile_pkg::N_MGR); // Number of bits required to identify each master
+  localparam int unsigned N_BIT_MGR            = $clog2(N_MGR);                   // Number of bits required to identify each master
 
   // Parameters used by AXI
   parameter int unsigned AXI_DATA_ID_W         = 2;                               // Width of the AXI Data ID (2 bits: Core, iDMA. I$)
