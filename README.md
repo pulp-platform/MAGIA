@@ -28,5 +28,5 @@ make all
 ```
 **6)** Run test (`redmule-mesh` folder):
 ```
-make run (gui=1 to open the Questasim Graphic User Interface)
+make run gui=1
 ```
