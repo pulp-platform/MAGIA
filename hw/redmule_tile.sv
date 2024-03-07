@@ -116,10 +116,10 @@ module redemule_tile
   logic                                                                hci_clear              ;  //TODO: figure out who should clear the hci
   hci_package::hci_interconnect_ctrl_t                                 hci_ctrl               ;  //TODO: figure out who should control the hci
 
-  redmule_tile_pkg::obi_xbar_rule_t[redmule_tile_pkg::N_ADDR_RULE-1:0] obi_xbar_rule_t        ;
+  redmule_tile_pkg::obi_xbar_rule_t[redmule_tile_pkg::N_ADDR_RULE-1:0] obi_xbar_rule          ;
   
-  logic[redmule_tile_pkg::N_SBR-1:0]                                   obi_xbar_en_default_idx;
-  logic[redmule_tile_pkg::N_SBR-1:0][redmule_tile_pkg::N_BIT_MGR-1:0]  obi_xbar_default_idx   ;
+  logic[redmule_tile_pkg::N_MGR-1:0]                                   obi_xbar_en_default_idx;
+  logic[redmule_tile_pkg::N_MGR-1:0][redmule_tile_pkg::N_BIT_SBR-1:0]  obi_xbar_default_idx   ;
 
   logic[redmule_tile_pkg::AXI_DATA_U_W-1:0]                            axi_data_user          ;
   logic[obi_pkg::ObiDefaultConfig.OptionalCfg.RUserWidth-1:0]          obi_rsp_data_user      ;
@@ -136,8 +136,8 @@ module redemule_tile
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
 
-  assign obi_xbar_rule_t[0] = '{idx: 32'd0, start_addr: redmule_tile_pkg::L1_ADDR_START, end_addr: redmule_tile_pkg::L1_ADDR_END};
-  assign obi_xbar_rule_t[1] = '{idx: 32'd1, start_addr: redmule_tile_pkg::L2_ADDR_START, end_addr: redmule_tile_pkg::L2_ADDR_END};
+  assign obi_xbar_rule[0] = '{idx: 32'd0, start_addr: redmule_tile_pkg::L1_ADDR_START, end_addr: redmule_tile_pkg::L1_ADDR_END};
+  assign obi_xbar_rule[1] = '{idx: 32'd1, start_addr: redmule_tile_pkg::L2_ADDR_START, end_addr: redmule_tile_pkg::L2_ADDR_END};
   
   assign obi_xbar_en_default_idx = '0;
   assign obi_xbar_default_idx    = '0;
@@ -299,6 +299,14 @@ module redemule_tile
     .AW ( redmule_tile_pkg::AWC    ),
     .OW ( redmule_tile_pkg::AWC    )
   ) hci_dma_if[redmule_tile_pkg::N_DMA-1:0] (
+    .clk( sys_clk )
+  );
+
+  hci_core_intf #(
+    .DW ( redmule_tile_pkg::ADDR_W ),
+    .AW ( redmule_tile_pkg::AWC    ),
+    .OW ( redmule_tile_pkg::AWC    )
+  ) hci_ext_if[redmule_tile_pkg::N_EXT-1:0] (
     .clk( sys_clk )
   );
 
@@ -478,34 +486,26 @@ module redemule_tile
 /**      Core Data Demuxing (OBI XBAR) Beginning      **/
 /*******************************************************/
 
-  obi_xbar #(
+  obi_demux_addr #(
     .SbrPortObiCfg      (                                          ),
     .MgrPortObiCfg      (                                          ),
     .sbr_port_obi_req_t ( redmule_tile_pkg::core_data_req_t        ),
-    .sbr_port_a_chan_t  ( redmule_tile_pkg::core_data_obi_a_chan_t ),
     .sbr_port_obi_rsp_t ( redmule_tile_pkg::core_data_rsp_t        ),
-    .sbr_port_r_chan_t  ( redmule_tile_pkg::core_data_obi_r_chan_t ),
-    .mgr_port_obi_req_t (                                          ),
-    .mgr_port_obi_rsp_t (                                          ),
-    .NumSbrPorts        ( redmule_tile_pkg::N_SBR                  ),
-    .NumMgrPorts        ( redmule_tile_pkg::N_MGR                  ),
+    .NumMgrPorts        ( redmule_tile_pkg::N_SBR                  ),
     .NumMaxTrans        ( redmule_tile_pkg::N_MAX_TRAN             ),
     .NumAddrRules       ( redmule_tile_pkg::N_ADDR_RULE            ),
     .addr_map_rule_t    ( redmule_tile_pkg::obi_xbar_rule_t        ),
-    .UseIdForRouting    (                                          ),
-    .Connectivity       (                                          )
   ) i_obi_xbar (
     .clk_i            ( sys_clk                 ),
     .rst_ni           ( rstn_i                  ),
-    .testmode_i       ( test_mode_i             ),
 
-    .sbr_ports_req_i  ( core_mem_data_req       ),
-    .sbr_ports_rsp_o  ( core_mem_data_rsp       ),
+    .sbr_ports_req_i  ( core_data_req           ),
+    .sbr_ports_rsp_o  ( core_data_rsp           ),
 
-    .mgr_ports_req_o  ( core_data_req           ),
-    .mgr_ports_rsp_i  ( core_data_rsp           ),
+    .mgr_ports_req_o  ( core_mem_data_req       ),
+    .mgr_ports_rsp_i  ( core_mem_data_rsp       ),
 
-    .addr_map_i       ( obi_xbar_rule_t         ),
+    .addr_map_i       ( obi_xbar_rule           ),
     .en_default_idx_i ( obi_xbar_en_default_idx ),
     .default_idx_i    ( obi_xbar_default_idx    )
   );
@@ -547,7 +547,7 @@ module redemule_tile
     
     .cores   ( hci_core_if       ),
     .dma     ( hci_dma_if        ),
-    .ext     (                   ),
+    .ext     ( hci_ext_if        ),
     .mems    ( hci_tcdm_sram_if  ),
     .hwpe    ( hci_redmule_if[0] )
   );

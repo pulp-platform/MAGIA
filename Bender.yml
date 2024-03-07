@@ -41,6 +41,7 @@ sources:
     - hw/l1_spm.sv
     - hw/instr2obi.sv
     - hw/obi2hci.sv
+    - hw/obi_demux_addr.sv
     - hw/redmule_tile.sv
 
     - target: redmule_mesh_dv

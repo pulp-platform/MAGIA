@@ -40,7 +40,11 @@ TEST_SRCS := sw/tests/hello_world.c
 
 compile_script       ?= scripts/compile.tcl
 compile_script_synth ?= scripts/synth_compile.tcl
-compile_flag         ?= -suppress 2583 -suppress 13314 -suppress 3009
+compile_flag         ?= -suppress 2583 -suppress 13314
+
+questa_compile_flag  += -t 1ns -suppress 3009
+questa_opt_flag      += -suppress 3009
+questa_run_flag      += -t 1ns -suppress 3009
 
 INI_PATH  = $(mkfile_path)/modelsim.ini
 WORK_PATH = $(BUILD_DIR)
@@ -113,18 +117,18 @@ all: $(STIM_INSTR) $(STIM_DATA) dis
 # Run the simulation
 run: $(CRT)
 ifeq ($(gui), 0)
-	cd $(BUILD_DIR)/$(TEST_SRCS);          \
-	$(QUESTA) vsim -c vopt_tb -do "run -a" \
-	-gSTIM_INSTR=stim_instr.txt            \
-	-gSTIM_DATA=stim_data.txt              \
+	cd $(BUILD_DIR)/$(TEST_SRCS);                             \
+	$(QUESTA) vsim -c vopt_tb $(questa_run_flag) -do "run -a" \
+	-gSTIM_INSTR=stim_instr.txt                               \
+	-gSTIM_DATA=stim_data.txt                                 \
 	-gPROB_STALL=$(P_STALL)
 else
-	cd $(BUILD_DIR)/$(TEST_SRCS); \
-	$(QUESTA) vsim vopt_tb        \
-	-do "add log -r sim:/$(tb)/*" \
-	-do "source $(WAVES)"         \
-	-gSTIM_INSTR=stim_instr.txt   \
-	-gSTIM_DATA=stim_data.txt     \
+	cd $(BUILD_DIR)/$(TEST_SRCS);             \
+	$(QUESTA) vsim vopt_tb $(questa_run_flag) \
+	-do "add log -r sim:/$(tb)/*"             \
+	-do "source $(WAVES)"                     \
+	-gSTIM_INSTR=stim_instr.txt               \
+	-gSTIM_DATA=stim_data.txt                 \
 	-gPROB_STALL=$(P_STALL)
 endif
 
@@ -213,10 +217,10 @@ hw-clean-all:
 	rm -rf .cached_ipdb.json
 
 hw-opt:
-	$(QUESTA) vopt +acc=npr -o vopt_tb $(tb) -floatparameters+$(tb) -work $(BUILD_DIR)
+	$(QUESTA) vopt $(questa_opt_flag) +acc=npr -o vopt_tb $(tb) -floatparameters+$(tb) -work $(BUILD_DIR)
 
 hw-compile:
-	$(QUESTA) vsim -c +incdir+$(UVM_HOME) -do 'quit -code [source $(compile_script)]'
+	$(QUESTA) vsim $(questa_compile_flag) -c +incdir+$(UVM_HOME) -do 'quit -code [source $(compile_script)]'
 
 hw-lib:
 	@touch modelsim.ini
