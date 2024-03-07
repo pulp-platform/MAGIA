@@ -40,7 +40,7 @@ TEST_SRCS := sw/tests/hello_world.c
 
 compile_script       ?= scripts/compile.tcl
 compile_script_synth ?= scripts/synth_compile.tcl
-compile_flag         ?= -suppress 2583 -suppress 13314
+compile_flag         ?= -suppress 2583 -suppress 13314 -suppress 3009
 
 INI_PATH  = $(mkfile_path)/modelsim.ini
 WORK_PATH = $(BUILD_DIR)
