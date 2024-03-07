@@ -41,7 +41,7 @@ TEST_SRCS  = $(TEST_DIR)/$(test).c
 
 compile_script       ?= scripts/compile.tcl
 compile_script_synth ?= scripts/synth_compile.tcl
-compile_flag         ?= -suppress 2583 -suppress 13314
+compile_flag         ?= -suppress 2583 -suppress 13314 -suppress 3009
 
 questa_compile_flag  += -t 1ns -suppress 3009
 questa_opt_flag      += -suppress 3009 -debugdb
