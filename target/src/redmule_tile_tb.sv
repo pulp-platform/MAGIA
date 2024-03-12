@@ -21,10 +21,8 @@
 
 module redmule_tile_tb;
 
-  string       inst_hex;
-  string       data_hex;
-  int unsigned inst_entry;
-  int unsigned data_entry;
+  string     inst_hex;
+  string     data_hex;
   bit [31:0] exit_code;
 
   redmule_tile_fixture fixture();
@@ -33,12 +31,10 @@ module redmule_tile_tb;
     // Fetch plusargs or use safe (fail-fast) defaults
     if (!$value$plusargs("INST_HEX=%s",   inst_hex))   inst_hex = "";
     if (!$value$plusargs("DATA_HEX=%s",   data_hex))   data_hex = "";
-    if (!$value$plusargs("INST_ENTRY=%s", inst_entry)) inst_entry = 0;
-    if (!$value$plusargs("DATA_ENTRY=%s", data_entry)) data_entry = 0;
 
     // Preload data (dummy L2 MEM) and instructions (dummy I$)
-    fixture.vip.inst_preload(inst_hex, inst_entry);
-    fixture.vip.data_preload(data_hex, data_entry);
+    fixture.vip.inst_preload(inst_hex);
+    fixture.vip.data_preload(data_hex);
 
     // Wait for reset
     fixture.vip.wait_for_reset();

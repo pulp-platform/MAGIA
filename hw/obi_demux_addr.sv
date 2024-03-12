@@ -28,6 +28,10 @@ module obi_demux_addr #(
   parameter type               sbr_port_obi_req_t = logic,
   /// The response struct for the subordinate ports (input ports).
   parameter type               sbr_port_obi_rsp_t = logic,
+  /// The request struct for the manager ports (output ports).
+  parameter type               mgr_port_obi_req_t = sbr_port_obi_req_t,
+  /// The response struct for the manager ports (output ports).
+  parameter type               mgr_port_obi_rsp_t = sbr_port_obi_rsp_t,
   /// The number of manager ports (output ports).
   parameter int unsigned       NumMgrPorts        = 32'd0,
   /// The maximum number of outstanding transactions.

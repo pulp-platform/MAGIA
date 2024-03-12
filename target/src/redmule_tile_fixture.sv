@@ -61,7 +61,7 @@ module redmule_tile_fixture;
   logic                                     debug_running;
   logic                                     debug_halted;
   logic                                     debug_pc_valid;
-  logic                                     debug_pc;
+  logic [31:0]                              debug_pc;
 
   logic                                     fetch_enable;
   logic                                     core_sleep;

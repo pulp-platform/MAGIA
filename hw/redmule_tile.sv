@@ -71,7 +71,7 @@ module redemule_tile
   output logic                                     debug_running_o     ,
   output logic                                     debug_halted_o      ,
   output logic                                     debug_pc_valid_o    ,
-  output logic                                     debug_pc_o          ,
+  output logic [31:0]                              debug_pc_o          ,
 
   input  logic                                     fetch_enable_i      ,
   output logic                                     core_sleep_o        ,
@@ -142,11 +142,11 @@ module redemule_tile
   assign obi_xbar_en_default_idx = '0;
   assign obi_xbar_default_idx    = '0;
 
-  assign core_data_req_o = core_l2_data_req;  //TODO: add the AXI XBAR and route data out through it
-  assign core_data_rsp_i = core_l2_data_rsp;  //TODO: add the AXI XBAR and route data out through it
+  assign core_data_req_o  = core_l2_data_req;  //TODO: add the AXI XBAR and route data out through it
+  assign core_l2_data_rsp = core_data_rsp_i;   //TODO: add the AXI XBAR and route data out through it
 
-  assign core_instr_req_o = core_cache_instr_req; //TODO: add the AXI XBAR and route data out through it
-  assign core_instr_rsp_i = core_cache_instr_rsp; //TODO: add the AXI XBAR and route data out through it
+  assign core_instr_req_o     = core_cache_instr_req; //TODO: add the AXI XBAR and route data out through it
+  assign core_cache_instr_rsp = core_instr_rsp_i;     //TODO: add the AXI XBAR and route data out through it
 
   assign axi_data_user     = '0;
   assign obi_rsp_data_user = '0;
@@ -187,7 +187,7 @@ module redemule_tile
     .AxiBurstType (                                       ),
     .axi_req_t    ( redmule_tile_pkg::core_axi_data_req_t ),
     .axi_rsp_t    ( redmule_tile_pkg::core_axi_data_rsp_t ),
-    .MaxRequests  (                                       )
+    .MaxRequests  ( 1                                     )
   ) i_core_data_obi2axi (
     .clk_i               ( sys_clk              ),
     .rst_ni              ( rstn_i               ),
@@ -229,7 +229,7 @@ module redemule_tile
     .AxiBurstType (                                        ),
     .axi_req_t    ( redmule_tile_pkg::core_axi_instr_req_t ),
     .axi_rsp_t    ( redmule_tile_pkg::core_axi_instr_rsp_t ),
-    .MaxRequests  (                                        )
+    .MaxRequests  ( 1                                      )
   ) i_core_instr_obi2axi (
     .clk_i               ( sys_clk              ),
     .rst_ni              ( rstn_i               ),
@@ -491,10 +491,12 @@ module redemule_tile
     .MgrPortObiCfg      (                                          ),
     .sbr_port_obi_req_t ( redmule_tile_pkg::core_data_req_t        ),
     .sbr_port_obi_rsp_t ( redmule_tile_pkg::core_data_rsp_t        ),
+    .mgr_port_obi_req_t (                                          ),
+    .mgr_port_obi_rsp_t (                                          ),
     .NumMgrPorts        ( redmule_tile_pkg::N_SBR                  ),
     .NumMaxTrans        ( redmule_tile_pkg::N_MAX_TRAN             ),
     .NumAddrRules       ( redmule_tile_pkg::N_ADDR_RULE            ),
-    .addr_map_rule_t    ( redmule_tile_pkg::obi_xbar_rule_t        ),
+    .addr_map_rule_t    ( redmule_tile_pkg::obi_xbar_rule_t        )
   ) i_obi_xbar (
     .clk_i            ( sys_clk                 ),
     .rst_ni           ( rstn_i                  ),

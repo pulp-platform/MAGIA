@@ -50,9 +50,12 @@ INI_PATH  = $(mkfile_path)/modelsim.ini
 WORK_PATH = $(BUILD_DIR)
 
 # Useful Parameters
-gui      ?= 0
-ipstools ?= 0
-P_STALL  ?= 0.0
+gui           ?= 0
+ipstools      ?= 0
+inst_hex_name ?= stim_instr.txt 
+data_hex_name ?= stim_data.txt 
+inst_entry    ?= 0x2C000000
+data_entry    ?= 0x2c010000
 
 ifeq ($(verbose),1)
 	FLAGS += -DVERBOSE
@@ -119,17 +122,19 @@ run: $(CRT)
 ifeq ($(gui), 0)
 	cd $(BUILD_DIR)/$(TEST_SRCS);                             \
 	$(QUESTA) vsim -c vopt_tb $(questa_run_flag) -do "run -a" \
-	-gSTIM_INSTR=stim_instr.txt                               \
-	-gSTIM_DATA=stim_data.txt                                 \
-	-gPROB_STALL=$(P_STALL)
+	+INST_HEX=$(inst_hex_name)                                \
+	+DATA_HEX=$(data_hex_name)                                \
+	+INST_ENTRY=$(inst_entry)                                 \
+	+DATA_ENTRY=$(data_entry)
 else
 	cd $(BUILD_DIR)/$(TEST_SRCS);             \
 	$(QUESTA) vsim vopt_tb $(questa_run_flag) \
 	-do "add log -r sim:/$(tb)/*"             \
 	-do "source $(WAVES)"                     \
-	-gSTIM_INSTR=stim_instr.txt               \
-	-gSTIM_DATA=stim_data.txt                 \
-	-gPROB_STALL=$(P_STALL)
+	+INST_HEX=$(inst_hex_name)                \
+	+DATA_HEX=$(data_hex_name)                \
+	+INST_ENTRY=$(inst_entry)                 \
+	+DATA_ENTRY=$(data_entry)
 endif
 
 # Download bender

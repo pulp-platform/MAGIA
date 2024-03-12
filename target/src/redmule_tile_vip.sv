@@ -62,7 +62,7 @@ module redmule_tile_vip
   input  logic                                     debug_running,
   input  logic                                     debug_halted,
   input  logic                                     debug_pc_valid,
-  input  logic                                     debug_pc,
+  input  logic [31:0]                              debug_pc,
 
   output logic                                     fetch_enable,  //TODO: manage signal
   input  logic                                     core_sleep,
@@ -118,13 +118,13 @@ module redmule_tile_vip
 /*******************************************************/
 
   // Preload instruction cache subroutine
-  task automatic inst_preload(input string image, input int unsigned entry);
-    $readmemh(image, i_instr_cache.mem, entry);
+  task automatic inst_preload(input string image);
+    $readmemh(image, i_instr_cache.mem);
   endtask: inst_preload
 
   // Preload data subroutine
-  task automatic data_preload(input string image, input int unsigned entry);
-    $readmemh(image, i_l2_mem.mem, entry);
+  task automatic data_preload(input string image);
+    $readmemh(image, i_l2_mem.mem);
   endtask: data_preload
 
   task wait_for_reset;
@@ -142,6 +142,8 @@ module redmule_tile_vip
 
   task automatic wait_for_eoc(output bit[31:0] exit_code);
     //TODO
+    #100;
+    exit_code = 1;
   endtask: wait_for_eoc
 
 /*******************************************************/
@@ -154,7 +156,7 @@ module redmule_tile_vip
     .AddrWidth          ( redmule_tile_pkg::ADDR_W               ),
     .DataWidth          ( redmule_tile_pkg::DATA_W               ),
     .IdWidth            ( 1                                      ),
-    .UserWidth          ( 0                                      ),
+    .UserWidth          ( 1                                      ),
     .axi_req_t          ( redmule_tile_pkg::core_axi_instr_req_t ),
     .axi_rsp_t          ( redmule_tile_pkg::core_axi_instr_rsp_t ),
     .WarnUninitialized  ( 0                                      ),
@@ -192,7 +194,7 @@ module redmule_tile_vip
     .AddrWidth          ( redmule_tile_pkg::ADDR_W              ),
     .DataWidth          ( redmule_tile_pkg::DATA_W              ),
     .IdWidth            ( 1                                     ),
-    .UserWidth          ( 0                                     ),
+    .UserWidth          ( 1                                     ),
     .axi_req_t          ( redmule_tile_pkg::core_axi_data_req_t ),
     .axi_rsp_t          ( redmule_tile_pkg::core_axi_data_rsp_t ),
     .WarnUninitialized  ( 0                                     ),

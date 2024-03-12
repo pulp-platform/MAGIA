@@ -88,7 +88,7 @@ package redmule_tile_pkg;
   parameter int unsigned CLIC_ID_W             = 0;                               // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
 
   // Parameters used by RedMulE
-  parameter int unsigned REDMULE_DW            = DWH;                             // RedMulE Data Width
+  parameter int unsigned REDMULE_DW            = DW_LIC;                          // RedMulE Data Width
   parameter int unsigned REDMULE_ID_W          = IW + ID_W_OFFSET;                // RedMulE ID Width
   parameter int unsigned REDMULE_UW            = 0;                               // RedMulE User Width
   
@@ -98,7 +98,7 @@ package redmule_tile_pkg;
   parameter int unsigned ACHK_WIDTH            = 0;                               // Width of the achk  signal (see OBI documentation): not used by the CV32E40X
   parameter int unsigned RUSER_WIDTH           = 0;                               // Width of the ruser signal (see OBI documentation): not used by the CV32E40X
   parameter int unsigned RCHK_WIDTH            = 0;                               // Width of the rchk  signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned AID_WIDTH             = 0;                               // Width of the aid   signal (address channel identifier, see OBI documentation)
+  parameter int unsigned AID_WIDTH             = 1;                               // Width of the aid   signal (address channel identifier, see OBI documentation)
   parameter int unsigned RID_WIDTH             = 1;                               // Width of the rid   signal (response channel identifier, see OBI documentation)
   parameter int unsigned MID_WIDTH             = 0;                               // Width of the mid   signal (manager identifier, see OBI documentation)
   parameter int unsigned N_SBR                 = 2;                               // Number of slaves (HCI, AXI XBAR)
@@ -149,8 +149,8 @@ package redmule_tile_pkg;
 
   `OBI_TYPEDEF_ALL_A_OPTIONAL(core_instr_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
   `OBI_TYPEDEF_ALL_R_OPTIONAL(core_instr_obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
-  `OBI_TYPEDEF_A_CHAN_T(core_instr_obi_a_chan_t, ADDR_W, DATA_W, 0, core_instr_obi_a_optional_t)  // Direct Core - I$ connection: ID = 0
-  `OBI_TYPEDEF_R_CHAN_T(core_instr_obi_r_chan_t, DATA_W, 0, core_instr_obi_r_optional_t)          // Direct Core - I$ connection: ID = 0
+  `OBI_TYPEDEF_A_CHAN_T(core_instr_obi_a_chan_t, ADDR_W, DATA_W, AID_WIDTH, core_instr_obi_a_optional_t)
+  `OBI_TYPEDEF_R_CHAN_T(core_instr_obi_r_chan_t, DATA_W, RID_WIDTH, core_instr_obi_r_optional_t)
   `OBI_TYPEDEF_DEFAULT_REQ_T(core_obi_instr_req_t, core_instr_obi_a_chan_t)
   `OBI_TYPEDEF_RSP_T(core_obi_instr_rsp_t, core_instr_obi_r_chan_t)
 
