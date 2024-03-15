@@ -30,6 +30,9 @@ package redmule_tile_pkg;
 
   // The following parameter is need to specify to the redmule_top module to include the Xif interface
   `define TARGET_REDMULE_COMPLEX
+
+  // The following parameter is need to enable the Core trace generation
+  `define CORE_TRACES
   
   // Global constants
   localparam int unsigned ADDR_W               = 32;                              // System-wide address Width
@@ -68,7 +71,7 @@ package redmule_tile_pkg;
   parameter int unsigned BWH                   = BYTE_W;                          // Byte Width for HWPE Interconnect
   parameter int unsigned WWH                   = DWH;                             // Word Width for HWPE Interconnect
   parameter int unsigned OWH                   = AWH;                             // Offset Width for HWPE Interconnect
-  parameter int unsigned UWH                   = 0;                               // User Width for HWPE Interconnect
+  parameter int unsigned UWH                   = 1;                               // User Width for HWPE Interconnect
   parameter int unsigned SEL_LIC               = 0;                               // Log interconnect type selector
   localparam int unsigned SW_LIC               = DW_LIC/BW_LIC;                   // Strobe Width for HWPE Interconnect
   localparam int unsigned WORDS_DATA           = DW_LIC/WWH;                      // Number of words per data
@@ -109,9 +112,9 @@ package redmule_tile_pkg;
 
   // Parameters used by AXI
   parameter int unsigned AXI_DATA_ID_W         = 2;                               // Width of the AXI Data ID (2 bits: Core, iDMA. I$)
-  parameter int unsigned AXI_INSTR_ID_W        = 0;                               // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
-  parameter int unsigned AXI_DATA_U_W          = 0;                               // Width of the AXI Data User
-  parameter int unsigned AXI_INSTR_U_W         = 0;                               // Width of the AXI Instruction User
+  parameter int unsigned AXI_INSTR_ID_W        = 1;                               // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
+  parameter int unsigned AXI_DATA_U_W          = 1;                               // Width of the AXI Data User
+  parameter int unsigned AXI_INSTR_U_W         = 1;                               // Width of the AXI Instruction User
 
   typedef struct packed {
     int unsigned       idx;

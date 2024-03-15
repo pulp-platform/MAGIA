@@ -378,7 +378,11 @@ module redemule_tile
   // Documentation of cv32e40x_core's design parameters and interface is available at:
   // https://docs.openhwgroup.org/projects/cv32e40x-user-manual/en/latest/integration.html#core-integration
 
+`ifndef CORE_TRACES
   cv32e40x_core #(
+`else
+  cv32e40x_wrapper #(
+`endif
     .RV32             ( CORE_ISA                          ),
     .A_EXT            ( CORE_A                            ),
     .B_EXT            ( CORE_B                            ),

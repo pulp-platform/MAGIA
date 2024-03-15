@@ -132,17 +132,20 @@ module redmule_tile_vip
     @(posedge clk);
   endtask: wait_for_reset
 
-  task automatic init;
-    //TODO
+  task automatic init(input bit[31:0] entry_addr);
+    irq          = '0;
+    fetch_enable = 1'b0;
+    boot_addr    = entry_addr;
+    #1000;
   endtask: init
 
   task automatic elf_run;
-    //TODO
+    fetch_enable = 1'b1;
+    #1000;
   endtask: elf_run
 
   task automatic wait_for_eoc(output bit[31:0] exit_code);
-    //TODO
-    #100;
+    #10000;
     exit_code = 1;
   endtask: wait_for_eoc
 

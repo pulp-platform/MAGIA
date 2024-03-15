@@ -43,8 +43,8 @@ compile_script_synth ?= scripts/synth_compile.tcl
 compile_flag         ?= -suppress 2583 -suppress 13314
 
 questa_compile_flag  += -t 1ns -suppress 3009
-questa_opt_flag      += -suppress 3009
-questa_run_flag      += -t 1ns -suppress 3009
+questa_opt_flag      += -suppress 3009 -debugdb
+questa_run_flag      += -t 1ns -debugDB -suppress 3009
 
 INI_PATH  = $(mkfile_path)/modelsim.ini
 WORK_PATH = $(BUILD_DIR)
@@ -56,6 +56,7 @@ inst_hex_name ?= stim_instr.txt
 data_hex_name ?= stim_data.txt 
 inst_entry    ?= 0x2C000000
 data_entry    ?= 0x2c010000
+boot_addr     ?= 0x2c000080
 
 ifeq ($(verbose),1)
 	FLAGS += -DVERBOSE
@@ -125,7 +126,8 @@ ifeq ($(gui), 0)
 	+INST_HEX=$(inst_hex_name)                                \
 	+DATA_HEX=$(data_hex_name)                                \
 	+INST_ENTRY=$(inst_entry)                                 \
-	+DATA_ENTRY=$(data_entry)
+	+DATA_ENTRY=$(data_entry)                                 \
+	+BOOT_ADDR=$(boot_addr)
 else
 	cd $(BUILD_DIR)/$(TEST_SRCS);             \
 	$(QUESTA) vsim vopt_tb $(questa_run_flag) \
@@ -134,7 +136,8 @@ else
 	+INST_HEX=$(inst_hex_name)                \
 	+DATA_HEX=$(data_hex_name)                \
 	+INST_ENTRY=$(inst_entry)                 \
-	+DATA_ENTRY=$(data_entry)
+	+DATA_ENTRY=$(data_entry)                 \
+	+BOOT_ADDR=$(boot_addr)
 endif
 
 # Download bender
