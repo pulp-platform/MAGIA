@@ -23,7 +23,7 @@ package:
 
 dependencies:
   redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 4b74428d82a40eb42ed38ce0eefc1803620a32f4 } # branch: vi/scale_up
-  cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: "redmule-v1.0"                           }
+  cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: 5ee072a7e2be9b55b4e54f76482cd68ea6a30930 } # branch: vi/redmule_scaleup
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: c35d5b0886ab549fb9144c3c14a4682112330e21 } # branch: yt/reqrsp
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 5a48a854573fca5bbabc1cfd4110fa4530a50ed7 } # branch: vi/redmule_scaleup
@@ -35,18 +35,27 @@ dependencies:
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
 
 sources:
-  files:
   # RedMulE Mesh
-    - hw/redmule_tile_pkg.sv
-    - hw/l1_spm.sv
-    - hw/instr2obi.sv
-    - hw/obi2hci.sv
-    - hw/obi_demux_addr.sv
-    - hw/redmule_tile.sv
+  - target: all(redmule_mesh_dv)
+    defines:
+      CORE_TRACES: ~
+    files:
+      - hw/redmule_tile_pkg.sv
+      - hw/l1_spm.sv
+      - hw/instr2obi.sv
+      - hw/obi2hci.sv
+      - hw/obi_demux_addr.sv
+      - hw/redmule_tile.sv
+      - target/src/redmule_tile_tb_pkg.sv
+      - target/src/redmule_tile_vip.sv
+      - target/src/redmule_tile_fixture.sv
+      - target/src/redmule_tile_tb.sv
 
-    - target: redmule_mesh_dv
-      files:
-        - target/src/redmule_tile_tb_pkg.sv
-        - target/src/redmule_tile_vip.sv
-        - target/src/redmule_tile_fixture.sv
-        - target/src/redmule_tile_tb.sv
+  - target: all(not(redmule_mesh_dv))
+    files:
+      - hw/redmule_tile_pkg.sv
+      - hw/l1_spm.sv
+      - hw/instr2obi.sv
+      - hw/obi2hci.sv
+      - hw/obi_demux_addr.sv
+      - hw/redmule_tile.sv

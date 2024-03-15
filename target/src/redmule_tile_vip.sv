@@ -145,7 +145,8 @@ module redmule_tile_vip
   endtask: elf_run
 
   task automatic wait_for_eoc(output bit[31:0] exit_code);
-    #10000;
+    while (i_l2_mem.mem[32'h2C03_0000] == 0)
+      #10000;
     exit_code = 1;
   endtask: wait_for_eoc
 

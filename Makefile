@@ -168,7 +168,7 @@ bender_targs += -t cv32e40p_exclude_tracer
 tb           := redmule_tile_tb
 WAVES        := $(mkfile_path)/wave.do
 bender_targs += -t redmule_complex
-bender_targs += -t redmule_tile
+bender_targs += -t cv32e40x_bhv
 
 update-ips:
 	$(BENDER) update

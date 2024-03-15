@@ -27,12 +27,6 @@ package redmule_tile_pkg;
   `include "axi/typedef.svh"
 
   `include "hci/assign.svh"
-
-  // The following parameter is need to specify to the redmule_top module to include the Xif interface
-  `define TARGET_REDMULE_COMPLEX
-
-  // The following parameter is need to enable the Core trace generation
-  `define CORE_TRACES
   
   // Global constants
   localparam int unsigned ADDR_W               = 32;                              // System-wide address Width
