@@ -24,9 +24,9 @@ make build-hw > build-hw.log
 ```
 **5)** Comile the test code (`redmule-mesh` folder):
 ```
-make all
+make all test=boot_test
 ```
 **6)** Run test (`redmule-mesh` folder):
 ```
-make run gui=1
+make run test=boot_test gui=1
 ```
