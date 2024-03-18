@@ -32,10 +32,15 @@ module instr2obi_req #(
   assign obi_req_o.a.we                 = 1'b0;
   assign obi_req_o.a.be                 = 4'hF;
   assign obi_req_o.a.wdata              = 32'h0;
+  assign obi_req_o.a.aid                = 'b0;
+  assign obi_req_o.a.a_optional.auser   = 'b0;
+  assign obi_req_o.a.a_optional.wuser   = 'b0;
   assign obi_req_o.a.a_optional.atop    = 6'h0;
   assign obi_req_o.a.a_optional.memtype = instr_req_i.memtype;
+  assign obi_req_o.a.a_optional.mid     = 'b0;
   assign obi_req_o.a.a_optional.prot    = instr_req_i.prot;
   assign obi_req_o.a.a_optional.dbg     = instr_req_i.dbg;
+  assign obi_req_o.a.a_optional.achk    = 'b0;
 
 endmodule: instr2obi_req
 

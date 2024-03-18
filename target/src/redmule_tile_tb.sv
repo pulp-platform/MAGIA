@@ -46,7 +46,7 @@ module redmule_tile_tb;
     fixture.vip.elf_run();
     fixture.vip.wait_for_eoc(exit_code);
 
-    $display("SIMULATION FINISHED WITH EXIT CODE: %0d\n", exit_code);
+    $display("SIMULATION FINISHED WITH EXIT CODE: %0h\n", exit_code);
 
     $finish;
   end

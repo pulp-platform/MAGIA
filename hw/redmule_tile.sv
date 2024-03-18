@@ -95,8 +95,11 @@ module redemule_tile
   redmule_tile_pkg::core_data_req_t                                    core_data_req          ;
   redmule_tile_pkg::core_data_rsp_t                                    core_data_rsp          ;
 
-  redmule_tile_pkg::core_data_req_t[redmule_tile_pkg::N_SBR]           core_mem_data_req      ; // Index 0 -> L1SPM, Index 1 -> L2
-  redmule_tile_pkg::core_data_rsp_t[redmule_tile_pkg::N_SBR]           core_mem_data_rsp      ; // Index 0 -> L1SPM, Index 1 -> L2
+  redmule_tile_pkg::core_obi_data_req_t                                core_obi_data_req      ;
+  redmule_tile_pkg::core_obi_data_rsp_t                                core_obi_data_rsp      ;
+
+  redmule_tile_pkg::core_obi_data_req_t[redmule_tile_pkg::N_SBR]       core_mem_data_req      ; // Index 0 -> L2, Index 1 -> L1SPM
+  redmule_tile_pkg::core_obi_data_rsp_t[redmule_tile_pkg::N_SBR]       core_mem_data_rsp      ; // Index 0 -> L2, Index 1 -> L1SPM
 
   redmule_tile_pkg::core_hci_data_req_t                                core_l1_data_req       ;
   redmule_tile_pkg::core_hci_data_rsp_t                                core_l1_data_rsp       ;
@@ -154,32 +157,51 @@ module redemule_tile
   assign axi_instr_user     = '0;
   assign obi_rsp_instr_user = '0;
 
+  assign hci_clear = 1'b0;  //TODO: Figure out how to manage these signals
+  assign hci_ctrl  = '0;    //TODO: Figure out how to manage these signals
+
 /*******************************************************/
 /**               Hardwired Signals End               **/
 /*******************************************************/
 /**             Type Conversions Beginning            **/
 /*******************************************************/
 
+  data2obi_req #(
+    .data_req_t ( redmule_tile_pkg::core_data_req_t     ),
+    .obi_req_t  ( redmule_tile_pkg::core_obi_data_req_t )
+  ) i_core_data2obi_req (
+    .data_req_i ( core_data_req     ),
+    .obi_req_o  ( core_obi_data_req )
+  );
+
+  obi2data_rsp #(
+    .obi_rsp_t  ( redmule_tile_pkg::core_obi_data_rsp_t ),
+    .data_rsp_t ( redmule_tile_pkg::core_data_rsp_t     )
+  ) i_core_obi2data_rsp (
+    .obi_rsp_i  ( core_obi_data_rsp ),
+    .data_rsp_o ( core_data_rsp     )
+  );
+  
   obi2hci_req #(
-    .obi_req_t ( redmule_tile_pkg::core_data_req_t     ),
+    .obi_req_t ( redmule_tile_pkg::core_obi_data_req_t ),
     .hci_req_t ( redmule_tile_pkg::core_hci_data_req_t )
   ) i_core_data_obi2hci_req (
-    .obi_req_i ( core_mem_data_req[0] ),
-    .hci_req_o ( core_l1_data_req     )
+    .obi_req_i ( core_mem_data_req[redmule_tile_pkg::L1SPM_IDX] ),
+    .hci_req_o ( core_l1_data_req                               )
   );
 
   hci2obi_rsp #(
     .hci_rsp_t ( redmule_tile_pkg::core_hci_data_rsp_t ),
-    .obi_rsp_t ( redmule_tile_pkg::core_data_rsp_t     )
+    .obi_rsp_t ( redmule_tile_pkg::core_obi_data_rsp_t )
   ) i_core_data_hci2obi_rsp (
-    .hci_rsp_i ( core_l1_data_rsp     ),
-    .obi_rsp_o ( core_mem_data_rsp[0] )
+    .hci_rsp_i ( core_l1_data_rsp                               ),
+    .obi_rsp_o ( core_mem_data_rsp[redmule_tile_pkg::L1SPM_IDX] )
   );
 
   obi_to_axi #(
     .ObiCfg       (                                       ),
-    .obi_req_t    ( redmule_tile_pkg::core_data_req_t     ),
-    .obi_rsp_t    ( redmule_tile_pkg::core_data_rsp_t     ),
+    .obi_req_t    ( redmule_tile_pkg::core_obi_data_req_t ),
+    .obi_rsp_t    ( redmule_tile_pkg::core_obi_data_rsp_t ),
     .AxiLite      (                                       ),
     .AxiAddrWidth ( redmule_tile_pkg::ADDR_W              ),
     .AxiDataWidth ( redmule_tile_pkg::DATA_W              ),
@@ -189,17 +211,17 @@ module redemule_tile
     .axi_rsp_t    ( redmule_tile_pkg::core_axi_data_rsp_t ),
     .MaxRequests  ( 1                                     )
   ) i_core_data_obi2axi (
-    .clk_i               ( sys_clk              ),
-    .rst_ni              ( rstn_i               ),
-    .obi_req_i           ( core_mem_data_req[1] ),
-    .obi_rsp_o           ( core_mem_data_rsp[1] ),
-    .user_i              ( axi_data_user        ),
-    .axi_req_o           ( core_l2_data_req     ),
-    .axi_rsp_i           ( core_l2_data_rsp     ),
-    .axi_rsp_channel_sel (                      ),
-    .axi_rsp_b_user_o    (                      ),
-    .axi_rsp_r_user_o    (                      ),
-    .obi_rsp_user_i      ( obi_rsp_data_user    )
+    .clk_i               ( sys_clk                                     ),
+    .rst_ni              ( rstn_i                                      ),
+    .obi_req_i           ( core_mem_data_req[redmule_tile_pkg::L2_IDX] ),
+    .obi_rsp_o           ( core_mem_data_rsp[redmule_tile_pkg::L2_IDX] ),
+    .user_i              ( axi_data_user                               ),
+    .axi_req_o           ( core_l2_data_req                            ),
+    .axi_rsp_i           ( core_l2_data_rsp                            ),
+    .axi_rsp_channel_sel (                                             ),
+    .axi_rsp_b_user_o    (                                             ),
+    .axi_rsp_r_user_o    (                                             ),
+    .obi_rsp_user_i      ( obi_rsp_data_user                           )
   );
 
   instr2obi_req #(
@@ -430,20 +452,20 @@ module redemule_tile
     .instr_err_i         ( core_instr_rsp.err     ),
 
     // Data memory interface
-    .data_req_o          ( core_data_req.req                  ),
-    .data_gnt_i          ( core_data_rsp.gnt                  ),
-    .data_addr_o         ( core_data_req.a.addr               ),
-    .data_atop_o         ( core_data_req.a.a_optional.atop    ),
-    .data_be_o           ( core_data_req.a.be                 ),
-    .data_memtype_o      ( core_data_req.a.a_optional.memtype ),
-    .data_prot_o         ( core_data_req.a.a_optional.prot    ),
-    .data_dbg_o          ( core_data_req.a.a_optional.dbg     ),
-    .data_wdata_o        ( core_data_req.a.wdata              ),
-    .data_we_o           ( core_data_req.a.we                 ),
-    .data_rvalid_i       ( core_data_rsp.rvalid               ),
-    .data_rdata_i        ( core_data_rsp.r.rdata              ),
-    .data_err_i          ( core_data_rsp.r.err                ),
-    .data_exokay_i       ( core_data_rsp.r.r_optional.exokay  ),
+    .data_req_o          ( core_data_req.req     ),
+    .data_gnt_i          ( core_data_rsp.gnt     ),
+    .data_addr_o         ( core_data_req.addr    ),
+    .data_atop_o         ( core_data_req.atop    ),
+    .data_be_o           ( core_data_req.be      ),
+    .data_memtype_o      ( core_data_req.memtype ),
+    .data_prot_o         ( core_data_req.prot    ),
+    .data_dbg_o          ( core_data_req.dbg     ),
+    .data_wdata_o        ( core_data_req.wdata   ),
+    .data_we_o           ( core_data_req.we      ),
+    .data_rvalid_i       ( core_data_rsp.rvalid  ),
+    .data_rdata_i        ( core_data_rsp.rdata   ),
+    .data_err_i          ( core_data_rsp.err     ),
+    .data_exokay_i       ( core_data_rsp.exokay  ),
 
     // Cycle, Time
     .mcycle_o                                        ,  //TODO: do we need these or can we hardwire them?
@@ -493,8 +515,8 @@ module redemule_tile
   obi_demux_addr #(
     .SbrPortObiCfg      (                                          ),
     .MgrPortObiCfg      (                                          ),
-    .sbr_port_obi_req_t ( redmule_tile_pkg::core_data_req_t        ),
-    .sbr_port_obi_rsp_t ( redmule_tile_pkg::core_data_rsp_t        ),
+    .sbr_port_obi_req_t ( redmule_tile_pkg::core_obi_data_req_t    ),
+    .sbr_port_obi_rsp_t ( redmule_tile_pkg::core_obi_data_rsp_t    ),
     .mgr_port_obi_req_t (                                          ),
     .mgr_port_obi_rsp_t (                                          ),
     .NumMgrPorts        ( redmule_tile_pkg::N_SBR                  ),
@@ -505,8 +527,8 @@ module redemule_tile
     .clk_i            ( sys_clk                 ),
     .rst_ni           ( rstn_i                  ),
 
-    .sbr_ports_req_i  ( core_data_req           ),
-    .sbr_ports_rsp_o  ( core_data_rsp           ),
+    .sbr_ports_req_i  ( core_obi_data_req       ),
+    .sbr_ports_rsp_o  ( core_obi_data_rsp       ),
 
     .mgr_ports_req_o  ( core_mem_data_req       ),
     .mgr_ports_rsp_i  ( core_mem_data_rsp       ),

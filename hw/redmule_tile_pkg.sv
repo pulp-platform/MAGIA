@@ -56,17 +56,17 @@ package redmule_tile_pkg;
   localparam int unsigned AWM                  = $clog2(N_WORDS_BANK);            // Address width memory (master ports)
   parameter int unsigned DW_LIC                = DATA_W * N_MEM_BANKS;            // Data Width for Log Interconnect
   parameter int unsigned BW_LIC                = BYTE_W;                          // Byte Width for Log Interconnect
-  parameter int unsigned UW_LIC                = 0;                               // User Width for Log Interconnect
+  parameter int unsigned UW_LIC                = 1;                               // User Width for Log Interconnect
   parameter int unsigned TS_BIT                = 21;                              // TEST_SET_BIT (for Log Interconnect)
   parameter int unsigned IW                    = N_HWPE + N_CORE + N_DMA + N_EXT; // ID Width HCI
-  parameter int unsigned EXPFIFO               = 0;                               // FIFO Depth for HWPE Interconnect
+  parameter int unsigned EXPFIFO               = 1;                               // FIFO Depth for HWPE Interconnect
   parameter int unsigned DWH                   = DATA_W * (N_MEM_BANKS - 1);      // Data Width for HWPE Interconnect (ignore the extra bank for missaligned accesses)
   parameter int unsigned AWH                   = ADDR_W;                          // Address Width for HWPE Interconnect
   parameter int unsigned BWH                   = BYTE_W;                          // Byte Width for HWPE Interconnect
   parameter int unsigned WWH                   = DWH;                             // Word Width for HWPE Interconnect
   parameter int unsigned OWH                   = AWH;                             // Offset Width for HWPE Interconnect
   parameter int unsigned UWH                   = 1;                               // User Width for HWPE Interconnect
-  parameter int unsigned SEL_LIC               = 0;                               // Log interconnect type selector
+  parameter int unsigned SEL_LIC               = 1;                               // Log interconnect type selector
   localparam int unsigned SW_LIC               = DW_LIC/BW_LIC;                   // Strobe Width for HWPE Interconnect
   localparam int unsigned WORDS_DATA           = DW_LIC/WWH;                      // Number of words per data
 
@@ -82,22 +82,22 @@ package redmule_tile_pkg;
   parameter bit [31:0]   DM_REGION_START       = 32'hF0000000;                    // Start address of Debug Module region, see Debug & Trigger
   parameter bit [31:0]   DM_REGION_END         = 32'hF0003FFF;                    // End address of Debug Module region, see Debug & Trigger
   parameter bit          CLIC_EN               = 1'b0;                            // Specifies whether Smclic, Smclicshv and Smclicconfig are supported
-  parameter int unsigned CLIC_ID_W             = 0;                               // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
+  parameter int unsigned CLIC_ID_W             = 1;                               // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
 
   // Parameters used by RedMulE
   parameter int unsigned REDMULE_DW            = DW_LIC;                          // RedMulE Data Width
   parameter int unsigned REDMULE_ID_W          = IW + ID_W_OFFSET;                // RedMulE ID Width
-  parameter int unsigned REDMULE_UW            = 0;                               // RedMulE User Width
+  parameter int unsigned REDMULE_UW            = 1;                               // RedMulE User Width
   
   // Parameters used by OBI
-  parameter int unsigned AUSER_WIDTH           = 0;                               // Width of the auser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned WUSER_WIDTH           = 0;                               // Width of the wuser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned ACHK_WIDTH            = 0;                               // Width of the achk  signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned RUSER_WIDTH           = 0;                               // Width of the ruser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned RCHK_WIDTH            = 0;                               // Width of the rchk  signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned AUSER_WIDTH           = 1;                               // Width of the auser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned WUSER_WIDTH           = 1;                               // Width of the wuser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned ACHK_WIDTH            = 1;                               // Width of the achk  signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned RUSER_WIDTH           = 1;                               // Width of the ruser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned RCHK_WIDTH            = 1;                               // Width of the rchk  signal (see OBI documentation): not used by the CV32E40X
   parameter int unsigned AID_WIDTH             = 1;                               // Width of the aid   signal (address channel identifier, see OBI documentation)
   parameter int unsigned RID_WIDTH             = 1;                               // Width of the rid   signal (response channel identifier, see OBI documentation)
-  parameter int unsigned MID_WIDTH             = 0;                               // Width of the mid   signal (manager identifier, see OBI documentation)
+  parameter int unsigned MID_WIDTH             = 1;                               // Width of the mid   signal (manager identifier, see OBI documentation)
   parameter int unsigned N_SBR                 = 2;                               // Number of slaves (HCI, AXI XBAR)
   parameter int unsigned N_MGR                 = 1;                               // Number of masters (Core)
   parameter int unsigned N_MAX_TRAN            = 1;                               // Number of maximum outstanding transactions
@@ -111,25 +111,50 @@ package redmule_tile_pkg;
   parameter int unsigned AXI_INSTR_U_W         = 1;                               // Width of the AXI Instruction User
 
   typedef struct packed {
-    int unsigned       idx;
-    logic [ADDR_W-1:0] start_addr;
-    logic [ADDR_W-1:0] end_addr;
+    int unsigned      idx;
+    logic[ADDR_W-1:0] start_addr;
+    logic[ADDR_W-1:0] end_addr;
   } obi_xbar_rule_t;
 
   typedef struct packed {
-    logic               req;
-    logic [INSTR_W-1:0] addr;
-    logic [1        :0] memtype;
-    logic [2        :0] prot;
-    logic               dbg;
+    logic              req;
+    logic[INSTR_W-1:0] addr;
+    logic[1        :0] memtype;
+    logic[2        :0] prot;
+    logic              dbg;
   } core_instr_req_t;
 
   typedef struct packed {
-    logic               gnt;
-    logic               rvalid;
-    logic [INSTR_W-1:0] rdata;
-    logic               err;
+    logic              gnt;
+    logic              rvalid;
+    logic[INSTR_W-1:0] rdata;
+    logic              err;
   } core_instr_rsp_t;
+
+  typedef struct packed {
+    logic             req;
+    logic[ADDR_W-1:0] addr;
+    logic[5       :0] atop;
+    logic[3       :0] be;
+    logic[1       :0] memtype;
+    logic[2       :0] prot;
+    logic             dbg;
+    logic[DATA_W-1:0] wdata;
+    logic             we;
+  } core_data_req_t;
+
+  typedef struct packed {
+    logic             gnt;
+    logic             rvalid;
+    logic[DATA_W-1:0] rdata;
+    logic             err;
+    logic             exokay;
+  } core_data_rsp_t;
+
+  typedef enum {
+    L1SPM_IDX = 1,
+    L2_IDX    = 0
+  } mem_array_idx_e;
 
   `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic [AWC-1:0], logic [DW_LIC-1:0], logic [SW_LIC-1:0], logic [IW-1:0])
   `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic [DW_LIC-1:0], logic [IW-1:0])
@@ -141,8 +166,8 @@ package redmule_tile_pkg;
   `OBI_TYPEDEF_ALL_R_OPTIONAL(core_data_obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
   `OBI_TYPEDEF_A_CHAN_T(core_data_obi_a_chan_t, ADDR_W, DATA_W, AID_WIDTH, core_data_obi_a_optional_t)
   `OBI_TYPEDEF_R_CHAN_T(core_data_obi_r_chan_t, DATA_W, RID_WIDTH, core_data_obi_r_optional_t)
-  `OBI_TYPEDEF_DEFAULT_REQ_T(core_data_req_t, core_data_obi_a_chan_t)
-  `OBI_TYPEDEF_RSP_T(core_data_rsp_t, core_data_obi_r_chan_t)
+  `OBI_TYPEDEF_DEFAULT_REQ_T(core_obi_data_req_t, core_data_obi_a_chan_t)
+  `OBI_TYPEDEF_RSP_T(core_obi_data_rsp_t, core_data_obi_r_chan_t)
 
   `OBI_TYPEDEF_ALL_A_OPTIONAL(core_instr_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
   `OBI_TYPEDEF_ALL_R_OPTIONAL(core_instr_obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)

@@ -147,7 +147,7 @@ module redmule_tile_vip
   task automatic wait_for_eoc(output bit[31:0] exit_code);
     while (i_l2_mem.mem[32'h2C03_0000] == 0)
       #10000;
-    exit_code = 1;
+    exit_code = i_l2_mem.mem[32'h2C03_0000];
   endtask: wait_for_eoc
 
 /*******************************************************/
@@ -163,7 +163,7 @@ module redmule_tile_vip
     .UserWidth          ( 1                                      ),
     .axi_req_t          ( redmule_tile_pkg::core_axi_instr_req_t ),
     .axi_rsp_t          ( redmule_tile_pkg::core_axi_instr_rsp_t ),
-    .WarnUninitialized  ( 0                                      ),
+    .WarnUninitialized  ( 1                                      ),
     .ClearErrOnAccess   ( 1                                      ),
     .ApplDelay          ( CLK_PERIOD * T_APPL                    ),
     .AcqDelay           ( CLK_PERIOD * T_TEST                    )
@@ -201,7 +201,7 @@ module redmule_tile_vip
     .UserWidth          ( 1                                     ),
     .axi_req_t          ( redmule_tile_pkg::core_axi_data_req_t ),
     .axi_rsp_t          ( redmule_tile_pkg::core_axi_data_rsp_t ),
-    .WarnUninitialized  ( 0                                     ),
+    .WarnUninitialized  ( 1                                     ),
     .ClearErrOnAccess   ( 1                                     ),
     .ApplDelay          ( CLK_PERIOD * T_APPL                   ),
     .AcqDelay           ( CLK_PERIOD * T_TEST                   )

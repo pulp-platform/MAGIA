@@ -36,7 +36,8 @@ XTEN           ?= imc
 #	TEST_SRCS := sw/redmule.c
 #endif
 
-TEST_SRCS := sw/tests/hello_world.c
+TEST_DIR  := sw/tests
+TEST_SRCS  = $(TEST_DIR)/$(test)
 
 compile_script       ?= scripts/compile.tcl
 compile_script_synth ?= scripts/synth_compile.tcl
@@ -57,6 +58,8 @@ data_hex_name ?= stim_data.txt
 inst_entry    ?= 0x2C000000
 data_entry    ?= 0x2c010000
 boot_addr     ?= 0x2c000080
+log_path      ?= ./core_traces.log
+test          ?= hello_world.c
 
 ifeq ($(verbose),1)
 	FLAGS += -DVERBOSE
@@ -127,7 +130,8 @@ ifeq ($(gui), 0)
 	+DATA_HEX=$(data_hex_name)                                \
 	+INST_ENTRY=$(inst_entry)                                 \
 	+DATA_ENTRY=$(data_entry)                                 \
-	+BOOT_ADDR=$(boot_addr)
+	+BOOT_ADDR=$(boot_addr)									  \
+	+log_file=$(log_path)
 else
 	cd $(BUILD_DIR)/$(TEST_SRCS);             \
 	$(QUESTA) vsim vopt_tb $(questa_run_flag) \
@@ -137,7 +141,8 @@ else
 	+DATA_HEX=$(data_hex_name)                \
 	+INST_ENTRY=$(inst_entry)                 \
 	+DATA_ENTRY=$(data_entry)                 \
-	+BOOT_ADDR=$(boot_addr)
+	+BOOT_ADDR=$(boot_addr)                   \
+	+log_file=$(log_path)
 endif
 
 # Download bender

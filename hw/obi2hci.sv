@@ -51,6 +51,8 @@ module hci2obi_rsp #(
   assign obi_rsp_o.r.rdata             = hci_rsp_i.r_data;
   assign obi_rsp_o.r.rid               = '0;
   assign obi_rsp_o.r.err               = 1'b0;
-  assign obi_rsp_o.r.r_optional.exokay = 1'b1;
+  assign obi_rsp_o.r.r_optional.ruser  = 'b0;
+  assign obi_rsp_o.r.r_optional.exokay = 1'b0;
+  assign obi_rsp_o.r.r_optional.rchk   = 'b0;
 
 endmodule: hci2obi_rsp
