@@ -37,7 +37,7 @@ XTEN           ?= imc
 #endif
 
 TEST_DIR  := sw/tests
-TEST_SRCS  = $(TEST_DIR)/$(test)
+TEST_SRCS  = $(TEST_DIR)/$(test).c
 
 compile_script       ?= scripts/compile.tcl
 compile_script_synth ?= scripts/synth_compile.tcl
@@ -59,7 +59,7 @@ inst_entry    ?= 0x2C000000
 data_entry    ?= 0x2c010000
 boot_addr     ?= 0x2c000080
 log_path      ?= ./core_traces.log
-test          ?= hello_world.c
+test          ?= hello_world
 
 ifeq ($(verbose),1)
 	FLAGS += -DVERBOSE
