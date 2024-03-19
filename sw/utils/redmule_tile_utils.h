@@ -1,5 +1,5 @@
-#define L1_BASE       (0x10000000)
-#define L2_BASE       (0x20000000)
+#define L1_BASE       (0x1C010000)
+#define L2_BASE       (0x2C010000)
 #define TEST_END_ADDR (0x2C030000)
 
 #define DEFAULT_EXIT_CODE (0xAF)

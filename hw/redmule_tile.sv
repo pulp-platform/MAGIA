@@ -160,6 +160,8 @@ module redemule_tile
   assign hci_clear = 1'b0;  //TODO: Figure out how to manage these signals
   assign hci_ctrl  = '0;    //TODO: Figure out how to manage these signals
 
+  assign redmule_ctrl_req = '0; //TODO: Figure out how to manage control
+
 /*******************************************************/
 /**               Hardwired Signals End               **/
 /*******************************************************/

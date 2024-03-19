@@ -59,6 +59,7 @@ inst_entry    ?= 0x2C000000
 data_entry    ?= 0x2c010000
 boot_addr     ?= 0x2c000080
 log_path      ?= ./core_traces.log
+itb_file      ?= $(ITB)
 test          ?= hello_world
 
 ifeq ($(verbose),1)
@@ -88,6 +89,8 @@ CRT=$(BUILD_DIR)/crt0.o
 OBJ=$(BUILD_DIR)/$(TEST_SRCS)/verif.o
 BIN=$(BUILD_DIR)/$(TEST_SRCS)/verif
 DUMP=$(BUILD_DIR)/$(TEST_SRCS)/verif.dump
+ODUMP=$(BUILD_DIR)/$(TEST_SRCS)/verif.objdump
+ITB=$(BUILD_DIR)/$(TEST_SRCS)/verif.itb
 STIM_INSTR=$(BUILD_DIR)/$(TEST_SRCS)/stim_instr.txt
 STIM_DATA=$(BUILD_DIR)/$(TEST_SRCS)/stim_data.txt
 VSIM_INI=$(BUILD_DIR)/$(TEST_SRCS)/modelsim.ini
@@ -119,7 +122,7 @@ $(BUILD_DIR):
 SHELL := /bin/bash
 
 # Generate instructions and data stimuli
-all: $(STIM_INSTR) $(STIM_DATA) dis
+all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb
 
 # Run the simulation
 run: $(CRT)
@@ -131,7 +134,8 @@ ifeq ($(gui), 0)
 	+INST_ENTRY=$(inst_entry)                                 \
 	+DATA_ENTRY=$(data_entry)                                 \
 	+BOOT_ADDR=$(boot_addr)									  \
-	+log_file=$(log_path)
+	+log_file=$(log_path)                                     \
+	+itb_file=$(itb_file)
 else
 	cd $(BUILD_DIR)/$(TEST_SRCS);             \
 	$(QUESTA) vsim vopt_tb $(questa_run_flag) \
@@ -142,7 +146,8 @@ else
 	+INST_ENTRY=$(inst_entry)                 \
 	+DATA_ENTRY=$(data_entry)                 \
 	+BOOT_ADDR=$(boot_addr)                   \
-	+log_file=$(log_path)
+	+log_file=$(log_path)                     \
+	+itb_file=$(itb_file)
 endif
 
 # Download bender
@@ -206,6 +211,12 @@ clean:
 
 dis:
 	$(OBJDUMP) -d $(BIN) > $(DUMP)
+
+objdump:
+	$(OBJDUMP) -d -l -s $(BIN) > $(ODUMP)
+
+itb:
+	python scripts/objdump2itb.py $(ODUMP) > $(ITB)
 
 OP     ?= gemm
 fp_fmt ?= FP16

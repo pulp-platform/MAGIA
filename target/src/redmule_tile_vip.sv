@@ -229,5 +229,24 @@ module redmule_tile_vip
 /*******************************************************/
 /**                     L2 MEM End                    **/
 /*******************************************************/
+/**                 Printing Beginning                **/
+/*******************************************************/
+
+int errors = -1;
+always_ff @(posedge clk)
+begin
+  if((core_data_req.aw.addr == 32'h2FFF0000) &&
+     (core_data_req.aw_valid & core_data_req.w_valid)) begin
+    errors = core_data_req.w.data;
+  end
+  if((core_data_req.aw.addr == 32'h2FFF0004) &&
+     (core_data_req.aw_valid & core_data_req.w_valid)) begin
+    $write("%c", core_data_req.w.data);
+  end
+end
+
+/*******************************************************/
+/**                    Printing End                   **/
+/*******************************************************/
 
 endmodule: redmule_tile_vip
