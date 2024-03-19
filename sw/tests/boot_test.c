@@ -1,10 +1,8 @@
 #include <stdio.h>
+#include "redmule_tile_utils.h"
 
 int main(void) {
-  volatile unsigned int *test_end_addr = (volatile unsigned int *) 0x2C030000;
-  unsigned char exit_code = 0xAB;
-
-  *test_end_addr = exit_code;
+  mmio32(TEST_END_ADDR) = DEFAULT_EXIT_CODE;
 
   return 0;
 }

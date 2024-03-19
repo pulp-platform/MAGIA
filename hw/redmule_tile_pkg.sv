@@ -40,6 +40,7 @@ package redmule_tile_pkg;
   localparam int unsigned IRQ_ID_W             = $clog2(N_IRQ);                   // IRQ ID Width
   localparam int unsigned ID_W_OFFSET          = 4;                               // Offset to be added to ID Width
   localparam int unsigned ID_W                 = 4;                               // Default ID Width
+  localparam int unsigned USR_W                = 1;                               // Default User Width
 
   // Address map
   localparam logic [ADDR_W-1:0] L1_ADDR_START  = 32'h1000_0000;
@@ -56,7 +57,7 @@ package redmule_tile_pkg;
   localparam int unsigned AWM                  = $clog2(N_WORDS_BANK);            // Address width memory (master ports)
   parameter int unsigned DW_LIC                = DATA_W * N_MEM_BANKS;            // Data Width for Log Interconnect
   parameter int unsigned BW_LIC                = BYTE_W;                          // Byte Width for Log Interconnect
-  parameter int unsigned UW_LIC                = 1;                               // User Width for Log Interconnect
+  parameter int unsigned UW_LIC                = USR_W;                           // User Width for Log Interconnect
   parameter int unsigned TS_BIT                = 21;                              // TEST_SET_BIT (for Log Interconnect)
   parameter int unsigned IW                    = N_HWPE + N_CORE + N_DMA + N_EXT; // ID Width HCI
   parameter int unsigned EXPFIFO               = 1;                               // FIFO Depth for HWPE Interconnect
@@ -65,7 +66,7 @@ package redmule_tile_pkg;
   parameter int unsigned BWH                   = BYTE_W;                          // Byte Width for HWPE Interconnect
   parameter int unsigned WWH                   = DWH;                             // Word Width for HWPE Interconnect
   parameter int unsigned OWH                   = AWH;                             // Offset Width for HWPE Interconnect
-  parameter int unsigned UWH                   = 1;                               // User Width for HWPE Interconnect
+  parameter int unsigned UWH                   = USR_W;                           // User Width for HWPE Interconnect
   parameter int unsigned SEL_LIC               = 1;                               // Log interconnect type selector
   localparam int unsigned SW_LIC               = DW_LIC/BW_LIC;                   // Strobe Width for HWPE Interconnect
   localparam int unsigned WORDS_DATA           = DW_LIC/WWH;                      // Number of words per data
@@ -87,7 +88,7 @@ package redmule_tile_pkg;
   // Parameters used by RedMulE
   parameter int unsigned REDMULE_DW            = DW_LIC;                          // RedMulE Data Width
   parameter int unsigned REDMULE_ID_W          = IW + ID_W_OFFSET;                // RedMulE ID Width
-  parameter int unsigned REDMULE_UW            = 1;                               // RedMulE User Width
+  parameter int unsigned REDMULE_UW            = USR_W;                           // RedMulE User Width
   
   // Parameters used by OBI
   parameter int unsigned AUSER_WIDTH           = 1;                               // Width of the auser signal (see OBI documentation): not used by the CV32E40X
@@ -107,8 +108,8 @@ package redmule_tile_pkg;
   // Parameters used by AXI
   parameter int unsigned AXI_DATA_ID_W         = 2;                               // Width of the AXI Data ID (2 bits: Core, iDMA. I$)
   parameter int unsigned AXI_INSTR_ID_W        = 1;                               // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
-  parameter int unsigned AXI_DATA_U_W          = 1;                               // Width of the AXI Data User
-  parameter int unsigned AXI_INSTR_U_W         = 1;                               // Width of the AXI Instruction User
+  parameter int unsigned AXI_DATA_U_W          = USR_W;                           // Width of the AXI Data User
+  parameter int unsigned AXI_INSTR_U_W         = USR_W;                           // Width of the AXI Instruction User
 
   typedef struct packed {
     int unsigned      idx;
