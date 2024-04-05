@@ -35,7 +35,7 @@ module redemule_tile
   parameter cv32e40x_pkg::rv32_e  CORE_ISA      = cv32e40x_pkg::RV32I            , // RV32I (default) 32 registers in the RF - RV32E 16 registers in the RF
   parameter cv32e40x_pkg::a_ext_e CORE_A        = cv32e40x_pkg::A_NONE           , // Atomic Istruction (A) support (dafault: not enabled)
   parameter cv32e40x_pkg::b_ext_e CORE_B        = cv32e40x_pkg::B_NONE           , // Bit Manipulation support (dafault: not enabled)
-  parameter cv32e40x_pkg::m_ext_e CORE_M        = cv32e40x_pkg::ZMMUL              // Multiply and Divide support (dafault: only Multiply upported)
+  parameter cv32e40x_pkg::m_ext_e CORE_M        = cv32e40x_pkg::M                  // Multiply and Divide support (dafault: full support)
 )(
   input  logic                                     clk_i               ,
   input  logic                                     rstn_i              ,
@@ -312,10 +312,10 @@ module redemule_tile
   );
 
   hci_core_intf #(
-    .DW ( redmule_tile_pkg::DWH    ),
-    .AW ( redmule_tile_pkg::AWC    ),
-    .OW ( redmule_tile_pkg::AWC    ),
-    .UW ( redmule_tile_pkg::UWH    )
+    .DW ( redmule_tile_pkg::REDMULE_DW ),
+    .AW ( redmule_tile_pkg::AWC        ),
+    .OW ( redmule_tile_pkg::AWC        ),
+    .UW ( redmule_tile_pkg::UWH        )
   ) hci_redmule_if[redmule_tile_pkg::N_HWPE-1:0] (
     .clk( sys_clk )
   );
@@ -598,7 +598,7 @@ module redemule_tile
     .N_WORDS  ( N_WORDS_BANK             ),
     .DATA_W   ( redmule_tile_pkg::DW_LIC ),
     .ID_W     ( redmule_tile_pkg::IW     ),
-    .SIM_INIT ( "ones"                   )
+    .SIM_INIT ( "zeros"                  )
   ) i_l1_spm (
     .clk_i      ( sys_clk          ),
     .rstn_i     ( rstn_i           ),

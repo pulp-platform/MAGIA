@@ -34,7 +34,7 @@ package redmule_tile_pkg;
   localparam int unsigned INSTR_W              = 32;                              // System-wide instruction Width
   localparam int unsigned BYTE_W               = 8;                               // System-wide byte Width
   localparam int unsigned STRB_W               = DATA_W/BYTE_W;                   // System-wide strobe Width
-  localparam int unsigned N_MEM_BANKS          = 16 + 1;                          // Number of TCDM banks (1 extra bank for missaligned accesses)
+  localparam int unsigned N_MEM_BANKS          = 32;                              // Number of TCDM banks (1 extra bank for missaligned accesses)
   localparam int unsigned N_WORDS_BANK         = 1024;                            // Number of words per TCDM bank
   localparam int unsigned N_IRQ                = 32;                              // Number of IRQs
   localparam int unsigned IRQ_ID_W             = $clog2(N_IRQ);                   // IRQ ID Width
@@ -60,8 +60,8 @@ package redmule_tile_pkg;
   parameter int unsigned UW_LIC                = USR_W;                           // User Width for Log Interconnect
   parameter int unsigned TS_BIT                = 21;                              // TEST_SET_BIT (for Log Interconnect)
   parameter int unsigned IW                    = N_HWPE + N_CORE + N_DMA + N_EXT; // ID Width HCI
-  parameter int unsigned EXPFIFO               = 1;                               // FIFO Depth for HWPE Interconnect
-  parameter int unsigned DWH                   = DATA_W * (N_MEM_BANKS - 1);      // Data Width for HWPE Interconnect (ignore the extra bank for missaligned accesses)
+  parameter int unsigned EXPFIFO               = 0;                               // FIFO Depth for HWPE Interconnect
+  parameter int unsigned DWH                   = DATA_W * N_MEM_BANKS;            // Data Width for HWPE Interconnect
   parameter int unsigned AWH                   = ADDR_W;                          // Address Width for HWPE Interconnect
   parameter int unsigned BWH                   = BYTE_W;                          // Byte Width for HWPE Interconnect
   parameter int unsigned WWH                   = DWH;                             // Word Width for HWPE Interconnect
@@ -73,7 +73,7 @@ package redmule_tile_pkg;
 
   // Parameters used by the core
   parameter bit          X_EXT_EN              = 1;                               // Enable eXtension Interface (X) support, see eXtension Interface        
-  parameter int unsigned X_NUM_RS              = 2;                               // Number of register file read ports that can be used by the eXtension interface
+  parameter int unsigned X_NUM_RS              = 3;                               // Number of register file read ports that can be used by the eXtension interface
   parameter int unsigned X_ID_W                = IW + ID_W_OFFSET;                // Identification width for the eXtension interface
   parameter int unsigned X_MEM_W               = 32;                              // Memory access width for loads/stores via the eXtension interface
   parameter int unsigned X_RFR_W               = 32;                              // Register file read access width for the eXtension interface
@@ -160,7 +160,7 @@ package redmule_tile_pkg;
   `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic [AWC-1:0], logic [DW_LIC-1:0], logic [SW_LIC-1:0], logic [IW-1:0])
   `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic [DW_LIC-1:0], logic [IW-1:0])
   
-  `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic [AWM-1:0], logic [DW_LIC-1:0], logic [SW_LIC-1:0], logic signed [WORDS_DATA-1:0][AWH:0], logic [UWH-1:0])
+  `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic [AWC-1:0], logic [DW_LIC-1:0], logic [SW_LIC-1:0], logic signed [WORDS_DATA-1:0][AWH:0], logic [UWH-1:0])
   `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic [DW_LIC-1:0], logic [UWH-1:0])
 
   `OBI_TYPEDEF_ALL_A_OPTIONAL(core_data_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
@@ -177,7 +177,7 @@ package redmule_tile_pkg;
   `OBI_TYPEDEF_DEFAULT_REQ_T(core_obi_instr_req_t, core_instr_obi_a_chan_t)
   `OBI_TYPEDEF_RSP_T(core_obi_instr_rsp_t, core_instr_obi_r_chan_t)
 
-  `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic [AWM-1:0], logic [DW_LIC-1:0], logic [SW_LIC-1:0], logic signed [WORDS_DATA-1:0][AWH:0], logic [UWH-1:0])
+  `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic [AWC-1:0], logic [DW_LIC-1:0], logic [SW_LIC-1:0], logic signed [WORDS_DATA-1:0][AWH:0], logic [UWH-1:0])
   `HCI_TYPEDEF_RSP_T(core_hci_data_rsp_t, logic [DW_LIC-1:0], logic [UWH-1:0])
 
   `AXI_TYPEDEF_ALL_CT(core_axi_data, core_axi_data_req_t, core_axi_data_rsp_t, logic[ADDR_W-1:0], logic[AXI_DATA_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_DATA_U_W-1:0])

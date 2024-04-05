@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include "redmule_tile_utils.h"
 
 int main(void) {

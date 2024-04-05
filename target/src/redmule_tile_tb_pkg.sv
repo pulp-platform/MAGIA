@@ -21,7 +21,7 @@
 
 package redmule_tile_tb_pkg;
 
-  parameter int unsigned N_MEM_BANKS  = 16;   // Number of memory banks 
-  parameter int unsigned N_WORDS_BANK = 1024; // Number of words per memory bank   
+  parameter int unsigned N_MEM_BANKS  = 32;    // Number of memory banks 
+  parameter int unsigned N_WORDS_BANK = 1024;  // Number of words per memory bank   
 
 endpackage: redmule_tile_tb_pkg
