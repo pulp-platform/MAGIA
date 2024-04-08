@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Environment Setup
-        run: pwd && source setup_env.sh
+        run: pwd && ls -la && source setup_env.sh
   bender:
     needs: setup
     runs-on: ubuntu-latest
