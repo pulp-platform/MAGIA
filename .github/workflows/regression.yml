@@ -1,0 +1,34 @@
+name: redmule_tile_regression
+run-name: ${{ github.actor }} is running RedMulE Tile regression
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+  setup: 
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Environment Setup
+        run: source setup_env.sh
+  bender:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dowmload Bender
+        run: make bender
+  build:
+    needs: bender
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build
+        run: make update-ips && make build-hw
+  boot-test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Boot Test
+        run: make all test=boot_test && make run test=boot_test 
+    
