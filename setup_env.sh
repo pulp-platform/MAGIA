@@ -1,4 +1,4 @@
-export BENDER_DIR=$(pwd)/hw/bender
+export BENDER_DIR=$(pwd)/bender
 echo "Exporting bender path to $BENDER_DIR"
 export PATH=$BENDER_DIR:$PATH
 unset BENDER_DIR

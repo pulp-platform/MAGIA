@@ -10,12 +10,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Regression
+      - name: Environment Setup
+        run: source setup_env.sh
+      - name: Dowmload Bender
+        run: make bender
+      - name: Build
         run: |
-          source setup_env.sh
-          make bender
           make update-ips
           make build-hw
+      - name: Parallel Tests
+        run: |
           make all test=${{ matrix.test }}
           make run test=${{ matrix.test }} 
     
