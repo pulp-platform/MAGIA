@@ -8,8 +8,9 @@ jobs:
       matrix:
         test: [boot_test, l1_test, redmule_test]
     steps:
-      - name: Regression
+      - name: Checkout
         uses: actions/checkout@v4
+      - name: Regression
         run: |
           source setup_env.sh
           make bender
