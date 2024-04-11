@@ -26,7 +26,7 @@ int main(void) {
     mmio16(X_BASE + 2*i) = x_inp[i];
 #if VERBOSE > 10
   for (int i = 0; i < M_SIZE*N_SIZE; i++)
-    printf("X[%8x]: %5d\n", X_BASE + 2*i, mmio16(X_BASE + 2*i));
+    printf("X[%8x]: 0x%4x\n", X_BASE + 2*i, mmio16(X_BASE + 2*i));
 #endif
 
   // W
@@ -34,7 +34,7 @@ int main(void) {
     mmio16(W_BASE + 2*i) = w_inp[i];
 #if VERBOSE > 10
   for (int i = 0; i < N_SIZE*K_SIZE; i++)
-    printf("W[%8x]: %5d\n", W_BASE + 2*i, mmio16(W_BASE + 2*i));
+    printf("W[%8x]: 0x%4x\n", W_BASE + 2*i, mmio16(W_BASE + 2*i));
 #endif
 
   // Y
@@ -42,7 +42,7 @@ int main(void) {
     mmio16(Y_BASE + 2*i) = y_inp[i];
 #if VERBOSE > 10
   for (int i = 0; i < M_SIZE*K_SIZE; i++)
-    printf("Y[%8x]: %5d\n", Y_BASE + 2*i, mmio16(Y_BASE + 2*i));
+    printf("Y[%8x]: 0x%4x\n", Y_BASE + 2*i, mmio16(Y_BASE + 2*i));
 #endif
 
   // Z - golden (reference)
@@ -50,7 +50,7 @@ int main(void) {
     mmio16(Z_BASE + 2*i) = z_oup[i];
 #if VERBOSE > 10
   for (int i = 0; i < M_SIZE*K_SIZE; i++)
-    printf("Z[%8x]: %5d\n", Z_BASE + 2*i, mmio16(Z_BASE + 2*i));
+    printf("Z[%8x]: 0x%4x\n", Z_BASE + 2*i, mmio16(Z_BASE + 2*i));
 #endif
 
   uint32_t cfg_reg0 = ((((uint16_t)K_SIZE) << 16) | (((uint16_t)M_SIZE) << 0));
@@ -122,7 +122,7 @@ int main(void) {
     diff = (computed > expected) ? (computed - expected) : (expected - computed);
     if(diff > DIFF_TH){
       num_errors++;
-      printf("**ERROR**: Y[%8x](=%5d) != Z[%8x](=%5d)\n", Y_BASE + 2*i, computed, Z_BASE + 2*i, expected);
+      printf("**ERROR**: Y[%8x](=0x%4x) != Z[%8x](=0x%4x)\n", Y_BASE + 2*i, computed, Z_BASE + 2*i, expected);
     }
   }
   printf("Finished test with %0d errors\n", num_errors);

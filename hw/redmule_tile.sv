@@ -168,18 +168,12 @@ module redemule_tile
 /**             Type Conversions Beginning            **/
 /*******************************************************/
 
-  data2obi_req #(
-    .data_req_t ( redmule_tile_pkg::core_data_req_t     ),
-    .obi_req_t  ( redmule_tile_pkg::core_obi_data_req_t )
-  ) i_core_data2obi_req (
+  data2obi_req i_core_data2obi_req (
     .data_req_i ( core_data_req     ),
     .obi_req_o  ( core_obi_data_req )
   );
 
-  obi2data_rsp #(
-    .obi_rsp_t  ( redmule_tile_pkg::core_obi_data_rsp_t ),
-    .data_rsp_t ( redmule_tile_pkg::core_data_rsp_t     )
-  ) i_core_obi2data_rsp (
+  obi2data_rsp i_core_obi2data_rsp (
     .obi_rsp_i  ( core_obi_data_rsp ),
     .data_rsp_o ( core_data_rsp     )
   );
@@ -226,18 +220,12 @@ module redemule_tile
     .obi_rsp_user_i      ( obi_rsp_data_user                           )
   );
 
-  instr2obi_req #(
-    .instr_req_t ( redmule_tile_pkg::core_instr_req_t     ),
-    .obi_req_t   ( redmule_tile_pkg::core_obi_instr_req_t )
-  ) i_core_instr2obi_req (
+  instr2obi_req i_core_instr2obi_req (
     .instr_req_i ( core_instr_req     ),
     .obi_req_o   ( core_obi_instr_req )
   );
 
-  obi2instr_rsp #(
-    .obi_rsp_t   ( redmule_tile_pkg::core_obi_instr_rsp_t ),
-    .instr_rsp_t ( redmule_tile_pkg::core_instr_rsp_t     )
-  ) i_core_obi2instr_rsp (
+  obi2instr_rsp i_core_obi2instr_rsp (
     .obi_rsp_i   ( core_obi_instr_rsp ),
     .instr_rsp_o ( core_instr_rsp     )
   );

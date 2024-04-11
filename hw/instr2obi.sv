@@ -19,12 +19,11 @@
  * Core Instruction - OBI REQ/RSP Converter
  */
 
-module instr2obi_req #(
-  parameter type instr_req_t = logic,
-  parameter type obi_req_t   = logic
-)(
-  input  instr_req_t instr_req_i,
-  output obi_req_t   obi_req_o
+module instr2obi_req 
+  import redmule_tile_pkg::*;
+(
+  input  redmule_tile_pkg::core_instr_req_t     instr_req_i,
+  output redmule_tile_pkg::core_obi_instr_req_t obi_req_o
 );
 
   assign obi_req_o.req                  = instr_req_i.req;
@@ -44,12 +43,11 @@ module instr2obi_req #(
 
 endmodule: instr2obi_req
 
-module obi2instr_rsp #(
-  parameter type obi_rsp_t   = logic,
-  parameter type instr_rsp_t = logic
-)(
-  input  obi_rsp_t   obi_rsp_i,
-  output instr_rsp_t instr_rsp_o
+module obi2instr_rsp 
+  import redmule_tile_pkg::*;
+(
+  input  redmule_tile_pkg::core_obi_instr_rsp_t obi_rsp_i,
+  output redmule_tile_pkg::core_instr_rsp_t     instr_rsp_o
 );
 
   assign instr_rsp_o.gnt    = obi_rsp_i.gnt;

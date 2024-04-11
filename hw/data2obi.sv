@@ -19,12 +19,11 @@
  * Core Data - OBI REQ/RSP Converter
  */
 
-module data2obi_req #(
-  parameter type data_req_t = logic,
-  parameter type obi_req_t  = logic
-)(
-  input  data_req_t data_req_i,
-  output obi_req_t  obi_req_o
+module data2obi_req 
+  import redmule_tile_pkg::*;
+(
+  input  redmule_tile_pkg::core_data_req_t     data_req_i,
+  output redmule_tile_pkg::core_obi_data_req_t obi_req_o
 );
 
   assign obi_req_o.req                  = data_req_i.req;
@@ -44,12 +43,11 @@ module data2obi_req #(
 
 endmodule: data2obi_req
 
-module obi2data_rsp #(
-  parameter type obi_rsp_t  = logic,
-  parameter type data_rsp_t = logic
-)(
-  input  obi_rsp_t  obi_rsp_i,
-  output data_rsp_t data_rsp_o
+module obi2data_rsp 
+  import redmule_tile_pkg::*;
+(
+  input  redmule_tile_pkg::core_obi_data_rsp_t obi_rsp_i,
+  output redmule_tile_pkg::core_data_rsp_t     data_rsp_o
 );
 
   assign data_rsp_o.gnt    = obi_rsp_i.gnt;
