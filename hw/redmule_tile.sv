@@ -38,7 +38,7 @@ module redemule_tile
   parameter cv32e40x_pkg::m_ext_e CORE_M        = cv32e40x_pkg::M                  // Multiply and Divide support (dafault: full support)
 )(
   input  logic                                     clk_i               ,
-  input  logic                                     rstn_i              ,
+  input  logic                                     rst_ni              ,
   input  logic                                     test_mode_i         ,
   input  logic                                     tile_enable_i       ,
 
@@ -202,7 +202,7 @@ module redemule_tile
     .MaxRequests  ( 1                                     )
   ) i_core_data_obi2axi (
     .clk_i               ( sys_clk                                     ),
-    .rst_ni              ( rstn_i                                      ),
+    .rst_ni              ( rst_ni                                      ),
     .obi_req_i           ( core_mem_data_req[redmule_tile_pkg::L2_IDX] ),
     .obi_rsp_o           ( core_mem_data_rsp[redmule_tile_pkg::L2_IDX] ),
     .user_i              ( axi_data_user                               ),
@@ -238,7 +238,7 @@ module redemule_tile
     .MaxRequests  ( 1                                      )
   ) i_core_instr_obi2axi (
     .clk_i               ( sys_clk              ),
-    .rst_ni              ( rstn_i               ),
+    .rst_ni              ( rst_ni               ),
     .obi_req_i           ( core_obi_instr_req   ),
     .obi_rsp_o           ( core_obi_instr_rsp   ),
     .user_i              ( axi_instr_user       ),
@@ -256,8 +256,8 @@ module redemule_tile
 /**               Clock gating Beginning              **/
 /*******************************************************/
 
-  always_ff @ (posedge clk_i, negedge rstn_i) begin: sys_clk_en_ff
-    if (~rstn_i) sys_clk_en <= 1'b0;
+  always_ff @ (posedge clk_i, negedge rst_ni) begin: sys_clk_en_ff
+    if (~rst_ni) sys_clk_en <= 1'b0;
     else         sys_clk_en <= tile_enable_i;
   end
 
@@ -362,7 +362,7 @@ module redemule_tile
     .redmule_ctrl_rsp_t ( redmule_tile_pkg::redmule_ctrl_rsp_t )
   ) i_redmule_top (
     .clk_i               ( sys_clk                  ),
-    .rst_ni              ( rstn_i                   ),
+    .rst_ni              ( rst_ni                   ),
     .test_mode_i                                     ,
 
     .busy_o                                          ,  //TODO: do not interface with the outside, interface with the core
@@ -418,7 +418,7 @@ module redemule_tile
   ) i_cv32e40x_core (
     // Clock and reset
     .clk_i               ( sys_clk                  ),
-    .rst_ni              ( rstn_i                   ),
+    .rst_ni              ( rst_ni                   ),
     .scan_cg_en_i                                    ,
 
     // Configuration
@@ -514,7 +514,7 @@ module redemule_tile
     .addr_map_rule_t    ( redmule_tile_pkg::obi_xbar_rule_t        )
   ) i_obi_xbar (
     .clk_i            ( sys_clk                 ),
-    .rst_ni           ( rstn_i                  ),
+    .rst_ni           ( rst_ni                  ),
 
     .sbr_ports_req_i  ( core_obi_data_req       ),
     .sbr_ports_rsp_o  ( core_obi_data_rsp       ),
@@ -557,7 +557,7 @@ module redemule_tile
     .SEL_LIC ( redmule_tile_pkg::SEL_LIC )
   ) i_local_interconnect (
     .clk_i   ( sys_clk           ),
-    .rst_ni  ( rstn_i            ),
+    .rst_ni  ( rst_ni            ),
     .clear_i ( hci_clear         ),
 
     .ctrl_i  ( hci_ctrl          ),
@@ -583,7 +583,7 @@ module redemule_tile
     .SIM_INIT ( "zeros"                  )
   ) i_l1_spm (
     .clk_i      ( sys_clk          ),
-    .rstn_i     ( rstn_i           ),
+    .rst_ni     ( rst_ni           ),
 
     .tcdm_slave ( hci_tcdm_sram_if )
   );

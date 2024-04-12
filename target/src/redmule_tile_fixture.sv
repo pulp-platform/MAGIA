@@ -86,7 +86,7 @@ module redmule_tile_fixture;
     .CORE_M       (                                   )
   ) dut (
     .clk_i               ( clk               ),
-    .rstn_i              ( rst_n             ),
+    .rst_ni              ( rst_n             ),
     .test_mode_i         ( test_mode         ),
     .tile_enable_i       ( tile_enable       ),
 

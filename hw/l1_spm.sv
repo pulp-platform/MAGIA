@@ -27,7 +27,7 @@ module l1_spm #(
   parameter              SIM_INIT  = "ones"   // Simulation initialization value
 ) (
   input logic        clk_i                 ,
-  input logic        rstn_i                ,
+  input logic        rst_ni                ,
   hci_mem_intf.slave tcdm_slave[0:N_BANK-1]   // Memory interface
 );
 
@@ -37,8 +37,8 @@ module l1_spm #(
     assign resp_id_d          = tcdm_slave[i].id;
     assign tcdm_slave[i].r_id = resp_id_q;
 
-    always_ff @ (posedge clk_i, negedge rstn_i) begin:  resp_id_register
-      if (~rstn_i) resp_id_q <= '0;
+    always_ff @ (posedge clk_i, negedge rst_ni) begin:  resp_id_register
+      if (~rst_ni) resp_id_q <= '0;
       else         resp_id_q <= resp_id_d;
     end
 
@@ -53,7 +53,7 @@ module l1_spm #(
       .ImplKey     ( "none"   )
     ) i_tcdm_bank (
       .clk_i   ( clk_i                                    ),
-      .rst_ni  ( rstn_i                                   ),
+      .rst_ni  ( rst_ni                                   ),
 
       .req_i   ( tcdm_slave[i].req                        ),
       .we_i    ( ~tcdm_slave[i].wen                       ),
