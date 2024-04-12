@@ -28,7 +28,7 @@ module l1_spm #(
 ) (
   input logic        clk_i                 ,
   input logic        rstn_i                ,
-  hci_mem_intf.slave tcdm_slave[N_BANK-1:0]   // Memory interface
+  hci_mem_intf.slave tcdm_slave[0:N_BANK-1]   // Memory interface
 );
 
   for (genvar i = 0; i < N_BANK; i++) begin: gen_tcdm_bank
