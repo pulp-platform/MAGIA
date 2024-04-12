@@ -250,7 +250,7 @@ hw-opt:
 	$(QUESTA) vopt $(questa_opt_flag) +acc=npr -o vopt_tb $(tb) -floatparameters+$(tb) -work $(BUILD_DIR)
 
 hw-compile:
-    $(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_BASE_IDS=$(IDMA_BASE_IDS)
+	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_BASE_IDS=$(IDMA_BASE_IDS)
 	$(QUESTA) vsim $(questa_compile_flag) -c +incdir+$(UVM_HOME) -do 'quit -code [source $(compile_script)]'
 
 hw-lib:
