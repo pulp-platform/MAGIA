@@ -19,12 +19,11 @@
  * OBI - HCI REQ/RSP Converter
  */
 
-module obi2hci_req #(
-  parameter type obi_req_t = logic,
-  parameter type hci_req_t = logic
-)(
-  input  obi_req_t obi_req_i,
-  output hci_req_t hci_req_o
+module obi2hci_req
+  import redmule_tile_pkg::*;
+(
+  input  redmule_tile_pkg::core_obi_data_req_t obi_req_i,
+  output redmule_tile_pkg::core_hci_data_req_t hci_req_o
 );
 
   assign hci_req_o.req   = obi_req_i.req;
@@ -38,12 +37,11 @@ module obi2hci_req #(
 
 endmodule: obi2hci_req
 
-module hci2obi_rsp #(
-  parameter type hci_rsp_t = logic,
-  parameter type obi_rsp_t = logic
-)(
-  input  hci_rsp_t hci_rsp_i,
-  output obi_rsp_t obi_rsp_o
+module hci2obi_rsp
+  import redmule_tile_pkg::*;
+(
+  input  redmule_tile_pkg::core_hci_data_rsp_t hci_rsp_i,
+  output redmule_tile_pkg::core_obi_data_rsp_t obi_rsp_o
 );
 
   assign obi_rsp_o.gnt                 = hci_rsp_i.gnt;

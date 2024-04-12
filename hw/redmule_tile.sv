@@ -178,18 +178,12 @@ module redemule_tile
     .data_rsp_o ( core_data_rsp     )
   );
   
-  obi2hci_req #(
-    .obi_req_t ( redmule_tile_pkg::core_obi_data_req_t ),
-    .hci_req_t ( redmule_tile_pkg::core_hci_data_req_t )
-  ) i_core_data_obi2hci_req (
+  obi2hci_req i_core_data_obi2hci_req (
     .obi_req_i ( core_mem_data_req[redmule_tile_pkg::L1SPM_IDX] ),
     .hci_req_o ( core_l1_data_req                               )
   );
 
-  hci2obi_rsp #(
-    .hci_rsp_t ( redmule_tile_pkg::core_hci_data_rsp_t ),
-    .obi_rsp_t ( redmule_tile_pkg::core_obi_data_rsp_t )
-  ) i_core_data_hci2obi_rsp (
+  hci2obi_rsp i_core_data_hci2obi_rsp (
     .hci_rsp_i ( core_l1_data_rsp                               ),
     .obi_rsp_o ( core_mem_data_rsp[redmule_tile_pkg::L1SPM_IDX] )
   );
