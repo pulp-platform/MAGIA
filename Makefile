@@ -133,7 +133,7 @@ ifeq ($(gui), 0)
 	+DATA_HEX=$(data_hex_name)                                \
 	+INST_ENTRY=$(inst_entry)                                 \
 	+DATA_ENTRY=$(data_entry)                                 \
-	+BOOT_ADDR=$(boot_addr)									  \
+	+BOOT_ADDR=$(boot_addr)					\
 	+log_file=$(log_path)                                     \
 	+itb_file=$(itb_file)
 else
