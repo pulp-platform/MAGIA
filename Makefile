@@ -121,6 +121,10 @@ $(BUILD_DIR):
 
 SHELL := /bin/bash
 
+# Parameters used by the iDMA hardware build
+IDMA_ROOT     ?= $(shell $(BENDER) path idma)
+IDMA_BASE_IDS ?= rw_axi_rw_obi
+
 # Generate instructions and data stimuli
 all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb
 
@@ -164,6 +168,8 @@ bender_defs += -D COREV_ASSERT_OFF
 bender_targs += -t rtl
 bender_targs += -t test
 bender_targs += -t cv32e40p_exclude_tracer
+# Target needed to avoid error even though the module is not used
+bender_targs += -t snitch_cluster
 
 #ifeq ($(REDMULE_COMPLEX),1)
 #	tb := redmule_complex_tb
@@ -193,7 +199,7 @@ synth-ips:
 	$(BENDER) update
 	$(BENDER) script synopsys      \
 	$(common_targs) $(common_defs) \
-	$(synth_targs) $(synth_defs)   \
+	$(synth_targs)  $(synth_defs)  \
 	> ${compile_script_synth}
 
 build-hw: hw-all
@@ -244,6 +250,7 @@ hw-opt:
 	$(QUESTA) vopt $(questa_opt_flag) +acc=npr -o vopt_tb $(tb) -floatparameters+$(tb) -work $(BUILD_DIR)
 
 hw-compile:
+    $(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_BASE_IDS=$(IDMA_BASE_IDS)
 	$(QUESTA) vsim $(questa_compile_flag) -c +incdir+$(UVM_HOME) -do 'quit -code [source $(compile_script)]'
 
 hw-lib:
