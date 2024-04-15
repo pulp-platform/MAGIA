@@ -83,7 +83,7 @@ module redemule_tile
 );
 
 /*******************************************************/
-/**        Internal Signal Definitions Beginning      **/
+/**       Internal Signal Definitions Beginning       **/
 /*******************************************************/
 
   redmule_tile_pkg::redmule_data_req_t                                 redmule_data_req       ;
@@ -134,7 +134,7 @@ module redemule_tile
   logic                                                                sys_clk_en             ;
 
 /*******************************************************/
-/**           Internal Signal Definitions End         **/
+/**          Internal Signal Definitions End          **/
 /*******************************************************/
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
@@ -595,6 +595,11 @@ module redemule_tile
 /*******************************************************/
 
 //TODO
+  idma_ctrl #(
+
+  ) i_idma_ctrl (
+
+  );
 
 /*******************************************************/
 /**                      iDMA End                     **/

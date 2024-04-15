@@ -47,6 +47,7 @@ sources:
       - hw/obi2hci.sv
       - hw/obi_demux_addr.sv
       - hw/l1_spm.sv
+      - hw/idma_ctrl.sv
       - hw/redmule_tile.sv
       - target/src/redmule_tile_tb_pkg.sv
       - target/src/redmule_tile_vip.sv
@@ -61,4 +62,5 @@ sources:
       - hw/obi2hci.sv
       - hw/obi_demux_addr.sv
       - hw/l1_spm.sv
+      - hw/idma_ctrl.sv
       - hw/redmule_tile.sv

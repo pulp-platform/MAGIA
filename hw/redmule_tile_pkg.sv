@@ -29,87 +29,106 @@ package redmule_tile_pkg;
   `include "hci/assign.svh"
   
   // Global constants
-  localparam int unsigned ADDR_W               = 32;                              // System-wide address Width
-  localparam int unsigned DATA_W               = 32;                              // System-wide data Width
-  localparam int unsigned INSTR_W              = 32;                              // System-wide instruction Width
-  localparam int unsigned BYTE_W               = 8;                               // System-wide byte Width
-  localparam int unsigned STRB_W               = DATA_W/BYTE_W;                   // System-wide strobe Width
-  localparam int unsigned N_MEM_BANKS          = 32;                              // Number of TCDM banks (1 extra bank for missaligned accesses)
-  localparam int unsigned N_WORDS_BANK         = 4096;                            // Number of words per TCDM bank
-  localparam int unsigned N_IRQ                = 32;                              // Number of IRQs
-  localparam int unsigned IRQ_ID_W             = $clog2(N_IRQ);                   // IRQ ID Width
-  localparam int unsigned ID_W_OFFSET          = 4;                               // Offset to be added to ID Width
-  localparam int unsigned ID_W                 = 4;                               // Default ID Width
-  localparam int unsigned USR_W                = 1;                               // Default User Width
+  localparam int unsigned ADDR_W                   = 32;                              // System-wide address Width
+  localparam int unsigned DATA_W                   = 32;                              // System-wide data Width
+  localparam int unsigned INSTR_W                  = 32;                              // System-wide instruction Width
+  localparam int unsigned BYTE_W                   = 8;                               // System-wide byte Width
+  localparam int unsigned STRB_W                   = DATA_W/BYTE_W;                   // System-wide strobe Width
+  localparam int unsigned N_MEM_BANKS              = 32;                              // Number of TCDM banks (1 extra bank for missaligned accesses)
+  localparam int unsigned N_WORDS_BANK             = 4096;                            // Number of words per TCDM bank
+  localparam int unsigned N_IRQ                    = 32;                              // Number of IRQs
+  localparam int unsigned IRQ_ID_W                 = $clog2(N_IRQ);                   // IRQ ID Width
+  localparam int unsigned ID_W_OFFSET              = 4;                               // Offset to be added to ID Width
+  localparam int unsigned ID_W                     = 4;                               // Default ID Width
+  localparam int unsigned USR_W                    = 1;                               // Default User Width
 
   // Address map
-  localparam logic [ADDR_W-1:0] L1_ADDR_START  = 32'h1000_0000;
-  localparam logic [ADDR_W-1:0] L1_ADDR_END    = 32'h2000_0000;
-  localparam logic [ADDR_W-1:0] L2_ADDR_START  = 32'h2000_0000;
-  localparam logic [ADDR_W-1:0] L2_ADDR_END    = 32'h3000_0000;
+  localparam logic [ADDR_W-1:0] L1_ADDR_START      = 32'h1000_0000;
+  localparam logic [ADDR_W-1:0] L1_ADDR_END        = 32'h2000_0000;
+  localparam logic [ADDR_W-1:0] L2_ADDR_START      = 32'h2000_0000;
+  localparam logic [ADDR_W-1:0] L2_ADDR_END        = 32'h3000_0000;
   
   // Parameters used by the HCI
-  parameter int unsigned N_HWPE                = 1;                               // Number of HWPEs attached to the port
-  parameter int unsigned N_CORE                = 1;                               // Number of Core ports
-  parameter int unsigned N_DMA                 = 0;                               // Number of DMA ports /*TODO: add DMA and update interconnect parameter*/
-  parameter int unsigned N_EXT                 = 0;                               // Number of External ports - LEAVE TO 0 UNLESS YOU KNOW WHAT YOU ARE DOING
-  parameter int unsigned AWC                   = ADDR_W;                          // Address width core   (slave ports)
-  localparam int unsigned AWM                  = $clog2(N_WORDS_BANK);            // Address width memory (master ports)
-  parameter int unsigned DW_LIC                = DATA_W * N_MEM_BANKS;            // Data Width for Log Interconnect
-  parameter int unsigned BW_LIC                = BYTE_W;                          // Byte Width for Log Interconnect
-  parameter int unsigned UW_LIC                = USR_W;                           // User Width for Log Interconnect
-  parameter int unsigned TS_BIT                = 21;                              // TEST_SET_BIT (for Log Interconnect)
-  parameter int unsigned IW                    = N_HWPE + N_CORE + N_DMA + N_EXT; // ID Width HCI
-  parameter int unsigned EXPFIFO               = 0;                               // FIFO Depth for HWPE Interconnect
-  parameter int unsigned DWH                   = DATA_W * N_MEM_BANKS;            // Data Width for HWPE Interconnect
-  parameter int unsigned AWH                   = ADDR_W;                          // Address Width for HWPE Interconnect
-  parameter int unsigned BWH                   = BYTE_W;                          // Byte Width for HWPE Interconnect
-  parameter int unsigned WWH                   = DWH;                             // Word Width for HWPE Interconnect
-  parameter int unsigned OWH                   = AWH;                             // Offset Width for HWPE Interconnect
-  parameter int unsigned UWH                   = USR_W;                           // User Width for HWPE Interconnect
-  parameter int unsigned SEL_LIC               = 1;                               // Log interconnect type selector
-  localparam int unsigned SW_LIC               = DW_LIC/BW_LIC;                   // Strobe Width for HWPE Interconnect
-  localparam int unsigned WORDS_DATA           = DW_LIC/WWH;                      // Number of words per data
+  parameter int unsigned N_HWPE                    = 1;                               // Number of HWPEs attached to the port
+  parameter int unsigned N_CORE                    = 1;                               // Number of Core ports
+  parameter int unsigned N_DMA                     = 0;                               // Number of DMA ports /*TODO: add DMA and update interconnect parameter*/
+  parameter int unsigned N_EXT                     = 0;                               // Number of External ports - LEAVE TO 0 UNLESS YOU KNOW WHAT YOU ARE DOING
+  parameter int unsigned AWC                       = ADDR_W;                          // Address width core   (slave ports)
+  localparam int unsigned AWM                      = $clog2(N_WORDS_BANK);            // Address width memory (master ports)
+  parameter int unsigned DW_LIC                    = DATA_W * N_MEM_BANKS;            // Data Width for Log Interconnect
+  parameter int unsigned BW_LIC                    = BYTE_W;                          // Byte Width for Log Interconnect
+  parameter int unsigned UW_LIC                    = USR_W;                           // User Width for Log Interconnect
+  parameter int unsigned TS_BIT                    = 21;                              // TEST_SET_BIT (for Log Interconnect)
+  parameter int unsigned IW                        = N_HWPE + N_CORE + N_DMA + N_EXT; // ID Width HCI
+  parameter int unsigned EXPFIFO                   = 0;                               // FIFO Depth for HWPE Interconnect
+  parameter int unsigned DWH                       = DATA_W * N_MEM_BANKS;            // Data Width for HWPE Interconnect
+  parameter int unsigned AWH                       = ADDR_W;                          // Address Width for HWPE Interconnect
+  parameter int unsigned BWH                       = BYTE_W;                          // Byte Width for HWPE Interconnect
+  parameter int unsigned WWH                       = DWH;                             // Word Width for HWPE Interconnect
+  parameter int unsigned OWH                       = AWH;                             // Offset Width for HWPE Interconnect
+  parameter int unsigned UWH                       = USR_W;                           // User Width for HWPE Interconnect
+  parameter int unsigned SEL_LIC                   = 1;                               // Log interconnect type selector
+  localparam int unsigned SW_LIC                   = DW_LIC/BW_LIC;                   // Strobe Width for HWPE Interconnect
+  localparam int unsigned WORDS_DATA               = DW_LIC/WWH;                      // Number of words per data
 
   // Parameters used by the core
-  parameter bit          X_EXT_EN              = 1;                               // Enable eXtension Interface (X) support, see eXtension Interface        
-  parameter int unsigned X_NUM_RS              = 3;                               // Number of register file read ports that can be used by the eXtension interface
-  parameter int unsigned X_ID_W                = IW + ID_W_OFFSET;                // Identification width for the eXtension interface
-  parameter int unsigned X_MEM_W               = 32;                              // Memory access width for loads/stores via the eXtension interface
-  parameter int unsigned X_RFR_W               = 32;                              // Register file read access width for the eXtension interface
-  parameter int unsigned X_RFW_W               = 32;                              // Register file write access width for the eXtension interface
-  parameter bit [31:0]   X_MISA                = 32'h0;                           // MISA extensions implemented on the eXtension interface, see Machine ISA (misa). X_MISA can only be used to set a subset of the following: {P, V, F, M}
-  parameter bit [1 :0]   X_ECS_XS              = 2'b0;                            // Default value for mstatus.XS if X_EXT = 1, see Machine Status (mstatus)
-  parameter bit [31:0]   DM_REGION_START       = 32'hF0000000;                    // Start address of Debug Module region, see Debug & Trigger
-  parameter bit [31:0]   DM_REGION_END         = 32'hF0003FFF;                    // End address of Debug Module region, see Debug & Trigger
-  parameter bit          CLIC_EN               = 1'b0;                            // Specifies whether Smclic, Smclicshv and Smclicconfig are supported
-  parameter int unsigned CLIC_ID_W             = 1;                               // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
+  parameter bit          X_EXT_EN                  = 1;                               // Enable eXtension Interface (X) support, see eXtension Interface        
+  parameter int unsigned X_NUM_RS                  = 3;                               // Number of register file read ports that can be used by the eXtension interface
+  parameter int unsigned X_ID_W                    = IW + ID_W_OFFSET;                // Identification width for the eXtension interface
+  parameter int unsigned X_MEM_W                   = 32;                              // Memory access width for loads/stores via the eXtension interface
+  parameter int unsigned X_RFR_W                   = 32;                              // Register file read access width for the eXtension interface
+  parameter int unsigned X_RFW_W                   = 32;                              // Register file write access width for the eXtension interface
+  parameter bit [31:0]   X_MISA                    = 32'h0;                           // MISA extensions implemented on the eXtension interface, see Machine ISA (misa). X_MISA can only be used to set a subset of the following: {P, V, F, M}
+  parameter bit [1 :0]   X_ECS_XS                  = 2'b0;                            // Default value for mstatus.XS if X_EXT = 1, see Machine Status (mstatus)
+  parameter bit [31:0]   DM_REGION_START           = 32'hF0000000;                    // Start address of Debug Module region, see Debug & Trigger
+  parameter bit [31:0]   DM_REGION_END             = 32'hF0003FFF;                    // End address of Debug Module region, see Debug & Trigger
+  parameter bit          CLIC_EN                   = 1'b0;                            // Specifies whether Smclic, Smclicshv and Smclicconfig are supported
+  parameter int unsigned CLIC_ID_W                 = 1;                               // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
 
   // Parameters used by RedMulE
-  parameter int unsigned REDMULE_DW            = DW_LIC;                          // RedMulE Data Width
-  parameter int unsigned REDMULE_ID_W          = IW + ID_W_OFFSET;                // RedMulE ID Width
-  parameter int unsigned REDMULE_UW            = USR_W;                           // RedMulE User Width
+  parameter int unsigned REDMULE_DW                = DW_LIC;                          // RedMulE Data Width
+  parameter int unsigned REDMULE_ID_W              = IW + ID_W_OFFSET;                // RedMulE ID Width
+  parameter int unsigned REDMULE_UW                = USR_W;                           // RedMulE User Width
   
   // Parameters used by OBI
-  parameter int unsigned AUSER_WIDTH           = 1;                               // Width of the auser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned WUSER_WIDTH           = 1;                               // Width of the wuser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned ACHK_WIDTH            = 1;                               // Width of the achk  signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned RUSER_WIDTH           = 1;                               // Width of the ruser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned RCHK_WIDTH            = 1;                               // Width of the rchk  signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned AID_WIDTH             = 1;                               // Width of the aid   signal (address channel identifier, see OBI documentation)
-  parameter int unsigned RID_WIDTH             = 1;                               // Width of the rid   signal (response channel identifier, see OBI documentation)
-  parameter int unsigned MID_WIDTH             = 1;                               // Width of the mid   signal (manager identifier, see OBI documentation)
-  parameter int unsigned N_SBR                 = 2;                               // Number of slaves (HCI, AXI XBAR)
-  parameter int unsigned N_MGR                 = 1;                               // Number of masters (Core)
-  parameter int unsigned N_MAX_TRAN            = 1;                               // Number of maximum outstanding transactions
-  parameter int unsigned N_ADDR_RULE           = 2;                               // Number of address rules
-  localparam int unsigned N_BIT_SBR            = $clog2(N_SBR);                   // Number of bits required to identify each slave
+  parameter int unsigned AUSER_WIDTH               = 1;                               // Width of the auser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned WUSER_WIDTH               = 1;                               // Width of the wuser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned ACHK_WIDTH                = 1;                               // Width of the achk  signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned RUSER_WIDTH               = 1;                               // Width of the ruser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned RCHK_WIDTH                = 1;                               // Width of the rchk  signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned AID_WIDTH                 = 1;                               // Width of the aid   signal (address channel identifier, see OBI documentation)
+  parameter int unsigned RID_WIDTH                 = 1;                               // Width of the rid   signal (response channel identifier, see OBI documentation)
+  parameter int unsigned MID_WIDTH                 = 1;                               // Width of the mid   signal (manager identifier, see OBI documentation)
+  parameter int unsigned N_SBR                     = 2;                               // Number of slaves (HCI, AXI XBAR)
+  parameter int unsigned N_MGR                     = 1;                               // Number of masters (Core)
+  parameter int unsigned N_MAX_TRAN                = 1;                               // Number of maximum outstanding transactions
+  parameter int unsigned N_ADDR_RULE               = 2;                               // Number of address rules
+  localparam int unsigned N_BIT_SBR                = $clog2(N_SBR);                   // Number of bits required to identify each slave
 
   // Parameters used by AXI
-  parameter int unsigned AXI_DATA_ID_W         = 2;                               // Width of the AXI Data ID (2 bits: Core, iDMA. I$)
-  parameter int unsigned AXI_INSTR_ID_W        = 1;                               // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
-  parameter int unsigned AXI_DATA_U_W          = USR_W;                           // Width of the AXI Data User
-  parameter int unsigned AXI_INSTR_U_W         = USR_W;                           // Width of the AXI Instruction User
+  parameter int unsigned AXI_DATA_ID_W             = 2;                               // Width of the AXI Data ID (2 bits: Core, iDMA. I$)
+  parameter int unsigned AXI_INSTR_ID_W            = 1;                               // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
+  parameter int unsigned AXI_DATA_U_W              = USR_W;                           // Width of the AXI Data User
+  parameter int unsigned AXI_INSTR_U_W             = USR_W;                           // Width of the AXI Instruction User
+
+  // Parameters used by the iDMA
+  parameter int unsigned iDMA_DataWidth            = DATA_W;                          // iDMA Data Width
+  parameter int unsigned iDMA_AddrWidth            = ADDR_W;                          // iDMA Address Width
+  parameter int unsigned iDMA_UserWidth            = USR_W;                           // iDMA AXI User Width
+  parameter int unsigned iDMA_AxiIdWidth           = ID_W;                            // iDMA AXI ID Width
+  parameter int unsigned iDMA_NumAxInFlight        = 2;                               // iDMA Number of transaction that can be in-flight concurrently
+  parameter int unsigned iDMA_BufferDepth          = 3;                               // iDMA depth of the internal reorder buffer: '2' - minimal possible configuration; '3' - efficiently handle misaligned transfers (recommended)
+  parameter int unsigned iDMA_TFLenWidth           = 32;                              // iDMA With of a transfer: max transfer size is `2**TFLenWidth` bytes
+  parameter int unsigned iDMA_MemSysDepth          = 0;                               // iDMA depth of the memory system the backend is attached to
+  parameter int unsigned iDMA_CombinedShifter      = 0;                               // iDMA Should both data shifts be done before the dataflow element? If this is enabled, then the data inserted into the dataflow element will no longer be word aligned, but only a single shifter is needed
+  parameter int unsigned iDMA_RAWCouplingAvail     = 1;                               // iDMA Should the `R`-`AW` coupling hardware be present? (recommended)
+  parameter int unsigned iDMA_MaskInvalidData      = 1;                               // iDMA Mask invalid data on the manager interface
+  parameter int unsigned iDMA_HardwareLegalizer    = 1;                               // iDMA Should hardware legalization be present? (recommended) If not, software legalization is required to ensure the transfers are AXI4-conformal
+  parameter int unsigned iDMA_RejectZeroTransfers  = 1;                               // iDMA Reject zero-length transfers
+  parameter int unsigned iDMA_PrintFifoInfo        = 1;                               // iDMA Print the info of the FIFO configuration
+  parameter int unsigned iDMA_NumRegs              = 1;                               // iDMA Number of configuration register ports
+  parameter int unsigned iDMA_NumStreams           = 1;                               // iDMA Number of streams (max 16)
+  parameter int unsigned iDMA_IdCounterWidth       = 32;                              // iDMA Width of the transfer id (max 32-bit) 
 
   typedef struct packed {
     int unsigned      idx;
