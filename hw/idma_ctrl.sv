@@ -21,14 +21,23 @@
 
 module idma_ctrl 
   import redmule_tile_pkg::*;
+  import cv32e40x_pkg::*;
   import idma_pkg::*;
 #(
   parameter idma_pkg::error_cap_e ERROR_CAP = idma_pkg::NO_ERROR_HANDLING,
   parameter int unsigned          N_D       = 2
 )(
-  input  logic clk_i     ,
-  input  logic rst_ni    ,
-  input  logic testmode_i,
+  input  logic                 clk_i,
+  input  logic                 rst_ni,
+  input  logic                 testmode_i,
+  input  logic                 clear_i,
+
+  cv32e40x_if_xif.coproc_issue xif_issue_if_i,
+
+  output logic                 start_o,  // Started iDMA transfer
+  output logic                 busy_o,   // Performing iDMA transfer
+  output logic                 done_o,   // Finished iDMA transfer
+  output logic                 error_o   // Detected error
 );
 
 /*******************************************************/
@@ -36,6 +45,8 @@ module idma_ctrl
 /*******************************************************/
 
 //TODO
+  redmule_tile_pkg::idma_fe_reg_req_t idma_fe_reg_req;
+  redmule_tile_pkg::idma_fe_reg_rsp_t idma_fe_reg_rsp;
 
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
@@ -43,11 +54,45 @@ module idma_ctrl
 /**         Xif Instruction Decoder Beginning         **/
 /*******************************************************/
 
-//TODO
   idma_xif_inst_decoder #(
-
+    .INSTR_W             ( redmule_tile_pkg::DMA_INSTR_W             ),
+    .DATA_W              ( redmule_tile_pkg::DMA_DATA_W              ),
+    .N_RF_PORTS          ( redmule_tile_pkg::DMA_N_RF_PORTS          ),
+    .OPCODE_W            ( redmule_tile_pkg::DMA_OP_CODE_W           ),
+    .FUNC3_W             ( redmule_tile_pkg::DMA_FUNC3_W             ),
+    .ND_EN_W             ( redmule_tile_pkg::DMA_ND_EN_W             ),
+    .DST_MAX_LOG_LEN_W   ( redmule_tile_pkg::DMA_DST_MAX_LOG_LEN_W   ),
+    .SRC_MAX_LOG_LEN_W   ( redmule_tile_pkg::DMA_SRC_MAX_LOG_LEN_W   ),
+    .DST_REDUCE_LEN_W    ( redmule_tile_pkg::DMA_DST_REDUCE_LEN_W    ),
+    .SRC_REDUCE_LEN_W    ( redmule_tile_pkg::DMA_SRC_REDUCE_LEN_W    ),
+    .DECOUPLE_R_W_W      ( redmule_tile_pkg::DMA_DECOUPLE_R_W_W      ),
+    .DECOUPLE_R_AW_W     ( redmule_tile_pkg::DMA_DECOUPLE_R_AW_W     ),
+    .OPCODE_OFF          ( redmule_tile_pkg::DMA_OPCODE_OFF          ),
+    .FUNC3_OFF           ( redmule_tile_pkg::DMA_FUNC3_OFF           ),
+    .ND_EN_OFF           ( redmule_tile_pkg::DMA_ND_EN_OFF           ),
+    .DST_MAX_LOG_LEN_OFF ( redmule_tile_pkg::DMA_DST_MAX_LOG_LEN_OFF ),
+    .SRC_MAX_LOG_LEN_OFF ( redmule_tile_pkg::DMA_SRC_MAX_LOG_LEN_OFF ),
+    .DST_REDUCE_LEN_OFF  ( redmule_tile_pkg::DMA_DST_REDUCE_LEN_OFF  ),
+    .SRC_REDUCE_LEN_OFF  ( redmule_tile_pkg::DMA_SRC_REDUCE_LEN_OFF  ),
+    .DECOUPLE_R_W_OFF    ( redmule_tile_pkg::DMA_DECOUPLE_R_W_OFF    ),
+    .DECOUPLE_R_AW_OFF   ( redmule_tile_pkg::DMA_DECOUPLE_R_AW_OFF   ),
+    .N_CFG_REG           ( redmule_tile_pkg::DMA_N_CFG_REG           ),
+    .idma_fe_req_t       ( redmule_tile_pkg::idma_fe_reg_req_t       ),
+    .idma_fe_rsp_t       ( redmule_tile_pkg::idma_fe_reg_rsp_t       )
   ) i_idma_inst_decoder (
+    .clk_i                        ,
+    .rst_ni                       ,
+    .clear_i                      ,
 
+    .xif_issue_if_i               ,
+
+    .cfg_req_o ( idma_fe_reg_req ),
+    .cfg_rsp_i ( idma_fe_reg_rsp ),
+
+    .start_o                      ,
+    .busy_o                       ,
+    .done_o                       ,
+    .error_o                      ,
   );
 
 /*******************************************************/
@@ -62,8 +107,8 @@ module idma_ctrl
     .NumStreams     ( redmule_tile_pkg::iDMA_NumStreams     ),
     .IdCounterWidth ( redmule_tile_pkg::iDMA_IdCounterWidth ),
     .StreamWidth    ( /*DO NOT OVERRIDE*/ ),
-    .reg_req_t      (  ),
-    .reg_rsp_t      (  ),
+    .reg_req_t      ( redmule_tile_pkg::idma_fe_reg_req_t ),
+    .reg_rsp_t      ( redmule_tile_pkg::idma_fe_reg_rsp_t ),
     .dma_req_t      (  ),
     .cnt_width_t    ( /*DO NOT OVERRIDE*/ ),
     .stream_t       ( /*DO NOT OVERRIDE*/ )
@@ -71,8 +116,8 @@ module idma_ctrl
     .clk_i              ,
     .rst_ni             ,
 
-    .dma_ctrl_req_i (  ),
-    .dma_ctrl_rsp_o (  ),
+    .dma_ctrl_req_i ( idma_fe_reg_req ),
+    .dma_ctrl_rsp_o ( idma_fe_reg_rsp ),
 
     .dma_req_o      (  ),
     .req_valid_o    (  ),
