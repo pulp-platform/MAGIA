@@ -76,8 +76,8 @@ module idma_xif_inst_decoder
 /**       Internal Signal Definitions Beginning       **/
 /*******************************************************/
 
-  logic clk_en;
-  logic clk_g;
+  logic clk_dec_en, clk_cfg_en;
+  logic clk_dec_g,  clk_cfg_g;
   
   logic [         OPCODE_W-1:0] opcode;
   logic [          FUNC3_W-1:0] func3;
@@ -198,11 +198,18 @@ module idma_xif_inst_decoder
 /**               Clock gating Beginning              **/
 /*******************************************************/
 
-  tc_clk_gating sys_clock_gating (
-    .clk_i               ,
-    .en_i      ( clk_en ),
-    .test_en_i ( '0'    ),
-    .clk_o     ( clk_g  )
+  tc_clk_gating dec_clock_gating (
+    .clk_i                   ,
+    .en_i      ( clk_dec_en ),
+    .test_en_i ( '0'        ),
+    .clk_o     ( clk_dec_g  )
+  );
+
+  tc_clk_gating cfg_clock_gating (
+    .clk_i                   ,
+    .en_i      ( clk_cfg_en ),
+    .test_en_i ( '0'        ),
+    .clk_o     ( clk_cfg_g  )
   );
 
 /*******************************************************/
@@ -212,7 +219,7 @@ module idma_xif_inst_decoder
 /*******************************************************/
 
   always_comb begin:  instr_decoder
-    clk_en                           = 1'b0;
+    clk_dec_en                       = 1'b0;
     start_cfg                        = 1'b0;
     cfg_reg_d                        = cfg_reg_q;
     xif_issue_if_i.issue_ready       = 1'b0;
@@ -223,13 +230,13 @@ module idma_xif_inst_decoder
         CONF_OPCODE: begin
           xif_issue_if_i.issue_ready                = 1'b1;
           xif_issue_if_i.issue_resp.accept          = 1'b1;
-          clk_en                                    = 1'b1 | clear_i;
+          clk_dec_en                                = 1'b1;
           cfg_reg_d[redmule_tile_pkg::DMA_CONF_IDX] = {decouple_r_aw, decouple_r_w, src_reduce_len, dst_reduce_len, src_max_log_len, dst_max_log_len, nd_en};
         end
         SET_OPCODE: begin
           xif_issue_if_i.issue_ready       = 1'b1;
           xif_issue_if_i.issue_resp.accept = 1'b1;
-          clk_en                           = 1'b1 | clear_i;
+          clk_dec_en                       = 1'b1;
           case (func3)
             SET_DA_FUNC3: if (xif_issue_if_i.issue_req.rs_valid) begin 
               cfg_reg_d[ redmule_tile_pkg::DMA_DST_ADDR_LOW_IDX]     = xif_issue_if_i.issue_req.rs[0]; 
@@ -262,7 +269,7 @@ module idma_xif_inst_decoder
     end
   end
 
-  always_ff @(posedge clk_int, negedge rst_ni) begin : configuration_register
+  always_ff @(posedge clk_dec_g, negedge rst_ni) begin : configuration_register
     if (~rst_ni)   cfg_reg_q <= '0;
     else begin
       if (clear_i) cfg_reg_q <= '0;
@@ -277,6 +284,7 @@ module idma_xif_inst_decoder
 /*******************************************************/
 
   always_comb begin: idma_next_state_output_logic
+    clk_cfg_en                = 1'b1;
     n_idma_state              = c_idma_state;
     start_dma                 = 1'b0;
     busy_dma                  = 1'b0;
@@ -292,7 +300,7 @@ module idma_xif_inst_decoder
     cfg_req_o.valid           = 1'b0;
 
     case (c_idma_state)
-      IDLE: if (start_cfg) n_idma_state = WR_CFG;
+      IDLE: if (start_cfg) n_idma_state = WR_CFG; else clk_cfg_en = 1'b0;
       WR_CFG: begin
         rw_valid     = write_idma_reg(.req(cfg_req_o), .rsp(cfg_rsp_i), .addr(idma_reg64_2d_reg_pkg::IDMA_REG64_2D_CONF_OFFSET),              .data(cfg_reg_d[redmule_tile_pkg::DMA_CONF_IDX][CONF_W-1:0]),  .reg_error(reg_error));
         n_idma_state = reg_error ? IDLE : (~rw_valid ? c_idma_state : WR_DST_ADDR);
@@ -351,7 +359,7 @@ module idma_xif_inst_decoder
     endcase
   end
 
-  always_ff @(posedge clk_i, negedge rst_ni) begin : idma_state_register
+  always_ff @(posedge clk_cfg_g, negedge rst_ni) begin : idma_state_register
     if (~rst_ni)   c_idma_state <= IDLE;
     else begin
       if (clear_i) c_idma_state <= IDLE;
@@ -359,7 +367,7 @@ module idma_xif_inst_decoder
     end
   end
 
-  always_ff @(posedge clk_i, negedge rst_ni) begin : next_id_register
+  always_ff @(posedge clk_cfg_g, negedge rst_ni) begin : next_id_register
     if (~rst_ni)   next_id_q <= '0;
     else begin
       if (clear_i) next_id_q <= '0;
