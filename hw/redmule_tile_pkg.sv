@@ -113,9 +113,11 @@ package redmule_tile_pkg;
   parameter int unsigned AXI_INSTR_U_W             = USR_W;                           // Width of the AXI Instruction User
 
   // Parameters used by the iDMA
+  localparam int unsigned iDMA_NumDims             = 2;                               // iDMA Number of dimensions
   parameter int unsigned iDMA_DataWidth            = DATA_W;                          // iDMA Data Width
   parameter int unsigned iDMA_AddrWidth            = ADDR_W;                          // iDMA Address Width
   parameter int unsigned iDMA_UserWidth            = USR_W;                           // iDMA AXI User Width
+  parameter int unsigned iDMA_StrbWidth            = iDMA_DataWidth/8;                // iDMA AXI Strobe Width
   parameter int unsigned iDMA_AxiIdWidth           = ID_W;                            // iDMA AXI ID Width
   parameter int unsigned iDMA_NumAxInFlight        = 2;                               // iDMA Number of transaction that can be in-flight concurrently
   parameter int unsigned iDMA_BufferDepth          = 3;                               // iDMA depth of the internal reorder buffer: '2' - minimal possible configuration; '3' - efficiently handle misaligned transfers (recommended)
@@ -130,6 +132,10 @@ package redmule_tile_pkg;
   parameter int unsigned iDMA_NumRegs              = 1;                               // iDMA Number of configuration register ports
   parameter int unsigned iDMA_NumStreams           = 1;                               // iDMA Number of streams (max 16)
   parameter int unsigned iDMA_IdCounterWidth       = 32;                              // iDMA Width of the transfer id (max 32-bit)
+  parameter int unsigned iDMA_RepWidth             = 32;                              // iDMA Width of the reps field
+  localparam logic[iDMA_NumDims-1:0][31:0] 
+                         iDMA_RepWidths            = '{default: 32'd32};              // iDMA Width of the counters holding the number of repetitions
+  parameter int unsigned iDMA_StrideWidth          = 32;                              // iDMA Width of the stride field
 
   // Parameters used by the iDMA instruction decoder
   parameter int unsigned DMA_INSTR_W               = INSTR_W;                         // iDMA Decoder instruction width
@@ -225,11 +231,25 @@ package redmule_tile_pkg;
     L2_IDX    = 0
   } mem_array_idx_e;
 
-  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic [AWC-1:0], logic [DW_LIC-1:0], logic [SW_LIC-1:0], logic [IW-1:0])
-  `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic [DW_LIC-1:0], logic [IW-1:0])
+  typedef logic[iDMA_AddrWidth-1:0] idma_addr_t;
+
+  typedef struct packed {
+    struct packed {
+      idma_axi_ar_chan_t ar_chan;
+    } axi;
+  } idma_read_meta_channel_t;
   
-  `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic [AWC-1:0], logic [DW_LIC-1:0], logic [SW_LIC-1:0], logic signed [WORDS_DATA-1:0][AWH:0], logic [UWH-1:0])
-  `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic [DW_LIC-1:0], logic [UWH-1:0])
+  typedef struct packed {
+    struct packed {
+      idma_axi_aw_chan_t aw_chan;
+    } axi;
+  } idma_write_meta_channel_t;
+
+  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic[IW-1:0])
+  `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic[DW_LIC-1:0], logic[IW-1:0])
+  
+  `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic signed[WORDS_DATA-1:0][AWH:0], logic[UWH-1:0])
+  `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0])
 
   `OBI_TYPEDEF_ALL_A_OPTIONAL(core_data_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
   `OBI_TYPEDEF_ALL_R_OPTIONAL(core_data_obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
@@ -245,12 +265,19 @@ package redmule_tile_pkg;
   `OBI_TYPEDEF_DEFAULT_REQ_T(core_obi_instr_req_t, core_instr_obi_a_chan_t)
   `OBI_TYPEDEF_RSP_T(core_obi_instr_rsp_t, core_instr_obi_r_chan_t)
 
-  `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic [AWC-1:0], logic [DW_LIC-1:0], logic [SW_LIC-1:0], logic signed [WORDS_DATA-1:0][AWH:0], logic [UWH-1:0])
-  `HCI_TYPEDEF_RSP_T(core_hci_data_rsp_t, logic [DW_LIC-1:0], logic [UWH-1:0])
+  `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic signed[WORDS_DATA-1:0][AWH:0], logic[UWH-1:0])
+  `HCI_TYPEDEF_RSP_T(core_hci_data_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0])
 
   `AXI_TYPEDEF_ALL_CT(core_axi_data, core_axi_data_req_t, core_axi_data_rsp_t, logic[ADDR_W-1:0], logic[AXI_DATA_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_DATA_U_W-1:0])
   `AXI_TYPEDEF_ALL_CT(core_axi_instr, core_axi_instr_req_t, core_axi_instr_rsp_t, logic[ADDR_W-1:0], logic[AXI_INSTR_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_INSTR_U_W-1:0])
 
-  `REG_BUS_TYPEDEF_ALL(idma_fe_reg, logic [ADDR_W-1:0], logic [DATA_W-1:0], logic [STRB_W-1:0])  
+  `REG_BUS_TYPEDEF_ALL(idma_fe_reg, logic[ADDR_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0])
+
+  `IDMA_TYPEDEF_FULL_REQ_T(idma_be_req_t, logic[iDMA_AxiIdWidth-1:0], idma_addr_t, logic[iDMA_TFLenWidth-1:0])
+  `IDMA_TYPEDEF_FULL_RSP_T(idma_be_rsp_t, idma_addr_t)
+  `IDMA_TYPEDEF_FULL_ND_REQ_T(idma_nd_req_t, idma_be_req_t, logic[iDMA_RepWidth-1:0], logic[iDMA_StrideWidth-1:0])
+
+  `AXI_TYPEDEF_ALL_CT(idma_axi, idma_axi_req_t, idma_axi_rsp_t, logic[iDMA_AddrWidth-1:0], logic[iDMA_AxiIdWidth-1:0], logic[iDMA_DataWidth-1:0], logic[iDMA_StrbWidth-1:0], logic[iDMA_UserWidth-1:0])
+  `OBI_TYPEDEF_ALL(idma_obi, obi_pkg::ObiMinimalOptionalConfig)
 
 endpackage: redmule_tile_pkg

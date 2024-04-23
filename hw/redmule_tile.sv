@@ -21,10 +21,11 @@
 
 `include "hci/assign.svh"
 
-module redemule_tile
+module redmule_tile
   import redmule_tile_pkg::*;
   import hci_package::*;
   import cv32e40x_pkg::*;
+  import idma_pkg::*;
   import obi_pkg::*;
 #(
   // Parameters used by hci_interconnect and l1_spm
@@ -36,6 +37,9 @@ module redemule_tile
   parameter cv32e40x_pkg::a_ext_e CORE_A        = cv32e40x_pkg::A_NONE           , // Atomic Istruction (A) support (dafault: not enabled)
   parameter cv32e40x_pkg::b_ext_e CORE_B        = cv32e40x_pkg::B_NONE           , // Bit Manipulation support (dafault: not enabled)
   parameter cv32e40x_pkg::m_ext_e CORE_M        = cv32e40x_pkg::M                  // Multiply and Divide support (dafault: full support)
+
+  // Parameters used by the iDMA
+  parameter idma_pkg::error_cap_e ERROR_CAP     = idma_pkg::NO_ERROR_HANDLING    , // Error handaling capability of the iDMA
 )(
   input  logic                                     clk_i               ,
   input  logic                                     rst_ni              ,
@@ -596,9 +600,33 @@ module redemule_tile
 
 //TODO
   idma_ctrl #(
-
+    .ERROR_CAP ( ERROR_CAP                        ),
+    .axi_req_t ( redmule_tile_pkg::idma_axi_req_t ),
+    .axi_rsp_t ( redmule_tile_pkg::idma_axi_rsp_t ),
+    .obi_req_t ( redmule_tile_pkg::idma_obi_req_t ),
+    .obi_rsp_t ( redmule_tile_pkg::idma_obi_rsp_t )
   ) i_idma_ctrl (
+    .clk_i (  ),
+    .rst_ni (  ),
+    .testmode_i (  ),
+    .clear_i (  ),
 
+    .xif_issue_if_i (  ),
+
+    .axi_read_req_o (  ),
+    .axi_read_rsp_i (  ),
+    .axi_write_req_o (  ),
+    .axi_write_rsp_i (  ),
+
+    .obi_read_req_o (  ),
+    .obi_read_rsp_i (  ),
+    .obi_write_req_o (  ),
+    .obi_write_rsp_i (  ),
+
+    .start_o (  ),
+    .busy_o (  ),
+    .done_o (  ),
+    .error_o (  )
   );
 
 /*******************************************************/
@@ -621,4 +649,4 @@ module redemule_tile
 /**            Data Out - L2 (AXI XBAR) End           **/
 /*******************************************************/
 
-endmodule: redemule_tile
+endmodule: redmule_tile

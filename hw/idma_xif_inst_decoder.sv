@@ -119,7 +119,7 @@ module idma_xif_inst_decoder
 /**           Function Definitions Beginning          **/
 /*******************************************************/
 
-  /* Function that writes the data argument to the addr argument of the iDMA FE register and returns the next state of the configuration FSM
+  /* Function that writes the data argument to the addr argument of the iDMA FE register
    * OUTPUT:
    * req       - iDMA FE register request channel
    * reg_error - indicates that the req/rsp of the iDMA FE asserted the error signal
@@ -218,7 +218,7 @@ module idma_xif_inst_decoder
 /**               Decoder FSM Beginning               **/
 /*******************************************************/
 
-  always_comb begin:  instr_decoder
+  always_comb begin: instr_decoder
     clk_dec_en                       = 1'b0;
     start_cfg                        = 1'b0;
     cfg_reg_d                        = cfg_reg_q;

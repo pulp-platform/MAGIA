@@ -76,7 +76,7 @@ module redmule_tile_fixture;
 /**                   DUT Beginning                   **/
 /*******************************************************/
 
-  redemule_tile #(
+  redmule_tile #(
     .N_MEM_BANKS  ( redmule_tile_tb_pkg::N_MEM_BANKS  ),
     .N_WORDS_BANK ( redmule_tile_tb_pkg::N_WORDS_BANK ),
 
