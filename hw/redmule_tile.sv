@@ -134,6 +134,12 @@ module redmule_tile
   logic[redmule_tile_pkg::AXI_INSTR_U_W-1:0]                           axi_instr_user         ;
   logic[obi_pkg::ObiDefaultConfig.OptionalCfg.RUserWidth-1:0]          obi_rsp_instr_user     ;
 
+  logic                                                                idma_clear             ;  //TODO: figure out who should clear the iDMA
+  logic                                                                idma_start             ;  //TODO: figure out how to manage these signals as irq
+  logic                                                                idma_busy              ;  //TODO: figure out how to manage these signals as irq
+  logic                                                                idma_done              ;  //TODO: figure out how to manage these signals as irq
+  logic                                                                idma_error             ;  //TODO: figure out how to manage these signals as irq
+  
   logic                                                                sys_clk                ;
   logic                                                                sys_clk_en             ;
 
@@ -165,6 +171,8 @@ module redmule_tile
   assign hci_ctrl  = '0;    //TODO: Figure out how to manage these signals
 
   assign redmule_ctrl_req = '0; //TODO: Figure out how to manage control
+
+  assign idma_clear = 1'b0;  //TODO: Figure out how to manage the iDMA clear
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -606,27 +614,27 @@ module redmule_tile
     .obi_req_t ( redmule_tile_pkg::idma_obi_req_t ),
     .obi_rsp_t ( redmule_tile_pkg::idma_obi_rsp_t )
   ) i_idma_ctrl (
-    .clk_i (  ),
-    .rst_ni (  ),
-    .testmode_i (  ),
-    .clear_i (  ),
+    .clk_i           ( sys_clk     ),
+    .rst_ni          ( rst_ni      ),
+    .testmode_i      ( test_mode_i ),
+    .clear_i         ( idma_clear  ),
 
-    .xif_issue_if_i (  ),
+    .xif_issue_if_i  ( xif_if.coproc_issue ),
 
-    .axi_read_req_o (  ),
-    .axi_read_rsp_i (  ),
+    .axi_read_req_o  (  ),
+    .axi_read_rsp_i  (  ),
     .axi_write_req_o (  ),
     .axi_write_rsp_i (  ),
 
-    .obi_read_req_o (  ),
-    .obi_read_rsp_i (  ),
+    .obi_read_req_o  (  ),
+    .obi_read_rsp_i  (  ),
     .obi_write_req_o (  ),
     .obi_write_rsp_i (  ),
 
-    .start_o (  ),
-    .busy_o (  ),
-    .done_o (  ),
-    .error_o (  )
+    .start_o         ( idma_start ),
+    .busy_o          ( idma_busy  ),
+    .done_o          ( idma_done  ),
+    .error_o         ( idma_error )
   );
 
 /*******************************************************/
