@@ -28,6 +28,8 @@ package redmule_tile_pkg;
   `include "register_interface/typedef.svh"
 
   `include "hci/assign.svh"
+
+  `include "include/alias.svh"
   
   // Global constants
   localparam int unsigned ADDR_W                   = 32;                              // System-wide address Width
@@ -52,7 +54,7 @@ package redmule_tile_pkg;
   // Parameters used by the HCI
   parameter int unsigned N_HWPE                    = 1;                               // Number of HWPEs attached to the port
   parameter int unsigned N_CORE                    = 1;                               // Number of Core ports
-  parameter int unsigned N_DMA                     = 0;                               // Number of DMA ports /*TODO: add DMA and update interconnect parameter*/
+  parameter int unsigned N_DMA                     = 1;                               // Number of DMA ports
   parameter int unsigned N_EXT                     = 0;                               // Number of External ports - LEAVE TO 0 UNLESS YOU KNOW WHAT YOU ARE DOING
   parameter int unsigned AWC                       = ADDR_W;                          // Address width core   (slave ports)
   localparam int unsigned AWM                      = $clog2(N_WORDS_BANK);            // Address width memory (master ports)
@@ -188,6 +190,17 @@ package redmule_tile_pkg;
   parameter logic [ DMA_FUNC3_W-1:0] SET_R_FUNC3   = 3'b101;                          // iDMA Decoder REPS_2 instruction FUNC3
   parameter logic [ DMA_FUNC3_W-1:0] SET_S_FUNC3   = 3'b111;                          // iDMA Decoder START instruction FUNC3
 
+  // Parameters of the AXI XBAR
+  parameter int unsigned AxiXbarNoSlvPorts         = 2;                               // Number of Slave Ports (iDMA, Core) /*TODO: add i$*/
+  localparam int unsigned AxiXbarSlvAxiIDWidth     = $clog2(AxiXbarNoSlvPorts);       // Number of bits to indentify each Slave Port
+  parameter int unsigned AxiXbarMaxWTrans          = 8;                               // Maximum number of outstanding transactions per write
+  parameter bit          AxiXbarFallThrough        = 1'b0;                            // Enabled -> MUX is purely combinational
+  parameter bit          AxiXbarSpillAw            = 1'b0;                            // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
+  parameter bit          AxiXbarSpillW             = 1'b0;                            // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
+  parameter bit          AxiXbarSpillB             = 1'b0;                            // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
+  parameter bit          AxiXbarSpillAr            = 1'b0;                            // Enabled -> Spill register on read master ports, +1 cycle of latency on write channels
+  parameter bit          AxiXbarSpillR             = 1'b0;                            // Enabled -> Spill register on read master ports, +1 cycle of latency on write channels 
+  
   typedef struct packed {
     int unsigned      idx;
     logic[ADDR_W-1:0] start_addr;
@@ -233,6 +246,11 @@ package redmule_tile_pkg;
     L1SPM_IDX = 1,
     L2_IDX    = 0
   } mem_array_idx_e;
+
+  typedef enum {
+    IDMA_IDX = 1,
+    CORE_IDX = 0
+  } axi_xbar_idx_e;
 
   typedef logic[iDMA_AddrWidth-1:0] idma_addr_t;
 
@@ -282,5 +300,13 @@ package redmule_tile_pkg;
 
   `AXI_TYPEDEF_ALL_CT(idma_axi, idma_axi_req_t, idma_axi_rsp_t, logic[iDMA_AddrWidth-1:0], logic[iDMA_AxiIdWidth-1:0], logic[iDMA_DataWidth-1:0], logic[iDMA_StrbWidth-1:0], logic[iDMA_UserWidth-1:0])
   `OBI_TYPEDEF_ALL(idma_obi, obi_pkg::ObiMinimalOptionalConfig)
+
+  `AXI_ALIAS(core_axi_data, axi_xbar_mst, core_axi_data_req_t, axi_xbar_mst_req_t, core_axi_data_rsp_t, axi_xbar_mst_rsp_t)
+  `AXI_ALIAS(core_axi_data, axi_xbar_slv, core_axi_data_req_t, axi_xbar_slv_req_t, core_axi_data_rsp_t, axi_xbar_slv_rsp_t)
+
+  `AXI_ALIAS(core_axi_data, axi_default, core_axi_data_req_t, axi_default_req_t, core_axi_data_rsp_t, axi_default_rsp_t)
+
+  `HCI_TYPEDEF_REQ_T(idma_hci_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic signed[WORDS_DATA-1:0][AWH:0], logic[UWH-1:0])
+  `HCI_TYPEDEF_RSP_T(idma_hci_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0])
 
 endpackage: redmule_tile_pkg
