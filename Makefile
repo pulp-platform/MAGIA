@@ -22,7 +22,7 @@
 mkfile_path    := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
 SW             ?= $(mkfile_path)/sw
 BUILD_DIR      ?= $(mkfile_path)/work
-QUESTA         ?= questa-2020.1
+QUESTA         ?= questa-2023.4
 BENDER_DIR     ?= .
 BENDER         ?= bender
 ISA            ?= riscv
