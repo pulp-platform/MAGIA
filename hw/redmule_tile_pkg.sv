@@ -289,20 +289,25 @@ package redmule_tile_pkg;
   `IDMA_TYPEDEF_FULL_ND_REQ_T(idma_nd_req_t, idma_be_req_t, logic[iDMA_RepWidth-1:0], logic[iDMA_StrideWidth-1:0])
 
   `AXI_TYPEDEF_ALL_CT(idma_axi, idma_axi_req_t, idma_axi_rsp_t, logic[iDMA_AddrWidth-1:0], logic[iDMA_AxiIdWidth-1:0], logic[iDMA_DataWidth-1:0], logic[iDMA_StrbWidth-1:0], logic[iDMA_UserWidth-1:0])
-  
+  `OBI_TYPEDEF_ALL(idma_obi, obi_pkg::obi_default_cfg(.AddrWidth(iDMA_AddrWidth), .DataWidth(iDMA_DataWidth), .IdWidth(iDMA_AxiIdWidth), .OptionalCfg(obi_pkg::ObiMinimalOptionalConfig)))
+
   typedef struct packed {
     struct packed {
       idma_axi_ar_chan_t ar_chan;
     } axi;
+    struct packed {
+      idma_obi_a_chan_t a_chan;
+    } obi;
   } idma_read_meta_channel_t;
   
   typedef struct packed {
     struct packed {
       idma_axi_aw_chan_t aw_chan;
     } axi;
+    struct packed {
+      idma_obi_a_chan_t a_chan;
+    } obi;
   } idma_write_meta_channel_t;
-  
-  `OBI_TYPEDEF_ALL(idma_obi, obi_pkg::obi_default_cfg(.AddrWidth(iDMA_AddrWidth), .DataWidth(iDMA_DataWidth), .IdWidth(iDMA_AxiIdWidth), .OptionalCfg(obi_pkg::ObiMinimalOptionalConfig)))
 
   `AXI_ALIAS(core_axi_data, axi_xbar_mst, core_axi_data_req_t, axi_xbar_mst_req_t, core_axi_data_rsp_t, axi_xbar_mst_rsp_t)
   `AXI_ALIAS(core_axi_data, axi_xbar_slv, core_axi_data_req_t, axi_xbar_slv_req_t, core_axi_data_rsp_t, axi_xbar_slv_rsp_t)

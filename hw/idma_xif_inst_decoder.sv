@@ -94,7 +94,7 @@ module idma_xif_inst_decoder
   logic [  DECOUPLE_R_AW_W-1:0] decouple_r_aw;
   logic [      DIRECTION_W-1:0] direction;
 
-  logic [DATA_W-1:0][N_CFG_REG] cfg_reg_d, cfg_reg_q;
+  logic [DATA_W-1:0][N_CFG_REG-1:0] cfg_reg_d, cfg_reg_q;
 
   logic start_cfg;
   logic start_dma;
