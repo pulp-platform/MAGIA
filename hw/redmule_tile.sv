@@ -36,10 +36,10 @@ module redmule_tile
   parameter cv32e40x_pkg::rv32_e  CORE_ISA      = cv32e40x_pkg::RV32I            , // RV32I (default) 32 registers in the RF - RV32E 16 registers in the RF
   parameter cv32e40x_pkg::a_ext_e CORE_A        = cv32e40x_pkg::A_NONE           , // Atomic Istruction (A) support (dafault: not enabled)
   parameter cv32e40x_pkg::b_ext_e CORE_B        = cv32e40x_pkg::B_NONE           , // Bit Manipulation support (dafault: not enabled)
-  parameter cv32e40x_pkg::m_ext_e CORE_M        = cv32e40x_pkg::M                  // Multiply and Divide support (dafault: full support)
+  parameter cv32e40x_pkg::m_ext_e CORE_M        = cv32e40x_pkg::M                , // Multiply and Divide support (dafault: full support)
 
   // Parameters used by the iDMA
-  parameter idma_pkg::error_cap_e ERROR_CAP     = idma_pkg::NO_ERROR_HANDLING    , // Error handaling capability of the iDMA
+  parameter idma_pkg::error_cap_e ERROR_CAP     = idma_pkg::NO_ERROR_HANDLING      // Error handaling capability of the iDMA
 )(
   input  logic                                     clk_i               ,
   input  logic                                     rst_ni              ,
@@ -678,7 +678,7 @@ module redmule_tile
     .SlvAxiIDWidth ( redmule_tile_pkg::AxiXbarSlvAxiIDWidth   ),
     .slv_aw_chan_t ( redmule_tile_pkg::axi_xbar_slv_aw_chan_t ),
     .mst_aw_chan_t ( redmule_tile_pkg::axi_xbar_mst_aw_chan_t ),
-    .w_chan_t      ( redmule_tile_pkg::axi_xbar_w_chan_t      ),
+    .w_chan_t      ( redmule_tile_pkg::axi_xbar_mst_w_chan_t  ),
     .slv_b_chan_t  ( redmule_tile_pkg::axi_xbar_slv_b_chan_t  ),
     .mst_b_chan_t  ( redmule_tile_pkg::axi_xbar_mst_b_chan_t  ),
     .slv_ar_chan_t ( redmule_tile_pkg::axi_xbar_slv_ar_chan_t ),
@@ -686,7 +686,7 @@ module redmule_tile
     .slv_r_chan_t  ( redmule_tile_pkg::axi_xbar_slv_r_chan_t  ),
     .mst_r_chan_t  ( redmule_tile_pkg::axi_xbar_mst_r_chan_t  ),
     .slv_req_t     ( redmule_tile_pkg::axi_xbar_slv_req_t     ),
-    .slv_resp_t    ( redmule_tile_pkg::axi_xbar_slv_resp_t    ),
+    .slv_resp_t    ( redmule_tile_pkg::axi_xbar_slv_rsp_t     ),
     .mst_req_t     ( redmule_tile_pkg::axi_xbar_mst_req_t     ),
     .mst_resp_t    ( redmule_tile_pkg::axi_xbar_mst_rsp_t     ),
     .NoSlvPorts    ( redmule_tile_pkg::AxiXbarNoSlvPorts      ),

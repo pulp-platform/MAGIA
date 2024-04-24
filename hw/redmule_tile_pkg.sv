@@ -26,6 +26,7 @@ package redmule_tile_pkg;
   `include "obi/typedef.svh"
   `include "axi/typedef.svh"
   `include "register_interface/typedef.svh"
+  `include "idma/typedef.svh"
 
   `include "hci/assign.svh"
 
@@ -116,6 +117,7 @@ package redmule_tile_pkg;
 
   // Parameters used by the iDMA
   localparam int unsigned iDMA_NumDims             = 2;                               // iDMA Number of dimensions
+  localparam int unsigned NumDim                   = iDMA_NumDims;                    // Needed by the iDMA typedef (wtf?)
   parameter int unsigned iDMA_DataWidth            = DATA_W;                          // iDMA Data Width
   parameter int unsigned iDMA_AddrWidth            = ADDR_W;                          // iDMA Address Width
   parameter int unsigned iDMA_UserWidth            = USR_W;                           // iDMA AXI User Width
@@ -166,7 +168,7 @@ package redmule_tile_pkg;
   parameter int unsigned DMA_DIRECTION_OFF         = 26;                              // iDMA Decoder DIRECTION field offset
   parameter int unsigned DMA_N_CFG_REG             = 13;                              // iDMA Decoder number of configuration registers of the iDMA forntend: CONF, DST_ADDR_LOW, DST_ADDR_HIGH, SRC_ADDR_LOW, SRC_ADDR_HIGH, LENGTH_LOW, LENGTH_HIGH, DST_STRIDE_2_LOW, DST_STRIDE_2_HIGH, SRC_STRIDE_2_LOW, SRC_STRIDE_2_HIGH, REPS_2_LOW, REPS_2_HIGH
   parameter int unsigned DMA_CONF_IDX              = 0;                               // iDMA Decoder CONF cofiguration register index 
-  parameter int unsinged DMA_CONF_DIRECTION_IDX    = 11;                              // iDMA Decoder DIRECTION bit index within CONF
+  parameter int unsigned DMA_CONF_DIRECTION_IDX    = 11;                              // iDMA Decoder DIRECTION bit index within CONF
   parameter int unsigned DMA_DST_ADDR_LOW_IDX      = 1;                               // iDMA Decoder DST_ADDR_LOW cofiguration register index 
   parameter int unsigned DMA_DST_ADDR_HIGH_IDX     = 2;                               // iDMA Decoder DST_ADDR_HIGH cofiguration register index 
   parameter int unsigned DMA_SRC_ADDR_LOW_IDX      = 3;                               // iDMA Decoder SRC_ADDR_LOW cofiguration register index 
@@ -254,18 +256,6 @@ package redmule_tile_pkg;
 
   typedef logic[iDMA_AddrWidth-1:0] idma_addr_t;
 
-  typedef struct packed {
-    struct packed {
-      idma_axi_ar_chan_t ar_chan;
-    } axi;
-  } idma_read_meta_channel_t;
-  
-  typedef struct packed {
-    struct packed {
-      idma_axi_aw_chan_t aw_chan;
-    } axi;
-  } idma_write_meta_channel_t;
-
   `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic[IW-1:0])
   `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic[DW_LIC-1:0], logic[IW-1:0])
   
@@ -299,7 +289,20 @@ package redmule_tile_pkg;
   `IDMA_TYPEDEF_FULL_ND_REQ_T(idma_nd_req_t, idma_be_req_t, logic[iDMA_RepWidth-1:0], logic[iDMA_StrideWidth-1:0])
 
   `AXI_TYPEDEF_ALL_CT(idma_axi, idma_axi_req_t, idma_axi_rsp_t, logic[iDMA_AddrWidth-1:0], logic[iDMA_AxiIdWidth-1:0], logic[iDMA_DataWidth-1:0], logic[iDMA_StrbWidth-1:0], logic[iDMA_UserWidth-1:0])
-  `OBI_TYPEDEF_ALL(idma_obi, obi_pkg::ObiMinimalOptionalConfig)
+  
+  typedef struct packed {
+    struct packed {
+      idma_axi_ar_chan_t ar_chan;
+    } axi;
+  } idma_read_meta_channel_t;
+  
+  typedef struct packed {
+    struct packed {
+      idma_axi_aw_chan_t aw_chan;
+    } axi;
+  } idma_write_meta_channel_t;
+  
+  `OBI_TYPEDEF_ALL(idma_obi, obi_pkg::obi_default_cfg(.AddrWidth(iDMA_AddrWidth), .DataWidth(iDMA_DataWidth), .IdWidth(iDMA_AxiIdWidth), .OptionalCfg(obi_pkg::ObiMinimalOptionalConfig)))
 
   `AXI_ALIAS(core_axi_data, axi_xbar_mst, core_axi_data_req_t, axi_xbar_mst_req_t, core_axi_data_rsp_t, axi_xbar_mst_rsp_t)
   `AXI_ALIAS(core_axi_data, axi_xbar_slv, core_axi_data_req_t, axi_xbar_slv_req_t, core_axi_data_rsp_t, axi_xbar_slv_rsp_t)

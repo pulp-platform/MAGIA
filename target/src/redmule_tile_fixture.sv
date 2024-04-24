@@ -33,8 +33,8 @@ module redmule_tile_fixture;
   logic                                     test_mode;
   logic                                     tile_enable;
 
-  redmule_tile_pkg::core_axi_data_req_t     core_data_req;
-  redmule_tile_pkg::core_axi_data_rsp_t     core_data_rsp;
+  redmule_tile_pkg::axi_default_req_t       data_out_req;
+  redmule_tile_pkg::axi_default_rsp_t       data_out_rsp;
 
   redmule_tile_pkg::core_axi_instr_req_t    core_instr_req;
   redmule_tile_pkg::core_axi_instr_rsp_t    core_instr_rsp;
@@ -90,8 +90,8 @@ module redmule_tile_fixture;
     .test_mode_i         ( test_mode         ),
     .tile_enable_i       ( tile_enable       ),
 
-    .core_data_req_o     ( core_data_req     ),
-    .core_data_rsp_i     ( core_data_rsp     ), 
+    .data_out_req_o      ( data_out_req      ),
+    .data_out_rsp_i      ( data_out_rsp      ), 
 
     .core_instr_req_o    ( core_instr_req    ),
     .core_instr_rsp_i    ( core_instr_rsp    ),

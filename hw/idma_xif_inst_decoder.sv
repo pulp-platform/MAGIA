@@ -28,7 +28,7 @@ module idma_xif_inst_decoder
   parameter int unsigned DATA_W              = redmule_tile_pkg::DMA_DATA_W,
   parameter int unsigned ADDR_W              = redmule_tile_pkg::DMA_ADDR_W,
   parameter int unsigned N_RF_PORTS          = redmule_tile_pkg::DMA_N_RF_PORTS,
-  parameter int unsigned OPCODE_W            = redmule_tile_pkg::DMA_OP_CODE_W,
+  parameter int unsigned OPCODE_W            = redmule_tile_pkg::DMA_OPCODE_W,
   parameter int unsigned FUNC3_W             = redmule_tile_pkg::DMA_FUNC3_W,
   parameter int unsigned ND_EN_W             = redmule_tile_pkg::DMA_ND_EN_W,
   parameter int unsigned DST_MAX_LOG_LEN_W   = redmule_tile_pkg::DMA_DST_MAX_LOG_LEN_W,
@@ -94,7 +94,7 @@ module idma_xif_inst_decoder
   logic [  DECOUPLE_R_AW_W-1:0] decouple_r_aw;
   logic [      DIRECTION_W-1:0] direction;
 
-  logic [DATA_W-1:0] cfg_reg_d [N_CFG_REG], cfg_reg_q [N_CFG_REG];
+  logic [DATA_W-1:0][N_CFG_REG] cfg_reg_d, cfg_reg_q;
 
   logic start_cfg;
   logic start_dma;
@@ -209,14 +209,14 @@ module idma_xif_inst_decoder
   tc_clk_gating dec_clock_gating (
     .clk_i                   ,
     .en_i      ( clk_dec_en ),
-    .test_en_i ( '0'        ),
+    .test_en_i ( '0         ),
     .clk_o     ( clk_dec_g  )
   );
 
   tc_clk_gating cfg_clock_gating (
     .clk_i                   ,
     .en_i      ( clk_cfg_en ),
-    .test_en_i ( '0'        ),
+    .test_en_i ( '0         ),
     .clk_o     ( clk_cfg_g  )
   );
 
@@ -351,13 +351,13 @@ module idma_xif_inst_decoder
       end
       START: begin
         start_dma                 = 1'b1;
-        rw_valid                  = read_idma_reg(.req(cfg_req_o), .rsp(cfg_rsp_i), .addr(idma_reg64_2d_reg_pkg::IDMA_REG64_2D_NEXT_ID_0_OFFSET), data(next_id_d), .reg_error(reg_error));
+        rw_valid                  = read_idma_reg(.req(cfg_req_o), .rsp(cfg_rsp_i), .addr(idma_reg64_2d_reg_pkg::IDMA_REG64_2D_NEXT_ID_0_OFFSET), .data(next_id_d), .reg_error(reg_error));
         transfer_not_set_properly = (rw_valid & (next_id_d == 0)) ? 1'b1 : 1'b0;
         n_idma_state              = (reg_error | transfer_not_set_properly) ? IDLE : (~rw_valid ? c_idma_state: BUSY);
       end
       BUSY: begin
         busy_dma                  = 1'b1;
-        rw_valid                  = read_idma_reg(.req(cfg_req_o), .rsp(cfg_rsp_i), .addr(idma_reg64_2d_reg_pkg::IDMA_REG64_2D_NEXT_ID_0_OFFSET), data(next_id_d), .reg_error(reg_error));
+        rw_valid                  = read_idma_reg(.req(cfg_req_o), .rsp(cfg_rsp_i), .addr(idma_reg64_2d_reg_pkg::IDMA_REG64_2D_NEXT_ID_0_OFFSET), .data(next_id_d), .reg_error(reg_error));
         n_idma_state              = reg_error ? IDLE : (~rw_valid ? c_idma_state : (next_id_d == next_id_q ? c_idma_state : DONE));
       end
       DONE: begin

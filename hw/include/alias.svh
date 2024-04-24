@@ -23,13 +23,12 @@
 `define REDMULE_MESH_ALIAS_
 
 `define AXI_ALIAS(__src_name, __dst_name, __src_req, __dst_req, __src_rsp, __dst_rsp) \
-  alias __dst_name             = __src_name;                                          \
-  alias __dst_req              = __src_req;                                           \
-  alias __dst_rsp              = __src_rsp;                                           \
-  alias __dst_name``_aw_chan_t = __src_name``_aw_chan_t;                              \
-  alias __dst_name``_w_chan_t  = __src_name``_w_chan_t;                               \
-  alias __dst_name``_b_chan_t  = __src_name``_b_chan_t;                               \
-  alias __dst_name``_ar_chan_t = __src_name``_ar_chan_t;                              \
-  alias __dst_name``_r_chan_t  = __src_name``_r_chan_t;
+  typedef __src_req              __dst_req;                                           \
+  typedef __src_rsp              __dst_rsp;                                           \
+  typedef __src_name``_aw_chan_t __dst_name``_aw_chan_t;                              \
+  typedef __src_name``_w_chan_t  __dst_name``_w_chan_t;                               \
+  typedef __src_name``_b_chan_t  __dst_name``_b_chan_t;                               \
+  typedef __src_name``_ar_chan_t __dst_name``_ar_chan_t;                              \
+  typedef __src_name``_r_chan_t  __dst_name``_r_chan_t;
 
 `endif /*REDMULE_MESH_ALIAS_*/

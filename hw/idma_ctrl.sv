@@ -53,29 +53,29 @@ module idma_ctrl
 /**       Internal Signal Definitions Beginning       **/
 /*******************************************************/
 
-  redmule_tile_pkg::idma_fe_reg_req_t         idma_fe_reg_req;
-  redmule_tile_pkg::idma_fe_reg_rsp_t         idma_fe_reg_rsp;
+  redmule_tile_pkg::idma_fe_reg_req_t              idma_fe_reg_req;
+  redmule_tile_pkg::idma_fe_reg_rsp_t              idma_fe_reg_rsp;
 
-  redmule_tile_pkg::idma_nd_req_t             idma_fe_req;
+  redmule_tile_pkg::idma_nd_req_t                  idma_fe_req;
 
-  redmule_tile_pkg::idma_be_req_t             idma_be_req;
-  redmule_tile_pkg::idma_be_rsp_t             idma_be_rsp;
+  redmule_tile_pkg::idma_be_req_t                  idma_be_req;
+  redmule_tile_pkg::idma_be_rsp_t                  idma_be_rsp;
 
-  logic                                       fe_req_valid, fe_req_ready;
-  logic                                       be_req_valid, be_req_ready;
-  logic                                       be_rsp_valid, be_rsp_ready;
-  logic                                       nd_rsp_valid, nd_rsp_ready;
+  logic                                            fe_req_valid, fe_req_ready;
+  logic                                            be_req_valid, be_req_ready;
+  logic                                            be_rsp_valid, be_rsp_ready;
+  logic                                            nd_rsp_valid, nd_rsp_ready;
 
-  logic                                       issue_id, retire_id;
-  logic[redmule_tile_pkg::IdCounterWidth-1:0] next_id, done_id;
+  logic                                            issue_id, retire_id;
+  logic[redmule_tile_pkg::iDMA_IdCounterWidth-1:0] next_id, done_id;
 
-  idma_pkg::idma_busy_t                       busy;
-  logic                                       me_busy;
+  idma_pkg::idma_busy_t                            busy;
+  logic                                            me_busy;
 
-  idma_pkg::idma_eh_req_t                     idma_eh_req;
-  logic                                       eh_req_valid;
+  idma_pkg::idma_eh_req_t                          idma_eh_req;
+  logic                                            eh_req_valid;
 
-  logic                                       direction;
+  logic                                            direction;
 
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
@@ -99,7 +99,7 @@ module idma_ctrl
     .INSTR_W             ( redmule_tile_pkg::DMA_INSTR_W             ),
     .DATA_W              ( redmule_tile_pkg::DMA_DATA_W              ),
     .N_RF_PORTS          ( redmule_tile_pkg::DMA_N_RF_PORTS          ),
-    .OPCODE_W            ( redmule_tile_pkg::DMA_OP_CODE_W           ),
+    .OPCODE_W            ( redmule_tile_pkg::DMA_OPCODE_W            ),
     .FUNC3_W             ( redmule_tile_pkg::DMA_FUNC3_W             ),
     .ND_EN_W             ( redmule_tile_pkg::DMA_ND_EN_W             ),
     .DST_MAX_LOG_LEN_W   ( redmule_tile_pkg::DMA_DST_MAX_LOG_LEN_W   ),
@@ -134,7 +134,7 @@ module idma_ctrl
     .start_o                        ,
     .busy_o                         ,
     .done_o                         ,
-    .error_o                        ,
+    .error_o                        
   );
 
 /*******************************************************/
@@ -280,7 +280,7 @@ module idma_ctrl
 /*******************************************************/
 
   idma_transfer_id_gen #(
-    .IdWidth ( redmule_tile_pkg::IdCounterWidth )
+    .IdWidth ( redmule_tile_pkg::iDMA_IdCounterWidth )
   ) i_transfer_id_gen (
     .clk_i                    ,
     .rst_ni                   ,
