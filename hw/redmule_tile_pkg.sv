@@ -151,6 +151,7 @@ package redmule_tile_pkg;
   parameter int unsigned DMA_SRC_REDUCE_LEN_W      = 1;                               // iDMA Decoder SRC_REDUCE_LEN field width
   parameter int unsigned DMA_DECOUPLE_R_W_W        = 1;                               // iDMA Decoder DECOUPLE_R_W field width
   parameter int unsigned DMA_DECOUPLE_R_AW_W       = 1;                               // iDMA Decoder DECOUPLE_R_AW field width
+  parameter int unsigned DMA_DIRECTION_W           = 1;                               // iDMA Decoder DIRECTION field width
   parameter int unsigned DMA_OPCODE_OFF            = 0;                               // iDMA Decoder OPCODE field offset
   parameter int unsigned DMA_FUNC3_OFF             = 12;                              // iDMA Decoder FUNC3 field offset
   parameter int unsigned DMA_ND_EN_OFF             = 15;                              // iDMA Decoder ND_EN field offset
@@ -160,8 +161,10 @@ package redmule_tile_pkg;
   parameter int unsigned DMA_SRC_REDUCE_LEN_OFF    = 23;                              // iDMA Decoder SRC_REDUCE_LEN field offset
   parameter int unsigned DMA_DECOUPLE_R_W_OFF      = 24;                              // iDMA Decoder DECOUPLE_R_W field offset
   parameter int unsigned DMA_DECOUPLE_R_AW_OFF     = 25;                              // iDMA Decoder DECOUPLE_R_AW field offset
+  parameter int unsigned DMA_DIRECTION_OFF         = 26;                              // iDMA Decoder DIRECTION field offset
   parameter int unsigned DMA_N_CFG_REG             = 13;                              // iDMA Decoder number of configuration registers of the iDMA forntend: CONF, DST_ADDR_LOW, DST_ADDR_HIGH, SRC_ADDR_LOW, SRC_ADDR_HIGH, LENGTH_LOW, LENGTH_HIGH, DST_STRIDE_2_LOW, DST_STRIDE_2_HIGH, SRC_STRIDE_2_LOW, SRC_STRIDE_2_HIGH, REPS_2_LOW, REPS_2_HIGH
   parameter int unsigned DMA_CONF_IDX              = 0;                               // iDMA Decoder CONF cofiguration register index 
+  parameter int unsinged DMA_CONF_DIRECTION_IDX    = 11;                              // iDMA Decoder DIRECTION bit index within CONF
   parameter int unsigned DMA_DST_ADDR_LOW_IDX      = 1;                               // iDMA Decoder DST_ADDR_LOW cofiguration register index 
   parameter int unsigned DMA_DST_ADDR_HIGH_IDX     = 2;                               // iDMA Decoder DST_ADDR_HIGH cofiguration register index 
   parameter int unsigned DMA_SRC_ADDR_LOW_IDX      = 3;                               // iDMA Decoder SRC_ADDR_LOW cofiguration register index 

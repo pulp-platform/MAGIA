@@ -621,15 +621,11 @@ module redmule_tile
 
     .xif_issue_if_i  ( xif_if.coproc_issue ),
 
-    .axi_read_req_o  (  ),
-    .axi_read_rsp_i  (  ),
-    .axi_write_req_o (  ),
-    .axi_write_rsp_i (  ),
+    .axi_req_o       (  ),
+    .axi_rsp_i       (  ),
 
-    .obi_read_req_o  (  ),
-    .obi_read_rsp_i  (  ),
-    .obi_write_req_o (  ),
-    .obi_write_rsp_i (  ),
+    .obi_req_o       (  ),
+    .obi_rsp_i       (  ),
 
     .start_o         ( idma_start ),
     .busy_o          ( idma_busy  ),
@@ -652,6 +648,38 @@ module redmule_tile
 /*******************************************************/
 
 //TODO
+  axi_mux #(
+    .SlvAxiIDWidth (  ),
+    .slv_aw_chan_t (  ),
+    .mst_aw_chan_t (  ),
+    .w_chan_t      (  ),
+    .slv_b_chan_t  (  ),
+    .mst_b_chan_t  (  ),
+    .slv_ar_chan_t (  ),
+    .mst_ar_chan_t (  ),
+    .slv_r_chan_t  (  ),
+    .mst_r_chan_t  (  ),
+    .slv_req_t     (  ),
+    .slv_resp_t    (  ),
+    .mst_req_t     (  ),
+    .mst_resp_t    (  ),
+    .NoSlvPorts    (  ),
+    .MaxWTrans     (  ),
+    .FallThrough   (  ),
+    .SpillAw       (  ),
+    .SpillW        (  ),
+    .SpillB        (  ),
+    .SpillAr       (  ),
+    .SpillR        (  )
+  ) i_axi_xbar (
+    .clk_i       ( sys_clk ),
+    .rst_ni      ( rst_ni ),
+    .test_i      ( test_mode_i ),
+    .slv_reqs_i  (  ),
+    .slv_resps_o (  ),
+    .mst_req_o   (  ),
+    .mst_resp_i  (  )   
+  );
 
 /*******************************************************/
 /**            Data Out - L2 (AXI XBAR) End           **/

@@ -37,6 +37,7 @@ module idma_xif_inst_decoder
   parameter int unsigned SRC_REDUCE_LEN_W    = redmule_tile_pkg::DMA_SRC_REDUCE_LEN_W,
   parameter int unsigned DECOUPLE_R_W_W      = redmule_tile_pkg::DMA_DECOUPLE_R_W_W,
   parameter int unsigned DECOUPLE_R_AW_W     = redmule_tile_pkg::DMA_DECOUPLE_R_AW_W,
+  parameter int unsigned DIRECTION_W         = redmule_tile_pkg::DMA_DIRECTION_W,
   localparam int unsigned CONF_W             = ND_EN_W +
                                                DST_MAX_LOG_LEN_W +
                                                SRC_MAX_LOG_LEN_W +
@@ -53,23 +54,26 @@ module idma_xif_inst_decoder
   parameter int unsigned SRC_REDUCE_LEN_OFF  = redmule_tile_pkg::DMA_SRC_REDUCE_LEN_OFF,
   parameter int unsigned DECOUPLE_R_W_OFF    = redmule_tile_pkg::DMA_DECOUPLE_R_W_OFF,
   parameter int unsigned DECOUPLE_R_AW_OFF   = redmule_tile_pkg::DMA_DECOUPLE_R_AW_OFF,
+  parameter int unsigned DIRECTION_OFF       = redmule_tile_pkg::DMA_DIRECTION_OFF,
   parameter int unsigned N_CFG_REG           = redmule_tile_pkg::DMA_N_CFG_REG,
   parameter type         idma_fe_req_t       = redmule_tile_pkg::idma_fe_reg_req_t,
   parameter type         idma_fe_rsp_t       = redmule_tile_pkg::idma_fe_reg_rsp_t
 )(
-  input  logic                      clk_i,
-  input  logic                      rst_ni,
-  input  logic                      clear_i,
+  input  logic                 clk_i,
+  input  logic                 rst_ni,
+  input  logic                 clear_i,
 
-  cv32e40x_if_xif.coproc_issue      xif_issue_if_i,
+  cv32e40x_if_xif.coproc_issue xif_issue_if_i,
 
-  output idma_fe_req_t              cfg_req_o,
-  input  idma_fe_rsp_t              cfg_rsp_i,
+  output idma_fe_req_t         cfg_req_o,
+  input  idma_fe_rsp_t         cfg_rsp_i,
 
-  output logic                      start_o,  // Started iDMA transfer
-  output logic                      busy_o,   // Performing iDMA transfer
-  output logic                      done_o,   // Finished iDMA transfer
-  output logic                      error_o   // Detected error
+  output logic                 direction_o,  // Direction of the iDMA transfer: 0 -> AXI2OBI; 1 -> OBI2AXI
+  
+  output logic                 start_o,      // Started iDMA transfer
+  output logic                 busy_o,       // Performing iDMA transfer
+  output logic                 done_o,       // Finished iDMA transfer
+  output logic                 error_o       // Detected error
 );
 
 /*******************************************************/
@@ -88,6 +92,7 @@ module idma_xif_inst_decoder
   logic [ SRC_REDUCE_LEN_W-1:0] src_reduce_len;
   logic [   DECOUPLE_R_W_W-1:0] decouple_r_w;
   logic [  DECOUPLE_R_AW_W-1:0] decouple_r_aw;
+  logic [      DIRECTION_W-1:0] direction;
 
   logic [DATA_W-1:0] cfg_reg_d [N_CFG_REG], cfg_reg_q [N_CFG_REG];
 
@@ -185,12 +190,15 @@ module idma_xif_inst_decoder
   assign src_reduce_len  = xif_issue_if_i.issue_req.instr[ SRC_REDUCE_LEN_OFF +  SRC_REDUCE_LEN_W-1: SRC_REDUCE_LEN_OFF];
   assign decouple_r_w    = xif_issue_if_i.issue_req.instr[   DECOUPLE_R_W_OFF +    DECOUPLE_R_W_W-1:   DECOUPLE_R_W_OFF];
   assign decouple_r_aw   = xif_issue_if_i.issue_req.instr[  DECOUPLE_R_AW_OFF +   DECOUPLE_R_AW_W-1:  DECOUPLE_R_AW_OFF];
+  assign direction       = xif_issue_if_i.issue_req.instr[      DIRECTION_OFF +       DIRECTION_W-1:      DIRECTION_OFF];
 
   assign error_o = transfer_not_set_properly | reg_error;
 
   assign start_o = start_dma;
   assign busy_o  = busy_dma;
   assign done_o  = done_dma;
+
+  assign direction_o = cfg_reg_d[redmule_tile_pkg::DMA_CONF_IDX][DMA_CONF_DIRECTION_IDX];
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -231,7 +239,7 @@ module idma_xif_inst_decoder
           xif_issue_if_i.issue_ready                = 1'b1;
           xif_issue_if_i.issue_resp.accept          = 1'b1;
           clk_dec_en                                = 1'b1;
-          cfg_reg_d[redmule_tile_pkg::DMA_CONF_IDX] = {decouple_r_aw, decouple_r_w, src_reduce_len, dst_reduce_len, src_max_log_len, dst_max_log_len, nd_en};
+          cfg_reg_d[redmule_tile_pkg::DMA_CONF_IDX] = {direction, decouple_r_aw, decouple_r_w, src_reduce_len, dst_reduce_len, src_max_log_len, dst_max_log_len, nd_en};
         end
         SET_OPCODE: begin
           xif_issue_if_i.issue_ready       = 1'b1;

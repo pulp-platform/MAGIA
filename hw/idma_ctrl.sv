@@ -37,15 +37,11 @@ module idma_ctrl
 
   cv32e40x_if_xif.coproc_issue xif_issue_if_i,
 
-  output axi_req_t             axi_read_req_o,
-  input  axi_rsp_t             axi_read_rsp_i,
-  output axi_req_t             axi_write_req_o,
-  input  axi_rsp_t             axi_write_rsp_i,
+  output axi_req_t             axi_req_o,
+  input  axi_rsp_t             axi_rsp_i,
 
-  output obi_req_t             obi_read_req_o,
-  input  obi_rsp_t             obi_read_rsp_i,
-  output obi_req_t             obi_write_req_o,
-  input  obi_rsp_t             obi_write_rsp_i,
+  output obi_req_t             obi_req_o,
+  input  obi_rsp_t             obi_rsp_i,
 
   output logic                 start_o,  // Started iDMA transfer
   output logic                 busy_o,   // Performing iDMA transfer
@@ -78,6 +74,8 @@ module idma_ctrl
 
   idma_pkg::idma_eh_req_t                     idma_eh_req;
   logic                                       eh_req_valid;
+
+  logic                                       direction;
 
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
@@ -123,19 +121,20 @@ module idma_ctrl
     .idma_fe_req_t       ( redmule_tile_pkg::idma_fe_reg_req_t       ),
     .idma_fe_rsp_t       ( redmule_tile_pkg::idma_fe_reg_rsp_t       )
   ) i_idma_inst_decoder (
-    .clk_i                        ,
-    .rst_ni                       ,
-    .clear_i                      ,
+    .clk_i                          ,
+    .rst_ni                         ,
+    .clear_i                        ,
 
-    .xif_issue_if_i               ,
+    .xif_issue_if_i                 ,
 
-    .cfg_req_o ( idma_fe_reg_req ),
-    .cfg_rsp_i ( idma_fe_reg_rsp ),
+    .cfg_req_o   ( idma_fe_reg_req ),
+    .cfg_rsp_i   ( idma_fe_reg_rsp ),
 
-    .start_o                      ,
-    .busy_o                       ,
-    .done_o                       ,
-    .error_o                      ,
+    .direction_o ( direction       ),
+    .start_o                        ,
+    .busy_o                         ,
+    .done_o                         ,
+    .error_o                        ,
   );
 
 /*******************************************************/
@@ -294,21 +293,29 @@ module idma_ctrl
 /*******************************************************/
 /**                  Transfer ID End                  **/
 /*******************************************************/
-/**                 AXI XBAR Beginning                **/
+/**                 AXI MUX Beginning                 **/
 /*******************************************************/
 
 //TODO: Do we even need this???
+  assign axi_req_o = direction ? axi_write_req_o : axi_read_req_o;
+  assign axi_rsp_i = direction ? axi_write_rsp_i : axi_read_rsp_i;
+  assign axi_write_rsp_i = direction ? axi_write_rsp_i : '0;
+  assign axi_read_rsp_i  = direction ? '0              : axi_read_rsp_i;
 
 /*******************************************************/
-/**                    AXI XBAR End                   **/
+/**                    AXI MUX End                    **/
 /*******************************************************/
-/**                 OBI XBAR Beginning                **/
+/**                 OBI MUX Beginning                 **/
 /*******************************************************/
 
 //TODO: Do we even need this???
+  assign obi_req_o = direction ? obi_read_req_o : obi_write_req_o;
+  assign obi_rsp_i = direction ? obi_read_rsp_i : obi_write_rsp_i;
+  assign obi_read_rsp_i  = direction ? obi_read_rsp_i : '0;
+  assign obi_write_rsp_i = direction ? '0             : obi_write_rsp_i;
 
 /*******************************************************/
-/**                    OBI XBAR End                   **/
+/**                    OBI MUX End                    **/
 /*******************************************************/
 
 endmodule: idma_ctrl
