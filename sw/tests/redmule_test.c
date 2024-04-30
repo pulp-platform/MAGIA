@@ -77,7 +77,6 @@ int main(void) {
   //             (0b11100   << 15) | \     /* Rs1 */
   //             (0x00      <<  7) | \     /* Empty */
   //             (0b0001011 <<  0)   \n"); /* OpCode */
-
   asm volatile(
        ".word (0x0       << 25) | \
               (0b11101   << 20) | \
@@ -96,7 +95,6 @@ int main(void) {
   //            (0b001     << 10) | \     /* Operation selection */
   //            (0b001     <<  7) | \     /* Data format */
   //            (0b0101011 <<  0)   \n"); /* OpCode */
-
   asm volatile(
        ".word (0b00111   << 27) | \
               (0b00      << 25) | \

@@ -16,6 +16,11 @@
 #define mmio16(x) (*(volatile uint16_t *)(x))
 #define mmio8(x)  (*(volatile uint8_t  *)(x))
 
+#define addr64(x) (*(uint64_t *)(&x))
+#define addr32(x) (*(uint32_t *)(&x))
+#define addr16(x) (*(uint16_t *)(&x))
+#define addr8(x)  (*(uint8_t  *)(&x))
+
 void wait_print(unsigned int cycles){
     for(int i = 0; i <= cycles; i++){
         printf("Waiting: [");
