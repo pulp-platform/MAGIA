@@ -23,6 +23,7 @@
 
 module redmule_tile
   import redmule_tile_pkg::*;
+  import redmule_pkg::*;
   import hci_package::*;
   import cv32e40x_pkg::*;
   import idma_pkg::*;
@@ -154,6 +155,9 @@ module redmule_tile
   logic                                                                     idma_busy              ;  //TODO: figure out how to manage these signals as irq
   logic                                                                     idma_done              ;  //TODO: figure out how to manage these signals as irq
   logic                                                                     idma_error             ;  //TODO: figure out how to manage these signals as irq
+
+  cv32e40x_if_xif.coproc_issue[redmule_tile_pkg::N_COPROC-1:0]              xif_coproc_issues      ;  // Index 0 -> RedMulE, Index 1 -> iDMA
+  redmule_tile_pkg::xif_inst_rule_t[redmule_tile_pkg::N_COPROC-1:0]         xif_coproc_rules       ;
   
   logic                                                                     sys_clk                ;
   logic                                                                     sys_clk_en             ;
@@ -164,8 +168,8 @@ module redmule_tile
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
 
-  assign obi_xbar_rule[0] = '{idx: 32'd0, start_addr: redmule_tile_pkg::L1_ADDR_START, end_addr: redmule_tile_pkg::L1_ADDR_END};
-  assign obi_xbar_rule[1] = '{idx: 32'd1, start_addr: redmule_tile_pkg::L2_ADDR_START, end_addr: redmule_tile_pkg::L2_ADDR_END};
+  assign obi_xbar_rule[redmule_tile_pkg::L2_IDX]    = '{idx: 32'd0, start_addr: redmule_tile_pkg::L2_ADDR_START, end_addr: redmule_tile_pkg::L2_ADDR_END};
+  assign obi_xbar_rule[redmule_tile_pkg::L1SPM_IDX] = '{idx: 32'd1, start_addr: redmule_tile_pkg::L1_ADDR_START, end_addr: redmule_tile_pkg::L1_ADDR_END};
   
   assign obi_xbar_en_default_idx = '0;
   assign obi_xbar_default_idx    = '0;
@@ -193,6 +197,9 @@ module redmule_tile
   assign redmule_ctrl_req = '0; //TODO: Figure out how to manage control
 
   assign idma_clear = 1'b0;  //TODO: Figure out how to manage the iDMA clear
+
+  assign xif_coproc_rules[redmule_tile_pkg::REDMULE_IDX] = '{opcode_w: redmule_tile_pkg::DMA_OPCODE_W, n_opcode: redmule_tile_pkg::N_REDMULE_OPCODE, opcode_list: {{redmule_pkg::MCNFIG}, {redmule_pkg::MCNFIG}}};
+  assign xif_coproc_rules[redmule_tile_pkg::IDMA_IDX]    = '{opcode_w: redmule_tile_pkg::DMA_OPCODE_W, n_opcode: redmule_tile_pkg::N_IDMA_OPCODE,    opcode_list: {{redmule_tile_pkg::CONF_OPCODE}, {redmule_tile_pkg::SET_OPCODE}}};
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -401,23 +408,23 @@ module redmule_tile
     .redmule_ctrl_req_t ( redmule_tile_pkg::redmule_ctrl_req_t ),
     .redmule_ctrl_rsp_t ( redmule_tile_pkg::redmule_ctrl_rsp_t )
   ) i_redmule_top (
-    .clk_i               ( sys_clk                  ),
-    .rst_ni              ( rst_ni                   ),
-    .test_mode_i                                     ,
+    .clk_i               ( sys_clk                                          ),
+    .rst_ni              ( rst_ni                                           ),
+    .test_mode_i                                                             ,
 
-    .busy_o                                          ,  //TODO: do not interface with the outside, interface with the core
-    .evt_o                                           ,  //TODO: do not interface with the outside, interface with the core
+    .busy_o                                                                  ,  //TODO: do not interface with the outside, interface with the core
+    .evt_o                                                                   ,  //TODO: do not interface with the outside, interface with the core
 
-    .xif_issue_if_i      ( xif_if.coproc_issue      ),
-    .xif_result_if_o     ( xif_if.coproc_result     ),
-    .xif_compressed_if_i ( xif_if.coproc_compressed ),
-    .xif_mem_if_o        ( xif_if.coproc_mem        ),
+    .xif_issue_if_i      ( xif_coproc_issues[redmule_tile_pkg::REDMULE_IDX] ),
+    .xif_result_if_o     ( xif_if.coproc_result                             ),
+    .xif_compressed_if_i ( xif_if.coproc_compressed                         ),
+    .xif_mem_if_o        ( xif_if.coproc_mem                                ),
 
-    .data_req_o          ( redmule_data_req         ),
-    .data_rsp_i          ( redmule_data_rsp         ),
+    .data_req_o          ( redmule_data_req                                 ),
+    .data_rsp_i          ( redmule_data_rsp                                 ),
 
-    .ctrl_req_i          ( redmule_ctrl_req         ),
-    .ctrl_rsp_o          ( redmule_ctrl_rsp         )
+    .ctrl_req_i          ( redmule_ctrl_req                                 ),
+    .ctrl_rsp_o          ( redmule_ctrl_rsp                                 )
   );
 
 /*******************************************************/
@@ -631,6 +638,24 @@ module redmule_tile
 /*******************************************************/
 /**                 L1 SPM (TCDM) End                 **/
 /*******************************************************/
+/**                Xif DEMUX Beginning                **/
+/*******************************************************/
+
+  xif_inst_demux #(
+    .N_COPROC        ( redmule_tile_pkg::N_COPROC        ),
+    .DEFAULT_IDX     ( redmule_tile_pkg::DEFAULT_IDX     ),
+    .OPCODE_OFF      ( redmule_tile_pkg::DMA_OPCODE_OFF  ),
+    .OPCODE_W        ( redmule_tile_pkg::DMA_OPCODE_W    ),
+    .xif_inst_rule_t ( redmule_tile_pkg::xif_inst_rule_t )
+  ) i_xif_inst_demux (
+    .xif_issue_if_i ( xif_if.coproc_issue ),
+    .xif_issue_if_o ( xif_coproc_issues   ),
+    .rules_i        ( xif_coproc_rules    )
+  );
+
+/*******************************************************/
+/**                   Xif DEMUX End                   **/
+/*******************************************************/
 /**                   iDMA Beginning                  **/
 /*******************************************************/
 
@@ -641,23 +666,23 @@ module redmule_tile
     .obi_req_t ( redmule_tile_pkg::idma_obi_req_t ),
     .obi_rsp_t ( redmule_tile_pkg::idma_obi_rsp_t )
   ) i_idma_ctrl (
-    .clk_i           ( sys_clk             ),
-    .rst_ni          ( rst_ni              ),
-    .testmode_i      ( test_mode_i         ),
-    .clear_i         ( idma_clear          ),
+    .clk_i           ( sys_clk                                       ),
+    .rst_ni          ( rst_ni                                        ),
+    .testmode_i      ( test_mode_i                                   ),
+    .clear_i         ( idma_clear                                    ),
 
-    .xif_issue_if_i  ( xif_if.coproc_issue ),
+    .xif_issue_if_i  ( xif_coproc_issues[redmule_tile_pkg::IDMA_IDX] ),
 
-    .axi_req_o       ( idma_axi_req        ),
-    .axi_rsp_i       ( idma_axi_rsp        ),
+    .axi_req_o       ( idma_axi_req                                  ),
+    .axi_rsp_i       ( idma_axi_rsp                                  ),
 
-    .obi_req_o       ( idma_obi_req        ),
-    .obi_rsp_i       ( idma_obi_rsp        ),
+    .obi_req_o       ( idma_obi_req                                  ),
+    .obi_rsp_i       ( idma_obi_rsp                                  ),
 
-    .start_o         ( idma_start          ),
-    .busy_o          ( idma_busy           ),
-    .done_o          ( idma_done           ),
-    .error_o         ( idma_error          )
+    .start_o         ( idma_start                                    ),
+    .busy_o          ( idma_busy                                     ),
+    .done_o          ( idma_done                                     ),
+    .error_o         ( idma_error                                    )
   );
 
 /*******************************************************/

@@ -203,6 +203,12 @@ package redmule_tile_pkg;
   parameter bit          AxiXbarSpillAr            = 1'b0;                            // Enabled -> Spill register on read master ports, +1 cycle of latency on write channels
   parameter bit          AxiXbarSpillR             = 1'b0;                            // Enabled -> Spill register on read master ports, +1 cycle of latency on write channels 
   
+  // Parameters used by the Xif Instruction Demuxer
+  parameter int unsigned N_COPROC                  = 2;                               // RedMulE and iDMA
+  parameter int unsigned N_REDMULE_OPCODE          = 2;                               // Number of opcodes in the programming model of RedMulE
+  parameter int unsigned N_IDMA_OPCODE             = 2;                               // Number of opcodes in the programming model of the iDMA decoder
+  parameter int unsigned DEFAULT_IDX               = REDMULE_IDX;                     // RedMulE will handle the instructions by default 
+  
   typedef struct packed {
     int unsigned      idx;
     logic[ADDR_W-1:0] start_addr;
@@ -253,6 +259,17 @@ package redmule_tile_pkg;
     IDMA_IDX = 1,
     CORE_IDX = 0
   } axi_xbar_idx_e;
+
+  typedef enum{
+    REDMULE_IDX = 0,
+    IDMA_IDX    = 1
+  } xif_inst_demux_idx_e;
+
+  typedef struct packed {
+    int unsigned                      opcode_w;
+    int unsigned                      n_opcode;
+    logic[opcode_w-1:0][n_opcode-1:0] opcode_list;
+  } xif_inst_rule_t;
 
   typedef logic[iDMA_AddrWidth-1:0] idma_addr_t;
 
