@@ -36,15 +36,42 @@ module xif_inst_demux
   input redmule_tile_pkg::xif_inst_rule_t[N_COPROC-1:0] rules_i
 );
 
+  // IMPORTANT NOTE: must mirror what is found in cv32e40x_if_xif.sv
+  typedef struct packed {
+    logic       accept;   
+    logic       writeback;
+    logic       dualwrite;
+    logic [2:0] dualread; 
+    logic       loadstore;
+    logic       ecswrite ;
+    logic       exc;      
+  } x_issue_resp_t;
+  
   logic[OPCODE_W-1:0] opcode;
   logic[N_COPROC-1:0] coproc_opcode;    // Indicates which coprocessor expects detected OPCODE
   logic[N_COPROC-1:0] coproc_issue;     // Indicates to which coprocessor the instruction should be dispatched
   logic[N_COPROC-1:0] coproc_issue_pr;  // Priority encoded version of the above signal: used to ensure the instruction is dispatched to only 1 coprocessor
   logic               default_issue;    // Indicates that the instruction should be dispatched to the default coprocessor
 
+  logic         [N_COPROC-1:0] issue_ready;
+  x_issue_resp_t[N_COPROC-1:0] issue_resp;
+  
   assign opcode        = xif_issue_if_i.issue_req.instr[OPCODE_OFF+OPCODE_W-1:OPCODE_OFF];
   assign default_issue = ~(|coproc_opcode);
   assign coproc_issue  = default_issue ? (1 << DEFAULT_IDX) : coproc_opcode;
+
+  generate
+    for (genvar i = 0; i < N_COPROC; i++) begin
+      assign issue_ready[i]          = xif_issue_if_o[i].issue_ready;
+      assign issue_resp[i].accept    = xif_issue_if_o[i].issue_resp.accept;
+      assign issue_resp[i].writeback = xif_issue_if_o[i].issue_resp.writeback;
+      assign issue_resp[i].dualwrite = xif_issue_if_o[i].issue_resp.dualwrite;
+      assign issue_resp[i].dualread  = xif_issue_if_o[i].issue_resp.dualread;
+      assign issue_resp[i].loadstore = xif_issue_if_o[i].issue_resp.loadstore;
+      assign issue_resp[i].ecswrite  = xif_issue_if_o[i].issue_resp.ecswrite;
+      assign issue_resp[i].exc       = xif_issue_if_o[i].issue_resp.exc;
+    end
+  endgenerate
 
   always_comb begin
     for (int i = 0; i < N_COPROC; i++) begin
@@ -57,8 +84,11 @@ module xif_inst_demux
 
   always_comb begin
     coproc_issue_pr = '0;
-    for (int i = N_COPROC-1; i >= 0; i--) begin
-      coproc_issue_pr = coproc_issue[i] ? 1 << i : coproc_issue_pr;
+    for (int i = 0; i < N_COPROC; i++) begin
+      if (coproc_issue[i]) begin
+        coproc_issue_pr = 1 << i;
+        break;
+      end
     end
   end
 
@@ -68,9 +98,7 @@ module xif_inst_demux
         XIF_DISPATCHER_NOT_ONEHOT: assert ($onehot(coproc_issue_pr)) else $fatal("Xif dispatcher detected a number of isses != 1");
         if (coproc_issue_pr[i]) begin
           xif_issue_if_o[i].issue_valid = xif_issue_if_i.issue_valid;
-          xif_issue_if_i.issue_ready    = xif_issue_if_o[i].issue_ready;
           xif_issue_if_o[i].issue_req   = xif_issue_if_i.issue_req;
-          xif_issue_if_i.issue_resp     = xif_issue_if_o[i].issue_resp;
         end else begin
           xif_issue_if_o[i].issue_valid = '0;
           xif_issue_if_o[i].issue_req   = '0;
@@ -78,5 +106,23 @@ module xif_inst_demux
       end
     end
   endgenerate
+
+  always_comb begin
+    xif_issue_if_i.issue_ready = '0;
+    xif_issue_if_i.issue_resp  = '0;
+    for (int i = 0; i < N_COPROC; i++) begin
+      if (coproc_issue_pr[i]) begin
+        xif_issue_if_i.issue_ready          = issue_ready[i];
+        xif_issue_if_i.issue_resp.accept    = issue_resp[i].accept;
+        xif_issue_if_i.issue_resp.writeback = issue_resp[i].writeback;
+        xif_issue_if_i.issue_resp.dualwrite = issue_resp[i].dualwrite;
+        xif_issue_if_i.issue_resp.dualread  = issue_resp[i].dualread;
+        xif_issue_if_i.issue_resp.loadstore = issue_resp[i].loadstore;
+        xif_issue_if_i.issue_resp.ecswrite  = issue_resp[i].ecswrite;
+        xif_issue_if_i.issue_resp.exc       = issue_resp[i].exc;
+        break;
+      end
+    end
+  end
 
 endmodule: xif_inst_demux

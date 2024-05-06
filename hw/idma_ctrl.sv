@@ -77,6 +77,16 @@ module idma_ctrl
 
   logic                                            direction;
 
+  redmule_tile_pkg::idma_axi_req_t                 axi_read_req;
+  redmule_tile_pkg::idma_axi_rsp_t                 axi_read_rsp;
+  redmule_tile_pkg::idma_axi_req_t                 axi_write_req;
+  redmule_tile_pkg::idma_axi_rsp_t                 axi_write_rsp;
+
+  redmule_tile_pkg::idma_obi_req_t                 obi_read_req;
+  redmule_tile_pkg::idma_obi_rsp_t                 obi_read_rsp;
+  redmule_tile_pkg::idma_obi_req_t                 obi_write_req;
+  redmule_tile_pkg::idma_obi_rsp_t                 obi_write_rsp;
+
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
 /*******************************************************/
@@ -242,35 +252,35 @@ module idma_ctrl
     .StrbWidth            ( /*DO NOT OVERRIDE*/                         ),
     .OffsetWidth          ( /*DO NOT OVERRIDE*/                         )
   ) i_idma_backend (
-    .clk_i                              ,
-    .rst_ni                             ,
-    .testmode_i                         ,
+    .clk_i                            ,
+    .rst_ni                           ,
+    .testmode_i                       ,
 
-    .idma_req_i      ( idma_be_req     ),
-    .req_valid_i     ( be_req_valid    ),
-    .req_ready_o     ( be_req_ready    ),
+    .idma_req_i      ( idma_be_req   ),
+    .req_valid_i     ( be_req_valid  ),
+    .req_ready_o     ( be_req_ready  ),
 
-    .idma_rsp_o      ( idma_be_rsp     ),
-    .rsp_valid_o     ( be_rsp_valid    ),
-    .rsp_ready_i     ( be_rsp_ready    ),
+    .idma_rsp_o      ( idma_be_rsp   ),
+    .rsp_valid_o     ( be_rsp_valid  ),
+    .rsp_ready_i     ( be_rsp_ready  ),
 
-    .idma_eh_req_i   ( idma_eh_req     ),
-    .eh_req_valid_i  ( eh_req_valid    ),
-    .eh_req_ready_o  (                 ),
+    .idma_eh_req_i   ( idma_eh_req   ),
+    .eh_req_valid_i  ( eh_req_valid  ),
+    .eh_req_ready_o  (               ),
 
-    .axi_read_req_o  ( axi_read_req_o  ),
-    .axi_read_rsp_i  ( axi_read_rsp_i  ),
+    .axi_read_req_o  ( axi_read_req  ),
+    .axi_read_rsp_i  ( axi_read_rsp  ),
 
-    .obi_read_req_o  ( obi_read_req_o  ),
-    .obi_read_rsp_i  ( obi_read_rsp_i  ),
+    .obi_read_req_o  ( obi_read_req  ),
+    .obi_read_rsp_i  ( obi_read_rsp  ),
 
-    .axi_write_req_o ( axi_write_req_o ),
-    .axi_write_rsp_i ( axi_write_rsp_i ),
+    .axi_write_req_o ( axi_write_req ),
+    .axi_write_rsp_i ( axi_write_rsp ),
 
-    .obi_write_req_o ( obi_write_req_o ),
-    .obi_write_rsp_i ( obi_write_rsp_i ),
+    .obi_write_req_o ( obi_write_req ),
+    .obi_write_rsp_i ( obi_write_rsp ),
     
-    .busy_o          ( busy            )
+    .busy_o          ( busy          )
   );
 
 /*******************************************************/
@@ -297,10 +307,9 @@ module idma_ctrl
 /*******************************************************/
 
 //TODO: Do we even need this???
-  assign axi_req_o = direction ? axi_write_req_o : axi_read_req_o;
-  assign axi_rsp_i = direction ? axi_write_rsp_i : axi_read_rsp_i;
-  assign axi_write_rsp_i = direction ? axi_write_rsp_i : '0;
-  assign axi_read_rsp_i  = direction ? '0              : axi_read_rsp_i;
+  assign axi_req_o     = direction ? axi_write_req : axi_read_req;
+  assign axi_write_rsp = direction ? axi_rsp_i     : '0;
+  assign axi_read_rsp  = direction ? '0            : axi_rsp_i;
 
 /*******************************************************/
 /**                    AXI MUX End                    **/
@@ -309,10 +318,9 @@ module idma_ctrl
 /*******************************************************/
 
 //TODO: Do we even need this???
-  assign obi_req_o = direction ? obi_read_req_o : obi_write_req_o;
-  assign obi_rsp_i = direction ? obi_read_rsp_i : obi_write_rsp_i;
-  assign obi_read_rsp_i  = direction ? obi_read_rsp_i : '0;
-  assign obi_write_rsp_i = direction ? '0             : obi_write_rsp_i;
+  assign obi_req_o     = direction ? obi_read_req : obi_write_req;
+  assign obi_read_rsp  = direction ? obi_rsp_i    : '0;
+  assign obi_write_rsp = direction ? '0           : obi_rsp_i;
 
 /*******************************************************/
 /**                    OBI MUX End                    **/
