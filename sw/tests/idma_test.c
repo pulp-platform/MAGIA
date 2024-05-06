@@ -103,7 +103,7 @@ int main(void) {
               (0x0       <<  7) | \
               (0b1111011 <<  0)   \n");
 
-  /* set instruction */
+  /* start instruction */
   // asm volatile(
   //      ".word (0x0       << 15) | \     /* Reserved - 0x0 */
   //             (0b111     << 12) | \     /* FUNC3 - START */

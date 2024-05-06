@@ -207,7 +207,12 @@ package redmule_tile_pkg;
   parameter int unsigned N_COPROC                  = 2;                               // RedMulE and iDMA
   parameter int unsigned N_REDMULE_OPCODE          = 2;                               // Number of opcodes in the programming model of RedMulE
   parameter int unsigned N_IDMA_OPCODE             = 2;                               // Number of opcodes in the programming model of the iDMA decoder
-  parameter int unsigned DEFAULT_IDX               = REDMULE_IDX;                     // RedMulE will handle the instructions by default 
+  parameter int unsigned N_OPCODE                  = 2;                               // Number of opcodes = max{RedMulE_opcode, iDMA_opcode}
+  typedef enum{
+    XIF_REDMULE_IDX = 0,
+    XIF_IDMA_IDX    = 1
+  } xif_inst_demux_idx_e;
+  parameter int unsigned DEFAULT_IDX               = XIF_REDMULE_IDX;                 // RedMulE will handle the instructions by default 
   
   typedef struct packed {
     int unsigned      idx;
@@ -256,19 +261,12 @@ package redmule_tile_pkg;
   } mem_array_idx_e;
 
   typedef enum {
-    IDMA_IDX = 1,
-    CORE_IDX = 0
+    AXI_IDMA_IDX = 1,
+    AXI_CORE_IDX = 0
   } axi_xbar_idx_e;
 
-  typedef enum{
-    REDMULE_IDX = 0,
-    IDMA_IDX    = 1
-  } xif_inst_demux_idx_e;
-
   typedef struct packed {
-    int unsigned                      opcode_w;
-    int unsigned                      n_opcode;
-    logic[opcode_w-1:0][n_opcode-1:0] opcode_list;
+    logic[DMA_OPCODE_W-1:0][N_OPCODE-1:0] opcode_list;
   } xif_inst_rule_t;
 
   typedef logic[iDMA_AddrWidth-1:0] idma_addr_t;

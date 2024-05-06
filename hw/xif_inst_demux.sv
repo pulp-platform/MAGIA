@@ -24,35 +24,59 @@ module xif_inst_demux
   import cv32e40x_pkg::*;
 #(
   parameter int unsigned N_COPROC    = redmule_tile_pkg::N_COPROC,
+  parameter int unsigned N_OPCODE    = redmule_tile_pkg::N_OPCODE,
   parameter int unsigned DEFAULT_IDX = redmule_tile_pkg::DEFAULT_IDX,
   parameter int unsigned OPCODE_OFF  = redmule_tile_pkg::DMA_OPCODE_OFF,
   parameter int unsigned OPCODE_W    = redmule_tile_pkg::DMA_OPCODE_W,
   parameter type xif_inst_rule_t     = redmule_tile_pkg::xif_inst_rule_t
 )(
   cv32e40x_if_xif.coproc_issue                          xif_issue_if_i,
-  cv32e40x_if_xif.coproc_issue[N_COPROC-1:0]            xif_issue_if_o,
+  cv32e40x_if_xif.cpu_issue                             xif_issue_if_o[N_COPROC],
 
   input redmule_tile_pkg::xif_inst_rule_t[N_COPROC-1:0] rules_i
 );
 
-  assert(N_COPROC > 1) else $fatal("Xif instruction demux requires 2+ coprocessors");
-  assert(DEFAULT_IDX >= 0 && DEFAULT_IDX < N_COPROC) else $fatal("Xif instruction demux defult index must be within [0:N_COPROC[");
+  logic[OPCODE_W-1:0] opcode;
+  logic[N_COPROC-1:0] coproc_opcode;    // Indicates which coprocessor expects detected OPCODE
+  logic[N_COPROC-1:0] coproc_issue;     // Indicates to which coprocessor the instruction should be dispatched
+  logic[N_COPROC-1:0] coproc_issue_pr;  // Priority encoded version of the above signal: used to ensure the instruction is dispatched to only 1 coprocessor
+  logic               default_issue;    // Indicates that the instruction should be dispatched to the default coprocessor
 
-  always_comb begin: instruction_dispatcher
-    xif_issue_if_o[DEFAULT_IDX].issue_valid = xif_issue_if_i.issue_valid;
-    xif_issue_if_i.issue_ready              = xif_issue_if_o[DEFAULT_IDX].issue_ready;
-    xif_issue_if_o[DEFAULT_IDX].issue_req   = xif_issue_if_i.issue_req;
-    xif_issue_if_i.issue_resp               = xif_issue_if_o[DEFAULT_IDX].issue_resp;
-    for (genvar i = 0; i < N_COPROC; i++) begin: coproc_opcode_decoder
-      for (int j = 0; j < rules_i[i].n_opcode; j++) begin
-        if (rules_i[i].opcode_list[j] == xif_issue_if_i.issue_req.instr[OPCODE_OFF + OPCODE_W-1:OPCODE_OFF]) begin
+  assign opcode        = xif_issue_if_i.issue_req.instr[OPCODE_OFF+OPCODE_W-1:OPCODE_OFF];
+  assign default_issue = ~(|coproc_opcode);
+  assign coproc_issue  = default_issue ? (1 << DEFAULT_IDX) : coproc_opcode;
+
+  always_comb begin
+    for (int i = 0; i < N_COPROC; i++) begin
+      coproc_opcode[i] = 1'b0;
+      for (int j = 0; j < N_OPCODE; j++) begin
+        coproc_opcode[i] |= (opcode == rules_i[i].opcode_list[j]) ? 1'b1 : 1'b0;
+      end
+    end
+  end
+
+  always_comb begin
+    coproc_issue_pr = '0;
+    for (int i = N_COPROC-1; i >= 0; i--) begin
+      coproc_issue_pr = coproc_issue[i] ? 1 << i : coproc_issue_pr;
+    end
+  end
+
+  generate
+    for (genvar i = 0; i < N_COPROC; i++) begin
+      always_comb begin
+        XIF_DISPATCHER_NOT_ONEHOT: assert ($onehot(coproc_issue_pr)) else $fatal("Xif dispatcher detected a number of isses != 1");
+        if (coproc_issue_pr[i]) begin
           xif_issue_if_o[i].issue_valid = xif_issue_if_i.issue_valid;
           xif_issue_if_i.issue_ready    = xif_issue_if_o[i].issue_ready;
           xif_issue_if_o[i].issue_req   = xif_issue_if_i.issue_req;
           xif_issue_if_i.issue_resp     = xif_issue_if_o[i].issue_resp;
+        end else begin
+          xif_issue_if_o[i].issue_valid = '0;
+          xif_issue_if_o[i].issue_req   = '0;
         end
       end
     end
-  end
+  endgenerate
 
 endmodule: xif_inst_demux
