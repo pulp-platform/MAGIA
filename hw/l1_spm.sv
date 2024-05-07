@@ -24,11 +24,11 @@ module l1_spm #(
   parameter int unsigned N_WORDS   = 256   ,  // Number of words in a bank
   parameter int unsigned DATA_W    = 32    ,  // Data width
   parameter int unsigned ID_W      = 1     ,  // ID width
-  parameter              SIM_INIT  = "ones",  // Simulation initialization value
+  parameter              SIM_INIT  = "ones"   // Simulation initialization value
 ) (
-  input logic        clk_i,
-  input logic        rstn_i,
-  hci_mem_intf.slave tcdm_slave[N_BANK-1:0]   // Memory interface
+  input logic        clk_i                 ,
+  input logic        rst_ni                ,
+  hci_mem_intf.slave tcdm_slave[0:N_BANK-1]   // Memory interface
 );
 
   for (genvar i = 0; i < N_BANK; i++) begin: gen_tcdm_bank
@@ -37,8 +37,8 @@ module l1_spm #(
     assign resp_id_d          = tcdm_slave[i].id;
     assign tcdm_slave[i].r_id = resp_id_q;
 
-    always_ff @ (posedge clk_i, negedge rstn_i) begin:  resp_id_register
-      if (~rstn_i) resp_id_q <= '0;
+    always_ff @ (posedge clk_i, negedge rst_ni) begin:  resp_id_register
+      if (~rst_ni) resp_id_q <= '0;
       else         resp_id_q <= resp_id_d;
     end
 
@@ -52,16 +52,16 @@ module l1_spm #(
       .PrintSimCfg ( 0        ),
       .ImplKey     ( "none"   )
     ) i_tcdm_bank (
-      .clk_i   ( clk_i                                     ),
-      .rst_ni  ( rstn_i                                    ),
+      .clk_i   ( clk_i                                    ),
+      .rst_ni  ( rst_ni                                   ),
 
-      .req_i   ( tcdm_slave[i].req                         ),
-      .we_i    ( ~tcdm_slave[i].wen                        ),
-      .addr_i  ( tcdm_slave[i].add[$clog2(BankSize)+2-1:2] ),
-      .wdata_i ( tcdm_slave[i].data                        ),
-      .be_i    ( tcdm_slave[i].be                          ),
+      .req_i   ( tcdm_slave[i].req                        ),
+      .we_i    ( ~tcdm_slave[i].wen                       ),
+      .addr_i  ( tcdm_slave[i].add[$clog2(N_WORDS)+2-1:2] ),
+      .wdata_i ( tcdm_slave[i].data                       ),
+      .be_i    ( tcdm_slave[i].be                         ),
 
-      .rdata_o ( tcdm_slave[i].r_data                      )
+      .rdata_o ( tcdm_slave[i].r_data                     )
     );
 
     assign tcdm_slave[i].gnt = 1'b1;

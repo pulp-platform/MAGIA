@@ -22,22 +22,42 @@ package:
     - "Victor Isachi (victor.isachi@unibo.it)"
 
 dependencies:
-  redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 4b74428d82a40eb42ed38ce0eefc1803620a32f4 } # branch: vi/scale_up
-  cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: "redmule-v1.0"                           }
+  redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 17491250e621811a00a6545066d992c23a7e1620 } # branch: vi/scale_up
+  cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: e51af131252027374d083a745ab6727fb9959daa } # branch: vi/redmule_scaleup
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: c35d5b0886ab549fb9144c3c14a4682112330e21 } # branch: yt/reqrsp
-  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 0c67be238169209e3c89f6dd577496db1cf9cc88 } # branch: yt/reqrsp
+  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 5a48a854573fca5bbabc1cfd4110fa4530a50ed7 } # branch: vi/redmule_scaleup
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
+  obi               : { git: "https://github.com/pulp-platform/obi.git"               , version: 0.1.1                                }
+  axi               : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.1                               }
+  safety_island     : { git: "https://github.com/pulp-platform/safety_island.git"     , rev: 1cc316a6874cd2e08355fa17f0ede06406ba0407 } # branch: vi/redmule_scaleup
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
 
 sources:
-  files:
   # RedMulE Mesh
-    - HW/RTL/redmule_tile_pkg.sv
-    - HW/RTL/redmule_tile.sv
-    - HW/RTL/l1_spm.sv
+  - target: all(redmule_mesh_dv)
+    defines:
+      CORE_TRACES: ~
+    files:
+      - hw/redmule_tile_pkg.sv
+      - hw/data2obi.sv
+      - hw/instr2obi.sv
+      - hw/obi2hci.sv
+      - hw/obi_demux_addr.sv
+      - hw/l1_spm.sv
+      - hw/redmule_tile.sv
+      - target/src/redmule_tile_tb_pkg.sv
+      - target/src/redmule_tile_vip.sv
+      - target/src/redmule_tile_fixture.sv
+      - target/src/redmule_tile_tb.sv
 
-    - target: redmule_mesh_dv
-      files:
-        - HW/DV
+  - target: all(not(redmule_mesh_dv))
+    files:
+      - hw/redmule_tile_pkg.sv
+      - hw/data2obi.sv
+      - hw/instr2obi.sv
+      - hw/obi2hci.sv
+      - hw/obi_demux_addr.sv
+      - hw/l1_spm.sv
+      - hw/redmule_tile.sv

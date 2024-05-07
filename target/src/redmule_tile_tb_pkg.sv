@@ -16,9 +16,12 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * RedMulE Tile Testbench
+ * RedMulE Tile Testbench Package
  */
 
- module redmule_tile_tb;
+package redmule_tile_tb_pkg;
 
- endmodule: redmule_tile_tb
+  parameter int unsigned N_MEM_BANKS  = 32;    // Number of memory banks 
+  parameter int unsigned N_WORDS_BANK = 4096;  // Number of words per memory bank   
+
+endpackage: redmule_tile_tb_pkg
