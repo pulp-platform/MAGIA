@@ -53,39 +53,39 @@ module idma_ctrl
 /**       Internal Signal Definitions Beginning       **/
 /*******************************************************/
 
-  redmule_tile_pkg::idma_fe_reg_req_t              idma_fe_reg_req;
-  redmule_tile_pkg::idma_fe_reg_rsp_t              idma_fe_reg_rsp;
+  redmule_tile_pkg::idma_fe_reg_req_t idma_fe_reg_req;
+  redmule_tile_pkg::idma_fe_reg_rsp_t idma_fe_reg_rsp;
 
-  redmule_tile_pkg::idma_nd_req_t                  idma_fe_req;
+  redmule_tile_pkg::idma_nd_req_t idma_fe_req;
 
-  redmule_tile_pkg::idma_be_req_t                  idma_be_req;
-  redmule_tile_pkg::idma_be_rsp_t                  idma_be_rsp;
+  redmule_tile_pkg::idma_be_req_t idma_be_req;
+  redmule_tile_pkg::idma_be_rsp_t idma_be_rsp;
 
-  logic                                            fe_req_valid, fe_req_ready;
-  logic                                            be_req_valid, be_req_ready;
-  logic                                            be_rsp_valid, be_rsp_ready;
-  logic                                            nd_rsp_valid, nd_rsp_ready;
+  logic fe_req_valid, fe_req_ready;
+  logic be_req_valid, be_req_ready;
+  logic be_rsp_valid, be_rsp_ready;
+  logic nd_rsp_valid, nd_rsp_ready;
 
   logic                                            issue_id, retire_id;
   logic[redmule_tile_pkg::iDMA_IdCounterWidth-1:0] next_id, done_id;
 
-  idma_pkg::idma_busy_t                            busy;
-  logic                                            me_busy;
+  idma_pkg::idma_busy_t busy;
+  logic                 me_busy;
 
-  idma_pkg::idma_eh_req_t                          idma_eh_req;
-  logic                                            eh_req_valid;
+  idma_pkg::idma_eh_req_t idma_eh_req;
+  logic                   eh_req_valid;
 
-  logic                                            direction;
+  logic direction;
 
-  redmule_tile_pkg::idma_axi_req_t                 axi_read_req;
-  redmule_tile_pkg::idma_axi_rsp_t                 axi_read_rsp;
-  redmule_tile_pkg::idma_axi_req_t                 axi_write_req;
-  redmule_tile_pkg::idma_axi_rsp_t                 axi_write_rsp;
+  redmule_tile_pkg::idma_axi_req_t axi_read_req;
+  redmule_tile_pkg::idma_axi_rsp_t axi_read_rsp;
+  redmule_tile_pkg::idma_axi_req_t axi_write_req;
+  redmule_tile_pkg::idma_axi_rsp_t axi_write_rsp;
 
-  redmule_tile_pkg::idma_obi_req_t                 obi_read_req;
-  redmule_tile_pkg::idma_obi_rsp_t                 obi_read_rsp;
-  redmule_tile_pkg::idma_obi_req_t                 obi_write_req;
-  redmule_tile_pkg::idma_obi_rsp_t                 obi_write_rsp;
+  redmule_tile_pkg::idma_obi_req_t obi_read_req;
+  redmule_tile_pkg::idma_obi_rsp_t obi_read_rsp;
+  redmule_tile_pkg::idma_obi_req_t obi_write_req;
+  redmule_tile_pkg::idma_obi_rsp_t obi_write_rsp;
 
 /*******************************************************/
 /**          Internal Signal Definitions End          **/

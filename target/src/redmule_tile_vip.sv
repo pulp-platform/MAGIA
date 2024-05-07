@@ -30,47 +30,47 @@ module redmule_tile_vip
   parameter real         T_APPL     = 0.1,
   parameter real         T_TEST     = 0.9
 )(
-  output logic                                     clk,
-  output logic                                     rst_n,
-  output logic                                     test_mode,
-  output logic                                     tile_enable,
+  output logic                                    clk,
+  output logic                                    rst_n,
+  output logic                                    test_mode,
+  output logic                                    tile_enable,
 
-  input  redmule_mesh_pkg::axi_default_req_t       data_out_req,
-  output redmule_mesh_pkg::axi_default_rsp_t       data_out_rsp,
+  input  redmule_mesh_pkg::axi_default_req_t      data_out_req,
+  output redmule_mesh_pkg::axi_default_rsp_t      data_out_rsp,
 
-  input  redmule_tile_pkg::core_axi_instr_req_t    core_instr_req,
-  output redmule_tile_pkg::core_axi_instr_rsp_t    core_instr_rsp,
+  input  redmule_tile_pkg::core_axi_instr_req_t   core_instr_req,
+  output redmule_tile_pkg::core_axi_instr_rsp_t   core_instr_rsp,
 
-  output logic                                     scan_cg_en,
+  output logic                                    scan_cg_en,
 
-  output logic [31:0]                              boot_addr, //TODO: manage signal
-  output logic [31:0]                              mtvec_addr,
-  output logic [31:0]                              dm_halt_addr,
-  output logic [31:0]                              dm_exception_addr,
-  output logic [31:0]                              mhartid,
-  output logic [ 3:0]                              mimpid_patch,
+  output logic[31:0]                              boot_addr, //TODO: manage signal
+  output logic[31:0]                              mtvec_addr,
+  output logic[31:0]                              dm_halt_addr,
+  output logic[31:0]                              dm_exception_addr,
+  output logic[31:0]                              mhartid,
+  output logic[ 3:0]                              mimpid_patch,
 
-  input  logic [63:0]                              mcycle,
-  output logic [63:0]                              time_var,
+  input  logic[63:0]                              mcycle,
+  output logic[63:0]                              time_var,
 
-  output logic [redmule_tile_pkg::N_IRQ-1:0]       irq, //TODO: manage signal
+  output logic[redmule_tile_pkg::N_IRQ-1:0]       irq, //TODO: manage signal
 
-  input  logic                                     fencei_flush_req,
-  output logic                                     fencei_flush_ack,
+  input  logic                                    fencei_flush_req,
+  output logic                                    fencei_flush_ack,
 
-  output logic                                     debug_req,
-  input  logic                                     debug_havereset,
-  input  logic                                     debug_running,
-  input  logic                                     debug_halted,
-  input  logic                                     debug_pc_valid,
-  input  logic [31:0]                              debug_pc,
+  output logic                                    debug_req,
+  input  logic                                    debug_havereset,
+  input  logic                                    debug_running,
+  input  logic                                    debug_halted,
+  input  logic                                    debug_pc_valid,
+  input  logic[31:0]                              debug_pc,
 
-  output logic                                     fetch_enable,  //TODO: manage signal
-  input  logic                                     core_sleep,
-  output logic                                     wu_wfe,
+  output logic                                    fetch_enable,  //TODO: manage signal
+  input  logic                                    core_sleep,
+  output logic                                    wu_wfe,
 
-  input  logic                                     busy,
-  input  logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt
+  input  logic                                    busy,
+  input  logic[redmule_tile_pkg::N_CORE-1:0][1:0] evt
 );
 
 /*******************************************************/
@@ -234,13 +234,12 @@ module redmule_tile_vip
 /*******************************************************/
 
 int errors = -1;
-always_ff @(posedge clk)
-begin
-  if((data_out_req.aw.addr == 32'h2FFF0000) &&
+always_ff @(posedge clk) begin: wr_data_monitor
+  if ((data_out_req.aw.addr == 32'h2FFF0000) &&
      (data_out_req.aw_valid & data_out_req.w_valid)) begin
     errors = data_out_req.w.data;
   end
-  if((data_out_req.aw.addr == 32'h2FFF0004) &&
+  if ((data_out_req.aw.addr == 32'h2FFF0004) &&
      (data_out_req.aw_valid & data_out_req.w_valid)) begin
     $write("%c", data_out_req.w.data);
   end

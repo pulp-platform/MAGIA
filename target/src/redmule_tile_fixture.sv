@@ -29,47 +29,47 @@ module redmule_tile_fixture;
 /**        Internal Signal Definitions Beginning      **/
 /*******************************************************/
 
-  logic                                     clk;
-  logic                                     rst_n;
-  logic                                     test_mode;
-  logic                                     tile_enable;
+  logic                                    clk;
+  logic                                    rst_n;
+  logic                                    test_mode;
+  logic                                    tile_enable;
 
-  redmule_mesh_pkg::axi_default_req_t       data_out_req;
-  redmule_mesh_pkg::axi_default_rsp_t       data_out_rsp;
+  redmule_mesh_pkg::axi_default_req_t      data_out_req;
+  redmule_mesh_pkg::axi_default_rsp_t      data_out_rsp;
 
-  redmule_tile_pkg::core_axi_instr_req_t    core_instr_req;
-  redmule_tile_pkg::core_axi_instr_rsp_t    core_instr_rsp;
+  redmule_tile_pkg::core_axi_instr_req_t   core_instr_req;
+  redmule_tile_pkg::core_axi_instr_rsp_t   core_instr_rsp;
 
-  logic                                     scan_cg_en;
+  logic                                    scan_cg_en;
 
-  logic [31:0]                              boot_addr;
-  logic [31:0]                              mtvec_addr;
-  logic [31:0]                              dm_halt_addr;
-  logic [31:0]                              dm_exception_addr;
-  logic [31:0]                              mhartid;
-  logic [ 3:0]                              mimpid_patch;
+  logic[31:0]                              boot_addr;
+  logic[31:0]                              mtvec_addr;
+  logic[31:0]                              dm_halt_addr;
+  logic[31:0]                              dm_exception_addr;
+  logic[31:0]                              mhartid;
+  logic[ 3:0]                              mimpid_patch;
 
-  logic [63:0]                              mcycle;
-  logic [63:0]                              time_var;
+  logic[63:0]                              mcycle;
+  logic[63:0]                              time_var;
 
-  logic [redmule_tile_pkg::N_IRQ-1:0]       irq;
+  logic[redmule_tile_pkg::N_IRQ-1:0]       irq;
 
-  logic                                     fencei_flush_req;
-  logic                                     fencei_flush_ack;
+  logic                                    fencei_flush_req;
+  logic                                    fencei_flush_ack;
 
-  logic                                     debug_req;
-  logic                                     debug_havereset;
-  logic                                     debug_running;
-  logic                                     debug_halted;
-  logic                                     debug_pc_valid;
-  logic [31:0]                              debug_pc;
+  logic                                    debug_req;
+  logic                                    debug_havereset;
+  logic                                    debug_running;
+  logic                                    debug_halted;
+  logic                                    debug_pc_valid;
+  logic[31:0]                              debug_pc;
 
-  logic                                     fetch_enable;
-  logic                                     core_sleep;
-  logic                                     wu_wfe;
+  logic                                    fetch_enable;
+  logic                                    core_sleep;
+  logic                                    wu_wfe;
 
-  logic                                     busy;
-  logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt;
+  logic                                    busy;
+  logic[redmule_tile_pkg::N_CORE-1:0][1:0] evt;
 
 /*******************************************************/
 /**           Internal Signal Definitions End         **/

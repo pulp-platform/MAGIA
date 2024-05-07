@@ -38,13 +38,13 @@ module xif_inst_demux
 
   // IMPORTANT NOTE: must mirror what is found in cv32e40x_if_xif.sv
   typedef struct packed {
-    logic       accept;   
-    logic       writeback;
-    logic       dualwrite;
-    logic [2:0] dualread; 
-    logic       loadstore;
-    logic       ecswrite ;
-    logic       exc;      
+    logic      accept;   
+    logic      writeback;
+    logic      dualwrite;
+    logic[2:0] dualread; 
+    logic      loadstore;
+    logic      ecswrite ;
+    logic      exc;      
   } x_issue_resp_t;
   
   logic[OPCODE_W-1:0] opcode;
@@ -60,20 +60,18 @@ module xif_inst_demux
   assign default_issue = ~(|coproc_opcode);
   assign coproc_issue  = default_issue ? (1 << DEFAULT_IDX) : coproc_opcode;
 
-  generate
-    for (genvar i = 0; i < N_COPROC; i++) begin
-      assign issue_ready[i]          = xif_issue_if_o[i].issue_ready;
-      assign issue_resp[i].accept    = xif_issue_if_o[i].issue_resp.accept;
-      assign issue_resp[i].writeback = xif_issue_if_o[i].issue_resp.writeback;
-      assign issue_resp[i].dualwrite = xif_issue_if_o[i].issue_resp.dualwrite;
-      assign issue_resp[i].dualread  = xif_issue_if_o[i].issue_resp.dualread;
-      assign issue_resp[i].loadstore = xif_issue_if_o[i].issue_resp.loadstore;
-      assign issue_resp[i].ecswrite  = xif_issue_if_o[i].issue_resp.ecswrite;
-      assign issue_resp[i].exc       = xif_issue_if_o[i].issue_resp.exc;
-    end
-  endgenerate
+  for (genvar i = 0; i < N_COPROC; i++) begin: gen_if2signal
+    assign issue_ready[i]          = xif_issue_if_o[i].issue_ready;
+    assign issue_resp[i].accept    = xif_issue_if_o[i].issue_resp.accept;
+    assign issue_resp[i].writeback = xif_issue_if_o[i].issue_resp.writeback;
+    assign issue_resp[i].dualwrite = xif_issue_if_o[i].issue_resp.dualwrite;
+    assign issue_resp[i].dualread  = xif_issue_if_o[i].issue_resp.dualread;
+    assign issue_resp[i].loadstore = xif_issue_if_o[i].issue_resp.loadstore;
+    assign issue_resp[i].ecswrite  = xif_issue_if_o[i].issue_resp.ecswrite;
+    assign issue_resp[i].exc       = xif_issue_if_o[i].issue_resp.exc;
+  end
 
-  always_comb begin
+  always_comb begin: opcode_detector
     for (int i = 0; i < N_COPROC; i++) begin
       coproc_opcode[i] = 1'b0;
       for (int j = 0; j < N_OPCODE; j++) begin
@@ -82,7 +80,7 @@ module xif_inst_demux
     end
   end
 
-  always_comb begin
+  always_comb begin: priority_encoder
     coproc_issue_pr = '0;
     for (int i = 0; i < N_COPROC; i++) begin
       if (coproc_issue[i]) begin
@@ -92,21 +90,19 @@ module xif_inst_demux
     end
   end
 
-  generate
-    for (genvar i = 0; i < N_COPROC; i++) begin
-      always_comb begin
-        if (coproc_issue_pr[i]) begin
-          xif_issue_if_o[i].issue_valid = xif_issue_if_i.issue_valid;
-          xif_issue_if_o[i].issue_req   = xif_issue_if_i.issue_req;
-        end else begin
-          xif_issue_if_o[i].issue_valid = '0;
-          xif_issue_if_o[i].issue_req   = '0;
-        end
+  for (genvar i = 0; i < N_COPROC; i++) begin: gen_issue_out
+    always_comb begin
+      if (coproc_issue_pr[i]) begin
+        xif_issue_if_o[i].issue_valid = xif_issue_if_i.issue_valid;
+        xif_issue_if_o[i].issue_req   = xif_issue_if_i.issue_req;
+      end else begin
+        xif_issue_if_o[i].issue_valid = '0;
+        xif_issue_if_o[i].issue_req   = '0;
       end
     end
-  endgenerate
+  end
 
-  always_comb begin
+  always_comb begin: issue_in
     xif_issue_if_i.issue_ready = '0;
     xif_issue_if_i.issue_resp  = '0;
     for (int i = 0; i < N_COPROC; i++) begin

@@ -47,10 +47,10 @@ package redmule_tile_pkg;
   localparam int unsigned USR_W                    = 1;                               // Default User Width
 
   // Address map
-  localparam logic [ADDR_W-1:0] L1_ADDR_START      = 32'h1000_0000;
-  localparam logic [ADDR_W-1:0] L1_ADDR_END        = 32'h2000_0000;
-  localparam logic [ADDR_W-1:0] L2_ADDR_START      = 32'h2000_0000;
-  localparam logic [ADDR_W-1:0] L2_ADDR_END        = 32'h3000_0000;
+  localparam logic[ADDR_W-1:0] L1_ADDR_START       = 32'h1000_0000;
+  localparam logic[ADDR_W-1:0] L1_ADDR_END         = 32'h2000_0000;
+  localparam logic[ADDR_W-1:0] L2_ADDR_START       = 32'h2000_0000;
+  localparam logic[ADDR_W-1:0] L2_ADDR_END         = 32'h3000_0000;
   
   // Parameters used by the HCI
   parameter int unsigned N_HWPE                    = 1;                               // Number of HWPEs attached to the port
@@ -82,10 +82,10 @@ package redmule_tile_pkg;
   parameter int unsigned X_MEM_W                   = 32;                              // Memory access width for loads/stores via the eXtension interface
   parameter int unsigned X_RFR_W                   = 32;                              // Register file read access width for the eXtension interface
   parameter int unsigned X_RFW_W                   = 32;                              // Register file write access width for the eXtension interface
-  parameter bit [31:0]   X_MISA                    = 32'h0;                           // MISA extensions implemented on the eXtension interface, see Machine ISA (misa). X_MISA can only be used to set a subset of the following: {P, V, F, M}
-  parameter bit [1 :0]   X_ECS_XS                  = 2'b0;                            // Default value for mstatus.XS if X_EXT = 1, see Machine Status (mstatus)
-  parameter bit [31:0]   DM_REGION_START           = 32'hF0000000;                    // Start address of Debug Module region, see Debug & Trigger
-  parameter bit [31:0]   DM_REGION_END             = 32'hF0003FFF;                    // End address of Debug Module region, see Debug & Trigger
+  parameter bit[31:0]    X_MISA                    = 32'h0;                           // MISA extensions implemented on the eXtension interface, see Machine ISA (misa). X_MISA can only be used to set a subset of the following: {P, V, F, M}
+  parameter bit[1 :0]    X_ECS_XS                  = 2'b0;                            // Default value for mstatus.XS if X_EXT = 1, see Machine Status (mstatus)
+  parameter bit[31:0]    DM_REGION_START           = 32'hF0000000;                    // Start address of Debug Module region, see Debug & Trigger
+  parameter bit[31:0]    DM_REGION_END             = 32'hF0003FFF;                    // End address of Debug Module region, see Debug & Trigger
   parameter bit          CLIC_EN                   = 1'b0;                            // Specifies whether Smclic, Smclicshv and Smclicconfig are supported
   parameter int unsigned CLIC_ID_W                 = 1;                               // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
 
@@ -181,16 +181,16 @@ package redmule_tile_pkg;
   parameter int unsigned DMA_SRC_STRIDE_2_HIGH_IDX = 10;                              // iDMA Decoder SRC_STRIDE_2_HIGH configuration register index
   parameter int unsigned DMA_REPS_2_LOW_IDX        = 11;                              // iDMA Decoder REPS_2_LOW configuration register index
   parameter int unsigned DMA_REPS_2_HIGH_IDX       = 12;                              // iDMA Decoder REPS_2_HIGH configuration register index
-  parameter logic [DMA_OPCODE_W-1:0] CONF_OPCODE   = 7'b101_1011;                     // iDMA Decoder CONF instruction OPCODE
-  parameter logic [ DMA_FUNC3_W-1:0] CONF_FUNC3    = 3'b000;                          // iDMA Decoder CONF instruction FUNC3
-  parameter logic [DMA_OPCODE_W-1:0] SET_OPCODE    = 7'b111_1011;                     // iDMA Decoder SET (DST_ADDR, SRC_ADDR, LENGTH, DST_STRIDE_2, SRC_STRIDE_2, REPS_2, START) instruction OPCODE
-  parameter logic [ DMA_FUNC3_W-1:0] SET_DA_FUNC3  = 3'b000;                          // iDMA Decoder DST_ADDR instruction FUNC3
-  parameter logic [ DMA_FUNC3_W-1:0] SET_SA_FUNC3  = 3'b001;                          // iDMA Decoder SRC_ADDR instruction FUNC3
-  parameter logic [ DMA_FUNC3_W-1:0] SET_L_FUNC3   = 3'b010;                          // iDMA Decoder LENGTH instruction FUNC3
-  parameter logic [ DMA_FUNC3_W-1:0] SET_DS_FUNC3  = 3'b011;                          // iDMA Decoder DST_STRIDE_2 instruction FUNC3
-  parameter logic [ DMA_FUNC3_W-1:0] SET_SS_FUNC3  = 3'b100;                          // iDMA Decoder SRC_STRIDE_2 instruction FUNC3
-  parameter logic [ DMA_FUNC3_W-1:0] SET_R_FUNC3   = 3'b101;                          // iDMA Decoder REPS_2 instruction FUNC3
-  parameter logic [ DMA_FUNC3_W-1:0] SET_S_FUNC3   = 3'b111;                          // iDMA Decoder START instruction FUNC3
+  parameter logic[DMA_OPCODE_W-1:0] CONF_OPCODE    = 7'b101_1011;                     // iDMA Decoder CONF instruction OPCODE
+  parameter logic[ DMA_FUNC3_W-1:0] CONF_FUNC3     = 3'b000;                          // iDMA Decoder CONF instruction FUNC3
+  parameter logic[DMA_OPCODE_W-1:0] SET_OPCODE     = 7'b111_1011;                     // iDMA Decoder SET (DST_ADDR, SRC_ADDR, LENGTH, DST_STRIDE_2, SRC_STRIDE_2, REPS_2, START) instruction OPCODE
+  parameter logic[ DMA_FUNC3_W-1:0] SET_DA_FUNC3   = 3'b000;                          // iDMA Decoder DST_ADDR instruction FUNC3
+  parameter logic[ DMA_FUNC3_W-1:0] SET_SA_FUNC3   = 3'b001;                          // iDMA Decoder SRC_ADDR instruction FUNC3
+  parameter logic[ DMA_FUNC3_W-1:0] SET_L_FUNC3    = 3'b010;                          // iDMA Decoder LENGTH instruction FUNC3
+  parameter logic[ DMA_FUNC3_W-1:0] SET_DS_FUNC3   = 3'b011;                          // iDMA Decoder DST_STRIDE_2 instruction FUNC3
+  parameter logic[ DMA_FUNC3_W-1:0] SET_SS_FUNC3   = 3'b100;                          // iDMA Decoder SRC_STRIDE_2 instruction FUNC3
+  parameter logic[ DMA_FUNC3_W-1:0] SET_R_FUNC3    = 3'b101;                          // iDMA Decoder REPS_2 instruction FUNC3
+  parameter logic[ DMA_FUNC3_W-1:0] SET_S_FUNC3    = 3'b111;                          // iDMA Decoder START instruction FUNC3
 
   // Parameters of the AXI XBAR
   parameter int unsigned AxiXbarNoSlvPorts         = 2;                               // Number of Slave Ports (iDMA, Core) /*TODO: add i$*/

@@ -68,12 +68,12 @@ module idma_xif_inst_decoder
   output idma_fe_req_t         cfg_req_o,
   input  idma_fe_rsp_t         cfg_rsp_i,
 
-  output logic                 direction_o,  // Direction of the iDMA transfer: 0 -> AXI2OBI; 1 -> OBI2AXI
+  output logic                 direction_o, // Direction of the iDMA transfer: 0 -> AXI2OBI; 1 -> OBI2AXI
   
-  output logic                 start_o,      // Started iDMA transfer
-  output logic                 busy_o,       // Performing iDMA transfer
-  output logic                 done_o,       // Finished iDMA transfer
-  output logic                 error_o       // Detected error
+  output logic                 start_o,     // Started iDMA transfer
+  output logic                 busy_o,      // Performing iDMA transfer
+  output logic                 done_o,      // Finished iDMA transfer
+  output logic                 error_o      // Detected error
 );
 
 /*******************************************************/
@@ -83,18 +83,18 @@ module idma_xif_inst_decoder
   logic clk_dec_en, clk_cfg_en;
   logic clk_dec_g,  clk_cfg_g;
   
-  logic [         OPCODE_W-1:0] opcode;
-  logic [          FUNC3_W-1:0] func3;
-  logic [          ND_EN_W-1:0] nd_en;
-  logic [DST_MAX_LOG_LEN_W-1:0] dst_max_log_len;
-  logic [SRC_MAX_LOG_LEN_W-1:0] src_max_log_len;
-  logic [ DST_REDUCE_LEN_W-1:0] dst_reduce_len;
-  logic [ SRC_REDUCE_LEN_W-1:0] src_reduce_len;
-  logic [   DECOUPLE_R_W_W-1:0] decouple_r_w;
-  logic [  DECOUPLE_R_AW_W-1:0] decouple_r_aw;
-  logic [      DIRECTION_W-1:0] direction;
+  logic[         OPCODE_W-1:0] opcode;
+  logic[          FUNC3_W-1:0] func3;
+  logic[          ND_EN_W-1:0] nd_en;
+  logic[DST_MAX_LOG_LEN_W-1:0] dst_max_log_len;
+  logic[SRC_MAX_LOG_LEN_W-1:0] src_max_log_len;
+  logic[ DST_REDUCE_LEN_W-1:0] dst_reduce_len;
+  logic[ SRC_REDUCE_LEN_W-1:0] src_reduce_len;
+  logic[   DECOUPLE_R_W_W-1:0] decouple_r_w;
+  logic[  DECOUPLE_R_AW_W-1:0] decouple_r_aw;
+  logic[      DIRECTION_W-1:0] direction;
 
-  logic [DATA_W-1:0][N_CFG_REG-1:0] cfg_reg_d, cfg_reg_q;
+  logic[DATA_W-1:0][N_CFG_REG-1:0] cfg_reg_d, cfg_reg_q;
 
   logic start_cfg;
   logic start_dma;
@@ -106,7 +106,7 @@ module idma_xif_inst_decoder
 
   logic rw_valid;
 
-  logic [DATA_W-1:0] next_id_d, next_id_q;
+  logic[DATA_W-1:0] next_id_d, next_id_q;
 
   typedef enum logic[3:0] {
     IDLE,
@@ -136,7 +136,7 @@ module idma_xif_inst_decoder
    * 1'b1 if the write was acknowledged, 1'b0 otherwise
    */
   function automatic logic write_idma_reg(output idma_fe_req_t req, input idma_fe_rsp_t rsp, 
-                                          input logic [ADDR_W-1:0] addr, input logic [DATA_W-1:0] data, 
+                                          input logic[ADDR_W-1:0] addr, input logic[DATA_W-1:0] data, 
                                           output logic reg_error);
     req.addr       = addr;
     req.write      = 1'b1;
@@ -161,7 +161,7 @@ module idma_xif_inst_decoder
    * 1'b1 if the read data is valid, 1'b0 otherwise
    */
   function automatic logic read_idma_reg(output idma_fe_req_t req, input idma_fe_rsp_t rsp, 
-                                         input logic [ADDR_W-1:0] addr, output logic [DATA_W-1:0] data, 
+                                         input logic[ADDR_W-1:0] addr, output logic[DATA_W-1:0] data, 
                                          output logic reg_error);
     req.addr      = addr;
     req.write     = 1'b0;
@@ -277,7 +277,7 @@ module idma_xif_inst_decoder
     end
   end
 
-  always_ff @(posedge clk_dec_g, negedge rst_ni) begin : configuration_register
+  always_ff @(posedge clk_dec_g, negedge rst_ni) begin: configuration_register
     if (~rst_ni)   cfg_reg_q <= '0;
     else begin
       if (clear_i) cfg_reg_q <= '0;
@@ -367,7 +367,7 @@ module idma_xif_inst_decoder
     endcase
   end
 
-  always_ff @(posedge clk_cfg_g, negedge rst_ni) begin : idma_state_register
+  always_ff @(posedge clk_cfg_g, negedge rst_ni) begin: idma_state_register
     if (~rst_ni)   c_idma_state <= IDLE;
     else begin
       if (clear_i) c_idma_state <= IDLE;
@@ -375,7 +375,7 @@ module idma_xif_inst_decoder
     end
   end
 
-  always_ff @(posedge clk_cfg_g, negedge rst_ni) begin : next_id_register
+  always_ff @(posedge clk_cfg_g, negedge rst_ni) begin: next_id_register
     if (~rst_ni)   next_id_q <= '0;
     else begin
       if (clear_i) next_id_q <= '0;
