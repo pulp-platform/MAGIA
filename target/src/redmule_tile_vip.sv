@@ -234,14 +234,18 @@ module redmule_tile_vip
 /*******************************************************/
 
 int errors = -1;
-always_ff @(posedge clk) begin: wr_data_monitor
-  if ((data_out_req.aw.addr == 32'h2FFF0000) &&
-     (data_out_req.aw_valid & data_out_req.w_valid)) begin
-    errors = data_out_req.w.data;
+bit stdio_ready  = 0;
+bit stderr_ready = 0;
+always @(posedge clk) begin: print_monitor
+  if ((data_out_req.aw.addr == 32'h2FFF0000) && (data_out_req.aw_valid)) stderr_ready = 1'b1;
+  if ((data_out_req.aw.addr == 32'h2FFF0004) && (data_out_req.aw_valid)) stdio_ready  = 1'b1;
+  if ((data_out_req.w_valid) && stderr_ready) begin
+    errors       = data_out_req.w.data;
+    stderr_ready = 1'b0;
   end
-  if ((data_out_req.aw.addr == 32'h2FFF0004) &&
-     (data_out_req.aw_valid & data_out_req.w_valid)) begin
+  if ((data_out_req.w_valid) && stdio_ready) begin
     $write("%c", data_out_req.w.data);
+    stdio_ready = 1'b0;
   end
 end
 
