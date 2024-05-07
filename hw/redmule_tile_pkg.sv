@@ -326,8 +326,6 @@ package redmule_tile_pkg;
 
   `AXI_ALIAS(core_axi_data, axi_xbar_slv, core_axi_data_req_t, axi_xbar_slv_req_t, core_axi_data_rsp_t, axi_xbar_slv_rsp_t)
 
-  `AXI_ALIAS(core_axi_data, axi_default, core_axi_data_req_t, axi_default_req_t, core_axi_data_rsp_t, axi_default_rsp_t)
-
   `HCI_TYPEDEF_REQ_T(idma_hci_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic signed[WORDS_DATA-1:0][AWH:0], logic[UWH-1:0])
   `HCI_TYPEDEF_RSP_T(idma_hci_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0])
 

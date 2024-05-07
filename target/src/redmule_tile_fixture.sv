@@ -22,6 +22,7 @@
 module redmule_tile_fixture;
 
   import redmule_tile_pkg::*;
+  import redmule_mesh_pkg::*;
   import redmule_tile_tb_pkg::*;
 
 /*******************************************************/
@@ -33,8 +34,8 @@ module redmule_tile_fixture;
   logic                                     test_mode;
   logic                                     tile_enable;
 
-  redmule_tile_pkg::axi_default_req_t       data_out_req;
-  redmule_tile_pkg::axi_default_rsp_t       data_out_rsp;
+  redmule_mesh_pkg::axi_default_req_t       data_out_req;
+  redmule_mesh_pkg::axi_default_rsp_t       data_out_rsp;
 
   redmule_tile_pkg::core_axi_instr_req_t    core_instr_req;
   redmule_tile_pkg::core_axi_instr_rsp_t    core_instr_rsp;

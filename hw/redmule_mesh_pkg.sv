@@ -31,5 +31,6 @@ package redmule_mesh_pkg;
 
   `AXI_TYPEDEF_ALL_CT(noc_axi_data, noc_axi_data_req_t, noc_axi_data_rsp_t, logic[redmule_tile_pkg::ADDR_W-1:0], logic[AXI_NOC_ID_W-1:0], logic[redmule_tile_pkg::DATA_W-1:0], logic[redmule_tile_pkg::STRB_W-1:0], logic[AXI_NOC_U_W-1:0])
   `AXI_ALIAS(noc_axi_data, axi_xbar_mst, noc_axi_data_req_t, axi_xbar_mst_req_t, noc_axi_data_rsp_t, axi_xbar_mst_rsp_t)
+  `AXI_ALIAS(noc_axi_data, axi_default, noc_axi_data_req_t, axi_default_req_t, noc_axi_data_rsp_t, axi_default_rsp_t)
 
 endpackage: redmule_mesh_pkg
