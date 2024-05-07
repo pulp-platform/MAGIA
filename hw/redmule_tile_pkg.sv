@@ -128,11 +128,11 @@ package redmule_tile_pkg;
   parameter int unsigned iDMA_TFLenWidth           = 32;                              // iDMA With of a transfer: max transfer size is `2**TFLenWidth` bytes
   parameter int unsigned iDMA_MemSysDepth          = 0;                               // iDMA depth of the memory system the backend is attached to
   parameter int unsigned iDMA_CombinedShifter      = 0;                               // iDMA Should both data shifts be done before the dataflow element? If this is enabled, then the data inserted into the dataflow element will no longer be word aligned, but only a single shifter is needed
-  parameter int unsigned iDMA_RAWCouplingAvail     = 1;                               // iDMA Should the `R`-`AW` coupling hardware be present? (recommended)
+  parameter int unsigned iDMA_RAWCouplingAvail     = 0;                               // iDMA Should the `R`-`AW` coupling hardware be present? (recommended)
   parameter int unsigned iDMA_MaskInvalidData      = 1;                               // iDMA Mask invalid data on the manager interface
   parameter int unsigned iDMA_HardwareLegalizer    = 1;                               // iDMA Should hardware legalization be present? (recommended) If not, software legalization is required to ensure the transfers are AXI4-conformal
   parameter int unsigned iDMA_RejectZeroTransfers  = 1;                               // iDMA Reject zero-length transfers
-  parameter int unsigned iDMA_PrintFifoInfo        = 1;                               // iDMA Print the info of the FIFO configuration
+  parameter int unsigned iDMA_PrintFifoInfo        = 0;                               // iDMA Print the info of the FIFO configuration
   parameter int unsigned iDMA_NumRegs              = 1;                               // iDMA Number of configuration register ports
   parameter int unsigned iDMA_NumStreams           = 1;                               // iDMA Number of streams (max 16)
   parameter int unsigned iDMA_IdCounterWidth       = 32;                              // iDMA Width of the transfer id (max 32-bit)
@@ -194,7 +194,7 @@ package redmule_tile_pkg;
 
   // Parameters of the AXI XBAR
   parameter int unsigned AxiXbarNoSlvPorts         = 2;                               // Number of Slave Ports (iDMA, Core) /*TODO: add i$*/
-  localparam int unsigned AxiXbarSlvAxiIDWidth     = $clog2(AxiXbarNoSlvPorts);       // Number of bits to indentify each Slave Port
+  localparam int unsigned AxiXbarSlvAxiIDWidth     = AXI_DATA_ID_W;                   // Number of bits to indentify each Slave Port
   parameter int unsigned AxiXbarMaxWTrans          = 8;                               // Maximum number of outstanding transactions per write
   parameter bit          AxiXbarFallThrough        = 1'b0;                            // Enabled -> MUX is purely combinational
   parameter bit          AxiXbarSpillAw            = 1'b0;                            // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
@@ -324,7 +324,6 @@ package redmule_tile_pkg;
     } obi;
   } idma_write_meta_channel_t;
 
-  `AXI_ALIAS(core_axi_data, axi_xbar_mst, core_axi_data_req_t, axi_xbar_mst_req_t, core_axi_data_rsp_t, axi_xbar_mst_rsp_t)
   `AXI_ALIAS(core_axi_data, axi_xbar_slv, core_axi_data_req_t, axi_xbar_slv_req_t, core_axi_data_rsp_t, axi_xbar_slv_rsp_t)
 
   `AXI_ALIAS(core_axi_data, axi_default, core_axi_data_req_t, axi_default_req_t, core_axi_data_rsp_t, axi_default_rsp_t)

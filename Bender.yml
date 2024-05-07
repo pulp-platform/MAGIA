@@ -46,6 +46,7 @@ sources:
       CORE_TRACES: ~
     files:
       - hw/redmule_tile_pkg.sv
+      - hw/redmule_mesh_pkg.sv
       - hw/data2obi.sv
       - hw/instr2obi.sv
       - hw/obi2hci.sv
@@ -63,6 +64,7 @@ sources:
   - target: all(not(redmule_mesh_dv))
     files:
       - hw/redmule_tile_pkg.sv
+      - hw/redmule_mesh_pkg.sv
       - hw/data2obi.sv
       - hw/instr2obi.sv
       - hw/obi2hci.sv

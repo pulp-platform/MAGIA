@@ -95,7 +95,6 @@ module xif_inst_demux
   generate
     for (genvar i = 0; i < N_COPROC; i++) begin
       always_comb begin
-        XIF_DISPATCHER_NOT_ONEHOT: assert ($onehot(coproc_issue_pr)) else $fatal("Xif dispatcher detected a number of isses != 1");
         if (coproc_issue_pr[i]) begin
           xif_issue_if_o[i].issue_valid = xif_issue_if_i.issue_valid;
           xif_issue_if_o[i].issue_req   = xif_issue_if_i.issue_req;

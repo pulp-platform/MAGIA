@@ -133,8 +133,8 @@ module redmule_tile
   redmule_tile_pkg::axi_xbar_slv_req_t[redmule_tile_pkg::AxiXbarNoSlvPorts] axi_xbar_data_in_req   ;  // Index 0 -> Core, Index 1 -> iDMA
   redmule_tile_pkg::axi_xbar_slv_rsp_t[redmule_tile_pkg::AxiXbarNoSlvPorts] axi_xbar_data_in_rsp   ;  // Index 0 -> Core, Index 1 -> iDMA
   
-  redmule_tile_pkg::axi_xbar_mst_req_t                                      axi_xbar_data_out_req  ;
-  redmule_tile_pkg::axi_xbar_mst_rsp_t                                      axi_xbar_data_out_rsp  ;
+  redmule_mesh_pkg::axi_xbar_mst_req_t                                      axi_xbar_data_out_req  ;
+  redmule_mesh_pkg::axi_xbar_mst_rsp_t                                      axi_xbar_data_out_rsp  ;
   
   logic                                                                     hci_clear              ;  //TODO: figure out who should clear the hci
   hci_package::hci_interconnect_ctrl_t                                      hci_ctrl               ;  //TODO: figure out who should control the hci
@@ -723,18 +723,18 @@ module redmule_tile
   axi_mux #(
     .SlvAxiIDWidth ( redmule_tile_pkg::AxiXbarSlvAxiIDWidth   ),
     .slv_aw_chan_t ( redmule_tile_pkg::axi_xbar_slv_aw_chan_t ),
-    .mst_aw_chan_t ( redmule_tile_pkg::axi_xbar_mst_aw_chan_t ),
-    .w_chan_t      ( redmule_tile_pkg::axi_xbar_mst_w_chan_t  ),
+    .mst_aw_chan_t ( redmule_mesh_pkg::axi_xbar_mst_aw_chan_t ),
+    .w_chan_t      ( redmule_mesh_pkg::axi_xbar_mst_w_chan_t  ),
     .slv_b_chan_t  ( redmule_tile_pkg::axi_xbar_slv_b_chan_t  ),
-    .mst_b_chan_t  ( redmule_tile_pkg::axi_xbar_mst_b_chan_t  ),
+    .mst_b_chan_t  ( redmule_mesh_pkg::axi_xbar_mst_b_chan_t  ),
     .slv_ar_chan_t ( redmule_tile_pkg::axi_xbar_slv_ar_chan_t ),
-    .mst_ar_chan_t ( redmule_tile_pkg::axi_xbar_mst_ar_chan_t ),
+    .mst_ar_chan_t ( redmule_mesh_pkg::axi_xbar_mst_ar_chan_t ),
     .slv_r_chan_t  ( redmule_tile_pkg::axi_xbar_slv_r_chan_t  ),
-    .mst_r_chan_t  ( redmule_tile_pkg::axi_xbar_mst_r_chan_t  ),
+    .mst_r_chan_t  ( redmule_mesh_pkg::axi_xbar_mst_r_chan_t  ),
     .slv_req_t     ( redmule_tile_pkg::axi_xbar_slv_req_t     ),
     .slv_resp_t    ( redmule_tile_pkg::axi_xbar_slv_rsp_t     ),
-    .mst_req_t     ( redmule_tile_pkg::axi_xbar_mst_req_t     ),
-    .mst_resp_t    ( redmule_tile_pkg::axi_xbar_mst_rsp_t     ),
+    .mst_req_t     ( redmule_mesh_pkg::axi_xbar_mst_req_t     ),
+    .mst_resp_t    ( redmule_mesh_pkg::axi_xbar_mst_rsp_t     ),
     .NoSlvPorts    ( redmule_tile_pkg::AxiXbarNoSlvPorts      ),
     .MaxWTrans     ( redmule_tile_pkg::AxiXbarMaxWTrans       ),
     .FallThrough   ( redmule_tile_pkg::AxiXbarFallThrough     ),
