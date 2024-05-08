@@ -266,7 +266,7 @@ package redmule_tile_pkg;
   } axi_xbar_idx_e;
 
   typedef struct packed {
-    logic[DMA_OPCODE_W-1:0][N_OPCODE-1:0] opcode_list;
+    logic[N_OPCODE-1:0][DMA_OPCODE_W-1:0] opcode_list;
   } xif_inst_rule_t;
 
   typedef logic[iDMA_AddrWidth-1:0] idma_addr_t;

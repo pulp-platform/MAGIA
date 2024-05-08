@@ -7,7 +7,7 @@
 #define M_SIZE (96)
 #define N_SIZE (64)
 
-#define VERBOSE (0)
+#define VERBOSE (100)
 
 #define WAIT_CYCLES (50)
 
@@ -42,7 +42,7 @@ int main(void) {
 
   uint32_t x_dst_addr = X_BASE;
 #if VERBOSE > 10
-  printf("x_dst_addr: %8x\n", x_dst_addr);
+  printf("x_dst_addr: 0x%8x\n", x_dst_addr);
 #endif
   asm volatile ("addi t0, %0, 0" :: "r"(x_dst_addr));
   /* set instruction */
@@ -61,9 +61,9 @@ int main(void) {
               (0x0       <<  7) | \
               (0b1111011 <<  0)   \n");
 
-  uint32_t x_src_addr = addr32(x_inp);
+  uint32_t x_src_addr = addr32(x_inp[0]);
 #if VERBOSE > 10
-  printf("x_src_addr: %8x\n", x_src_addr);
+  printf("x_src_addr: 0x%8x\n", x_src_addr);
 #endif
   asm volatile ("addi t0, %0, 0" :: "r"(x_src_addr));
   /* set instruction */
@@ -84,7 +84,7 @@ int main(void) {
 
   uint32_t len = M_SIZE*N_SIZE*2; // 2 Bytes per element
 #if VERBOSE > 10
-  printf("len: %8x\n", len);
+  printf("len: %0d\n", len);
 #endif
   asm volatile ("addi t0, %0, 0" :: "r"(len));
   /* set instruction */
@@ -125,7 +125,7 @@ int main(void) {
     x_l2 = x_inp[i];
     if(x_l1 != x_l2){
       num_errors++;
-      printf("**ERROR**: L1_X[%8x](=0x%4x) != L2_X[%8x](=0x%4x)\n", i, x_l1, i, x_l2);
+      printf("**ERROR**: L1_X[%0d](=0x%4x) != L2_X[%0d](=0x%4x)\n", i, x_l1, i, x_l2);
     }
   }
   printf("Finished test with %0d errors\n", num_errors);

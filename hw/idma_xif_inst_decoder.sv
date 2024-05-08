@@ -94,7 +94,7 @@ module idma_xif_inst_decoder
   logic[  DECOUPLE_R_AW_W-1:0] decouple_r_aw;
   logic[      DIRECTION_W-1:0] direction;
 
-  logic[DATA_W-1:0][N_CFG_REG-1:0] cfg_reg_d, cfg_reg_q;
+  logic[N_CFG_REG-1:0][DATA_W-1:0] cfg_reg_d, cfg_reg_q;
 
   logic start_cfg;
   logic start_dma;
@@ -231,7 +231,7 @@ module idma_xif_inst_decoder
     start_cfg                        = 1'b0;
     cfg_reg_d                        = cfg_reg_q;
     xif_issue_if_i.issue_ready       = 1'b0;
-    xif_issue_if_i.issue_resp.accept = 1'b0;
+    xif_issue_if_i.issue_resp        = 1'b0;
 
     if (xif_issue_if_i.issue_valid) begin
       case (opcode)
@@ -239,7 +239,7 @@ module idma_xif_inst_decoder
           xif_issue_if_i.issue_ready                = 1'b1;
           xif_issue_if_i.issue_resp.accept          = 1'b1;
           clk_dec_en                                = 1'b1;
-          cfg_reg_d[redmule_tile_pkg::DMA_CONF_IDX] = {direction, decouple_r_aw, decouple_r_w, src_reduce_len, dst_reduce_len, src_max_log_len, dst_max_log_len, nd_en};
+          cfg_reg_d[redmule_tile_pkg::DMA_CONF_IDX] = {direction, nd_en, dst_max_log_len, src_max_log_len, dst_reduce_len, src_reduce_len, decouple_r_w, decouple_r_aw};
         end
         SET_OPCODE: begin
           xif_issue_if_i.issue_ready       = 1'b1;
