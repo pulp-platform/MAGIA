@@ -99,6 +99,8 @@ module idma_ctrl
 
   assign issue_id  = fe_req_valid_d & fe_req_ready_d;
   assign retire_id = fe_rsp_valid   & fe_rsp_ready;
+  
+  assign fe_rsp_ready = 1'b1;
 
   assign idma_eh_req  = '0;
   assign eh_req_valid = 1'b0;

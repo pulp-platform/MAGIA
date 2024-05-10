@@ -198,7 +198,7 @@ module redmule_tile_vip
   axi_sim_mem #(
     .AddrWidth          ( redmule_tile_pkg::ADDR_W            ),
     .DataWidth          ( redmule_tile_pkg::DATA_W            ),
-    .IdWidth            ( 1                                   ),
+    .IdWidth            ( 3                                   ),
     .UserWidth          ( 1                                   ),
     .axi_req_t          ( redmule_mesh_pkg::axi_default_req_t ),
     .axi_rsp_t          ( redmule_mesh_pkg::axi_default_rsp_t ),

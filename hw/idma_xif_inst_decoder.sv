@@ -107,6 +107,7 @@ module idma_xif_inst_decoder
   logic rw_valid;
 
   logic[DATA_W-1:0] next_id_d, next_id_q;
+  logic[DATA_W-1:0] done_id;
 
   typedef enum logic[3:0] {
     IDLE,
@@ -301,6 +302,7 @@ module idma_xif_inst_decoder
     reg_error                 = 1'b0;
     rw_valid                  = 1'b0;
     next_id_d                 = next_id_q;
+    done_id                   = '0;
     cfg_req_o.addr            = '0;
     cfg_req_o.write           = 1'b0;
     cfg_req_o.wdata           = '0;
@@ -357,8 +359,8 @@ module idma_xif_inst_decoder
       end
       BUSY: begin
         busy_dma                  = 1'b1;
-        rw_valid                  = read_idma_reg(.req(cfg_req_o), .rsp(cfg_rsp_i), .addr(idma_reg64_2d_reg_pkg::IDMA_REG64_2D_NEXT_ID_0_OFFSET), .data(next_id_d), .reg_error(reg_error));
-        n_idma_state              = reg_error ? IDLE : (~rw_valid ? c_idma_state : (next_id_d == next_id_q ? c_idma_state : DONE));
+        rw_valid                  = read_idma_reg(.req(cfg_req_o), .rsp(cfg_rsp_i), .addr(idma_reg64_2d_reg_pkg::IDMA_REG64_2D_DONE_ID_0_OFFSET), .data(done_id),   .reg_error(reg_error));
+        n_idma_state              = reg_error ? IDLE : (~rw_valid ? c_idma_state : (done_id != next_id_q ? c_idma_state : DONE));
       end
       DONE: begin
         done_dma                  = 1'b1;
