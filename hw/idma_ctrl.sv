@@ -56,18 +56,22 @@ module idma_ctrl
   redmule_tile_pkg::idma_fe_reg_req_t idma_fe_reg_req;
   redmule_tile_pkg::idma_fe_reg_rsp_t idma_fe_reg_rsp;
 
+  redmule_tile_pkg::idma_nd_req_t idma_fe_req_d;
   redmule_tile_pkg::idma_nd_req_t idma_fe_req;
 
   redmule_tile_pkg::idma_be_req_t idma_be_req;
   redmule_tile_pkg::idma_be_rsp_t idma_be_rsp;
 
-  logic fe_req_valid, fe_req_ready;
-  logic be_req_valid, be_req_ready;
-  logic be_rsp_valid, be_rsp_ready;
-  logic nd_rsp_valid, nd_rsp_ready;
+  logic fe_req_valid_d, fe_req_ready_d;
+  logic fe_req_valid,  fe_req_ready;
+  logic fe_rsp_valid,  fe_rsp_ready;
+  logic be_req_valid,  be_req_ready;
+  logic be_rsp_valid,  be_rsp_ready;
 
   logic                                            issue_id, retire_id;
   logic[redmule_tile_pkg::iDMA_IdCounterWidth-1:0] next_id, done_id;
+
+  logic stream_fifo_flush;
 
   idma_pkg::idma_busy_t busy;
   logic                 me_busy;
@@ -93,11 +97,13 @@ module idma_ctrl
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
 
-  assign issue_id  = fe_req_valid & fe_req_ready;
-  assign retire_id = nd_rsp_valid & nd_rsp_ready;
+  assign issue_id  = fe_req_valid_d & fe_req_ready_d;
+  assign retire_id = fe_rsp_valid   & fe_rsp_ready;
 
   assign idma_eh_req  = '0;
   assign eh_req_valid = 1'b0;
+
+  assign stream_fifo_flush = 1'b0;
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -170,9 +176,9 @@ module idma_ctrl
     .dma_ctrl_req_i ( idma_fe_reg_req ),
     .dma_ctrl_rsp_o ( idma_fe_reg_rsp ),
 
-    .dma_req_o      ( idma_fe_req     ),
-    .req_valid_o    ( fe_req_valid    ),
-    .req_ready_i    ( fe_req_ready    ),
+    .dma_req_o      ( idma_fe_req_d   ),
+    .req_valid_o    ( fe_req_valid_d  ),
+    .req_ready_i    ( fe_req_ready_d  ),
     .next_id_i      ( next_id         ),
     .stream_idx_o   (                 ),
 
@@ -183,6 +189,47 @@ module idma_ctrl
 
 /*******************************************************/
 /**                   Front-end End                   **/
+/*******************************************************/
+/**               Transfer ID Beginning               **/
+/*******************************************************/
+
+  idma_transfer_id_gen #(
+    .IdWidth ( redmule_tile_pkg::iDMA_IdCounterWidth )
+  ) i_transfer_id_gen (
+    .clk_i                    ,
+    .rst_ni                   ,
+    .issue_i     ( issue_id  ),
+    .retire_i    ( retire_id ),
+    .next_o      ( next_id   ),
+    .completed_o ( done_id   )
+  );
+
+/*******************************************************/
+/**                  Transfer ID End                  **/
+/*******************************************************/
+/**               Stream FIFO Beginning               **/
+/*******************************************************/
+
+  stream_fifo_optimal_wrap #(
+    .Depth     ( redmule_tile_pkg::iDMA_JobFifoDepth  ),
+    .type_t    ( redmule_tile_pkg::idma_nd_req_t      ),
+    .PrintInfo ( redmule_tile_pkg::iDMA_PrintFifoInfo )
+  ) i_stream_fifo_jobs_2d (
+    .clk_i                           ,
+    .rst_ni                          ,
+    .testmode_i                      ,
+    .flush_i    ( stream_fifo_flush ),
+    .usage_o    (                   ),
+    .data_i     ( idma_fe_req_d     ),
+    .valid_i    ( fe_req_valid_d    ),
+    .ready_o    ( fe_req_ready_d    ),
+    .data_o     ( idma_fe_req       ),
+    .valid_o    ( fe_req_valid      ),
+    .ready_i    ( fe_req_ready      )
+  );
+
+/*******************************************************/
+/**                  Stream FIFO End                  **/
 /*******************************************************/
 /**                 Mid-end Beginning                 **/
 /*******************************************************/
@@ -203,8 +250,8 @@ module idma_ctrl
     .nd_req_ready_o    ( fe_req_ready ),
 
     .nd_rsp_o          (              ),
-    .nd_rsp_valid_o    ( nd_rsp_valid ),
-    .nd_rsp_ready_i    ( nd_rsp_ready ),
+    .nd_rsp_valid_o    ( fe_rsp_valid ),
+    .nd_rsp_ready_i    ( fe_rsp_ready ),
 
     .burst_req_o       ( idma_be_req  ),
     .burst_req_valid_o ( be_req_valid ),
@@ -286,27 +333,10 @@ module idma_ctrl
 /*******************************************************/
 /**                    Back-end End                   **/
 /*******************************************************/
-/**               Transfer ID Beginning               **/
-/*******************************************************/
-
-  idma_transfer_id_gen #(
-    .IdWidth ( redmule_tile_pkg::iDMA_IdCounterWidth )
-  ) i_transfer_id_gen (
-    .clk_i                    ,
-    .rst_ni                   ,
-    .issue_i     ( issue_id  ),
-    .retire_i    ( retire_id ),
-    .next_o      ( next_id   ),
-    .completed_o ( done_id   )
-  );
-
-/*******************************************************/
-/**                  Transfer ID End                  **/
-/*******************************************************/
 /**                 AXI MUX Beginning                 **/
 /*******************************************************/
 
-//TODO: Do we even need this???
+  //TODO: add concurrent L1 to L2 and L2 to L1 transfers
   assign axi_req_o     = direction ? axi_write_req : axi_read_req;
   assign axi_write_rsp = direction ? axi_rsp_i     : '0;
   assign axi_read_rsp  = direction ? '0            : axi_rsp_i;
@@ -317,7 +347,7 @@ module idma_ctrl
 /**                 OBI MUX Beginning                 **/
 /*******************************************************/
 
-//TODO: Do we even need this???
+  //TODO: add concurrent L1 to L2 and L2 to L1 transfers
   assign obi_req_o     = direction ? obi_read_req : obi_write_req;
   assign obi_read_rsp  = direction ? obi_rsp_i    : '0;
   assign obi_write_rsp = direction ? '0           : obi_rsp_i;

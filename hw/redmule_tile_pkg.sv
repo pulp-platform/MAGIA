@@ -135,6 +135,7 @@ package redmule_tile_pkg;
   parameter int unsigned iDMA_PrintFifoInfo        = 0;                               // iDMA Print the info of the FIFO configuration
   parameter int unsigned iDMA_NumRegs              = 1;                               // iDMA Number of configuration register ports
   parameter int unsigned iDMA_NumStreams           = 1;                               // iDMA Number of streams (max 16)
+  parameter int unsigned iDMA_JobFifoDepth         = 2,                               // iDMA Stream FIFO depth
   parameter int unsigned iDMA_IdCounterWidth       = 32;                              // iDMA Width of the transfer id (max 32-bit)
   parameter int unsigned iDMA_RepWidth             = 32;                              // iDMA Width of the reps field
   localparam logic[iDMA_NumDims-1:0][31:0] 
