@@ -122,8 +122,8 @@ $(BUILD_DIR):
 SHELL := /bin/bash
 
 # Parameters used by the iDMA hardware build
-IDMA_ROOT     ?= $(shell $(BENDER) path idma)
-IDMA_BASE_IDS ?= rw_axi_rw_obi
+IDMA_ROOT    ?= $(shell $(BENDER) path idma)
+IDMA_ADD_IDS ?= rw_axi_rw_obi
 
 # Generate instructions and data stimuli
 all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb
@@ -250,7 +250,7 @@ hw-opt:
 	$(QUESTA) vopt $(questa_opt_flag) +acc=npr -o vopt_tb $(tb) -floatparameters+$(tb) -work $(BUILD_DIR)
 
 hw-compile:
-	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_BASE_IDS=$(IDMA_BASE_IDS)
+	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_ADD_IDS=$(IDMA_ADD_IDS)
 	$(QUESTA) vsim $(questa_compile_flag) -c +incdir+$(UVM_HOME) -do 'quit -code [source $(compile_script)]'
 
 hw-lib:

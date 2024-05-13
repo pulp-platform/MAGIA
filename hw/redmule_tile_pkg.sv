@@ -120,9 +120,9 @@ package redmule_tile_pkg;
   localparam int unsigned NumDim                   = iDMA_NumDims;                    // Needed by the iDMA typedef (wtf?)
   parameter int unsigned iDMA_DataWidth            = DATA_W;                          // iDMA Data Width
   parameter int unsigned iDMA_AddrWidth            = ADDR_W;                          // iDMA Address Width
-  parameter int unsigned iDMA_UserWidth            = USR_W;                           // iDMA AXI User Width
-  parameter int unsigned iDMA_StrbWidth            = iDMA_DataWidth/8;                // iDMA AXI Strobe Width
-  parameter int unsigned iDMA_AxiIdWidth           = ID_W;                            // iDMA AXI ID Width
+  parameter int unsigned iDMA_UserWidth            = AXI_DATA_U_W;                    // iDMA AXI User Width
+  parameter int unsigned iDMA_StrbWidth            = STRB_W;                          // iDMA AXI Strobe Width
+  parameter int unsigned iDMA_AxiIdWidth           = AXI_DATA_ID_W;                   // iDMA AXI ID Width
   parameter int unsigned iDMA_NumAxInFlight        = 2;                               // iDMA Number of transaction that can be in-flight concurrently
   parameter int unsigned iDMA_BufferDepth          = 3;                               // iDMA depth of the internal reorder buffer: '2' - minimal possible configuration; '3' - efficiently handle misaligned transfers (recommended)
   parameter int unsigned iDMA_TFLenWidth           = 32;                              // iDMA With of a transfer: max transfer size is `2**TFLenWidth` bytes
@@ -141,6 +141,10 @@ package redmule_tile_pkg;
   localparam logic[iDMA_NumDims-1:0][31:0] 
                          iDMA_RepWidths            = '{default: 32'd32};              // iDMA Width of the counters holding the number of repetitions
   parameter int unsigned iDMA_StrideWidth          = 32;                              // iDMA Width of the stride field
+  typedef enum logic{
+    AXI2OBI = 1'b0,
+    OBI2AXI = 1'b1
+  } idma_transfer_ch_e;                                                               // iDMA type of transfer channel
 
   // Parameters used by the iDMA instruction decoder
   parameter int unsigned DMA_INSTR_W               = INSTR_W;                         // iDMA Decoder instruction width
@@ -209,9 +213,9 @@ package redmule_tile_pkg;
   parameter int unsigned N_REDMULE_OPCODE          = 2;                               // Number of opcodes in the programming model of RedMulE
   parameter int unsigned N_IDMA_OPCODE             = 2;                               // Number of opcodes in the programming model of the iDMA decoder
   parameter int unsigned N_OPCODE                  = 2;                               // Number of opcodes = max{RedMulE_opcode, iDMA_opcode}
-  typedef enum{
-    XIF_REDMULE_IDX = 0,
-    XIF_IDMA_IDX    = 1
+  typedef enum logic{
+    XIF_REDMULE_IDX = 1'b0,
+    XIF_IDMA_IDX    = 1'b1
   } xif_inst_demux_idx_e;
   parameter int unsigned DEFAULT_IDX               = XIF_REDMULE_IDX;                 // RedMulE will handle the instructions by default 
   

@@ -24,11 +24,13 @@ module idma_ctrl
   import cv32e40x_pkg::*;
   import idma_pkg::*;
 #(
-  parameter idma_pkg::error_cap_e ERROR_CAP = idma_pkg::NO_ERROR_HANDLING,
-  parameter type                  axi_req_t = redmule_tile_pkg::idma_axi_req_t,
-  parameter type                  axi_rsp_t = redmule_tile_pkg::idma_axi_rsp_t,
-  parameter type                  obi_req_t = redmule_tile_pkg::idma_obi_req_t,
-  parameter type                  obi_rsp_t = redmule_tile_pkg::idma_obi_rsp_t
+  parameter idma_pkg::error_cap_e ERROR_CAP         = idma_pkg::NO_ERROR_HANDLING,
+  parameter type                  idma_fe_reg_req_t = redmule_tile_pkg::idma_fe_reg_req_t,
+  parameter type                  idma_fe_reg_rsp_t = redmule_tile_pkg::idma_fe_reg_rsp_t,
+  parameter type                  axi_req_t         = redmule_tile_pkg::idma_axi_req_t,
+  parameter type                  axi_rsp_t         = redmule_tile_pkg::idma_axi_rsp_t,
+  parameter type                  obi_req_t         = redmule_tile_pkg::idma_obi_req_t,
+  parameter type                  obi_rsp_t         = redmule_tile_pkg::idma_obi_rsp_t
 )(
   input  logic                 clk_i,
   input  logic                 rst_ni,
@@ -37,11 +39,11 @@ module idma_ctrl
 
   cv32e40x_if_xif.coproc_issue xif_issue_if_i,
 
-  output axi_req_t             axi_req_o,
-  input  axi_rsp_t             axi_rsp_i,
+  output axi_req_t             axi_req_o, //TODO: add separate channels for read and write
+  input  axi_rsp_t             axi_rsp_i, //TODO: add separate channels for read and write
 
-  output obi_req_t             obi_req_o,
-  input  obi_rsp_t             obi_rsp_i,
+  output obi_req_t             obi_req_o, //TODO: add separate channels for read and write
+  input  obi_rsp_t             obi_rsp_i, //TODO: add separate channels for read and write
 
   output logic                 start_o,  // Started iDMA transfer
   output logic                 busy_o,   // Performing iDMA transfer
@@ -53,31 +55,13 @@ module idma_ctrl
 /**       Internal Signal Definitions Beginning       **/
 /*******************************************************/
 
-  redmule_tile_pkg::idma_fe_reg_req_t idma_fe_reg_req;
-  redmule_tile_pkg::idma_fe_reg_rsp_t idma_fe_reg_rsp;
+  idma_fe_reg_req_t idma_fe_reg_req;
+  idma_fe_reg_rsp_t idma_fe_reg_rsp;
 
-  redmule_tile_pkg::idma_nd_req_t idma_fe_req_d;
-  redmule_tile_pkg::idma_nd_req_t idma_fe_req;
-
-  redmule_tile_pkg::idma_be_req_t idma_be_req;
-  redmule_tile_pkg::idma_be_rsp_t idma_be_rsp;
-
-  logic fe_req_valid_d, fe_req_ready_d;
-  logic fe_req_valid,  fe_req_ready;
-  logic fe_rsp_valid,  fe_rsp_ready;
-  logic be_req_valid,  be_req_ready;
-  logic be_rsp_valid,  be_rsp_ready;
-
-  logic                                            issue_id, retire_id;
-  logic[redmule_tile_pkg::iDMA_IdCounterWidth-1:0] next_id, done_id;
-
-  logic stream_fifo_flush;
-
-  idma_pkg::idma_busy_t busy;
-  logic                 me_busy;
-
-  idma_pkg::idma_eh_req_t idma_eh_req;
-  logic                   eh_req_valid;
+  idma_fe_reg_req_t idma_fe_reg_axi2obi_req;
+  idma_fe_reg_rsp_t idma_fe_reg_axi2obi_rsp;
+  idma_fe_reg_req_t idma_fe_reg_obi2axi_req;
+  idma_fe_reg_rsp_t idma_fe_reg_obi2axi_rsp;
 
   logic direction;
 
@@ -97,15 +81,17 @@ module idma_ctrl
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
 
-  assign issue_id  = fe_req_valid_d & fe_req_ready_d;
-  assign retire_id = fe_rsp_valid   & fe_rsp_ready;
-  
-  assign fe_rsp_ready = 1'b1;
+  assign axi_req_o     = direction ? axi_write_req : axi_read_req;
+  assign axi_write_rsp = direction ? axi_rsp_i     : '0;
+  assign axi_read_rsp  = direction ? '0            : axi_rsp_i;
 
-  assign idma_eh_req  = '0;
-  assign eh_req_valid = 1'b0;
+  assign obi_req_o     = direction ? obi_read_req : obi_write_req;
+  assign obi_read_rsp  = direction ? obi_rsp_i    : '0;
+  assign obi_write_rsp = direction ? '0           : obi_rsp_i;
 
-  assign stream_fifo_flush = 1'b0;
+  assign idma_fe_reg_rsp         = direction ? idma_fe_reg_obi2axi_rsp : idma_fe_reg_axi2obi_rsp;
+  assign idma_fe_reg_axi2obi_req = direction ? '0                      : idma_fe_reg_req;
+  assign idma_fe_reg_obi2axi_req = direction ? idma_fe_reg_req         : '0;
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -136,8 +122,8 @@ module idma_ctrl
     .DECOUPLE_R_W_OFF    ( redmule_tile_pkg::DMA_DECOUPLE_R_W_OFF    ),
     .DECOUPLE_R_AW_OFF   ( redmule_tile_pkg::DMA_DECOUPLE_R_AW_OFF   ),
     .N_CFG_REG           ( redmule_tile_pkg::DMA_N_CFG_REG           ),
-    .idma_fe_req_t       ( redmule_tile_pkg::idma_fe_reg_req_t       ),
-    .idma_fe_rsp_t       ( redmule_tile_pkg::idma_fe_reg_rsp_t       )
+    .idma_fe_req_t       ( idma_fe_reg_req_t                         ),
+    .idma_fe_rsp_t       ( idma_fe_reg_rsp_t                         )
   ) i_idma_inst_decoder (
     .clk_i                          ,
     .rst_ni                         ,
@@ -158,204 +144,61 @@ module idma_ctrl
 /*******************************************************/
 /**            Xif Instruction Decoder End            **/
 /*******************************************************/
-/**                Front-end Beginning                **/
+/**   AXI2OBI (L2 to L1) Transfer Channel Beginning   **/
 /*******************************************************/
 
-  idma_reg64_2d #(
-    .NumRegs        ( redmule_tile_pkg::iDMA_NumRegs        ),
-    .NumStreams     ( redmule_tile_pkg::iDMA_NumStreams     ),
-    .IdCounterWidth ( redmule_tile_pkg::iDMA_IdCounterWidth ),
-    .StreamWidth    ( /*DO NOT OVERRIDE*/                   ),
-    .reg_req_t      ( redmule_tile_pkg::idma_fe_reg_req_t   ),
-    .reg_rsp_t      ( redmule_tile_pkg::idma_fe_reg_rsp_t   ),
-    .dma_req_t      ( redmule_tile_pkg::idma_nd_req_t       ),
-    .cnt_width_t    ( /*DO NOT OVERRIDE*/                   ),
-    .stream_t       ( /*DO NOT OVERRIDE*/                   )
-  ) i_idma_frontend (
-    .clk_i                             ,
-    .rst_ni                            ,
-
-    .dma_ctrl_req_i ( idma_fe_reg_req ),
-    .dma_ctrl_rsp_o ( idma_fe_reg_rsp ),
-
-    .dma_req_o      ( idma_fe_req_d   ),
-    .req_valid_o    ( fe_req_valid_d  ),
-    .req_ready_i    ( fe_req_ready_d  ),
-    .next_id_i      ( next_id         ),
-    .stream_idx_o   (                 ),
-
-    .done_id_i      ( done_id         ),
-    .busy_i         ( busy            ),
-    .midend_busy_i  ( me_busy         )
+  idma_axi_obi_transfer_ch #(
+    .CHANNEL_T         ( redmule_tile_pkg::AXI2OBI ),
+    .ERROR_CAP         ( ERROR_CAP                 ),
+    .idma_fe_reg_req_t ( idma_fe_reg_req_t         ),
+    .idma_fe_reg_rsp_t ( idma_fe_reg_rsp_t         ),
+    .axi_req_t         ( axi_req_t                 ),
+    .axi_rsp_t         ( axi_rsp_t                 ),
+    .obi_req_t         ( obi_req_t                 ),
+    .obi_rsp_t         ( obi_rsp_t                 )
+  ) i_l2_to_l1_ch (
+    .clk_i                                ,
+    .rst_ni                               ,
+    .testmode_i                           ,
+    .clear_i                              ,
+    .cfg_req_i ( idma_fe_reg_axi2obi_req ),
+    .cfg_rsp_o ( idma_fe_reg_axi2obi_rsp ),
+    .axi_req_o ( axi_read_req            ),
+    .axi_rsp_i ( axi_read_rsp            ),
+    .obi_req_o ( obi_write_req           ),
+    .obi_rsp_i ( obi_write_rsp           )
   );
 
 /*******************************************************/
-/**                   Front-end End                   **/
+/**      AXI2OBI (L2 to L1) Transfer Channel End      **/
 /*******************************************************/
-/**               Transfer ID Beginning               **/
+/**   OBI2AXI (L1 to L2) Transfer Channel Beginning   **/
 /*******************************************************/
 
-  idma_transfer_id_gen #(
-    .IdWidth ( redmule_tile_pkg::iDMA_IdCounterWidth )
-  ) i_transfer_id_gen (
-    .clk_i                    ,
-    .rst_ni                   ,
-    .issue_i     ( issue_id  ),
-    .retire_i    ( retire_id ),
-    .next_o      ( next_id   ),
-    .completed_o ( done_id   )
+  idma_axi_obi_transfer_ch #(
+    .CHANNEL_T         ( redmule_tile_pkg::OBI2AXI ),
+    .ERROR_CAP         ( ERROR_CAP                 ),
+    .idma_fe_reg_req_t ( idma_fe_reg_req_t         ),
+    .idma_fe_reg_rsp_t ( idma_fe_reg_rsp_t         ),
+    .axi_req_t         ( axi_req_t                 ),
+    .axi_rsp_t         ( axi_rsp_t                 ),
+    .obi_req_t         ( obi_req_t                 ),
+    .obi_rsp_t         ( obi_rsp_t                 )
+  ) i_l1_to_l2_ch (
+    .clk_i                                ,
+    .rst_ni                               ,
+    .testmode_i                           ,
+    .clear_i                              ,
+    .cfg_req_i ( idma_fe_reg_obi2axi_req ),
+    .cfg_rsp_o ( idma_fe_reg_obi2axi_rsp ),
+    .axi_req_o ( axi_write_req           ),
+    .axi_rsp_i ( axi_write_rsp           ),
+    .obi_req_o ( obi_read_req            ),
+    .obi_rsp_i ( obi_read_rsp            )
   );
 
 /*******************************************************/
-/**                  Transfer ID End                  **/
-/*******************************************************/
-/**               Stream FIFO Beginning               **/
-/*******************************************************/
-
-  stream_fifo_optimal_wrap #(
-    .Depth     ( redmule_tile_pkg::iDMA_JobFifoDepth  ),
-    .type_t    ( redmule_tile_pkg::idma_nd_req_t      ),
-    .PrintInfo ( redmule_tile_pkg::iDMA_PrintFifoInfo )
-  ) i_stream_fifo_jobs_2d (
-    .clk_i                           ,
-    .rst_ni                          ,
-    .testmode_i                      ,
-    .flush_i    ( stream_fifo_flush ),
-    .usage_o    (                   ),
-    .data_i     ( idma_fe_req_d     ),
-    .valid_i    ( fe_req_valid_d    ),
-    .ready_o    ( fe_req_ready_d    ),
-    .data_o     ( idma_fe_req       ),
-    .valid_o    ( fe_req_valid      ),
-    .ready_i    ( fe_req_ready      )
-  );
-
-/*******************************************************/
-/**                  Stream FIFO End                  **/
-/*******************************************************/
-/**                 Mid-end Beginning                 **/
-/*******************************************************/
-
-  idma_nd_midend #(
-    .NumDim        ( redmule_tile_pkg::iDMA_NumDims   ),
-    .addr_t        ( redmule_tile_pkg::idma_addr_t    ),
-    .idma_req_t    ( redmule_tile_pkg::idma_be_req_t  ),
-    .idma_rsp_t    ( redmule_tile_pkg::idma_be_rsp_t  ),
-    .idma_nd_req_t ( redmule_tile_pkg::idma_nd_req_t  ),
-    .RepWidths     ( redmule_tile_pkg::iDMA_RepWidths )
-  ) i_idma_midend (
-    .clk_i                             ,
-    .rst_ni                            ,
-
-    .nd_req_i          ( idma_fe_req  ),
-    .nd_req_valid_i    ( fe_req_valid ),
-    .nd_req_ready_o    ( fe_req_ready ),
-
-    .nd_rsp_o          (              ),
-    .nd_rsp_valid_o    ( fe_rsp_valid ),
-    .nd_rsp_ready_i    ( fe_rsp_ready ),
-
-    .burst_req_o       ( idma_be_req  ),
-    .burst_req_valid_o ( be_req_valid ),
-    .burst_req_ready_i ( be_req_ready ),
-
-    .burst_rsp_i       ( idma_be_rsp  ),
-    .burst_rsp_valid_i ( be_rsp_valid ),
-    .burst_rsp_ready_o ( be_rsp_ready ),
-
-    .busy_o            ( me_busy      )
-  );
-
-/*******************************************************/
-/**                    Mid-end End                    **/
-/*******************************************************/
-/**                 Back-end Beginning                **/
-/*******************************************************/
-
-  idma_backend_rw_axi_rw_obi #(
-    .DataWidth            ( redmule_tile_pkg::iDMA_DataWidth            ),
-    .AddrWidth            ( redmule_tile_pkg::iDMA_AddrWidth            ),
-    .UserWidth            ( redmule_tile_pkg::iDMA_UserWidth            ),
-    .AxiIdWidth           ( redmule_tile_pkg::iDMA_AxiIdWidth           ),
-    .NumAxInFlight        ( redmule_tile_pkg::iDMA_NumAxInFlight        ),
-    .BufferDepth          ( redmule_tile_pkg::iDMA_BufferDepth          ),
-    .TFLenWidth           ( redmule_tile_pkg::iDMA_TFLenWidth           ),
-    .MemSysDepth          ( redmule_tile_pkg::iDMA_MemSysDepth          ),
-    .CombinedShifter      ( redmule_tile_pkg::iDMA_CombinedShifter      ),
-    .RAWCouplingAvail     ( redmule_tile_pkg::iDMA_RAWCouplingAvail     ),
-    .MaskInvalidData      ( redmule_tile_pkg::iDMA_MaskInvalidData      ),
-    .HardwareLegalizer    ( redmule_tile_pkg::iDMA_HardwareLegalizer    ),
-    .RejectZeroTransfers  ( redmule_tile_pkg::iDMA_RejectZeroTransfers  ),
-    .ErrorCap             ( ERROR_CAP                                   ),
-    .PrintFifoInfo        ( redmule_tile_pkg::iDMA_PrintFifoInfo        ),
-    .idma_req_t           ( redmule_tile_pkg::idma_be_req_t             ),
-    .idma_rsp_t           ( redmule_tile_pkg::idma_be_rsp_t             ),
-    .idma_eh_req_t        ( idma_pkg::idma_eh_req_t                     ),
-    .idma_busy_t          ( idma_pkg::idma_busy_t                       ),
-    .axi_req_t            ( redmule_tile_pkg::idma_axi_req_t            ),
-    .axi_rsp_t            ( redmule_tile_pkg::idma_axi_rsp_t            ),
-    .obi_req_t            ( redmule_tile_pkg::idma_obi_req_t            ),
-    .obi_rsp_t            ( redmule_tile_pkg::idma_obi_rsp_t            ),
-    .read_meta_channel_t  ( redmule_tile_pkg::idma_read_meta_channel_t  ),
-    .write_meta_channel_t ( redmule_tile_pkg::idma_write_meta_channel_t ),
-    .StrbWidth            ( /*DO NOT OVERRIDE*/                         ),
-    .OffsetWidth          ( /*DO NOT OVERRIDE*/                         )
-  ) i_idma_backend (
-    .clk_i                            ,
-    .rst_ni                           ,
-    .testmode_i                       ,
-
-    .idma_req_i      ( idma_be_req   ),
-    .req_valid_i     ( be_req_valid  ),
-    .req_ready_o     ( be_req_ready  ),
-
-    .idma_rsp_o      ( idma_be_rsp   ),
-    .rsp_valid_o     ( be_rsp_valid  ),
-    .rsp_ready_i     ( be_rsp_ready  ),
-
-    .idma_eh_req_i   ( idma_eh_req   ),
-    .eh_req_valid_i  ( eh_req_valid  ),
-    .eh_req_ready_o  (               ),
-
-    .axi_read_req_o  ( axi_read_req  ),
-    .axi_read_rsp_i  ( axi_read_rsp  ),
-
-    .obi_read_req_o  ( obi_read_req  ),
-    .obi_read_rsp_i  ( obi_read_rsp  ),
-
-    .axi_write_req_o ( axi_write_req ),
-    .axi_write_rsp_i ( axi_write_rsp ),
-
-    .obi_write_req_o ( obi_write_req ),
-    .obi_write_rsp_i ( obi_write_rsp ),
-    
-    .busy_o          ( busy          )
-  );
-
-/*******************************************************/
-/**                    Back-end End                   **/
-/*******************************************************/
-/**                 AXI MUX Beginning                 **/
-/*******************************************************/
-
-  //TODO: add concurrent L1 to L2 and L2 to L1 transfers
-  assign axi_req_o     = direction ? axi_write_req : axi_read_req;
-  assign axi_write_rsp = direction ? axi_rsp_i     : '0;
-  assign axi_read_rsp  = direction ? '0            : axi_rsp_i;
-
-/*******************************************************/
-/**                    AXI MUX End                    **/
-/*******************************************************/
-/**                 OBI MUX Beginning                 **/
-/*******************************************************/
-
-  //TODO: add concurrent L1 to L2 and L2 to L1 transfers
-  assign obi_req_o     = direction ? obi_read_req : obi_write_req;
-  assign obi_read_rsp  = direction ? obi_rsp_i    : '0;
-  assign obi_write_rsp = direction ? '0           : obi_rsp_i;
-
-/*******************************************************/
-/**                    OBI MUX End                    **/
+/**      OBI2AXI (L1 to L2) Transfer Channel End      **/
 /*******************************************************/
 
 endmodule: idma_ctrl

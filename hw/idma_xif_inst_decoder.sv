@@ -378,9 +378,9 @@ module idma_xif_inst_decoder
   end
 
   always_ff @(posedge clk_cfg_g, negedge rst_ni) begin: next_id_register
-    if (~rst_ni)   next_id_q <= '0;
+    if (~rst_ni)   next_id_q <= 1;
     else begin
-      if (clear_i) next_id_q <= '0;
+      if (clear_i) next_id_q <= 1;
       else         next_id_q <= next_id_d;
     end
   end

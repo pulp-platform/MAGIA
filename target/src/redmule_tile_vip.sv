@@ -198,8 +198,8 @@ module redmule_tile_vip
   axi_sim_mem #(
     .AddrWidth          ( redmule_tile_pkg::ADDR_W            ),
     .DataWidth          ( redmule_tile_pkg::DATA_W            ),
-    .IdWidth            ( 3                                   ),
-    .UserWidth          ( 1                                   ),
+    .IdWidth            ( redmule_tile_pkg::AXI_DATA_ID_W + 1 ),  // AXI_MUX adds 1 bit to the id
+    .UserWidth          ( redmule_tile_pkg::AXI_DATA_U_W      ),
     .axi_req_t          ( redmule_mesh_pkg::axi_default_req_t ),
     .axi_rsp_t          ( redmule_mesh_pkg::axi_default_rsp_t ),
     .WarnUninitialized  ( 1                                   ),
@@ -240,12 +240,20 @@ always @(posedge clk) begin: print_monitor
   if ((data_out_req.aw.addr == 32'h2FFF0000) && (data_out_req.aw_valid)) stderr_ready = 1'b1;
   if ((data_out_req.aw.addr == 32'h2FFF0004) && (data_out_req.aw_valid)) stdio_ready  = 1'b1;
   if ((data_out_req.w_valid) && stderr_ready) begin
-    errors       = data_out_req.w.data;
-    stderr_ready = 1'b0;
+    // NOTE: This is stupid! But unless we keep track of the outstanding AXI writes (which would require some logic) this should work,
+    //       unless other modules (not related to the print function) transfer bytes (instead of words) to the L2
+    if (data_out_req.w.data < 256) begin
+      errors       = data_out_req.w.data;
+      stderr_ready = 1'b0;
+    end
   end
   if ((data_out_req.w_valid) && stdio_ready) begin
-    $write("%c", data_out_req.w.data);
-    stdio_ready = 1'b0;
+    // NOTE: This is stupid! But unless we keep track of the outstanding AXI writes (which would require some logic) this should work,
+    //       unless other modules (not related to the print function) transfer bytes (instead of words) to the L2
+    if (data_out_req.w.data < 256) begin
+      $write("%c", data_out_req.w.data);
+      stdio_ready = 1'b0;
+    end
   end
 end
 
