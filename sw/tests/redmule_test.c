@@ -109,7 +109,9 @@ int main(void) {
   // Wait for end of computation
   // asm volatile("wfi" ::: "memory");
 
+  printf("Testing matrix multiplication with RedMulE...\n");
   wait_print(WAIT_CYCLES);
+  printf("Verifying results...\n");
   
   unsigned int num_errors = 0;
 

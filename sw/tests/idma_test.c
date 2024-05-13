@@ -9,7 +9,7 @@
 #define M_SIZE (96)
 #define N_SIZE (64)
 
-#define VERBOSE (100)
+#define VERBOSE (0)
 
 #define WAIT_CYCLES (10)
 
@@ -151,9 +151,7 @@ int main(void) {
               (0x0       <<  7) | \
               (0b1111011 <<  0)   \n");
 
-#if VERBOSE > 10
-  printf("iDMA moving data from L2 to L1\n");
-#endif
+  printf("iDMA moving data from L2 to L1...\n");
   wait_print(WAIT_CYCLES);
 
   /* conf instruction */
@@ -280,10 +278,9 @@ int main(void) {
               (0x0       <<  7) | \
               (0b1111011 <<  0)   \n");
 
-#if VERBOSE > 10
-  printf("iDMA moving data from L1 to L2\n");
-#endif
+  printf("iDMA moving data from L1 to L2...\n");
   wait_print(WAIT_CYCLES);
+  printf("Verifying results...\n");
   
   unsigned int num_errors = 0;
 
