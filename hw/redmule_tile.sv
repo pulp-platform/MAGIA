@@ -122,14 +122,26 @@ module redmule_tile
   redmule_tile_pkg::core_axi_instr_req_t core_cache_instr_req;
   redmule_tile_pkg::core_axi_instr_rsp_t core_cache_instr_rsp;
 
+  redmule_tile_pkg::idma_axi_req_t idma_axi_read_req;
+  redmule_tile_pkg::idma_axi_rsp_t idma_axi_read_rsp;
+
+  redmule_tile_pkg::idma_axi_req_t idma_axi_write_req;
+  redmule_tile_pkg::idma_axi_rsp_t idma_axi_write_rsp;
+  
   redmule_tile_pkg::idma_axi_req_t idma_axi_req;
   redmule_tile_pkg::idma_axi_rsp_t idma_axi_rsp;
 
-  redmule_tile_pkg::idma_obi_req_t idma_obi_req;
-  redmule_tile_pkg::idma_obi_rsp_t idma_obi_rsp;
+  redmule_tile_pkg::idma_obi_req_t idma_obi_read_req;
+  redmule_tile_pkg::idma_obi_rsp_t idma_obi_read_rsp;
 
-  redmule_tile_pkg::idma_hci_req_t idma_hci_req;
-  redmule_tile_pkg::idma_hci_rsp_t idma_hci_rsp;
+  redmule_tile_pkg::idma_obi_req_t idma_obi_write_req;
+  redmule_tile_pkg::idma_obi_rsp_t idma_obi_write_rsp;
+
+  redmule_tile_pkg::idma_hci_req_t idma_hci_read_req;
+  redmule_tile_pkg::idma_hci_rsp_t idma_hci_read_rsp;
+
+  redmule_tile_pkg::idma_hci_req_t idma_hci_write_req;
+  redmule_tile_pkg::idma_hci_rsp_t idma_hci_write_rsp;
 
   redmule_tile_pkg::axi_xbar_slv_req_t[redmule_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_data_in_req; // Index 0 -> Core, Index 1 -> iDMA
   redmule_tile_pkg::axi_xbar_slv_rsp_t[redmule_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_data_in_rsp; // Index 0 -> Core, Index 1 -> iDMA
@@ -151,11 +163,15 @@ module redmule_tile
   logic[redmule_tile_pkg::AXI_INSTR_U_W-1:0]                  axi_instr_user;
   logic[obi_pkg::ObiDefaultConfig.OptionalCfg.RUserWidth-1:0] obi_rsp_instr_user;
 
-  logic idma_clear; //TODO: figure out who should clear the iDMA
-  logic idma_start; //TODO: figure out how to manage these signals as irq
-  logic idma_busy;  //TODO: figure out how to manage these signals as irq
-  logic idma_done;  //TODO: figure out how to manage these signals as irq
-  logic idma_error; //TODO: figure out how to manage these signals as irq
+  logic idma_clear;         //TODO: figure out who should clear the iDMA
+  logic idma_axi2obi_start; //TODO: figure out how to manage these signals as irq
+  logic idma_axi2obi_busy;  //TODO: figure out how to manage these signals as irq
+  logic idma_axi2obi_done;  //TODO: figure out how to manage these signals as irq
+  logic idma_axi2obi_error; //TODO: figure out how to manage these signals as irq
+  logic idma_obi2axi_start; //TODO: figure out how to manage these signals as irq
+  logic idma_obi2axi_busy;  //TODO: figure out how to manage these signals as irq
+  logic idma_obi2axi_done;  //TODO: figure out how to manage these signals as irq
+  logic idma_obi2axi_error; //TODO: figure out how to manage these signals as irq
 
   redmule_tile_pkg::xif_inst_rule_t[redmule_tile_pkg::N_COPROC-1:0] xif_coproc_rules;
   
@@ -299,16 +315,32 @@ module redmule_tile
     .obi_req_t ( redmule_tile_pkg::idma_obi_req_t ),
     .hic_req_t ( redmule_tile_pkg::idma_hci_req_t )
   ) i_idma_obi2hci_req (
-    .obi_req_i ( idma_obi_req ),
-    .hci_req_o ( idma_hci_req )
+    .obi_req_i ( idma_obi_read_req ),
+    .hci_req_o ( idma_hci_read_req )
   );
 
   hci2obi_rsp #(
     .hci_rsp_t ( redmule_tile_pkg::idma_hci_rsp_t ),
     .obi_rsp_t ( redmule_tile_pkg::idma_obi_rsp_t )
   ) i_idma_hci2obi_rsp (
-    .hci_rsp_i ( idma_hci_rsp ),
-    .obi_rsp_o ( idma_obi_rsp )
+    .hci_rsp_i ( idma_hci_read_rsp ),
+    .obi_rsp_o ( idma_obi_read_rsp )
+  );
+
+  obi2hci_req #(
+    .obi_req_t ( redmule_tile_pkg::idma_obi_req_t ),
+    .hic_req_t ( redmule_tile_pkg::idma_hci_req_t )
+  ) i_idma_obi2hci_write_req (
+    .obi_req_i ( idma_obi_write_req ),
+    .hci_req_o ( idma_hci_write_req )
+  );
+
+  hci2obi_rsp #(
+    .hci_rsp_t ( redmule_tile_pkg::idma_hci_rsp_t ),
+    .obi_rsp_t ( redmule_tile_pkg::idma_obi_rsp_t )
+  ) i_idma_hci2obi_write_rsp (
+    .hci_rsp_i ( idma_hci_write_rsp ),
+    .obi_rsp_o ( idma_obi_write_rsp )
   );
 
 /*******************************************************/
@@ -407,9 +439,10 @@ module redmule_tile
 /**          Interface Assignments Beginning          **/
 /*******************************************************/
 
-  `HCI_ASSIGN_TO_INTF(hci_core_if[0], core_l1_data_req, core_l1_data_rsp)     // Only 1 core supported
-  `HCI_ASSIGN_TO_INTF(hci_redmule_if[0], redmule_data_req, redmule_data_rsp)  // Only 1 RedMulE supported
-  `HCI_ASSIGN_TO_INTF(hci_dma_if[0], idma_hci_req, idma_hci_rsp)              // Only 1 iDMA supported
+  `HCI_ASSIGN_TO_INTF(hci_core_if[0],                                     core_l1_data_req,   core_l1_data_rsp)   // Only 1 core supported
+  `HCI_ASSIGN_TO_INTF(hci_redmule_if[0],                                  redmule_data_req,   redmule_data_rsp)   // Only 1 RedMulE supported
+  `HCI_ASSIGN_TO_INTF(hci_dma_if[redmule_tile_pkg::HCI_DMA_CH_READ_IDX],  idma_hci_read_req,  idma_hci_read_rsp)  // iDMA HCI read channel
+  `HCI_ASSIGN_TO_INTF(hci_dma_if[redmule_tile_pkg::HCI_DMA_CH_WRITE_IDX], idma_hci_write_req, idma_hci_write_rsp) // iDMA HCI write channel
 
 /*******************************************************/
 /**             Interface Assignments End             **/
@@ -695,16 +728,41 @@ module redmule_tile
 
     .xif_issue_if_i  ( xif_coproc_if.coproc_issue[redmule_tile_pkg::XIF_IDMA_IDX] ),
 
-    .axi_req_o       ( idma_axi_req                                               ),
-    .axi_rsp_i       ( idma_axi_rsp                                               ),
+    .axi_read_req_o  ( idma_axi_read_req                                          ),
+    .axi_read_rsp_i  ( idma_axi_read_rsp                                          ),
 
-    .obi_req_o       ( idma_obi_req                                               ),
-    .obi_rsp_i       ( idma_obi_rsp                                               ),
+    .axi_write_req_o ( idma_axi_write_req                                         ),
+    .axi_write_rsp_i ( idma_axi_write_rsp                                         ),
 
-    .start_o         ( idma_start                                                 ),
-    .busy_o          ( idma_busy                                                  ),
-    .done_o          ( idma_done                                                  ),
-    .error_o         ( idma_error                                                 )
+    .obi_read_req_o  ( idma_obi_read_req                                          ),
+    .obi_read_rsp_i  ( idma_obi_read_rsp                                          ),
+
+    .obi_write_req_o ( idma_obi_write_req                                         ),
+    .obi_write_rsp_i ( idma_obi_write_rsp                                         ),
+
+    .axi2obi_start_o ( idma_axi2obi_start                                         ),
+    .axi2obi_busy_o  ( idma_axi2obi_busy                                          ),
+    .axi2obi_done_o  ( idma_axi2obi_done                                          ),
+    .axi2obi_error_o ( idma_axi2obi_error                                         ),
+
+    .obi2axi_start_o ( idma_obi2axi_start                                         ),
+    .obi2axi_busy_o  ( idma_obi2axi_busy                                          ),
+    .obi2axi_done_o  ( idma_obi2axi_done                                          ),
+    .obi2axi_error_o ( idma_obi2axi_error                                         )
+  );
+
+  axi_rw_join #(
+    .axi_req_t  ( redmule_tile_pkg::idma_axi_req_t ),
+    .axi_resp_t ( redmule_tile_pkg::idma_axi_rsp_t )
+  ) i_axi_rw_join (
+    .clk_i            ( sys_clk            ),
+    .rst_ni           ( rst_ni             ),
+    .slv_read_req_i   ( idma_axi_read_req  ),
+    .slv_read_resp_o  ( idma_axi_read_rsp  ),
+    .slv_write_req_i  ( idma_axi_write_req ),
+    .slv_write_resp_o ( idma_axi_write_rsp ),
+    .mst_req_o        ( idma_axi_req       ),
+    .mst_resp_i       ( idma_axi_rsp       )
   );
 
 /*******************************************************/

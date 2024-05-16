@@ -25,8 +25,10 @@ module idma_ctrl
   import idma_pkg::*;
 #(
   parameter idma_pkg::error_cap_e ERROR_CAP         = idma_pkg::NO_ERROR_HANDLING,
-  parameter type                  idma_fe_reg_req_t = redmule_tile_pkg::idma_fe_reg_req_t,
-  parameter type                  idma_fe_reg_rsp_t = redmule_tile_pkg::idma_fe_reg_rsp_t,
+  localparam int unsigned         DIRECTION_W       = redmule_tile_pkg::DMA_DIRECTION_W,
+  localparam int unsigned         DIRECTION_OFF     = redmule_tile_pkg::DMA_DIRECTION_OFF,
+  localparam type                 idma_fe_reg_req_t = redmule_tile_pkg::idma_fe_reg_req_t,
+  localparam type                 idma_fe_reg_rsp_t = redmule_tile_pkg::idma_fe_reg_rsp_t,
   parameter type                  axi_req_t         = redmule_tile_pkg::idma_axi_req_t,
   parameter type                  axi_rsp_t         = redmule_tile_pkg::idma_axi_rsp_t,
   parameter type                  obi_req_t         = redmule_tile_pkg::idma_obi_req_t,
@@ -39,64 +41,104 @@ module idma_ctrl
 
   cv32e40x_if_xif.coproc_issue xif_issue_if_i,
 
-  output axi_req_t             axi_req_o, //TODO: add separate channels for read and write
-  input  axi_rsp_t             axi_rsp_i, //TODO: add separate channels for read and write
+  output axi_req_t             axi_read_req_o,
+  input  axi_rsp_t             axi_read_rsp_i,
 
-  output obi_req_t             obi_req_o, //TODO: add separate channels for read and write
-  input  obi_rsp_t             obi_rsp_i, //TODO: add separate channels for read and write
+  output axi_req_t             axi_write_req_o,
+  input  axi_rsp_t             axi_write_rsp_i,
 
-  output logic                 start_o,  // Started iDMA transfer
-  output logic                 busy_o,   // Performing iDMA transfer
-  output logic                 done_o,   // Finished iDMA transfer
-  output logic                 error_o   // Detected error
+  output obi_req_t             obi_read_req_o,
+  input  obi_rsp_t             obi_read_rsp_i,
+
+  output obi_req_t             obi_write_req_o,
+  input  obi_rsp_t             obi_write_rsp_i,
+
+  output logic                 axi2obi_start_o,  // Started L2 to L1 iDMA transfer
+  output logic                 axi2obi_busy_o,   // Performing L2 to L1  iDMA transfer
+  output logic                 axi2obi_done_o,   // Finished L2 to L1  iDMA transfer
+  output logic                 axi2obi_error_o,  // Detected L2 to L1 transfer error
+
+  output logic                 obi2axi_start_o,  // Started L1 to L2 iDMA transfer
+  output logic                 obi2axi_busy_o,   // Performing L1 to L2 iDMA transfer
+  output logic                 obi2axi_done_o,   // Finished L1 to L2 iDMA transfer
+  output logic                 obi2axi_error_o   // Detected L1 to L2 transfer error
 );
 
 /*******************************************************/
 /**       Internal Signal Definitions Beginning       **/
 /*******************************************************/
 
-  idma_fe_reg_req_t idma_fe_reg_req;
-  idma_fe_reg_rsp_t idma_fe_reg_rsp;
-
+  logic direction;  // Direction of the iDMA transfer: 0 -> AXI2OBI; 1 -> OBI2AXI
+  
   idma_fe_reg_req_t idma_fe_reg_axi2obi_req;
   idma_fe_reg_rsp_t idma_fe_reg_axi2obi_rsp;
   idma_fe_reg_req_t idma_fe_reg_obi2axi_req;
   idma_fe_reg_rsp_t idma_fe_reg_obi2axi_rsp;
 
-  logic direction;
-
-  redmule_tile_pkg::idma_axi_req_t axi_read_req;
-  redmule_tile_pkg::idma_axi_rsp_t axi_read_rsp;
-  redmule_tile_pkg::idma_axi_req_t axi_write_req;
-  redmule_tile_pkg::idma_axi_rsp_t axi_write_rsp;
-
-  redmule_tile_pkg::idma_obi_req_t obi_read_req;
-  redmule_tile_pkg::idma_obi_rsp_t obi_read_rsp;
-  redmule_tile_pkg::idma_obi_req_t obi_write_req;
-  redmule_tile_pkg::idma_obi_rsp_t obi_write_rsp;
-
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
+/*******************************************************/
+/**           Interface Definitions Beginning         **/
+/*******************************************************/
+
+  cv32e40x_if_xif #(
+    .X_NUM_RS    ( redmule_tile_pkg::X_NUM_RS ),
+    .X_ID_WIDTH  ( redmule_tile_pkg::X_ID_W   ),
+    .X_MEM_WIDTH ( redmule_tile_pkg::X_MEM_W  ),
+    .X_RFR_WIDTH ( redmule_tile_pkg::X_RFR_W  ),
+    .X_RFW_WIDTH ( redmule_tile_pkg::X_RFW_W  ),
+    .X_MISA      ( redmule_tile_pkg::X_MISA   ),
+    .X_ECS_XS    ( redmule_tile_pkg::X_ECS_XS )
+  ) xif_axi2obi_issue_if ();
+
+  cv32e40x_if_xif #(
+    .X_NUM_RS    ( redmule_tile_pkg::X_NUM_RS ),
+    .X_ID_WIDTH  ( redmule_tile_pkg::X_ID_W   ),
+    .X_MEM_WIDTH ( redmule_tile_pkg::X_MEM_W  ),
+    .X_RFR_WIDTH ( redmule_tile_pkg::X_RFR_W  ),
+    .X_RFW_WIDTH ( redmule_tile_pkg::X_RFW_W  ),
+    .X_MISA      ( redmule_tile_pkg::X_MISA   ),
+    .X_ECS_XS    ( redmule_tile_pkg::X_ECS_XS )
+  ) xif_obi2axi_issue_if ();
+
+/*******************************************************/
+/**             Interface Definitions End             **/
 /*******************************************************/
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
 
-  assign axi_req_o     = direction ? axi_write_req : axi_read_req;
-  assign axi_write_rsp = direction ? axi_rsp_i     : '0;
-  assign axi_read_rsp  = direction ? '0            : axi_rsp_i;
-
-  assign obi_req_o     = direction ? obi_read_req : obi_write_req;
-  assign obi_read_rsp  = direction ? obi_rsp_i    : '0;
-  assign obi_write_rsp = direction ? '0           : obi_rsp_i;
-
-  assign idma_fe_reg_rsp         = direction ? idma_fe_reg_obi2axi_rsp : idma_fe_reg_axi2obi_rsp;
-  assign idma_fe_reg_axi2obi_req = direction ? '0                      : idma_fe_reg_req;
-  assign idma_fe_reg_obi2axi_req = direction ? idma_fe_reg_req         : '0;
+  assign direction = xif_issue_if_i.issue_req.instr[DIRECTION_OFF+:DIRECTION_W];
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
 /*******************************************************/
-/**         Xif Instruction Decoder Beginning         **/
+/**             Xif Issue DEMUX Beginning             **/
+/*******************************************************/
+
+  always_comb begin: xif_issue_demux
+    if (direction) begin  // OBI2AXI
+      xif_obi2axi_issue_if.issue_valid = xif_issue_if_i.issue_valid;
+      xif_obi2axi_issue_if.issue_req   = xif_issue_if_i.issue_req;
+      xif_issue_if_i.issue_ready       = xif_obi2axi_issue_if.issue_ready;
+      xif_issue_if_i.issue_resp        = xif_obi2axi_issue_if.issue_resp;
+
+      xif_axi2obi_issue_if.issue_valid = 1'b0;
+      xif_axi2obi_issue_if.issue_req   = '0;
+    end else begin        // AXI2OBI
+      xif_axi2obi_issue_if.issue_valid = xif_issue_if_i.issue_valid;
+      xif_axi2obi_issue_if.issue_req   = xif_issue_if_i.issue_req;
+      xif_issue_if_i.issue_ready       = xif_axi2obi_issue_if.issue_ready;
+      xif_issue_if_i.issue_resp        = xif_axi2obi_issue_if.issue_resp;
+
+      xif_obi2axi_issue_if.issue_valid = 1'b0;
+      xif_obi2axi_issue_if.issue_req   = '0;
+    end
+  end
+
+/*******************************************************/
+/**                Xif Issue DEMUX End                **/
+/*******************************************************/
+/**     AXI2OBI Xif Instruction Decoder Beginning     **/
 /*******************************************************/
 
   idma_xif_inst_decoder #(
@@ -124,25 +166,71 @@ module idma_ctrl
     .N_CFG_REG           ( redmule_tile_pkg::DMA_N_CFG_REG           ),
     .idma_fe_req_t       ( idma_fe_reg_req_t                         ),
     .idma_fe_rsp_t       ( idma_fe_reg_rsp_t                         )
-  ) i_idma_inst_decoder (
-    .clk_i                          ,
-    .rst_ni                         ,
-    .clear_i                        ,
+  ) i_idma_axi2obi_inst_decoder (
+    .clk_i                                                  ,
+    .rst_ni                                                 ,
+    .clear_i                                                ,
 
-    .xif_issue_if_i                 ,
+    .xif_issue_if_i ( xif_axi2obi_issue_if.coproc_issue    ),
 
-    .cfg_req_o   ( idma_fe_reg_req ),
-    .cfg_rsp_i   ( idma_fe_reg_rsp ),
+    .cfg_req_o      ( idma_fe_reg_axi2obi_req              ),
+    .cfg_rsp_i      ( idma_fe_reg_axi2obi_rsp              ),
 
-    .direction_o ( direction       ),
-    .start_o                        ,
-    .busy_o                         ,
-    .done_o                         ,
-    .error_o                        
+    .start_o        ( axi2obi_start_o                      ),
+    .busy_o         ( axi2obi_busy_o                       ),
+    .done_o         ( axi2obi_done_o                       ),
+    .error_o        ( axi2obi_error_o                      )
   );
 
 /*******************************************************/
-/**            Xif Instruction Decoder End            **/
+/**        AXI2OBI Xif Instruction Decoder End        **/
+/*******************************************************/
+/**     OBI2AXI Xif Instruction Decoder Beginning     **/
+/*******************************************************/
+
+  idma_xif_inst_decoder #(
+    .INSTR_W             ( redmule_tile_pkg::DMA_INSTR_W             ),
+    .DATA_W              ( redmule_tile_pkg::DMA_DATA_W              ),
+    .N_RF_PORTS          ( redmule_tile_pkg::DMA_N_RF_PORTS          ),
+    .OPCODE_W            ( redmule_tile_pkg::DMA_OPCODE_W            ),
+    .FUNC3_W             ( redmule_tile_pkg::DMA_FUNC3_W             ),
+    .ND_EN_W             ( redmule_tile_pkg::DMA_ND_EN_W             ),
+    .DST_MAX_LOG_LEN_W   ( redmule_tile_pkg::DMA_DST_MAX_LOG_LEN_W   ),
+    .SRC_MAX_LOG_LEN_W   ( redmule_tile_pkg::DMA_SRC_MAX_LOG_LEN_W   ),
+    .DST_REDUCE_LEN_W    ( redmule_tile_pkg::DMA_DST_REDUCE_LEN_W    ),
+    .SRC_REDUCE_LEN_W    ( redmule_tile_pkg::DMA_SRC_REDUCE_LEN_W    ),
+    .DECOUPLE_R_W_W      ( redmule_tile_pkg::DMA_DECOUPLE_R_W_W      ),
+    .DECOUPLE_R_AW_W     ( redmule_tile_pkg::DMA_DECOUPLE_R_AW_W     ),
+    .OPCODE_OFF          ( redmule_tile_pkg::DMA_OPCODE_OFF          ),
+    .FUNC3_OFF           ( redmule_tile_pkg::DMA_FUNC3_OFF           ),
+    .ND_EN_OFF           ( redmule_tile_pkg::DMA_ND_EN_OFF           ),
+    .DST_MAX_LOG_LEN_OFF ( redmule_tile_pkg::DMA_DST_MAX_LOG_LEN_OFF ),
+    .SRC_MAX_LOG_LEN_OFF ( redmule_tile_pkg::DMA_SRC_MAX_LOG_LEN_OFF ),
+    .DST_REDUCE_LEN_OFF  ( redmule_tile_pkg::DMA_DST_REDUCE_LEN_OFF  ),
+    .SRC_REDUCE_LEN_OFF  ( redmule_tile_pkg::DMA_SRC_REDUCE_LEN_OFF  ),
+    .DECOUPLE_R_W_OFF    ( redmule_tile_pkg::DMA_DECOUPLE_R_W_OFF    ),
+    .DECOUPLE_R_AW_OFF   ( redmule_tile_pkg::DMA_DECOUPLE_R_AW_OFF   ),
+    .N_CFG_REG           ( redmule_tile_pkg::DMA_N_CFG_REG           ),
+    .idma_fe_req_t       ( idma_fe_reg_req_t                         ),
+    .idma_fe_rsp_t       ( idma_fe_reg_rsp_t                         )
+  ) i_idma_obi2axi_inst_decoder (
+    .clk_i                                               ,
+    .rst_ni                                              ,
+    .clear_i                                             ,
+
+    .xif_issue_if_i ( xif_obi2axi_issue_if.coproc_issue ),
+
+    .cfg_req_o      ( idma_fe_reg_obi2axi_req           ),
+    .cfg_rsp_i      ( idma_fe_reg_obi2axi_rsp           ),
+
+    .start_o        ( obi2axi_start_o                   ),
+    .busy_o         ( obi2axi_busy_o                    ),
+    .done_o         ( obi2axi_done_o                    ),
+    .error_o        ( obi2axi_error_o                   )
+  );
+
+/*******************************************************/
+/**        OBI2AXI Xif Instruction Decoder End        **/
 /*******************************************************/
 /**   AXI2OBI (L2 to L1) Transfer Channel Beginning   **/
 /*******************************************************/
@@ -163,10 +251,10 @@ module idma_ctrl
     .clear_i                              ,
     .cfg_req_i ( idma_fe_reg_axi2obi_req ),
     .cfg_rsp_o ( idma_fe_reg_axi2obi_rsp ),
-    .axi_req_o ( axi_read_req            ),
-    .axi_rsp_i ( axi_read_rsp            ),
-    .obi_req_o ( obi_write_req           ),
-    .obi_rsp_i ( obi_write_rsp           )
+    .axi_req_o ( axi_read_req_o          ),
+    .axi_rsp_i ( axi_read_rsp_i          ),
+    .obi_req_o ( obi_write_req_o         ),
+    .obi_rsp_i ( obi_write_rsp_i         )
   );
 
 /*******************************************************/
@@ -191,10 +279,10 @@ module idma_ctrl
     .clear_i                              ,
     .cfg_req_i ( idma_fe_reg_obi2axi_req ),
     .cfg_rsp_o ( idma_fe_reg_obi2axi_rsp ),
-    .axi_req_o ( axi_write_req           ),
-    .axi_rsp_i ( axi_write_rsp           ),
-    .obi_req_o ( obi_read_req            ),
-    .obi_rsp_i ( obi_read_rsp            )
+    .axi_req_o ( axi_write_req_o         ),
+    .axi_rsp_i ( axi_write_rsp_i         ),
+    .obi_req_o ( obi_read_req_o          ),
+    .obi_rsp_i ( obi_read_rsp_i          )
   );
 
 /*******************************************************/

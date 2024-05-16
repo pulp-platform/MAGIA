@@ -55,7 +55,11 @@ package redmule_tile_pkg;
   // Parameters used by the HCI
   parameter int unsigned N_HWPE                    = 1;                               // Number of HWPEs attached to the port
   parameter int unsigned N_CORE                    = 1;                               // Number of Core ports
-  parameter int unsigned N_DMA                     = 1;                               // Number of DMA ports
+  parameter int unsigned N_DMA                     = 2;                               // Number of DMA ports (1 for the read channel and 1 for the write channel)
+  typedef enum logic{
+    HCI_DMA_CH_READ_IDX  = 1'b0,
+    HCI_DMA_CH_WRITE_IDX = 1'b1
+  } hci_idma_ch_idx_e;                                                                // Index of the HCI DMA read and write channels
   parameter int unsigned N_EXT                     = 0;                               // Number of External ports - LEAVE TO 0 UNLESS YOU KNOW WHAT YOU ARE DOING
   parameter int unsigned AWC                       = ADDR_W;                          // Address width core   (slave ports)
   localparam int unsigned AWM                      = $clog2(N_WORDS_BANK);            // Address width memory (master ports)
@@ -171,30 +175,20 @@ package redmule_tile_pkg;
   parameter int unsigned DMA_DECOUPLE_R_W_OFF      = 24;                              // iDMA Decoder DECOUPLE_R_W field offset
   parameter int unsigned DMA_DECOUPLE_R_AW_OFF     = 25;                              // iDMA Decoder DECOUPLE_R_AW field offset
   parameter int unsigned DMA_DIRECTION_OFF         = 26;                              // iDMA Decoder DIRECTION field offset
-  parameter int unsigned DMA_N_CFG_REG             = 13;                              // iDMA Decoder number of configuration registers of the iDMA forntend: CONF, DST_ADDR_LOW, DST_ADDR_HIGH, SRC_ADDR_LOW, SRC_ADDR_HIGH, LENGTH_LOW, LENGTH_HIGH, DST_STRIDE_2_LOW, DST_STRIDE_2_HIGH, SRC_STRIDE_2_LOW, SRC_STRIDE_2_HIGH, REPS_2_LOW, REPS_2_HIGH
+  parameter int unsigned DMA_N_CFG_REG             = 7;                               // iDMA Decoder number of configuration registers of the iDMA forntend: CONF, DST_ADDR, SRC_ADDR, LENGTH, DST_STRIDE_2, SRC_STRIDE_2, REPS_2
   parameter int unsigned DMA_CONF_IDX              = 0;                               // iDMA Decoder CONF cofiguration register index 
-  parameter int unsigned DMA_CONF_DIRECTION_IDX    = 11;                              // iDMA Decoder DIRECTION bit index within CONF
-  parameter int unsigned DMA_DST_ADDR_LOW_IDX      = 1;                               // iDMA Decoder DST_ADDR_LOW cofiguration register index 
-  parameter int unsigned DMA_DST_ADDR_HIGH_IDX     = 2;                               // iDMA Decoder DST_ADDR_HIGH cofiguration register index 
-  parameter int unsigned DMA_SRC_ADDR_LOW_IDX      = 3;                               // iDMA Decoder SRC_ADDR_LOW cofiguration register index 
-  parameter int unsigned DMA_SRC_ADDR_HIGH_IDX     = 4;                               // iDMA Decoder SRC_ADDR_HIGH cofiguration register index 
-  parameter int unsigned DMA_LENGTH_LOW_IDX        = 5;                               // iDMA Decoder LENGTH_LOW cofiguration register index 
-  parameter int unsigned DMA_LENGTH_HIGH_IDX       = 6;                               // iDMA Decoder LENGTH_HIGH cofiguration register index 
-  parameter int unsigned DMA_DST_STRIDE_2_LOW_IDX  = 7;                               // iDMA Decoder DST_STRIDE_2_LOW cofiguration register index 
-  parameter int unsigned DMA_DST_STRIDE_2_HIGH_IDX = 8;                               // iDMA Decoder DST_STRIDE_2_HIGH cofiguration register index 
-  parameter int unsigned DMA_SRC_STRIDE_2_LOW_IDX  = 9;                               // iDMA Decoder SRC_STRIDE_2_LOW cofiguration register index 
-  parameter int unsigned DMA_SRC_STRIDE_2_HIGH_IDX = 10;                              // iDMA Decoder SRC_STRIDE_2_HIGH configuration register index
-  parameter int unsigned DMA_REPS_2_LOW_IDX        = 11;                              // iDMA Decoder REPS_2_LOW configuration register index
-  parameter int unsigned DMA_REPS_2_HIGH_IDX       = 12;                              // iDMA Decoder REPS_2_HIGH configuration register index
+  parameter int unsigned DMA_DST_ADDR_IDX          = 1;                               // iDMA Decoder DST_ADDR cofiguration register index 
+  parameter int unsigned DMA_SRC_ADDR_IDX          = 2;                               // iDMA Decoder SRC_ADDR cofiguration register index 
+  parameter int unsigned DMA_LENGTH_IDX            = 3;                               // iDMA Decoder LENGTH cofiguration register index 
+  parameter int unsigned DMA_REPS_2_IDX            = 4;                               // iDMA Decoder REPS_2 configuration register index
+  parameter int unsigned DMA_DST_STRIDE_2_IDX      = 5;                               // iDMA Decoder DST_STRIDE_2 cofiguration register index 
+  parameter int unsigned DMA_SRC_STRIDE_2_IDX      = 6;                               // iDMA Decoder SRC_STRIDE_2 cofiguration register index 
   parameter logic[DMA_OPCODE_W-1:0] CONF_OPCODE    = 7'b101_1011;                     // iDMA Decoder CONF instruction OPCODE
   parameter logic[ DMA_FUNC3_W-1:0] CONF_FUNC3     = 3'b000;                          // iDMA Decoder CONF instruction FUNC3
-  parameter logic[DMA_OPCODE_W-1:0] SET_OPCODE     = 7'b111_1011;                     // iDMA Decoder SET (DST_ADDR, SRC_ADDR, LENGTH, DST_STRIDE_2, SRC_STRIDE_2, REPS_2, START) instruction OPCODE
-  parameter logic[ DMA_FUNC3_W-1:0] SET_DA_FUNC3   = 3'b000;                          // iDMA Decoder DST_ADDR instruction FUNC3
-  parameter logic[ DMA_FUNC3_W-1:0] SET_SA_FUNC3   = 3'b001;                          // iDMA Decoder SRC_ADDR instruction FUNC3
-  parameter logic[ DMA_FUNC3_W-1:0] SET_L_FUNC3    = 3'b010;                          // iDMA Decoder LENGTH instruction FUNC3
-  parameter logic[ DMA_FUNC3_W-1:0] SET_DS_FUNC3   = 3'b011;                          // iDMA Decoder DST_STRIDE_2 instruction FUNC3
-  parameter logic[ DMA_FUNC3_W-1:0] SET_SS_FUNC3   = 3'b100;                          // iDMA Decoder SRC_STRIDE_2 instruction FUNC3
-  parameter logic[ DMA_FUNC3_W-1:0] SET_R_FUNC3    = 3'b101;                          // iDMA Decoder REPS_2 instruction FUNC3
+  parameter logic[DMA_OPCODE_W-1:0] SET_OPCODE     = 7'b111_1011;                     // iDMA Decoder SET (ADDR, LEN/REP_2, STR_2, START) instruction OPCODE
+  parameter logic[ DMA_FUNC3_W-1:0] SET_ADDR_FUNC3 = 3'b000;                          // iDMA Decoder ADDR instruction FUNC3
+  parameter logic[ DMA_FUNC3_W-1:0] SET_LR_FUNC3   = 3'b001;                          // iDMA Decoder LEN/REP_2 instruction FUNC3
+  parameter logic[ DMA_FUNC3_W-1:0] SET_STR_FUNC3  = 3'b010;                          // iDMA Decoder STR_2 instruction FUNC3
   parameter logic[ DMA_FUNC3_W-1:0] SET_S_FUNC3    = 3'b111;                          // iDMA Decoder START instruction FUNC3
 
   // Parameters of the AXI XBAR
