@@ -97,7 +97,7 @@ module idma_axi_obi_transfer_ch
 /**                Front-end Beginning                **/
 /*******************************************************/
 
-  idma_reg64_2d #(
+  idma_reg32_3d #(
     .NumRegs        ( redmule_tile_pkg::iDMA_NumRegs        ),
     .NumStreams     ( redmule_tile_pkg::iDMA_NumStreams     ),
     .IdCounterWidth ( redmule_tile_pkg::iDMA_IdCounterWidth ),

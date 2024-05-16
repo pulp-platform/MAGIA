@@ -242,7 +242,7 @@ always @(posedge clk) begin: print_monitor
   if ((data_out_req.w_valid) && stderr_ready) begin
     // NOTE: This is stupid! But unless we keep track of the outstanding AXI writes (which would require some logic) this should work,
     //       unless other modules (not related to the print function) transfer bytes (instead of words) to the L2
-    if (data_out_req.w.data < 256) begin
+    if (data_out_req.w.data < 256 && data_out_req.w.data > 0) begin
       errors       = data_out_req.w.data;
       stderr_ready = 1'b0;
     end
@@ -250,7 +250,7 @@ always @(posedge clk) begin: print_monitor
   if ((data_out_req.w_valid) && stdio_ready) begin
     // NOTE: This is stupid! But unless we keep track of the outstanding AXI writes (which would require some logic) this should work,
     //       unless other modules (not related to the print function) transfer bytes (instead of words) to the L2
-    if (data_out_req.w.data < 256) begin
+    if (data_out_req.w.data < 256 && data_out_req.w.data > 0) begin
       $write("%c", data_out_req.w.data);
       stdio_ready = 1'b0;
     end

@@ -191,15 +191,15 @@ module idma_xif_inst_decoder
 
   assign clk_dc_en = dec_clk_req | cfg_clk_req;
   
-  assign opcode          = xif_issue_if_i.issue_req.instr[         OPCODE_OFF +:         OPCODE_W];
-  assign func3           = xif_issue_if_i.issue_req.instr[          FUNC3_OFF +:          FUNC3_W];
-  assign nd_en           = xif_issue_if_i.issue_req.instr[          ND_EN_OFF +:          ND_EN_W];
-  assign dst_max_log_len = xif_issue_if_i.issue_req.instr[DST_MAX_LOG_LEN_OFF +:DST_MAX_LOG_LEN_W];
-  assign src_max_log_len = xif_issue_if_i.issue_req.instr[SRC_MAX_LOG_LEN_OFF +:SRC_MAX_LOG_LEN_W];
-  assign dst_reduce_len  = xif_issue_if_i.issue_req.instr[ DST_REDUCE_LEN_OFF +: DST_REDUCE_LEN_W];
-  assign src_reduce_len  = xif_issue_if_i.issue_req.instr[ SRC_REDUCE_LEN_OFF +: SRC_REDUCE_LEN_W];
-  assign decouple_r_w    = xif_issue_if_i.issue_req.instr[   DECOUPLE_R_W_OFF +:   DECOUPLE_R_W_W];
-  assign decouple_r_aw   = xif_issue_if_i.issue_req.instr[  DECOUPLE_R_AW_OFF +:  DECOUPLE_R_AW_W];
+  assign opcode          = xif_issue_if_i.issue_req.instr[         OPCODE_OFF+:         OPCODE_W];
+  assign func3           = xif_issue_if_i.issue_req.instr[          FUNC3_OFF+:          FUNC3_W];
+  assign nd_en           = xif_issue_if_i.issue_req.instr[          ND_EN_OFF+:          ND_EN_W];
+  assign dst_max_log_len = xif_issue_if_i.issue_req.instr[DST_MAX_LOG_LEN_OFF+:DST_MAX_LOG_LEN_W];
+  assign src_max_log_len = xif_issue_if_i.issue_req.instr[SRC_MAX_LOG_LEN_OFF+:SRC_MAX_LOG_LEN_W];
+  assign dst_reduce_len  = xif_issue_if_i.issue_req.instr[ DST_REDUCE_LEN_OFF+: DST_REDUCE_LEN_W];
+  assign src_reduce_len  = xif_issue_if_i.issue_req.instr[ SRC_REDUCE_LEN_OFF+: SRC_REDUCE_LEN_W];
+  assign decouple_r_w    = xif_issue_if_i.issue_req.instr[   DECOUPLE_R_W_OFF+:   DECOUPLE_R_W_W];
+  assign decouple_r_aw   = xif_issue_if_i.issue_req.instr[  DECOUPLE_R_AW_OFF+:  DECOUPLE_R_AW_W];
 
   assign free_cfg = ~(|cfg_reg_update_q);
   assign free_tfr = ~(start_dma | busy_dma);
@@ -264,23 +264,29 @@ module idma_xif_inst_decoder
           xif_issue_if_i.issue_resp.accept = 1'b1;
           dec_clk_req                      = 1'b1;
           case (func3)
-            SET_ADDR_FUNC3: if (xif_issue_if_i.issue_req.rs_valid) begin 
-              cfg_reg_d       [redmule_tile_pkg::DMA_DST_ADDR_IDX]     = xif_issue_if_i.issue_req.rs[0]; 
+            SET_AL_FUNC3: if (xif_issue_if_i.issue_req.rs_valid) begin 
+              cfg_reg_d       [redmule_tile_pkg::DMA_LENGTH_IDX]       = xif_issue_if_i.issue_req.rs[0]; 
               cfg_reg_d       [redmule_tile_pkg::DMA_SRC_ADDR_IDX]     = xif_issue_if_i.issue_req.rs[1];
-              cfg_reg_update_d[redmule_tile_pkg::DMA_DST_ADDR_IDX]     = 1'b1;
-              cfg_reg_update_d[redmule_tile_pkg::DMA_SRC_ADDR_IDX]     = 1'b1;
-            end
-            SET_LR_FUNC3: if (xif_issue_if_i.issue_req.rs_valid) begin 
-              cfg_reg_d       [redmule_tile_pkg::DMA_REPS_2_IDX]       = xif_issue_if_i.issue_req.rs[0]; 
-              cfg_reg_d       [redmule_tile_pkg::DMA_LENGTH_IDX]       = xif_issue_if_i.issue_req.rs[1];
-              cfg_reg_update_d[redmule_tile_pkg::DMA_REPS_2_IDX]       = 1'b1;
+              cfg_reg_d       [redmule_tile_pkg::DMA_DST_ADDR_IDX]     = xif_issue_if_i.issue_req.rs[2];
               cfg_reg_update_d[redmule_tile_pkg::DMA_LENGTH_IDX]       = 1'b1;
+              cfg_reg_update_d[redmule_tile_pkg::DMA_SRC_ADDR_IDX]     = 1'b1;
+              cfg_reg_update_d[redmule_tile_pkg::DMA_DST_ADDR_IDX]     = 1'b1;
             end
-            SET_STR_FUNC3:  if (xif_issue_if_i.issue_req.rs_valid) begin 
-              cfg_reg_d       [redmule_tile_pkg::DMA_DST_STRIDE_2_IDX] = xif_issue_if_i.issue_req.rs[0]; 
+            SET_SR2_FUNC3: if (xif_issue_if_i.issue_req.rs_valid) begin 
+              cfg_reg_d       [redmule_tile_pkg::DMA_REPS_2_IDX]       = xif_issue_if_i.issue_req.rs[0]; 
               cfg_reg_d       [redmule_tile_pkg::DMA_SRC_STRIDE_2_IDX] = xif_issue_if_i.issue_req.rs[1];
-              cfg_reg_update_d[redmule_tile_pkg::DMA_DST_STRIDE_2_IDX] = 1'b1;
+              cfg_reg_d       [redmule_tile_pkg::DMA_DST_STRIDE_2_IDX] = xif_issue_if_i.issue_req.rs[2];
+              cfg_reg_update_d[redmule_tile_pkg::DMA_REPS_2_IDX]       = 1'b1;
               cfg_reg_update_d[redmule_tile_pkg::DMA_SRC_STRIDE_2_IDX] = 1'b1;
+              cfg_reg_update_d[redmule_tile_pkg::DMA_DST_STRIDE_2_IDX] = 1'b1;
+            end
+            SET_SR3_FUNC3:  if (xif_issue_if_i.issue_req.rs_valid) begin 
+              cfg_reg_d       [redmule_tile_pkg::DMA_REPS_3_IDX]       = xif_issue_if_i.issue_req.rs[0]; 
+              cfg_reg_d       [redmule_tile_pkg::DMA_SRC_STRIDE_3_IDX] = xif_issue_if_i.issue_req.rs[1];
+              cfg_reg_d       [redmule_tile_pkg::DMA_DST_STRIDE_3_IDX] = xif_issue_if_i.issue_req.rs[2];
+              cfg_reg_update_d[redmule_tile_pkg::DMA_REPS_3_IDX]       = 1'b1;
+              cfg_reg_update_d[redmule_tile_pkg::DMA_SRC_STRIDE_3_IDX] = 1'b1;
+              cfg_reg_update_d[redmule_tile_pkg::DMA_DST_STRIDE_3_IDX] = 1'b1;
             end
             SET_S_FUNC3:  start_transfer = 1'b1;
           endcase
@@ -319,32 +325,44 @@ module idma_xif_inst_decoder
         cfg_clk_req = 1'b1;
         case (1'b1)
           cfg_reg_update_q[redmule_tile_pkg::DMA_CONF_IDX]: begin
-            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg64_2d_reg_pkg::IDMA_REG64_2D_CONF_OFFSET),              .data(cfg_reg_d[redmule_tile_pkg::DMA_CONF_IDX][CONF_W-1:0]),  .reg_error(reg_error_cfg));
+            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg32_3d_reg_pkg::IDMA_REG32_3D_CONF_OFFSET),              .data(cfg_reg_d[redmule_tile_pkg::DMA_CONF_IDX][CONF_W-1:0]),  .reg_error(reg_error_cfg));
             cfg_reg_update_clr[redmule_tile_pkg::DMA_CONF_IDX]         = reg_error_cfg ? 1'b0 : (rw_valid_cfg ? 1'b1 : 1'b0);
           end
           cfg_reg_update_q[redmule_tile_pkg::DMA_DST_ADDR_IDX]: begin
-            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg64_2d_reg_pkg::IDMA_REG64_2D_DST_ADDR_LOW_OFFSET),      .data(cfg_reg_d[redmule_tile_pkg::DMA_DST_ADDR_IDX]),          .reg_error(reg_error_cfg));
+            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg32_3d_reg_pkg::IDMA_REG32_3D_DST_ADDR_LOW_OFFSET),      .data(cfg_reg_d[redmule_tile_pkg::DMA_DST_ADDR_IDX]),          .reg_error(reg_error_cfg));
             cfg_reg_update_clr[redmule_tile_pkg::DMA_DST_ADDR_IDX]     = reg_error_cfg ? 1'b0 : (rw_valid_cfg ? 1'b1 : 1'b0);
           end
           cfg_reg_update_q[redmule_tile_pkg::DMA_SRC_ADDR_IDX]: begin
-            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg64_2d_reg_pkg::IDMA_REG64_2D_SRC_ADDR_LOW_OFFSET),      .data(cfg_reg_d[redmule_tile_pkg::DMA_SRC_ADDR_IDX]),          .reg_error(reg_error_cfg));
+            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg32_3d_reg_pkg::IDMA_REG32_3D_SRC_ADDR_LOW_OFFSET),      .data(cfg_reg_d[redmule_tile_pkg::DMA_SRC_ADDR_IDX]),          .reg_error(reg_error_cfg));
             cfg_reg_update_clr[redmule_tile_pkg::DMA_SRC_ADDR_IDX]     = reg_error_cfg ? 1'b0 : (rw_valid_cfg ? 1'b1 : 1'b0);
           end
           cfg_reg_update_q[redmule_tile_pkg::DMA_LENGTH_IDX]: begin
-            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg64_2d_reg_pkg::IDMA_REG64_2D_LENGTH_LOW_OFFSET),        .data(cfg_reg_d[redmule_tile_pkg::DMA_LENGTH_IDX]),            .reg_error(reg_error_cfg));
+            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg32_3d_reg_pkg::IDMA_REG32_3D_LENGTH_LOW_OFFSET),        .data(cfg_reg_d[redmule_tile_pkg::DMA_LENGTH_IDX]),            .reg_error(reg_error_cfg));
             cfg_reg_update_clr[redmule_tile_pkg::DMA_LENGTH_IDX]       = reg_error_cfg ? 1'b0 : (rw_valid_cfg ? 1'b1 : 1'b0);
           end
-          cfg_reg_update_q[redmule_tile_pkg::DMA_REPS_2_IDX]: begin
-            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg64_2d_reg_pkg::IDMA_REG64_2D_REPS_2_LOW_OFFSET),        .data(cfg_reg_d[redmule_tile_pkg::DMA_REPS_2_IDX]),            .reg_error(reg_error_cfg));
-            cfg_reg_update_clr[redmule_tile_pkg::DMA_REPS_2_IDX]       = reg_error_cfg ? 1'b0 : (rw_valid_cfg ? 1'b1 : 1'b0);
-          end
           cfg_reg_update_q[redmule_tile_pkg::DMA_DST_STRIDE_2_IDX]: begin
-            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg64_2d_reg_pkg::IDMA_REG64_2D_DST_STRIDE_2_LOW_OFFSET),  .data(cfg_reg_d[redmule_tile_pkg::DMA_DST_STRIDE_2_IDX]),      .reg_error(reg_error_cfg));
+            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg32_3d_reg_pkg::IDMA_REG32_3D_DST_STRIDE_2_LOW_OFFSET),  .data(cfg_reg_d[redmule_tile_pkg::DMA_DST_STRIDE_2_IDX]),      .reg_error(reg_error_cfg));
             cfg_reg_update_clr[redmule_tile_pkg::DMA_DST_STRIDE_2_IDX] = reg_error_cfg ? 1'b0 : (rw_valid_cfg ? 1'b1 : 1'b0);
           end
           cfg_reg_update_q[redmule_tile_pkg::DMA_SRC_STRIDE_2_IDX]: begin
-            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg64_2d_reg_pkg::IDMA_REG64_2D_SRC_STRIDE_2_LOW_OFFSET),  .data(cfg_reg_d[redmule_tile_pkg::DMA_SRC_STRIDE_2_IDX]),      .reg_error(reg_error_cfg));
+            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg32_3d_reg_pkg::IDMA_REG32_3D_SRC_STRIDE_2_LOW_OFFSET),  .data(cfg_reg_d[redmule_tile_pkg::DMA_SRC_STRIDE_2_IDX]),      .reg_error(reg_error_cfg));
             cfg_reg_update_clr[redmule_tile_pkg::DMA_SRC_STRIDE_2_IDX] = reg_error_cfg ? 1'b0 : (rw_valid_cfg ? 1'b1 : 1'b0);
+          end
+          cfg_reg_update_q[redmule_tile_pkg::DMA_REPS_2_IDX]: begin
+            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg32_3d_reg_pkg::IDMA_REG32_3D_REPS_2_LOW_OFFSET),        .data(cfg_reg_d[redmule_tile_pkg::DMA_REPS_2_IDX]),            .reg_error(reg_error_cfg));
+            cfg_reg_update_clr[redmule_tile_pkg::DMA_REPS_2_IDX]       = reg_error_cfg ? 1'b0 : (rw_valid_cfg ? 1'b1 : 1'b0);
+          end
+          cfg_reg_update_q[redmule_tile_pkg::DMA_DST_STRIDE_3_IDX]: begin
+            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg32_3d_reg_pkg::IDMA_REG32_3D_DST_STRIDE_3_LOW_OFFSET),  .data(cfg_reg_d[redmule_tile_pkg::DMA_DST_STRIDE_3_IDX]),      .reg_error(reg_error_cfg));
+            cfg_reg_update_clr[redmule_tile_pkg::DMA_DST_STRIDE_3_IDX] = reg_error_cfg ? 1'b0 : (rw_valid_cfg ? 1'b1 : 1'b0);
+          end
+          cfg_reg_update_q[redmule_tile_pkg::DMA_SRC_STRIDE_3_IDX]: begin
+            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg32_3d_reg_pkg::IDMA_REG32_3D_SRC_STRIDE_3_LOW_OFFSET),  .data(cfg_reg_d[redmule_tile_pkg::DMA_SRC_STRIDE_3_IDX]),      .reg_error(reg_error_cfg));
+            cfg_reg_update_clr[redmule_tile_pkg::DMA_SRC_STRIDE_3_IDX] = reg_error_cfg ? 1'b0 : (rw_valid_cfg ? 1'b1 : 1'b0);
+          end
+          cfg_reg_update_q[redmule_tile_pkg::DMA_REPS_3_IDX]: begin
+            rw_valid_cfg = write_idma_reg(.req(cfg_configurer_req), .rsp(cfg_configurer_rsp), .addr(idma_reg32_3d_reg_pkg::IDMA_REG32_3D_REPS_3_LOW_OFFSET),        .data(cfg_reg_d[redmule_tile_pkg::DMA_REPS_3_IDX]),            .reg_error(reg_error_cfg));
+            cfg_reg_update_clr[redmule_tile_pkg::DMA_REPS_3_IDX]       = reg_error_cfg ? 1'b0 : (rw_valid_cfg ? 1'b1 : 1'b0);
           end
         endcase
       end
@@ -388,13 +406,13 @@ module idma_xif_inst_decoder
       IDLE: if (start_transfer) n_idma_state = START; else clk_tfr_en = 1'b0;
       START: begin
         start_dma                 = 1'b1;
-        rw_valid_tfr              = read_idma_reg(.req(cfg_transferer_req), .rsp(cfg_transferer_rsp), .addr(idma_reg64_2d_reg_pkg::IDMA_REG64_2D_NEXT_ID_0_OFFSET), .data(next_id_d), .reg_error(reg_error_tfr));
+        rw_valid_tfr              = read_idma_reg(.req(cfg_transferer_req), .rsp(cfg_transferer_rsp), .addr(idma_reg32_3d_reg_pkg::IDMA_REG32_3D_NEXT_ID_0_OFFSET), .data(next_id_d), .reg_error(reg_error_tfr));
         transfer_not_set_properly = (rw_valid_tfr & (next_id_d == 0)) ? 1'b1 : 1'b0;
         n_idma_state              = (reg_error_tfr | transfer_not_set_properly) ? IDLE : (~rw_valid_tfr ? c_idma_state: BUSY);
       end
       BUSY: begin
         busy_dma                  = 1'b1;
-        rw_valid_tfr              = read_idma_reg(.req(cfg_transferer_req), .rsp(cfg_transferer_rsp), .addr(idma_reg64_2d_reg_pkg::IDMA_REG64_2D_DONE_ID_0_OFFSET), .data(done_id),   .reg_error(reg_error_tfr));
+        rw_valid_tfr              = read_idma_reg(.req(cfg_transferer_req), .rsp(cfg_transferer_rsp), .addr(idma_reg32_3d_reg_pkg::IDMA_REG32_3D_DONE_ID_0_OFFSET), .data(done_id),   .reg_error(reg_error_tfr));
         n_idma_state              = reg_error_tfr ? IDLE : (~rw_valid_tfr ? c_idma_state : (done_id != next_id_q ? c_idma_state : DONE));
       end
       DONE: begin

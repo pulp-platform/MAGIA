@@ -120,7 +120,7 @@ package redmule_tile_pkg;
   parameter int unsigned AXI_INSTR_U_W             = USR_W;                           // Width of the AXI Instruction User
 
   // Parameters used by the iDMA
-  localparam int unsigned iDMA_NumDims             = 2;                               // iDMA Number of dimensions
+  localparam int unsigned iDMA_NumDims             = 3;                               // iDMA Number of dimensions
   localparam int unsigned NumDim                   = iDMA_NumDims;                    // Needed by the iDMA typedef (wtf?)
   parameter int unsigned iDMA_DataWidth            = DATA_W;                          // iDMA Data Width
   parameter int unsigned iDMA_AddrWidth            = ADDR_W;                          // iDMA Address Width
@@ -157,7 +157,7 @@ package redmule_tile_pkg;
   parameter int unsigned DMA_N_RF_PORTS            = X_NUM_RS;                        // iDMA Decoder number of register file read ports
   parameter int unsigned DMA_OPCODE_W              = 7;                               // iDMA Decoder OPCODE field width
   parameter int unsigned DMA_FUNC3_W               = 3;                               // iDMA Decoder FUNC3 field width
-  parameter int unsigned DMA_ND_EN_W               = 1;                               // iDMA Decoder ND_EN field width
+  parameter int unsigned DMA_ND_EN_W               = 2;                               // iDMA Decoder ND_EN field width
   parameter int unsigned DMA_DST_MAX_LOG_LEN_W     = 3;                               // iDMA Decoder DST_MAX_LOG_LEN field width
   parameter int unsigned DMA_SRC_MAX_LOG_LEN_W     = 3;                               // iDMA Decoder SRC_MAX_LOG_LEN field width
   parameter int unsigned DMA_DST_REDUCE_LEN_W      = 1;                               // iDMA Decoder DST_REDUCE_LEN field width
@@ -167,28 +167,31 @@ package redmule_tile_pkg;
   parameter int unsigned DMA_DIRECTION_W           = 1;                               // iDMA Decoder DIRECTION field width
   parameter int unsigned DMA_OPCODE_OFF            = 0;                               // iDMA Decoder OPCODE field offset
   parameter int unsigned DMA_FUNC3_OFF             = 12;                              // iDMA Decoder FUNC3 field offset
-  parameter int unsigned DMA_ND_EN_OFF             = 15;                              // iDMA Decoder ND_EN field offset
-  parameter int unsigned DMA_DST_MAX_LOG_LEN_OFF   = 16;                              // iDMA Decoder DST_MAX_LOG_LEN field offset
+  parameter int unsigned DMA_ND_EN_OFF             = 26;                              // iDMA Decoder ND_EN field offset
+  parameter int unsigned DMA_DST_MAX_LOG_LEN_OFF   = 22;                              // iDMA Decoder DST_MAX_LOG_LEN field offset
   parameter int unsigned DMA_SRC_MAX_LOG_LEN_OFF   = 19;                              // iDMA Decoder SRC_MAX_LOG_LEN field offset
-  parameter int unsigned DMA_DST_REDUCE_LEN_OFF    = 22;                              // iDMA Decoder DST_REDUCE_LEN field offset
-  parameter int unsigned DMA_SRC_REDUCE_LEN_OFF    = 23;                              // iDMA Decoder SRC_REDUCE_LEN field offset
-  parameter int unsigned DMA_DECOUPLE_R_W_OFF      = 24;                              // iDMA Decoder DECOUPLE_R_W field offset
-  parameter int unsigned DMA_DECOUPLE_R_AW_OFF     = 25;                              // iDMA Decoder DECOUPLE_R_AW field offset
-  parameter int unsigned DMA_DIRECTION_OFF         = 26;                              // iDMA Decoder DIRECTION field offset
-  parameter int unsigned DMA_N_CFG_REG             = 7;                               // iDMA Decoder number of configuration registers of the iDMA forntend: CONF, DST_ADDR, SRC_ADDR, LENGTH, DST_STRIDE_2, SRC_STRIDE_2, REPS_2
+  parameter int unsigned DMA_DST_REDUCE_LEN_OFF    = 18;                              // iDMA Decoder DST_REDUCE_LEN field offset
+  parameter int unsigned DMA_SRC_REDUCE_LEN_OFF    = 17;                              // iDMA Decoder SRC_REDUCE_LEN field offset
+  parameter int unsigned DMA_DECOUPLE_R_W_OFF      = 16;                              // iDMA Decoder DECOUPLE_R_W field offset
+  parameter int unsigned DMA_DECOUPLE_R_AW_OFF     = 15;                              // iDMA Decoder DECOUPLE_R_AW field offset
+  parameter int unsigned DMA_DIRECTION_OFF         = 25;                              // iDMA Decoder DIRECTION field offset
+  parameter int unsigned DMA_N_CFG_REG             = 10;                              // iDMA Decoder number of configuration registers of the iDMA forntend: CONF, DST_ADDR, SRC_ADDR, LENGTH, DST_STRIDE_2, SRC_STRIDE_2, REPS_2, DST_STRIDE_3, SRC_STRIDE_3, REPS_3
   parameter int unsigned DMA_CONF_IDX              = 0;                               // iDMA Decoder CONF cofiguration register index 
   parameter int unsigned DMA_DST_ADDR_IDX          = 1;                               // iDMA Decoder DST_ADDR cofiguration register index 
   parameter int unsigned DMA_SRC_ADDR_IDX          = 2;                               // iDMA Decoder SRC_ADDR cofiguration register index 
   parameter int unsigned DMA_LENGTH_IDX            = 3;                               // iDMA Decoder LENGTH cofiguration register index 
-  parameter int unsigned DMA_REPS_2_IDX            = 4;                               // iDMA Decoder REPS_2 configuration register index
-  parameter int unsigned DMA_DST_STRIDE_2_IDX      = 5;                               // iDMA Decoder DST_STRIDE_2 cofiguration register index 
-  parameter int unsigned DMA_SRC_STRIDE_2_IDX      = 6;                               // iDMA Decoder SRC_STRIDE_2 cofiguration register index 
+  parameter int unsigned DMA_DST_STRIDE_2_IDX      = 4;                               // iDMA Decoder DST_STRIDE_2 cofiguration register index 
+  parameter int unsigned DMA_SRC_STRIDE_2_IDX      = 5;                               // iDMA Decoder SRC_STRIDE_2 cofiguration register index 
+  parameter int unsigned DMA_REPS_2_IDX            = 6;                               // iDMA Decoder REPS_2 configuration register index
+  parameter int unsigned DMA_DST_STRIDE_3_IDX      = 7;                               // iDMA Decoder DST_STRIDE_3 cofiguration register index 
+  parameter int unsigned DMA_SRC_STRIDE_3_IDX      = 8;                               // iDMA Decoder SRC_STRIDE_3 cofiguration register index 
+  parameter int unsigned DMA_REPS_3_IDX            = 9;                               // iDMA Decoder REPS_3 configuration register index
   parameter logic[DMA_OPCODE_W-1:0] CONF_OPCODE    = 7'b101_1011;                     // iDMA Decoder CONF instruction OPCODE
   parameter logic[ DMA_FUNC3_W-1:0] CONF_FUNC3     = 3'b000;                          // iDMA Decoder CONF instruction FUNC3
-  parameter logic[DMA_OPCODE_W-1:0] SET_OPCODE     = 7'b111_1011;                     // iDMA Decoder SET (ADDR, LEN/REP_2, STR_2, START) instruction OPCODE
-  parameter logic[ DMA_FUNC3_W-1:0] SET_ADDR_FUNC3 = 3'b000;                          // iDMA Decoder ADDR instruction FUNC3
-  parameter logic[ DMA_FUNC3_W-1:0] SET_LR_FUNC3   = 3'b001;                          // iDMA Decoder LEN/REP_2 instruction FUNC3
-  parameter logic[ DMA_FUNC3_W-1:0] SET_STR_FUNC3  = 3'b010;                          // iDMA Decoder STR_2 instruction FUNC3
+  parameter logic[DMA_OPCODE_W-1:0] SET_OPCODE     = 7'b111_1011;                     // iDMA Decoder SET (ADDR/LEN, STD_2/REP_2, STD_3/REP_3, START) instruction OPCODE
+  parameter logic[ DMA_FUNC3_W-1:0] SET_AL_FUNC3   = 3'b000;                          // iDMA Decoder ADDR/LEN instruction FUNC3
+  parameter logic[ DMA_FUNC3_W-1:0] SET_SR2_FUNC3  = 3'b001;                          // iDMA Decoder STD_2/REP_2 instruction FUNC3
+  parameter logic[ DMA_FUNC3_W-1:0] SET_SR3_FUNC3  = 3'b010;                          // iDMA Decoder STD_3/REP_3 instruction FUNC3
   parameter logic[ DMA_FUNC3_W-1:0] SET_S_FUNC3    = 3'b111;                          // iDMA Decoder START instruction FUNC3
 
   // Parameters of the AXI XBAR
