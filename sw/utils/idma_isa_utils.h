@@ -1,5 +1,5 @@
-#ifndef IDMA_UTILS_H
-#define IDMA_UTILS_H
+#ifndef IDMA_ISA_UTILS_H
+#define IDMA_ISA_UTILS_H
 
 /* conf instruction */
   // asm volatile(
@@ -15,7 +15,7 @@
   //             (0b000     << 12) | \     /* FUNC3 */
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1011011 <<  0)   \n"); /* OPCODE */
-inline void conf_idma_in(){
+inline void idma_conf_in(){
   asm volatile(
        ".word (0x0       << 27) | \
               (0b11      << 26) | \
@@ -45,7 +45,7 @@ inline void conf_idma_in(){
   //             (0b000     << 12) | \     /* FUNC3 */
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1011011 <<  0)   \n"); /* OPCODE */
-inline void conf_idma_out(){
+inline void idma_conf_out(){
   asm volatile(
        ".word (0x0       << 27) | \
               (0b11      << 26) | \
@@ -71,7 +71,7 @@ inline void conf_idma_out(){
   //             (0b000     << 12) | \     /* FUNC3 - ADDR/LEN */
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1111011 <<  0)   \n"); /* OPCODE */
-inline void set_idma_addr_len_in(){
+inline void idma_set_addr_len_in(){
   asm volatile(
        ".word (0b00111   << 27) | \
               (0x0       << 26) | \
@@ -93,7 +93,7 @@ inline void set_idma_addr_len_in(){
   //             (0b000     << 12) | \     /* FUNC3 - ADDR/LEN */
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1111011 <<  0)   \n"); /* OPCODE */
-inline void set_idma_addr_len_out(){
+inline void idma_set_addr_len_out(){
   asm volatile(
        ".word (0b00111   << 27) | \
               (0x0       << 26) | \
@@ -115,7 +115,7 @@ inline void set_idma_addr_len_out(){
   //             (0b001     << 12) | \     /* FUNC3 - STD_2/REP_2 */
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1111011 <<  0)   \n"); /* OPCODE */
-inline void set_idma_std2_rep2_in(){
+inline void idma_set_std2_rep2_in(){
   asm volatile(
        ".word (0b00111   << 27) | \
               (0x0       << 26) | \
@@ -137,7 +137,7 @@ inline void set_idma_std2_rep2_in(){
   //             (0b001     << 12) | \     /* FUNC3 - STD_2/REP_2 */
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1111011 <<  0)   \n"); /* OPCODE */
-inline void set_idma_std2_rep2_out(){
+inline void idma_set_std2_rep2_out(){
   asm volatile(
        ".word (0b00111   << 27) | \
               (0x0       << 26) | \
@@ -159,7 +159,7 @@ inline void set_idma_std2_rep2_out(){
   //             (0b010     << 12) | \     /* FUNC3 - STD_3/REP_3 */
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1111011 <<  0)   \n"); /* OPCODE */
-inline void set_idma_std3_rep3_in(){
+inline void idma_set_std3_rep3_in(){
   asm volatile(
        ".word (0b00111   << 27) | \
               (0x0       << 26) | \
@@ -181,7 +181,7 @@ inline void set_idma_std3_rep3_in(){
   //             (0b010     << 12) | \     /* FUNC3 - STD_3/REP_3 */
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1111011 <<  0)   \n"); /* OPCODE */
-inline void set_idma_std3_rep3_out(){
+inline void idma_set_std3_rep3_out(){
   asm volatile(
        ".word (0b00111   << 27) | \
               (0x0       << 26) | \
@@ -201,7 +201,7 @@ inline void set_idma_std3_rep3_out(){
   //             (0b111     << 12) | \     /* FUNC3 - START */
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1111011 <<  0)   \n"); /* OPCODE */
-inline void start_idma_in(){
+inline void idma_start_in(){
   asm volatile(
        ".word (0x0       << 26) | \
               (0b0       << 25) | \
@@ -219,7 +219,7 @@ inline void start_idma_in(){
   //             (0b111     << 12) | \     /* FUNC3 - START */
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1111011 <<  0)   \n"); /* OPCODE */
-inline void start_idma_out(){
+inline void idma_start_out(){
   asm volatile(
        ".word (0x0       << 26) | \
               (0b1       << 25) | \
@@ -229,4 +229,4 @@ inline void start_idma_out(){
               (0b1111011 <<  0)   \n");
 }
 
-#endif /*IDMA_UTILS_H*/
+#endif /*IDMA_ISA_UTILS_H*/

@@ -1,5 +1,5 @@
 #include "redmule_tile_utils.h"
-#include "idma_utils.h"
+#include "idma_isa_utils.h"
 
 #include "x_input.h"
 
@@ -46,7 +46,7 @@ int main(void) {
   irq_en(index);
 #endif
 
-  conf_idma_in();
+  idma_conf_in();
 
   dst_addr = (uint32_t)X_BASE;
   src_addr = (uint32_t)Z_BASE;
@@ -59,7 +59,7 @@ int main(void) {
   asm volatile ("addi t2, %0, 0" :: "r"(dst_addr));
   asm volatile ("addi t1, %0, 0" :: "r"(src_addr));
   asm volatile ("addi t0, %0, 0" :: "r"(len));
-  set_idma_addr_len_in();
+  idma_set_addr_len_in();
 
   dst_std_2 = 0;
   src_std_2 = 0;
@@ -72,7 +72,7 @@ int main(void) {
   asm volatile ("addi t2, %0, 0" :: "r"(dst_std_2));
   asm volatile ("addi t1, %0, 0" :: "r"(src_std_2));
   asm volatile ("addi t0, %0, 0" :: "r"(reps_2));
-  set_idma_std2_rep2_in();
+  idma_set_std2_rep2_in();
 
   dst_std_3 = 0;
   src_std_3 = 0;
@@ -85,9 +85,9 @@ int main(void) {
   asm volatile ("addi t2, %0, 0" :: "r"(dst_std_3));
   asm volatile ("addi t1, %0, 0" :: "r"(src_std_3));
   asm volatile ("addi t0, %0, 0" :: "r"(reps_3));
-  set_idma_std3_rep3_in();
+  idma_set_std3_rep3_in();
 
-  start_idma_in();
+  idma_start_in();
   printf("iDMA moving data from L2 to L1...\n");
 #ifdef IRQ_EN
   asm volatile("wfi" ::: "memory");
@@ -96,7 +96,7 @@ int main(void) {
   wait_print(WAIT_CYCLES);
 #endif
 
-  conf_idma_out();
+  idma_conf_out();
 
   dst_addr = (uint32_t)W_BASE;
   src_addr = (uint32_t)X_BASE;
@@ -109,7 +109,7 @@ int main(void) {
   asm volatile ("addi t2, %0, 0" :: "r"(dst_addr));
   asm volatile ("addi t1, %0, 0" :: "r"(src_addr));
   asm volatile ("addi t0, %0, 0" :: "r"(len));
-  set_idma_addr_len_out();
+  idma_set_addr_len_out();
 
   dst_std_2 = 0;
   src_std_2 = 0;
@@ -122,7 +122,7 @@ int main(void) {
   asm volatile ("addi t2, %0, 0" :: "r"(dst_std_2));
   asm volatile ("addi t1, %0, 0" :: "r"(src_std_2));
   asm volatile ("addi t0, %0, 0" :: "r"(reps_2));
-  set_idma_std2_rep2_out();
+  idma_set_std2_rep2_out();
 
   dst_std_3 = 0;
   src_std_3 = 0;
@@ -135,10 +135,10 @@ int main(void) {
   asm volatile ("addi t2, %0, 0" :: "r"(dst_std_3));
   asm volatile ("addi t1, %0, 0" :: "r"(src_std_3));
   asm volatile ("addi t0, %0, 0" :: "r"(reps_3));
-  set_idma_std3_rep3_out();
+  idma_set_std3_rep3_out();
 
 #ifdef CONCURRENT
-  conf_idma_in();
+  idma_conf_in();
 
   dst_addr = (uint32_t)Y_BASE;
   src_addr = (uint32_t)Z_BASE;
@@ -151,7 +151,7 @@ int main(void) {
   asm volatile ("addi t2, %0, 0" :: "r"(dst_addr));
   asm volatile ("addi t1, %0, 0" :: "r"(src_addr));
   asm volatile ("addi t0, %0, 0" :: "r"(len));
-  set_idma_addr_len_in();
+  idma_set_addr_len_in();
 
   dst_std_2 = 0;
   src_std_2 = 0;
@@ -164,7 +164,7 @@ int main(void) {
   asm volatile ("addi t2, %0, 0" :: "r"(dst_std_2));
   asm volatile ("addi t1, %0, 0" :: "r"(src_std_2));
   asm volatile ("addi t0, %0, 0" :: "r"(reps_2));
-  set_idma_std2_rep2_in();
+  idma_set_std2_rep2_in();
 
   dst_std_3 = 0;
   src_std_3 = 0;
@@ -177,11 +177,11 @@ int main(void) {
   asm volatile ("addi t2, %0, 0" :: "r"(dst_std_3));
   asm volatile ("addi t1, %0, 0" :: "r"(src_std_3));
   asm volatile ("addi t0, %0, 0" :: "r"(reps_3));
-  set_idma_std3_rep3_in();
+  idma_set_std3_rep3_in();
 
-  start_idma_out();
+  idma_start_out();
 
-  start_idma_in();
+  idma_start_in();
 
   printf("iDMA moving concurrently data from L1 to L2 and from L2 to L1...\n");
 #ifdef IRQ_EN
@@ -191,7 +191,7 @@ int main(void) {
   wait_print(2*WAIT_CYCLES);
 #endif
 #else
-  start_idma_out();
+  idma_start_out();
 
   printf("iDMA moving data from L1 to L2...\n");
 #ifdef IRQ_EN
