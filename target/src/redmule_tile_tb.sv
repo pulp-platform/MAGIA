@@ -21,10 +21,10 @@
 
 module redmule_tile_tb;
 
-  string     inst_hex;
-  string     data_hex;
-  bit [31:0] boot_addr;
-  bit [31:0] exit_code;
+  string    inst_hex;
+  string    data_hex;
+  bit[31:0] boot_addr;
+  bit[31:0] exit_code;
 
   redmule_tile_fixture fixture();
 

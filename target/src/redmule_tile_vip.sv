@@ -21,6 +21,7 @@
 
 module redmule_tile_vip
   import redmule_tile_pkg::*;
+  import redmule_mesh_pkg::*;
   import redmule_tile_tb_pkg::*;
 #(
   // Timing
@@ -29,47 +30,47 @@ module redmule_tile_vip
   parameter real         T_APPL     = 0.1,
   parameter real         T_TEST     = 0.9
 )(
-  output logic                                     clk,
-  output logic                                     rst_n,
-  output logic                                     test_mode,
-  output logic                                     tile_enable,
+  output logic                                    clk,
+  output logic                                    rst_n,
+  output logic                                    test_mode,
+  output logic                                    tile_enable,
 
-  input  redmule_tile_pkg::core_axi_data_req_t     core_data_req,
-  output redmule_tile_pkg::core_axi_data_rsp_t     core_data_rsp,
+  input  redmule_mesh_pkg::axi_default_req_t      data_out_req,
+  output redmule_mesh_pkg::axi_default_rsp_t      data_out_rsp,
 
-  input  redmule_tile_pkg::core_axi_instr_req_t    core_instr_req,
-  output redmule_tile_pkg::core_axi_instr_rsp_t    core_instr_rsp,
+  input  redmule_tile_pkg::core_axi_instr_req_t   core_instr_req,
+  output redmule_tile_pkg::core_axi_instr_rsp_t   core_instr_rsp,
 
-  output logic                                     scan_cg_en,
+  output logic                                    scan_cg_en,
 
-  output logic [31:0]                              boot_addr, //TODO: manage signal
-  output logic [31:0]                              mtvec_addr,
-  output logic [31:0]                              dm_halt_addr,
-  output logic [31:0]                              dm_exception_addr,
-  output logic [31:0]                              mhartid,
-  output logic [ 3:0]                              mimpid_patch,
+  output logic[31:0]                              boot_addr, //TODO: manage signal
+  output logic[31:0]                              mtvec_addr,
+  output logic[31:0]                              dm_halt_addr,
+  output logic[31:0]                              dm_exception_addr,
+  output logic[31:0]                              mhartid,
+  output logic[ 3:0]                              mimpid_patch,
 
-  input  logic [63:0]                              mcycle,
-  output logic [63:0]                              time_var,
+  input  logic[63:0]                              mcycle,
+  output logic[63:0]                              time_var,
 
-  output logic [redmule_tile_pkg::N_IRQ-1:0]       irq, //TODO: manage signal
+  output logic[redmule_tile_pkg::N_IRQ-1:0]       irq, //TODO: manage signal
 
-  input  logic                                     fencei_flush_req,
-  output logic                                     fencei_flush_ack,
+  input  logic                                    fencei_flush_req,
+  output logic                                    fencei_flush_ack,
 
-  output logic                                     debug_req,
-  input  logic                                     debug_havereset,
-  input  logic                                     debug_running,
-  input  logic                                     debug_halted,
-  input  logic                                     debug_pc_valid,
-  input  logic [31:0]                              debug_pc,
+  output logic                                    debug_req,
+  input  logic                                    debug_havereset,
+  input  logic                                    debug_running,
+  input  logic                                    debug_halted,
+  input  logic                                    debug_pc_valid,
+  input  logic[31:0]                              debug_pc,
 
-  output logic                                     fetch_enable,  //TODO: manage signal
-  input  logic                                     core_sleep,
-  output logic                                     wu_wfe,
+  output logic                                    fetch_enable,  //TODO: manage signal
+  input  logic                                    core_sleep,
+  output logic                                    wu_wfe,
 
-  input  logic                                     busy,
-  input  logic [redmule_tile_pkg::N_CORE-1:0][1:0] evt
+  input  logic                                    busy,
+  input  logic[redmule_tile_pkg::N_CORE-1:0][1:0] evt
 );
 
 /*******************************************************/
@@ -195,35 +196,35 @@ module redmule_tile_vip
 /*******************************************************/
 
   axi_sim_mem #(
-    .AddrWidth          ( redmule_tile_pkg::ADDR_W              ),
-    .DataWidth          ( redmule_tile_pkg::DATA_W              ),
-    .IdWidth            ( 1                                     ),
-    .UserWidth          ( 1                                     ),
-    .axi_req_t          ( redmule_tile_pkg::core_axi_data_req_t ),
-    .axi_rsp_t          ( redmule_tile_pkg::core_axi_data_rsp_t ),
-    .WarnUninitialized  ( 1                                     ),
-    .ClearErrOnAccess   ( 1                                     ),
-    .ApplDelay          ( CLK_PERIOD * T_APPL                   ),
-    .AcqDelay           ( CLK_PERIOD * T_TEST                   )
+    .AddrWidth          ( redmule_tile_pkg::ADDR_W            ),
+    .DataWidth          ( redmule_tile_pkg::DATA_W            ),
+    .IdWidth            ( redmule_tile_pkg::AXI_DATA_ID_W + 1 ),  // AXI_MUX adds 1 bit to the id
+    .UserWidth          ( redmule_tile_pkg::AXI_DATA_U_W      ),
+    .axi_req_t          ( redmule_mesh_pkg::axi_default_req_t ),
+    .axi_rsp_t          ( redmule_mesh_pkg::axi_default_rsp_t ),
+    .WarnUninitialized  ( 1                                   ),
+    .ClearErrOnAccess   ( 1                                   ),
+    .ApplDelay          ( CLK_PERIOD * T_APPL                 ),
+    .AcqDelay           ( CLK_PERIOD * T_TEST                 )
   ) i_l2_mem (
-    .clk_i              ( clk           ),
-    .rst_ni             ( rst_n         ),
-    .axi_req_i          ( core_data_req ),
-    .axi_rsp_o          ( core_data_rsp ),
-    .mon_w_valid_o      (               ),
-    .mon_w_addr_o       (               ),
-    .mon_w_data_o       (               ),
-    .mon_w_id_o         (               ),
-    .mon_w_user_o       (               ),
-    .mon_w_beat_count_o (               ),
-    .mon_w_last_o       (               ),
-    .mon_r_valid_o      (               ),
-    .mon_r_addr_o       (               ),
-    .mon_r_data_o       (               ),
-    .mon_r_id_o         (               ),
-    .mon_r_user_o       (               ),
-    .mon_r_beat_count_o (               ),
-    .mon_r_last_o       (               )
+    .clk_i              ( clk          ),
+    .rst_ni             ( rst_n        ),
+    .axi_req_i          ( data_out_req ),
+    .axi_rsp_o          ( data_out_rsp ),
+    .mon_w_valid_o      (              ),
+    .mon_w_addr_o       (              ),
+    .mon_w_data_o       (              ),
+    .mon_w_id_o         (              ),
+    .mon_w_user_o       (              ),
+    .mon_w_beat_count_o (              ),
+    .mon_w_last_o       (              ),
+    .mon_r_valid_o      (              ),
+    .mon_r_addr_o       (              ),
+    .mon_r_data_o       (              ),
+    .mon_r_id_o         (              ),
+    .mon_r_user_o       (              ),
+    .mon_r_beat_count_o (              ),
+    .mon_r_last_o       (              )
   );
 
 /*******************************************************/
@@ -233,15 +234,26 @@ module redmule_tile_vip
 /*******************************************************/
 
 int errors = -1;
-always_ff @(posedge clk)
-begin
-  if((core_data_req.aw.addr == 32'h2FFF0000) &&
-     (core_data_req.aw_valid & core_data_req.w_valid)) begin
-    errors = core_data_req.w.data;
+bit stdio_ready  = 0;
+bit stderr_ready = 0;
+always @(posedge clk) begin: print_monitor
+  if ((data_out_req.aw.addr == 32'h2FFF0000) && (data_out_req.aw_valid)) stderr_ready = 1'b1;
+  if ((data_out_req.aw.addr == 32'h2FFF0004) && (data_out_req.aw_valid)) stdio_ready  = 1'b1;
+  if ((data_out_req.w_valid) && stderr_ready) begin
+    // NOTE: This is stupid! But unless we keep track of the outstanding AXI writes (which would require some logic) this should work,
+    //       unless other modules (not related to the print function) transfer bytes (instead of words) to the L2
+    if (data_out_req.w.data < 256 && data_out_req.w.data > 0) begin
+      errors       = data_out_req.w.data;
+      stderr_ready = 1'b0;
+    end
   end
-  if((core_data_req.aw.addr == 32'h2FFF0004) &&
-     (core_data_req.aw_valid & core_data_req.w_valid)) begin
-    $write("%c", core_data_req.w.data);
+  if ((data_out_req.w_valid) && stdio_ready) begin
+    // NOTE: This is stupid! But unless we keep track of the outstanding AXI writes (which would require some logic) this should work,
+    //       unless other modules (not related to the print function) transfer bytes (instead of words) to the L2
+    if (data_out_req.w.data < 256 && data_out_req.w.data > 0) begin
+      $write("%c", data_out_req.w.data);
+      stdio_ready = 1'b0;
+    end
   end
 end
 

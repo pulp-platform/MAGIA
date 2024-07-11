@@ -20,35 +20,35 @@
  */
 
 module obi_demux_addr #(
-  parameter obi_pkg::obi_cfg_t SbrPortObiCfg      = obi_pkg::ObiDefaultConfig , // The OBI configuration for the subordinate ports (input ports)
-  parameter obi_pkg::obi_cfg_t MgrPortObiCfg      = SbrPortObiCfg             , // The OBI configuration for the manager ports (ouput ports)
+  parameter obi_pkg::obi_cfg_t SbrPortObiCfg      = obi_pkg::ObiDefaultConfig,  // The OBI configuration for the subordinate ports (input ports)
+  parameter obi_pkg::obi_cfg_t MgrPortObiCfg      = SbrPortObiCfg,              // The OBI configuration for the manager ports (ouput ports)
   
-  parameter type               sbr_port_obi_req_t = logic                     , // The request struct for the subordinate ports (input ports)
-  parameter type               sbr_port_obi_rsp_t = logic                     , // The response struct for the subordinate ports (input ports)
-  parameter type               mgr_port_obi_req_t = sbr_port_obi_req_t        , // The request struct for the manager ports (output ports)
-  parameter type               mgr_port_obi_rsp_t = sbr_port_obi_rsp_t        , // The response struct for the manager ports (output ports)
+  parameter type               sbr_port_obi_req_t = logic,                      // The request struct for the subordinate ports (input ports)
+  parameter type               sbr_port_obi_rsp_t = logic,                      // The response struct for the subordinate ports (input ports)
+  parameter type               mgr_port_obi_req_t = sbr_port_obi_req_t,         // The request struct for the manager ports (output ports)
+  parameter type               mgr_port_obi_rsp_t = sbr_port_obi_rsp_t,         // The response struct for the manager ports (output ports)
  
-  parameter int unsigned       NumMgrPorts        = 32'd0                     , // The number of manager ports (output ports)
-  parameter int unsigned       NumMaxTrans        = 32'd0                     , // The maximum number of outstanding transactions
+  parameter int unsigned       NumMgrPorts        = 32'd0,                      // The number of manager ports (output ports)
+  parameter int unsigned       NumMaxTrans        = 32'd0,                      // The maximum number of outstanding transactions
   
-  parameter int unsigned       NumAddrRules       = 32'd0                     , // The number of address rules
+  parameter int unsigned       NumAddrRules       = 32'd0,                      // The number of address rules
   parameter type               addr_map_rule_t    = logic                       // The address map rule type
 )(
-  input  logic                                clk_i,
-  input  logic                                rst_ni,
+  input  logic                               clk_i,
+  input  logic                               rst_ni,
 
-  input  sbr_port_obi_req_t                   sbr_ports_req_i,
-  output sbr_port_obi_rsp_t                   sbr_ports_rsp_o,
+  input  sbr_port_obi_req_t                  sbr_ports_req_i,
+  output sbr_port_obi_rsp_t                  sbr_ports_rsp_o,
 
-  output mgr_port_obi_req_t [NumMgrPorts-1:0] mgr_ports_req_o,
-  input  mgr_port_obi_rsp_t [NumMgrPorts-1:0] mgr_ports_rsp_i,
+  output mgr_port_obi_req_t[NumMgrPorts-1:0] mgr_ports_req_o,
+  input  mgr_port_obi_rsp_t[NumMgrPorts-1:0] mgr_ports_rsp_i,
 
-  input  addr_map_rule_t [NumAddrRules-1:0]   addr_map_i,
-  input  logic                                en_default_idx_i,
-  input  logic [$clog2(NumMgrPorts)-1:0]      default_idx_i
+  input  addr_map_rule_t[NumAddrRules-1:0]   addr_map_i,
+  input  logic                               en_default_idx_i,
+  input  logic[$clog2(NumMgrPorts)-1:0]      default_idx_i
 );
 
-  logic [$clog2(NumMgrPorts)-1:0] sbr_port_select;
+  logic[$clog2(NumMgrPorts)-1:0] sbr_port_select;
   
   addr_decode #(
     .NoIndices ( NumMgrPorts                        ),

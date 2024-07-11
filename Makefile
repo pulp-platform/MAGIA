@@ -22,7 +22,7 @@
 mkfile_path    := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
 SW             ?= $(mkfile_path)/sw
 BUILD_DIR      ?= $(mkfile_path)/work
-QUESTA         ?= questa-2020.1
+QUESTA         ?= questa-2023.4
 BENDER_DIR     ?= .
 BENDER         ?= bender
 ISA            ?= riscv
@@ -41,7 +41,7 @@ TEST_SRCS  = $(TEST_DIR)/$(test).c
 
 compile_script       ?= scripts/compile.tcl
 compile_script_synth ?= scripts/synth_compile.tcl
-compile_flag         ?= -suppress 2583 -suppress 13314
+compile_flag         ?= -suppress 2583 -suppress 13314 -suppress 3009
 
 questa_compile_flag  += -t 1ns -suppress 3009
 questa_opt_flag      += -suppress 3009 -debugdb
@@ -121,6 +121,10 @@ $(BUILD_DIR):
 
 SHELL := /bin/bash
 
+# Parameters used by the iDMA hardware build
+IDMA_ROOT    ?= $(shell $(BENDER) path idma)
+IDMA_ADD_IDS ?= rw_axi_rw_obi
+
 # Generate instructions and data stimuli
 all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb
 
@@ -164,6 +168,8 @@ bender_defs += -D COREV_ASSERT_OFF
 bender_targs += -t rtl
 bender_targs += -t test
 bender_targs += -t cv32e40p_exclude_tracer
+# Target needed to avoid error even though the module is not used
+bender_targs += -t snitch_cluster
 
 #ifeq ($(REDMULE_COMPLEX),1)
 #	tb := redmule_complex_tb
@@ -193,7 +199,7 @@ synth-ips:
 	$(BENDER) update
 	$(BENDER) script synopsys      \
 	$(common_targs) $(common_defs) \
-	$(synth_targs) $(synth_defs)   \
+	$(synth_targs)  $(synth_defs)  \
 	> ${compile_script_synth}
 
 build-hw: hw-all
@@ -244,6 +250,7 @@ hw-opt:
 	$(QUESTA) vopt $(questa_opt_flag) +acc=npr -o vopt_tb $(tb) -floatparameters+$(tb) -work $(BUILD_DIR)
 
 hw-compile:
+	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_ADD_IDS=$(IDMA_ADD_IDS)
 	$(QUESTA) vsim $(questa_compile_flag) -c +incdir+$(UVM_HOME) -do 'quit -code [source $(compile_script)]'
 
 hw-lib:
