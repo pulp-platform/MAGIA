@@ -67,7 +67,7 @@ module redmule_tile
   output logic[63:0]                              mcycle_o,
   input  logic[63:0]                              time_i,
 
-  input  logic[redmule_tile_pkg::N_IRQ-1:0]       irq_i, //TODO: Add IRQ support: look also at redmule_complex
+  input  logic[redmule_tile_pkg::N_IRQ-1:0]       irq_i,
   
   output logic                                    fencei_flush_req_o,
   input  logic                                    fencei_flush_ack_i,
@@ -81,11 +81,7 @@ module redmule_tile
 
   input  logic                                    fetch_enable_i,
   output logic                                    core_sleep_o,
-  input  logic                                    wu_wfe_i,
-
-  // Signals used by RedMulE
-  output logic                                    busy_o,  //TODO: Manage backpressure
-  output logic[redmule_tile_pkg::N_CORE-1:0][1:0] evt_o    //TODO: Manage RedMulE event to Core IRQ mapping
+  input  logic                                    wu_wfe_i
 );
 
 /*******************************************************/
@@ -164,19 +160,23 @@ module redmule_tile
   logic[obi_pkg::ObiDefaultConfig.OptionalCfg.RUserWidth-1:0] obi_rsp_instr_user;
 
   logic idma_clear;         //TODO: figure out who should clear the iDMA
-  logic idma_axi2obi_start; //TODO: figure out how to manage these signals as irq
-  logic idma_axi2obi_busy;  //TODO: figure out how to manage these signals as irq
-  logic idma_axi2obi_done;  //TODO: figure out how to manage these signals as irq
-  logic idma_axi2obi_error; //TODO: figure out how to manage these signals as irq
-  logic idma_obi2axi_start; //TODO: figure out how to manage these signals as irq
-  logic idma_obi2axi_busy;  //TODO: figure out how to manage these signals as irq
-  logic idma_obi2axi_done;  //TODO: figure out how to manage these signals as irq
-  logic idma_obi2axi_error; //TODO: figure out how to manage these signals as irq
+  logic idma_axi2obi_start;
+  logic idma_axi2obi_busy;
+  logic idma_axi2obi_done;
+  logic idma_axi2obi_error;
+  logic idma_obi2axi_start;
+  logic idma_obi2axi_busy;
+  logic idma_obi2axi_done;
+  logic idma_obi2axi_error;
 
   redmule_tile_pkg::xif_inst_rule_t[redmule_tile_pkg::N_COPROC-1:0] xif_coproc_rules;
   
   logic sys_clk;
   logic sys_clk_en;
+
+  logic[redmule_tile_pkg::N_IRQ-1:0]       irq;
+  logic                                    redmule_busy;
+  logic[redmule_tile_pkg::N_CORE-1:0][1:0] redmule_evt;
 
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
@@ -216,6 +216,25 @@ module redmule_tile
 
   assign xif_coproc_rules[redmule_tile_pkg::XIF_REDMULE_IDX] = '{opcode_list: {{redmule_pkg::MCNFIG}, {redmule_pkg::MARITH}}};
   assign xif_coproc_rules[redmule_tile_pkg::XIF_IDMA_IDX]    = '{opcode_list: {{redmule_tile_pkg::CONF_OPCODE}, {redmule_tile_pkg::SET_OPCODE}}};
+
+  assign irq[IRQ_IDX_REDMULE_BUSY] = redmule_busy;
+  assign irq[IRQ_IDX_REDMULE_EVT]  = redmule_evt[0];  // Only 1 core supported
+  assign irq[IRQ_IDX_A2O_START]    = idma_axi2obi_start;
+  assign irq[IRQ_IDX_A2O_BUSY]     = idma_axi2obi_busy;
+  assign irq[IRQ_IDX_A2O_DONE]     = idma_axi2obi_done;
+  assign irq[IRQ_IDX_A2O_ERROR]    = idma_axi2obi_error;
+  assign irq[IRQ_IDX_O2A_START]    = idma_obi2axi_start;
+  assign irq[IRQ_IDX_O2A_BUSY]     = idma_obi2axi_busy;
+  assign irq[IRQ_IDX_O2A_DONE]     = idma_obi2axi_done;
+  assign irq[IRQ_IDX_O2A_ERROR]    = idma_obi2axi_error;
+  assign irq[N_IRQ+IRQ_USED-1:16]  = irq_i[N_IRQ+IRQ_USED-1:16];
+  assign irq[15:12]                = '0;
+  assign irq[11]                   = irq_i[11];
+  assign irq[10:8]                 = '0;
+  assign irq[7]                    = irq_i[7];
+  assign irq[6:4]                  = '0;
+  assign irq[3]                    = irq_i[3];
+  assign irq[2:0]                  = '0;
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -467,8 +486,8 @@ module redmule_tile
     .rst_ni              ( rst_ni                                                        ),
     .test_mode_i                                                                          ,
 
-    .busy_o                                                                               ,  //TODO: do not interface with the outside, interface with the core
-    .evt_o                                                                                ,  //TODO: do not interface with the outside, interface with the core
+    .busy_o              ( redmule_busy                                                  ),
+    .evt_o               ( redmule_evt                                                   ),
 
     .xif_issue_if_i      ( xif_coproc_if.coproc_issue[redmule_tile_pkg::XIF_REDMULE_IDX] ),
     .xif_result_if_o     ( xif_if.coproc_result                                          ),
@@ -571,13 +590,13 @@ module redmule_tile
     .xif_result_if       ( xif_if.cpu_result        ),
 
      // Interrupt interface
-    .irq_i                                           ,  //TODO: manage IRQs - look at redmule_complex for an idea
+    .irq_i               ( irq                      ),
 
-    .clic_irq_i          ( '0                       ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
-    .clic_irq_id_i       ( '0                       ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
-    .clic_irq_level_i    ( '0                       ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
-    .clic_irq_priv_i     ( '0                       ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
-    .clic_irq_shv_i      ( '0                       ),  //TODO: CLIC not supported (yet?): see redmule_tile_pkg 
+    .clic_irq_i          ( '0                       ),
+    .clic_irq_id_i       ( '0                       ),
+    .clic_irq_level_i    ( '0                       ),
+    .clic_irq_priv_i     ( '0                       ),
+    .clic_irq_shv_i      ( '0                       ),
 
     // Fencei flush handshake
     .fencei_flush_req_o                              ,  //TODO: manage Fence.i flushing in the future or hardwire?  

@@ -46,6 +46,19 @@ package redmule_tile_pkg;
   localparam int unsigned ID_W                     = 4;                               // Default ID Width
   localparam int unsigned USR_W                    = 1;                               // Default User Width
 
+  // IRQ constraints
+  localparam int unsigned IRQ_IDX_REDMULE_BUSY    = 31;
+  localparam int unsigned IRQ_IDX_REDMULE_EVT     = 30;
+  localparam int unsigned IRQ_IDX_A2O_START       = 29;
+  localparam int unsigned IRQ_IDX_A2O_BUSY        = 28;
+  localparam int unsigned IRQ_IDX_A2O_DONE        = 27;
+  localparam int unsigned IRQ_IDX_A2O_ERROR       = 26;
+  localparam int unsigned IRQ_IDX_O2A_START       = 25;
+  localparam int unsigned IRQ_IDX_O2A_BUSY        = 24;
+  localparam int unsigned IRQ_IDX_O2A_DONE        = 23;
+  localparam int unsigned IRQ_IDX_O2A_ERROR       = 22;
+  localparam int unsigned IRQ_USED                = 10;
+
   // Address map
   localparam logic[ADDR_W-1:0] L1_ADDR_START       = 32'h1000_0000;
   localparam logic[ADDR_W-1:0] L1_ADDR_END         = 32'h2000_0000;
