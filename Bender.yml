@@ -24,7 +24,7 @@ package:
 dependencies:
   redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 17491250e621811a00a6545066d992c23a7e1620 } # branch: vi/scale_up
   cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: e51af131252027374d083a745ab6727fb9959daa } # branch: vi/redmule_scaleup
-  idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: deaaf3d16b1079db0a45afa096f3d9cd6dfaf411 } # branch: vi/redmule_scaleup
+  idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: a6b190c7991331432afa9a2899d032bc1b176830 } # branch: vi/redmule_scaleup
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: c35d5b0886ab549fb9144c3c14a4682112330e21 } # branch: yt/reqrsp
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 5a48a854573fca5bbabc1cfd4110fa4530a50ed7 } # branch: vi/redmule_scaleup
