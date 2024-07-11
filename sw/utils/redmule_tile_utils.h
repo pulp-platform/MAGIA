@@ -11,6 +11,18 @@
 #define PASS_EXIT_CODE    (0xA)
 #define FAIL_EXIT_CODE    (0xF)
 
+#define IRQ_REDMULE_EVT_0 (31)
+#define IRQ_REDMULE_EVT_1 (30)
+#define IRQ_A2O_ERROR     (29)
+#define IRQ_O2A_ERROR     (28)
+#define IRQ_A2O_DONE      (27)
+#define IRQ_O2A_DONE      (26)
+#define IRQ_A2O_START     (25)
+#define IRQ_O2A_START     (24)
+#define IRQ_A2O_BUSY      (23)
+#define IRQ_O2A_BUSY      (22)
+#define IRQ_REDMULE_BUSY  (21)
+
 #define mmio64(x) (*(volatile uint64_t *)(x))
 #define mmio32(x) (*(volatile uint32_t *)(x))
 #define mmio16(x) (*(volatile uint16_t *)(x))
@@ -30,6 +42,19 @@ void wait_print(unsigned int cycles){
             printf("-");
         printf("]\n");
     }
+}
+
+inline void irq_en(uint32_t index_oh){
+    asm volatile("addi t0, %0, 0\n\t"
+                 "csrrs zero, mie, t0"
+                 ::"r"(index_oh));
+}
+
+inline uint32_t irq_st(){
+    uint32_t irq_status;
+    asm volatile("csrr %0, mip"
+                 :"=r"(irq_status):);
+    return irq_status;
 }
 
 #endif /*REDMULE_TILE_UTILS_H*/

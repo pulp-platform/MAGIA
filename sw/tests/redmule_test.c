@@ -16,6 +16,8 @@
 
 #define VERBOSE (0)
 
+#define IRQ_EN
+
 #define WAIT_CYCLES (10)
 
 #define DIFF_TH (0x0011)
@@ -106,11 +108,20 @@ int main(void) {
               (0b001     <<  7) | \
               (0b0101011 <<  0)   \n");
 
-  // Wait for end of computation
-  // asm volatile("wfi" ::: "memory");
+#ifdef IRQ_EN
+  // Enable IRQs
+  uint32_t index = (1<<IRQ_REDMULE_EVT_0) | (1<<IRQ_REDMULE_EVT_1);
+  irq_en(index);
+#endif
 
+  // Wait for end of computation
   printf("Testing matrix multiplication with RedMulE...\n");
+#ifdef IRQ_EN
+  asm volatile("wfi" ::: "memory");
+  printf("Detected IRQ...\n");
+#else
   wait_print(WAIT_CYCLES);
+#endif
   printf("Verifying results...\n");
   
   unsigned int num_errors = 0;

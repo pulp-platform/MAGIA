@@ -13,6 +13,8 @@
 
 #define VERBOSE (0)
 
+#define IRQ_EN
+
 #define WAIT_CYCLES (10)
 
 #define CONCURRENT
@@ -36,6 +38,12 @@ int main(void) {
 #if VERBOSE > 100
   for (int i = 0; i < M_SIZE*N_SIZE; i++)
     printf("Z[%8x]: 0x%4x\n", Z_BASE + 2*i, mmio16(Z_BASE + 2*i));
+#endif
+
+#ifdef IRQ_EN
+  // Enable IRQs
+  uint32_t index = (1<<IRQ_A2O_DONE) | (1<<IRQ_O2A_DONE);
+  irq_en(index);
 #endif
 
   conf_idma_in();
@@ -81,7 +89,12 @@ int main(void) {
 
   start_idma_in();
   printf("iDMA moving data from L2 to L1...\n");
+#ifdef IRQ_EN
+  asm volatile("wfi" ::: "memory");
+  printf("Detected IRQ...\n");
+#else
   wait_print(WAIT_CYCLES);
+#endif
 
   conf_idma_out();
 
@@ -171,12 +184,22 @@ int main(void) {
   start_idma_in();
 
   printf("iDMA moving concurrently data from L1 to L2 and from L2 to L1...\n");
+#ifdef IRQ_EN
+  asm volatile("wfi" ::: "memory");
+  printf("Detected IRQ...\n");
+#else
   wait_print(2*WAIT_CYCLES);
+#endif
 #else
   start_idma_out();
 
   printf("iDMA moving data from L1 to L2...\n");
+#ifdef IRQ_EN
+  asm volatile("wfi" ::: "memory");
+  printf("Detected IRQ...\n");
+#else
   wait_print(WAIT_CYCLES);
+#endif
 #endif
 
   printf("Verifying results...\n");
