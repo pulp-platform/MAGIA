@@ -67,10 +67,7 @@ module redmule_tile_vip
 
   output logic                                    fetch_enable,  //TODO: manage signal
   input  logic                                    core_sleep,
-  output logic                                    wu_wfe,
-
-  input  logic                                    busy,
-  input  logic[redmule_tile_pkg::N_CORE-1:0][1:0] evt
+  output logic                                    wu_wfe
 );
 
 /*******************************************************/

@@ -68,9 +68,6 @@ module redmule_tile_fixture;
   logic                                    core_sleep;
   logic                                    wu_wfe;
 
-  logic                                    busy;
-  logic[redmule_tile_pkg::N_CORE-1:0][1:0] evt;
-
 /*******************************************************/
 /**           Internal Signal Definitions End         **/
 /*******************************************************/
@@ -123,10 +120,7 @@ module redmule_tile_fixture;
 
     .fetch_enable_i      ( fetch_enable      ),
     .core_sleep_o        ( core_sleep        ),
-    .wu_wfe_i            ( wu_wfe            ),
-
-    .busy_o              ( busy              ),
-    .evt_o               ( evt               )
+    .wu_wfe_i            ( wu_wfe            )
   );
 
 /*******************************************************/
