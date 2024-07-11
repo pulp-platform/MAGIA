@@ -217,24 +217,25 @@ module redmule_tile
   assign xif_coproc_rules[redmule_tile_pkg::XIF_REDMULE_IDX] = '{opcode_list: {{redmule_pkg::MCNFIG}, {redmule_pkg::MARITH}}};
   assign xif_coproc_rules[redmule_tile_pkg::XIF_IDMA_IDX]    = '{opcode_list: {{redmule_tile_pkg::CONF_OPCODE}, {redmule_tile_pkg::SET_OPCODE}}};
 
-  assign irq[IRQ_IDX_REDMULE_BUSY] = redmule_busy;
-  assign irq[IRQ_IDX_REDMULE_EVT]  = redmule_evt[0];  // Only 1 core supported
-  assign irq[IRQ_IDX_A2O_START]    = idma_axi2obi_start;
-  assign irq[IRQ_IDX_A2O_BUSY]     = idma_axi2obi_busy;
-  assign irq[IRQ_IDX_A2O_DONE]     = idma_axi2obi_done;
-  assign irq[IRQ_IDX_A2O_ERROR]    = idma_axi2obi_error;
-  assign irq[IRQ_IDX_O2A_START]    = idma_obi2axi_start;
-  assign irq[IRQ_IDX_O2A_BUSY]     = idma_obi2axi_busy;
-  assign irq[IRQ_IDX_O2A_DONE]     = idma_obi2axi_done;
-  assign irq[IRQ_IDX_O2A_ERROR]    = idma_obi2axi_error;
-  assign irq[N_IRQ+IRQ_USED-1:16]  = irq_i[N_IRQ+IRQ_USED-1:16];
-  assign irq[15:12]                = '0;
-  assign irq[11]                   = irq_i[11];
-  assign irq[10:8]                 = '0;
-  assign irq[7]                    = irq_i[7];
-  assign irq[6:4]                  = '0;
-  assign irq[3]                    = irq_i[3];
-  assign irq[2:0]                  = '0;
+  assign irq[IRQ_IDX_REDMULE_EVT_0] = redmule_evt[0][0];  // Only 1 core supported
+  assign irq[IRQ_IDX_REDMULE_EVT_1] = redmule_evt[0][1];  // Only 1 core supported
+  assign irq[IRQ_IDX_A2O_ERROR]     = idma_axi2obi_error;
+  assign irq[IRQ_IDX_O2A_ERROR]     = idma_obi2axi_error;
+  assign irq[IRQ_IDX_A2O_DONE]      = idma_axi2obi_done;
+  assign irq[IRQ_IDX_O2A_DONE]      = idma_obi2axi_done;
+  assign irq[IRQ_IDX_A2O_START]     = idma_axi2obi_start;
+  assign irq[IRQ_IDX_O2A_START]     = idma_obi2axi_start;
+  assign irq[IRQ_IDX_A2O_BUSY]      = idma_axi2obi_busy;
+  assign irq[IRQ_IDX_O2A_BUSY]      = idma_obi2axi_busy;
+  assign irq[IRQ_IDX_REDMULE_BUSY]  = redmule_busy;
+  assign irq[N_IRQ-IRQ_USED-1:16]   = irq_i[N_IRQ-IRQ_USED-1:16];
+  assign irq[15:12]                 = '0;
+  assign irq[11]                    = irq_i[11];
+  assign irq[10:8]                  = '0;
+  assign irq[7]                     = irq_i[7];
+  assign irq[6:4]                   = '0;
+  assign irq[3]                     = irq_i[3];
+  assign irq[2:0]                   = '0;
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
