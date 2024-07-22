@@ -49,6 +49,7 @@ sources:
       - hw/redmule_mesh_pkg.sv
       - hw/data2obi.sv
       - hw/instr2obi.sv
+      - hw/instr2cache.sv
       - hw/obi2hci.sv
       - hw/obi_demux_addr.sv
       - hw/l1_spm.sv
@@ -68,6 +69,7 @@ sources:
       - hw/redmule_mesh_pkg.sv
       - hw/data2obi.sv
       - hw/instr2obi.sv
+      - hw/instr2cache.sv
       - hw/obi2hci.sv
       - hw/obi_demux_addr.sv
       - hw/l1_spm.sv
