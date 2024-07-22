@@ -112,11 +112,8 @@ module redmule_tile
   redmule_tile_pkg::core_cache_instr_req_t core_cache_instr_req;
   redmule_tile_pkg::core_cache_instr_rsp_t core_cache_instr_rsp;
 
-  redmule_tile_pkg::axi_default_req_t core_l2_instr_req;
-  redmule_tile_pkg::axi_default_rsp_t core_l2_instr_rsp;
-
-  redmule_tile_pkg::core_axi_instr_req_t core_cache_instr_req;
-  redmule_tile_pkg::core_axi_instr_rsp_t core_cache_instr_rsp;
+  redmule_tile_pkg::core_axi_instr_req_t core_l2_instr_req;
+  redmule_tile_pkg::core_axi_instr_rsp_t core_l2_instr_rsp;
 
   redmule_tile_pkg::idma_axi_req_t idma_axi_read_req;
   redmule_tile_pkg::idma_axi_rsp_t idma_axi_read_rsp;
