@@ -130,8 +130,10 @@ package redmule_tile_pkg;
   // Parameters used by AXI
   parameter int unsigned AXI_DATA_ID_W             = 2;                               // Width of the AXI Data ID (2 bits: Core, iDMA. I$)
   parameter int unsigned AXI_INSTR_ID_W            = 1;                               // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
+  parameter int unsigned AXI_ID_W                  = 2;                               // Width of the AXI Unified Communication Channel ID
   parameter int unsigned AXI_DATA_U_W              = USR_W;                           // Width of the AXI Data User
   parameter int unsigned AXI_INSTR_U_W             = USR_W;                           // Width of the AXI Instruction User
+  parameter int unsigned AXI_U_W                   = USR_W;                           // Width of the AXI Unified Communication Channel User
 
   // Parameters used by the iDMA
   localparam int unsigned iDMA_NumDims             = 3;                               // iDMA Number of dimensions
@@ -232,9 +234,9 @@ package redmule_tile_pkg;
 
   // Parameters used by the i$
   parameter int unsigned NR_FETCH_PORTS            = 1;                               // i$ Number of request (fetch) ports
-  parameter int unsigned L0_LINE_COUNT             = 8;                               // i$ L0 Cache Line Count
-  parameter int unsigned LINE_WIDTH                = 32;                              // i$ Cache Line Width
-  parameter int unsigned LINE_COUNT                = 2;                               // i$ The number of cache lines per set. Power of two; >= 2.
+  parameter int unsigned L0_LINE_COUNT             = 16;                              // i$ L0 Cache Line Count
+  parameter int unsigned LINE_WIDTH                = 64;                              // i$ Cache Line Width
+  parameter int unsigned LINE_COUNT                = 16;                              // i$ The number of cache lines per set. Power of two; >= 2.
   parameter int unsigned SET_COUNT                 = 2;                               // i$ The set associativity of the cache. Power of two; >= 1.
   parameter int unsigned FETCH_AW                  = ADDR_W;                          // i$ Fetch interface address width. Same as FETCH_AW; >= 1.
   parameter int unsigned FETCH_DW                  = DATA_W;                          // i$ Fetch interface data width. Power of two; >= 8.
@@ -244,10 +246,10 @@ package redmule_tile_pkg;
   parameter bit MERGE_FETCHES                      = 1'b0;                            // i$ Merge L0-L1 fetches if requesting the same address
   parameter bit SERIAL_LOOKUP                      = 1'b0;                            // i$ Serialize the L1 lookup (parallel tag/data lookup by default)
   parameter bit L1_TAG_SCM                         = 1'b0;                            // i$ Replace the L1 tag banks with latch-based SCM.
-  parameter int unsigned NUM_AXI_OUTSTANDING       = 1;                               // i$ Number of pending response beats for the L1 cache.
+  parameter int unsigned NUM_AXI_OUTSTANDING       = 2;                               // i$ Number of pending response beats for the L1 cache. >= 2.
   parameter bit EARLY_LATCH                        = 1'b0;                            // i$ This reduces area impact at the cost of increased hassle of having latches in the design. i_snitch_icache/gen_prefetcher*i_snitch_icache_l0/data*/Q
-  parameter int L0_EARLY_TAG_WIDTH                  = -1;                             // i$ Tag width of the data determining logic, this can reduce the critical path into the L0 cache when small. The trade-off is a higher miss-rate in case the smaller tag matches more tags. The tag must be smaller than the necessary L0 tag. If configured to `-1` the entire tag is used, effectively disabling this feature.
-  parameter bit ISO_CROSSING                        = 1'b1;                           // i$ Operate L0 cache in slower clock-domain
+  parameter int L0_EARLY_TAG_WIDTH                 = -1;                              // i$ Tag width of the data determining logic, this can reduce the critical path into the L0 cache when small. The trade-off is a higher miss-rate in case the smaller tag matches more tags. The tag must be smaller than the necessary L0 tag. If configured to `-1` the entire tag is used, effectively disabling this feature.
+  parameter bit ISO_CROSSING                       = 1'b1;                            // i$ Operate L0 cache in slower clock-domain
   
   typedef struct packed {
     int unsigned      idx;
@@ -342,8 +344,8 @@ package redmule_tile_pkg;
   `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic signed[WORDS_DATA-1:0][AWH:0], logic[UWH-1:0])
   `HCI_TYPEDEF_RSP_T(core_hci_data_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0])
 
-  `AXI_TYPEDEF_ALL_CT(core_axi_data, core_axi_data_req_t, core_axi_data_rsp_t, logic[ADDR_W-1:0], logic[AXI_DATA_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_DATA_U_W-1:0])
-  `AXI_TYPEDEF_ALL_CT(core_axi_instr, core_axi_instr_req_t, core_axi_instr_rsp_t, logic[ADDR_W-1:0], logic[AXI_INSTR_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_INSTR_U_W-1:0])
+  `AXI_TYPEDEF_ALL_CT(core_axi_data, core_axi_data_req_t, core_axi_data_rsp_t, logic[ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_U_W-1:0])
+  `AXI_TYPEDEF_ALL_CT(core_axi_instr, core_axi_instr_req_t, core_axi_instr_rsp_t, logic[ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_U_W-1:0])
 
   `REG_BUS_TYPEDEF_ALL(idma_fe_reg, logic[ADDR_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0])
 
