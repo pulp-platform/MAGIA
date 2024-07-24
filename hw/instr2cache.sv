@@ -26,10 +26,9 @@ module instr2cache_req
   output redmule_tile_pkg::core_cache_instr_req_t cache_req_o
 );
   
-  assign cache_req_o.addr      = instr_req_i.addr;
-  assign cache_req_o.cacheable = 1'b1 /*instr_req_i.memtype[1]*/;
-  assign cache_req_o.valid     = instr_req_i.req;
-
+  assign cache_req_o.req  = instr_req_i.req;
+  assign cache_req_o.addr = instr_req_i.addr;
+  
 endmodule: instr2cache_req
 
 module cache2instr_rsp 
@@ -39,9 +38,9 @@ module cache2instr_rsp
   output redmule_tile_pkg::core_instr_rsp_t       instr_rsp_o
 );
 
-  assign instr_rsp_o.gnt    = cache_rsp_i.ready;
-  assign instr_rsp_o.rvalid = cache_rsp_i.ready;
-  assign instr_rsp_o.rdata  = cache_rsp_i.data;
-  assign instr_rsp_o.err    = cache_rsp_i.error;
+  assign instr_rsp_o.gnt    = cache_rsp_i.gnt;
+  assign instr_rsp_o.rvalid = cache_rsp_i.rvalid;
+  assign instr_rsp_o.rdata  = cache_rsp_i.rdata;
+  assign instr_rsp_o.err    = cache_rsp_i.rerror;
 
 endmodule: cache2instr_rsp

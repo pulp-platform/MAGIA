@@ -293,15 +293,15 @@ package redmule_tile_pkg;
   } core_data_rsp_t;
 
   typedef struct packed {
+    logic[NR_FETCH_PORTS-1:0]               req;
     logic[NR_FETCH_PORTS-1:0][FETCH_AW-1:0] addr;
-    logic[NR_FETCH_PORTS-1:0]               cacheable;
-    logic[NR_FETCH_PORTS-1:0]               valid;
   } core_cache_instr_req_t;
 
   typedef struct packed {
-    logic[NR_FETCH_PORTS-1:0][FETCH_DW-1:0] data;
-    logic[NR_FETCH_PORTS-1:0]               ready;
-    logic[NR_FETCH_PORTS-1:0]               error;
+    logic[NR_FETCH_PORTS-1:0]               gnt;
+    logic[NR_FETCH_PORTS-1:0]               rvalid;
+    logic[NR_FETCH_PORTS-1:0][FETCH_DW-1:0] rdata;
+    logic[NR_FETCH_PORTS-1:0]               rerror;
   } core_cache_instr_rsp_t;
 
   typedef enum {
