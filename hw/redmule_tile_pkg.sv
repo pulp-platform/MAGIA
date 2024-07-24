@@ -213,7 +213,7 @@ package redmule_tile_pkg;
   // Parameters of the AXI XBAR
   parameter int unsigned AxiXbarNoSlvPorts         = 3;                               // Number of Slave Ports (iDMA, Core Data and Core I$)
   localparam int unsigned AxiXbarSlvAxiIDWidth     = AXI_DATA_ID_W;                   // Number of bits to indentify each Slave Port
-  parameter int unsigned AxiXbarMaxWTrans          = 8;                               // Maximum number of outstanding transactions per write
+  parameter int unsigned AxiXbarMaxWTrans          = 16;                              // Maximum number of outstanding transactions per write
   parameter bit          AxiXbarFallThrough        = 1'b0;                            // Enabled -> MUX is purely combinational
   parameter bit          AxiXbarSpillAw            = 1'b0;                            // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
   parameter bit          AxiXbarSpillW             = 1'b0;                            // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
@@ -237,19 +237,13 @@ package redmule_tile_pkg;
   parameter int unsigned L0_LINE_COUNT             = 16;                              // i$ L0 Cache Line Count
   parameter int unsigned LINE_WIDTH                = 64;                              // i$ Cache Line Width
   parameter int unsigned LINE_COUNT                = 16;                              // i$ The number of cache lines per set. Power of two; >= 2.
-  parameter int unsigned SET_COUNT                 = 2;                               // i$ The set associativity of the cache. Power of two; >= 1.
+  parameter int unsigned SET_COUNT                 = 4;                               // i$ The set associativity of the cache. Power of two; >= 1.
+  parameter int unsigned L0_PARITY_W               = 0;                               // i$ Parity of the L0 cache
+  parameter int unsigned L1_PARITY_W               = L0_PARITY_W;                     // i$ Parity of the L1 cache
   parameter int unsigned FETCH_AW                  = ADDR_W;                          // i$ Fetch interface address width. Same as FETCH_AW; >= 1.
   parameter int unsigned FETCH_DW                  = DATA_W;                          // i$ Fetch interface data width. Power of two; >= 8.
   parameter int unsigned FILL_AW                   = ADDR_W;                          // i$ Fill interface address width. Same as FILL_AW; >= 1.
   parameter int unsigned FILL_DW                   = DATA_W;                          // i$ Fill interface data width. Power of two; >= 8.
-  parameter bit FETCH_PRIORITY                     = 1'b0;                            // i$ Allow fetches to have priority over prefetches for L0 to L1
-  parameter bit MERGE_FETCHES                      = 1'b0;                            // i$ Merge L0-L1 fetches if requesting the same address
-  parameter bit SERIAL_LOOKUP                      = 1'b0;                            // i$ Serialize the L1 lookup (parallel tag/data lookup by default)
-  parameter bit L1_TAG_SCM                         = 1'b0;                            // i$ Replace the L1 tag banks with latch-based SCM.
-  parameter int unsigned NUM_AXI_OUTSTANDING       = 2;                               // i$ Number of pending response beats for the L1 cache. >= 2.
-  parameter bit EARLY_LATCH                        = 1'b0;                            // i$ This reduces area impact at the cost of increased hassle of having latches in the design. i_snitch_icache/gen_prefetcher*i_snitch_icache_l0/data*/Q
-  parameter int L0_EARLY_TAG_WIDTH                 = -1;                              // i$ Tag width of the data determining logic, this can reduce the critical path into the L0 cache when small. The trade-off is a higher miss-rate in case the smaller tag matches more tags. The tag must be smaller than the necessary L0 tag. If configured to `-1` the entire tag is used, effectively disabling this feature.
-  parameter bit ISO_CROSSING                       = 1'b1;                            // i$ Operate L0 cache in slower clock-domain
   
   typedef struct packed {
     int unsigned      idx;

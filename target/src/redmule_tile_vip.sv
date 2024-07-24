@@ -154,8 +154,8 @@ module redmule_tile_vip
   axi_sim_mem #(
     .AddrWidth          ( redmule_tile_pkg::ADDR_W            ),
     .DataWidth          ( redmule_tile_pkg::DATA_W            ),
-    .IdWidth            ( redmule_tile_pkg::AXI_DATA_ID_W + 1 ),  // AXI_MUX adds 1 bit to the id
-    .UserWidth          ( redmule_tile_pkg::AXI_DATA_U_W      ),
+    .IdWidth            ( redmule_mesh_pkg::AXI_NOC_ID_W      ),
+    .UserWidth          ( redmule_mesh_pkg::AXI_NOC_U_W       ),
     .axi_req_t          ( redmule_mesh_pkg::axi_default_req_t ),
     .axi_rsp_t          ( redmule_mesh_pkg::axi_default_rsp_t ),
     .WarnUninitialized  ( 1                                   ),

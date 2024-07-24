@@ -762,93 +762,44 @@ module redmule_tile
 /*******************************************************/
 
 //TODO
-  // snitch_icache #(
-  // .NR_FETCH_PORTS      ( redmule_tile_pkg::NR_FETCH_PORTS       ),
-  // .L0_LINE_COUNT       ( redmule_tile_pkg::L0_LINE_COUNT        ),
-  // .LINE_WIDTH          ( redmule_tile_pkg::LINE_WIDTH           ),
-  // .LINE_COUNT          ( redmule_tile_pkg::LINE_COUNT           ),
-  // .SET_COUNT           ( redmule_tile_pkg::SET_COUNT            ),
-  // .FETCH_AW            ( redmule_tile_pkg::FETCH_AW             ),
-  // .FETCH_DW            ( redmule_tile_pkg::FETCH_DW             ),
-  // .FILL_AW             ( redmule_tile_pkg::FILL_AW              ),
-  // .FILL_DW             ( redmule_tile_pkg::FILL_DW              ),
-  // .FETCH_PRIORITY      ( redmule_tile_pkg::FETCH_PRIORITY       ),
-  // .MERGE_FETCHES       ( redmule_tile_pkg::MERGE_FETCHES        ),
-  // .SERIAL_LOOKUP       ( redmule_tile_pkg::SERIAL_LOOKUP        ),
-  // .L1_TAG_SCM          ( redmule_tile_pkg::L1_TAG_SCM           ),
-  // .NUM_AXI_OUTSTANDING ( redmule_tile_pkg::NUM_AXI_OUTSTANDING  ),
-  // .EARLY_LATCH         ( redmule_tile_pkg::EARLY_LATCH          ),
-  // .L0_EARLY_TAG_WIDTH  ( redmule_tile_pkg::L0_EARLY_TAG_WIDTH   ),
-  // .ISO_CROSSING        ( redmule_tile_pkg::ISO_CROSSING         ),
-  // .sram_cfg_data_t     ( /* Not Used */                         ),
-  // .sram_cfg_tag_t      ( /* Not Used */                         ),
-  // .axi_req_t           ( redmule_tile_pkg::core_axi_instr_req_t ),
-  // .axi_rsp_t           ( redmule_tile_pkg::core_axi_instr_rsp_t )
-  // ) i_icache (
-  // .clk_i                ( sys_clk                        ),
-  // .clk_d2_i             ( sys_clk                        ),
-  // .rst_ni               ( rst_ni                         ),
-  // .enable_prefetching_i ( 1'b0                           ), //TODO: manage
-  // .icache_events_o      (                                ), //TODO: manage
-  // .flush_valid_i        ( 1'b0                           ), //TODO: manage
-  // .flush_ready_o        (                                ), //TODO: manage
-  // .inst_addr_i          ( core_cache_instr_req.addr      ),
-  // .inst_data_o          ( core_cache_instr_rsp.data      ),
-  // .inst_cacheable_i     ( core_cache_instr_req.cacheable ),
-  // .inst_valid_i         ( core_cache_instr_req.valid     ),
-  // .inst_ready_o         ( core_cache_instr_rsp.ready     ),
-  // .inst_error_o         ( core_cache_instr_rsp.error     ),
-  // .sram_cfg_data_i      ( '0                             ),
-  // .sram_cfg_tag_i       ( '0                             ),
-  // .axi_req_o            ( core_l2_instr_req              ),
-  // .axi_rsp_i            ( core_l2_instr_rsp              )
-  // );
   pulp_icache_wrap #(
   .NumFetchPorts       ( redmule_tile_pkg::NR_FETCH_PORTS       ),
   .L0_LINE_COUNT       ( redmule_tile_pkg::L0_LINE_COUNT        ),
   .LINE_WIDTH          ( redmule_tile_pkg::LINE_WIDTH           ),
   .LINE_COUNT          ( redmule_tile_pkg::LINE_COUNT           ),
   .SET_COUNT           ( redmule_tile_pkg::SET_COUNT            ),
-  .L1DataParityWidth   ( 0                                      ),
-  .L0DataParityWidth   (                                        ),
+  .L1DataParityWidth   ( redmule_tile_pkg::L0_PARITY_W          ),
+  .L0DataParityWidth   ( redmule_tile_pkg::L1_PARITY_W          ),
   .FetchAddrWidth      ( redmule_tile_pkg::FETCH_AW             ),
   .FetchDataWidth      ( redmule_tile_pkg::FETCH_DW             ),
   .AxiAddrWidth        ( redmule_tile_pkg::FILL_AW              ),
   .AxiDataWidth        ( redmule_tile_pkg::FILL_DW              ),
-  // .FETCH_PRIORITY      ( redmule_tile_pkg::FETCH_PRIORITY       ),
-  // .MERGE_FETCHES       ( redmule_tile_pkg::MERGE_FETCHES        ),
-  // .SERIAL_LOOKUP       ( redmule_tile_pkg::SERIAL_LOOKUP        ),
-  // .L1_TAG_SCM          ( redmule_tile_pkg::L1_TAG_SCM           ),
-  // .NUM_AXI_OUTSTANDING ( redmule_tile_pkg::NUM_AXI_OUTSTANDING  ),
-  // .EARLY_LATCH         ( redmule_tile_pkg::EARLY_LATCH          ),
-  // .L0_EARLY_TAG_WIDTH  ( redmule_tile_pkg::L0_EARLY_TAG_WIDTH   ),
-  // .ISO_CROSSING        ( redmule_tile_pkg::ISO_CROSSING         ),
   .sram_cfg_data_t     ( /* Not Used */                         ),
   .sram_cfg_tag_t      ( /* Not Used */                         ),
   .axi_req_t           ( redmule_tile_pkg::core_axi_instr_req_t ),
   .axi_rsp_t           ( redmule_tile_pkg::core_axi_instr_rsp_t )
   ) i_icache (
-  .clk_i                ( sys_clk                        ),
-  .rst_ni               ( rst_ni                         ),
+  .clk_i                ( sys_clk                     ),
+  .rst_ni               ( rst_ni                      ),
 
-  .fetch_req_i          ( core_cache_instr_req.req       ),
-  .fetch_addr_i         ( core_cache_instr_req.addr      ),
-  .fetch_gnt_o          ( core_cache_instr_req.gnt       ),
-  .fetch_rvalid_o       ( core_cache_instr_req.rvalid    ),
-  .fetch_rdata_o        ( core_cache_instr_req.rdata     ),
-  .fetch_rerror_o       ( core_cache_instr_req.rerror    ),
+  .fetch_req_i          ( core_cache_instr_req.req    ),
+  .fetch_addr_i         ( core_cache_instr_req.addr   ),
+  .fetch_gnt_o          ( core_cache_instr_rsp.gnt    ),
+  .fetch_rvalid_o       ( core_cache_instr_rsp.rvalid ),
+  .fetch_rdata_o        ( core_cache_instr_rsp.rdata  ),
+  .fetch_rerror_o       ( core_cache_instr_rsp.rerror ),
 
-  .enable_prefetching_i ( 1'b0                           ), //TODO: manage
-  .icache_l0_events_o   (                                ), //TODO: manage
-  .icache_l1_events_o   (                                ), //TODO: manage
-  .flush_valid_i        ( 1'b0                           ), //TODO: manage
-  .flush_ready_o        (                                ), //TODO: manage
+  .enable_prefetching_i ( 1'b0                        ), //TODO: manage
+  .icache_l0_events_o   (                             ), //TODO: manage
+  .icache_l1_events_o   (                             ), //TODO: manage
+  .flush_valid_i        ( 1'b0                        ), //TODO: manage
+  .flush_ready_o        (                             ), //TODO: manage
 
-  .sram_cfg_data_i      ( '0                             ),
-  .sram_cfg_tag_i       ( '0                             ),
+  .sram_cfg_data_i      ( '0                          ),
+  .sram_cfg_tag_i       ( '0                          ),
   
-  .axi_req_o            ( core_l2_instr_req              ),
-  .axi_rsp_i            ( core_l2_instr_rsp              )
+  .axi_req_o            ( core_l2_instr_req           ),
+  .axi_rsp_i            ( core_l2_instr_rsp           )
   );
 
 /*******************************************************/
