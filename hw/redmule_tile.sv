@@ -788,7 +788,7 @@ module redmule_tile
   .clk_i                ( sys_clk                        ),
   .clk_d2_i             ( sys_clk                        ),
   .rst_ni               ( rst_ni                         ),
-  .enable_prefetching_i ( 1'b1                           ), //TODO: manage
+  .enable_prefetching_i ( 1'b0                           ), //TODO: manage
   .icache_events_o      (                                ), //TODO: manage
   .flush_valid_i        ( 1'b0                           ), //TODO: manage
   .flush_ready_o        (                                ), //TODO: manage
