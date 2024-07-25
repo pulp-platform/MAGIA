@@ -10,9 +10,9 @@
 #define X_BASE (L1_BASE + 0x00012048)
 #define W_BASE (L1_BASE + 0x00016048)
 #define Y_BASE (L1_BASE + 0x0001A048)
-#define Z_BASE (L2_BASE + 0x00001048)
-#define V_BASE (L2_BASE + 0x00005048)
-#define T_BASE (L2_BASE + 0x00009048)
+#define Z_BASE (L2_BASE + 0x00012000)
+#define V_BASE (L2_BASE + 0x00016000)
+#define T_BASE (L2_BASE + 0x0001A000)
 
 #define M_SIZE (96)
 #define N_SIZE (64)
@@ -240,13 +240,13 @@ int main(void) {
   asm volatile("addi t3, %0, 0" ::"r"(cfg_reg0));
   asm volatile("addi t4, %0, 0" ::"r"(cfg_reg1));
 
-#ifdef IRQ_EN
-  irq_en(1<<IRQ_REDMULE_EVT_0);
-#endif
-
   redmule_mcnfig();
 
   redmule_marith();
+
+#ifdef IRQ_EN
+  irq_en(1<<IRQ_REDMULE_EVT_0);
+#endif
 
   printf("Testing matrix multiplication with RedMulE...\n");
 

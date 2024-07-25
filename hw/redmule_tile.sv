@@ -761,7 +761,6 @@ module redmule_tile
 /**                    i$ Beginning                   **/
 /*******************************************************/
 
-//TODO
   pulp_icache_wrap #(
   .NumFetchPorts       ( redmule_tile_pkg::NR_FETCH_PORTS       ),
   .L0_LINE_COUNT       ( redmule_tile_pkg::L0_LINE_COUNT        ),
