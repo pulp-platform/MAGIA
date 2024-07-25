@@ -3,6 +3,10 @@
 
 #include "tinyprintf.h"
 
+#define NUM_L1_BANKS (32)
+#define WORDS_BANK   (4096)
+#define BITS_WORD    (32)
+
 #define L1_BASE       (0x1C010000)
 #define L2_BASE       (0x2C010000)
 #define TEST_END_ADDR (0x2C030000)

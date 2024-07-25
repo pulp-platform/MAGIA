@@ -272,7 +272,7 @@ int main(void) {
     diff = (computed > expected) ? (computed - expected) : (expected - computed);
     if(diff > DIFF_TH){
       num_errors++;
-      printf("**ERROR**: Y[%8x](=0x%4x) != Z[%8x](=0x%4x)\n", V_BASE + 2*i, computed, Z_BASE + 2*i, expected);
+      printf("**ERROR**: V[%8x](=0x%4x) != Z[%8x](=0x%4x)\n", V_BASE + 2*i, computed, Z_BASE + 2*i, expected);
     }
   }
   printf("Finished test with %0d errors\n", num_errors);
