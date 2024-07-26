@@ -274,12 +274,12 @@ int main(void) {
 
   uint16_t computed, expected, diff;
   for(int i = 0; i < M_SIZE*K_SIZE; i++){
-    computed = mmio16(V_BASE + 2*i);
+    computed = mmio16(V_BASE + mhartid*MHARTID_OFFSET + 2*i);
     expected = mmio16(Z_BASE + 2*i);
     diff = (computed > expected) ? (computed - expected) : (expected - computed);
     if(diff > DIFF_TH){
       num_errors++;
-      printf("[mhartid %d] **ERROR**: V[%8x](=0x%4x) != Z[%8x](=0x%4x)\n", mhartid, V_BASE + 2*i, computed, Z_BASE + 2*i, expected);
+      printf("[mhartid %d] **ERROR**: V[%8x](=0x%4x) != Z[%8x](=0x%4x)\n", mhartid, V_BASE + mhartid*MHARTID_OFFSET + 2*i, computed, Z_BASE + 2*i, expected);
     }
   }
   printf("[mhartid %d] Finished test with %0d errors\n", mhartid, num_errors);
