@@ -65,3 +65,7 @@ sources:
       - target/src/tile/redmule_tile_vip.sv
       - target/src/tile/redmule_tile_fixture.sv
       - target/src/tile/redmule_tile_tb.sv
+      - target/src/mesh/redmule_mesh_tb_pkg.sv
+      - target/src/mesh/redmule_mesh_vip.sv
+      - target/src/mesh/redmule_mesh_fixture.sv
+      - target/src/mesh/redmule_mesh_tb.sv
