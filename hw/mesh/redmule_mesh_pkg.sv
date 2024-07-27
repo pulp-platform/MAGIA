@@ -23,7 +23,7 @@ package redmule_mesh_pkg;
 
   `include "axi/typedef.svh"
 
-  `include "include/alias.svh"
+  `include "../include/alias.svh"
 
   // Parameters used by the NoC
   parameter int unsigned AXI_NOC_ID_W = 4;

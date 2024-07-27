@@ -41,8 +41,10 @@ export_include_dirs:
   - hw/include
 
 sources:
-  # RedMulE Tile
+  # RedMulE Packages
   - hw/tile/redmule_tile_pkg.sv
+  - hw/mesh/redmule_mesh_pkg.sv
+  # RedMulE Tile
   - hw/tile/data2obi.sv
   - hw/tile/instr2obi.sv
   - hw/tile/instr2cache.sv
@@ -55,7 +57,6 @@ sources:
   - hw/tile/idma_ctrl.sv
   - hw/tile/redmule_tile.sv
   # RedMulE Mesh
-  - hw/mesh/redmule_mesh_pkg.sv
 
   - target: all(redmule_mesh_dv)
     defines:

@@ -268,4 +268,4 @@ end
 /**                    Printing End                   **/
 /*******************************************************/
 
-endmodule: redmule_tile_vip
+endmodule: redmule_mesh_vip
