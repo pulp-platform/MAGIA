@@ -61,6 +61,7 @@ boot_addr     ?= 0x2c000080
 log_path      ?= ./core_traces.log
 itb_file      ?= $(ITB)
 test          ?= hello_world
+mesh_dv       ?= 1
 
 ifeq ($(verbose),1)
 	FLAGS += -DVERBOSE
@@ -181,7 +182,11 @@ bender_targs += -t snitch_cluster
 #	bender_targs += -t redmule_hwpe
 #endif
 
-tb           := redmule_tile_tb
+ifeq ($(mesh_dv),1)
+	tb         := redmule_mesh_tb
+else
+	tb         := redmule_tile_tb
+endif
 WAVES        := $(mkfile_path)/wave.do
 bender_targs += -t redmule_complex
 bender_targs += -t cv32e40x_bhv
