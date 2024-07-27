@@ -17,6 +17,8 @@
 
 #define MHARTID_OFFSET (0x00010000)
 
+#define NUM_HARTS (2)
+
 #define M_SIZE (96)
 #define N_SIZE (64)
 #define K_SIZE (64)
@@ -205,47 +207,48 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
 }
 
 int main(void) {
-  uint32_t mhartid = get_hartid();
-  
-  // X
-  printf("[mhartid %d] Initializing X through iDMA...\n", mhartid);
-  idma_mv_in(M_SIZE, N_SIZE, x_inp, X_BASE, mhartid);
-
-  // W
-  printf("[mhartid %d] Initializing W through iDMA...\n", mhartid);
-  idma_mv_in(N_SIZE, K_SIZE, w_inp, W_BASE, mhartid);
-
-  // Y
-  printf("[mhartid %d] Initializing Y through iDMA...\n", mhartid);
-  idma_mv_in(M_SIZE, K_SIZE, y_inp, Y_BASE, mhartid);
-
-  if (mhartid == 0) {
+  if (get_hartid() == 0) {
     // Z - golden (reference)
-    printf("[mhartid %d] Initializing Z - golden...\n", mhartid);
+    printf("[mhartid %d] Initializing Z - golden...\n", get_hartid());
     for (int i = 0; i < M_SIZE*K_SIZE; i++)
         mmio16(Z_BASE + 2*i) = z_oup[i];
 #if VERBOSE > 100
     for (int i = 0; i < M_SIZE*K_SIZE; i++)
-        printf("[mhartid %d] Z[%8x]: 0x%4x\n", mhartid, Z_BASE + 2*i, mmio16(Z_BASE + 2*i));
+        printf("[mhartid %d] Z[%8x]: 0x%4x\n", get_hartid(), Z_BASE + 2*i, mmio16(Z_BASE + 2*i));
 #endif
   }
+  
+  // X
+  printf("[mhartid %d] Initializing X through iDMA...\n", get_hartid());
+  idma_mv_in(M_SIZE, N_SIZE, x_inp, X_BASE, get_hartid());
 
-  uint32_t cfg_reg0 = ((((uint16_t)K_SIZE) << 16) | (((uint16_t)M_SIZE) << 0));
-  uint32_t cfg_reg1 = (((uint16_t)N_SIZE) << 0);
+  // W
+  printf("[mhartid %d] Initializing W through iDMA...\n", get_hartid());
+  idma_mv_in(N_SIZE, K_SIZE, w_inp, W_BASE, get_hartid());
+
+  // Y
+  printf("[mhartid %d] Initializing Y through iDMA...\n", get_hartid());
+  idma_mv_in(M_SIZE, K_SIZE, y_inp, Y_BASE, get_hartid());
+
+  uint32_t cfg_reg0[NUM_HARTS];
+  uint32_t cfg_reg1[NUM_HARTS];
+  
+  cfg_reg0[get_hartid()] = ((((uint16_t)K_SIZE) << 16) | (((uint16_t)M_SIZE) << 0));
+  cfg_reg1[get_hartid()] = (((uint16_t)N_SIZE) << 0);
 
 #if VERBOSE > 10
-  printf("[mhartid %d] K_SIZE: %4x\n", mhartid, K_SIZE);
-  printf("[mhartid %d] M_SIZE: %4x\n", mhartid, M_SIZE);
-  printf("[mhartid %d] N_SIZE: %4x\n", mhartid, N_SIZE);  
-  printf("[mhartid %d] cfg_reg0: %8x\n", mhartid, cfg_reg0);
-  printf("[mhartid %d] cfg_reg1: %8x\n", mhartid, cfg_reg1);
+  printf("[mhartid %d] K_SIZE: %4x\n", get_hartid(), K_SIZE);
+  printf("[mhartid %d] M_SIZE: %4x\n", get_hartid(), M_SIZE);
+  printf("[mhartid %d] N_SIZE: %4x\n", get_hartid(), N_SIZE);  
+  printf("[mhartid %d] cfg_reg0: %8x\n", get_hartid(), cfg_reg0[get_hartid()]);
+  printf("[mhartid %d] cfg_reg1: %8x\n", get_hartid(), cfg_reg1[get_hartid()]);
 #endif
 
   asm volatile("addi t0, %0, 0" ::"r"((uint32_t)X_BASE));
   asm volatile("addi t1, %0, 0" ::"r"((uint32_t)W_BASE));
   asm volatile("addi t2, %0, 0" ::"r"((uint32_t)Y_BASE));
-  asm volatile("addi t3, %0, 0" ::"r"(cfg_reg0));
-  asm volatile("addi t4, %0, 0" ::"r"(cfg_reg1));
+  asm volatile("addi t3, %0, 0" ::"r"(cfg_reg0[get_hartid()]));
+  asm volatile("addi t4, %0, 0" ::"r"(cfg_reg1[get_hartid()]));
 
   redmule_mcnfig();
 
@@ -255,42 +258,43 @@ int main(void) {
   irq_en(1<<IRQ_REDMULE_EVT_0);
 #endif
 
-  printf("[mhartid %d] Testing matrix multiplication with RedMulE...\n", mhartid);
+  printf("[mhartid %d] Testing matrix multiplication with RedMulE...\n", get_hartid());
 
 #ifdef IRQ_EN
   // Wait for end of computation
   asm volatile("wfi" ::: "memory");
-  printf("[mhartid %d] Detected IRQ...\n", mhartid);
+  printf("[mhartid %d] Detected IRQ...\n", get_hartid());
 #else
   wait_print(WAIT_CYCLES);
 #endif
 
-  printf("[mhartid %d] Moving results through iDMA...\n", mhartid);
-  idma_mv_out(M_SIZE, K_SIZE, Y_BASE, V_BASE, mhartid);
+  printf("[mhartid %d] Moving results through iDMA...\n", get_hartid());
+  idma_mv_out(M_SIZE, K_SIZE, Y_BASE, V_BASE, get_hartid());
 
-  printf("[mhartid %d] Verifying results...\n", mhartid);
+  printf("[mhartid %d] Verifying results...\n", get_hartid());
   
-  unsigned int num_errors = 0;
+  unsigned int num_errors[NUM_HARTS];
+  num_errors[get_hartid()] = 0;
 
-  uint16_t computed, expected, diff;
+  uint16_t computed[NUM_HARTS], expected[NUM_HARTS], diff[NUM_HARTS];
   for(int i = 0; i < M_SIZE*K_SIZE; i++){
-    computed = mmio16(V_BASE + mhartid*MHARTID_OFFSET + 2*i);
-    expected = mmio16(Z_BASE + 2*i);
-    diff = (computed > expected) ? (computed - expected) : (expected - computed);
-    if(diff > DIFF_TH){
-      num_errors++;
-      printf("[mhartid %d] **ERROR**: V[%8x](=0x%4x) != Z[%8x](=0x%4x)\n", mhartid, V_BASE + mhartid*MHARTID_OFFSET + 2*i, computed, Z_BASE + 2*i, expected);
+    computed[get_hartid()] = mmio16(V_BASE + get_hartid()*MHARTID_OFFSET + 2*i);
+    expected[get_hartid()] = mmio16(Z_BASE + 2*i);
+    diff[get_hartid()] = (computed[get_hartid()] > expected[get_hartid()]) ? (computed[get_hartid()] - expected[get_hartid()]) : (expected[get_hartid()] - computed[get_hartid()]);
+    if(diff[get_hartid()] > DIFF_TH){
+      num_errors[get_hartid()]++;
+      printf("[mhartid %d] **ERROR**: V[%8x](=0x%4x) != Z[%8x](=0x%4x)\n", get_hartid(), V_BASE + get_hartid()*MHARTID_OFFSET + 2*i, computed[get_hartid()], Z_BASE + 2*i, expected[get_hartid()]);
     }
   }
-  printf("[mhartid %d] Finished test with %0d errors\n", mhartid, num_errors);
+  printf("[mhartid %d] Finished test with %0d errors\n", get_hartid(), num_errors[get_hartid()]);
 
-  uint32_t exit_code;
-  if(num_errors)
-    exit_code = FAIL_EXIT_CODE;
+  uint32_t exit_code[NUM_HARTS];
+  if(num_errors[get_hartid()])
+    exit_code[get_hartid()] = FAIL_EXIT_CODE;
   else
-    exit_code = PASS_EXIT_CODE;
+    exit_code[get_hartid()] = PASS_EXIT_CODE;
 
-  mmio32(TEST_END_ADDR) = exit_code;
+  mmio32(TEST_END_ADDR + get_hartid()) = exit_code[get_hartid()] - get_hartid();
 
   return 0;
 }

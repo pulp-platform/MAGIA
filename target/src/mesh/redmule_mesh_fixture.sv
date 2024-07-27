@@ -44,26 +44,26 @@ module redmule_mesh_fixture;
   logic[31:0]                                                           mtvec_addr;
   logic[31:0]                                                           dm_halt_addr;
   logic[31:0]                                                           dm_exception_addr;
-  logic[31:0][redmule_mesh_tb_pkg::N_TILES-1:0]                         mhartid;
+  logic[31:0]                                                           mhartid[redmule_mesh_tb_pkg::N_TILES];
   logic[ 3:0]                                                           mimpid_patch;
 
-  logic[63:0]                                                           mcycle;
+  logic[63:0]                                                           mcycle[redmule_mesh_tb_pkg::N_TILES];
   logic[63:0]                                                           time_var;
 
   logic[redmule_tile_pkg::N_IRQ-1:0]                                    irq;
 
-  logic                                                                 fencei_flush_req;
+  logic                                                                 fencei_flush_req[redmule_mesh_tb_pkg::N_TILES];
   logic                                                                 fencei_flush_ack;
 
   logic                                                                 debug_req;
-  logic                                                                 debug_havereset;
-  logic                                                                 debug_running;
-  logic                                                                 debug_halted;
-  logic                                                                 debug_pc_valid;
-  logic[31:0]                                                           debug_pc;
+  logic                                                                 debug_havereset[redmule_mesh_tb_pkg::N_TILES];
+  logic                                                                 debug_running[redmule_mesh_tb_pkg::N_TILES];
+  logic                                                                 debug_halted[redmule_mesh_tb_pkg::N_TILES];
+  logic                                                                 debug_pc_valid[redmule_mesh_tb_pkg::N_TILES];
+  logic[31:0]                                                           debug_pc[redmule_mesh_tb_pkg::N_TILES];
 
   logic                                                                 fetch_enable;
-  logic                                                                 core_sleep;
+  logic                                                                 core_sleep[redmule_mesh_tb_pkg::N_TILES];
   logic                                                                 wu_wfe;
 
 /*******************************************************/
@@ -82,41 +82,41 @@ module redmule_mesh_fixture;
       .CORE_B       (                                   ),
       .CORE_M       (                                   )
     ) dut (
-      .clk_i               ( clk               ),
-      .rst_ni              ( rst_n             ),
-      .test_mode_i         ( test_mode         ),
-      .tile_enable_i       ( tile_enable       ),
+      .clk_i               ( clk                 ),
+      .rst_ni              ( rst_n               ),
+      .test_mode_i         ( test_mode           ),
+      .tile_enable_i       ( tile_enable         ),
 
-      .data_out_req_o      ( data_out_req[i]   ),
-      .data_out_rsp_i      ( data_out_rsp[i]   ), 
+      .data_out_req_o      ( data_out_req[i]     ),
+      .data_out_rsp_i      ( data_out_rsp[i]     ), 
 
-      .scan_cg_en_i        ( scan_cg_en        ),
+      .scan_cg_en_i        ( scan_cg_en          ),
 
-      .boot_addr_i         ( boot_addr         ),
-      .mtvec_addr_i        ( mtvec_addr        ),
-      .dm_halt_addr_i      ( dm_halt_addr      ),
-      .dm_exception_addr_i ( dm_exception_addr ),
-      .mhartid_i           ( mhartid[i]        ),
-      .mimpid_patch_i      ( mimpid_patch      ),
+      .boot_addr_i         ( boot_addr           ),
+      .mtvec_addr_i        ( mtvec_addr          ),
+      .dm_halt_addr_i      ( dm_halt_addr        ),
+      .dm_exception_addr_i ( dm_exception_addr   ),
+      .mhartid_i           ( mhartid[i]          ),
+      .mimpid_patch_i      ( mimpid_patch        ),
 
-      .mcycle_o            ( mcycle            ),
-      .time_i              ( time_var          ),
+      .mcycle_o            ( mcycle[i]           ),
+      .time_i              ( time_var            ),
 
-      .irq_i               ( irq               ),
+      .irq_i               ( irq                 ),
 
-      .fencei_flush_req_o  ( fencei_flush_req  ),
-      .fencei_flush_ack_i  ( fencei_flush_ack  ),
+      .fencei_flush_req_o  ( fencei_flush_req[i] ),
+      .fencei_flush_ack_i  ( fencei_flush_ack    ),
 
-      .debug_req_i         ( debug_req         ),
-      .debug_havereset_o   ( debug_havereset   ),
-      .debug_running_o     ( debug_running     ),
-      .debug_halted_o      ( debug_halted      ),
-      .debug_pc_valid_o    ( debug_pc_valid    ),
-      .debug_pc_o          ( debug_pc          ),
+      .debug_req_i         ( debug_req           ),
+      .debug_havereset_o   ( debug_havereset[i]  ),
+      .debug_running_o     ( debug_running[i]    ),
+      .debug_halted_o      ( debug_halted[i]     ),
+      .debug_pc_valid_o    ( debug_pc_valid[i]   ),
+      .debug_pc_o          ( debug_pc[i]         ),
 
-      .fetch_enable_i      ( fetch_enable      ),
-      .core_sleep_o        ( core_sleep        ),
-      .wu_wfe_i            ( wu_wfe            )
+      .fetch_enable_i      ( fetch_enable        ),
+      .core_sleep_o        ( core_sleep[i]       ),
+      .wu_wfe_i            ( wu_wfe              )
     );
   end
 

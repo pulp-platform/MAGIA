@@ -21,10 +21,10 @@
 
 module redmule_mesh_tb;
 
-  string    inst_hex;
-  string    data_hex;
-  bit[31:0] boot_addr;
-  bit[31:0] exit_code;
+  string                                  inst_hex;
+  string                                  data_hex;
+  bit[31:0]                               boot_addr;
+  bit[redmule_mesh_tb_pkg::N_TILES*8-1:0] exit_code;
 
   redmule_mesh_fixture fixture();
 
