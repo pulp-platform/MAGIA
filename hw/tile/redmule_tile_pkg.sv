@@ -30,7 +30,7 @@ package redmule_tile_pkg;
 
   `include "hci/assign.svh"
 
-  `include "include/alias.svh"
+  `include "../include/alias.svh"
   
   // Global constants
   localparam int unsigned ADDR_W                   = 32;                              // System-wide address Width
