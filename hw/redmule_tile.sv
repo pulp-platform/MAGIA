@@ -50,9 +50,6 @@ module redmule_tile
 
   output redmule_mesh_pkg::axi_default_req_t      data_out_req_o,
   input  redmule_mesh_pkg::axi_default_rsp_t      data_out_rsp_i,
-  
-  output redmule_tile_pkg::core_axi_instr_req_t   core_instr_req_o,  //TODO: REMOVE, this should be managed internally by the AXI xbar
-  input  redmule_tile_pkg::core_axi_instr_rsp_t   core_instr_rsp_i,  //TODO: REMOVE, this should be managed internally by the AXI xbar
 
   // Signals used by the core
   input  logic                                    scan_cg_en_i,
@@ -111,12 +108,12 @@ module redmule_tile
 
   redmule_tile_pkg::core_instr_req_t core_instr_req;
   redmule_tile_pkg::core_instr_rsp_t core_instr_rsp;
-  
-  redmule_tile_pkg::core_obi_instr_req_t core_obi_instr_req;
-  redmule_tile_pkg::core_obi_instr_rsp_t core_obi_instr_rsp;
 
-  redmule_tile_pkg::core_axi_instr_req_t core_cache_instr_req;
-  redmule_tile_pkg::core_axi_instr_rsp_t core_cache_instr_rsp;
+  redmule_tile_pkg::core_cache_instr_req_t core_cache_instr_req;
+  redmule_tile_pkg::core_cache_instr_rsp_t core_cache_instr_rsp;
+
+  redmule_tile_pkg::core_axi_instr_req_t core_l2_instr_req;
+  redmule_tile_pkg::core_axi_instr_rsp_t core_l2_instr_rsp;
 
   redmule_tile_pkg::idma_axi_req_t idma_axi_read_req;
   redmule_tile_pkg::idma_axi_rsp_t idma_axi_read_rsp;
@@ -139,8 +136,8 @@ module redmule_tile
   redmule_tile_pkg::idma_hci_req_t idma_hci_write_req;
   redmule_tile_pkg::idma_hci_rsp_t idma_hci_write_rsp;
 
-  redmule_tile_pkg::axi_xbar_slv_req_t[redmule_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_data_in_req; // Index 0 -> Core, Index 1 -> iDMA
-  redmule_tile_pkg::axi_xbar_slv_rsp_t[redmule_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_data_in_rsp; // Index 0 -> Core, Index 1 -> iDMA
+  redmule_tile_pkg::axi_xbar_slv_req_t[redmule_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_data_in_req; // Index 2 -> iDMA, Index 1 -> Core Data, Index 0 -> Core Instruction
+  redmule_tile_pkg::axi_xbar_slv_rsp_t[redmule_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_data_in_rsp; // Index 2 -> iDMA, Index 1 -> Core Data, Index 0 -> Core Instruction
   
   redmule_mesh_pkg::axi_xbar_mst_req_t axi_xbar_data_out_req;
   redmule_mesh_pkg::axi_xbar_mst_rsp_t axi_xbar_data_out_rsp;
@@ -193,13 +190,12 @@ module redmule_tile
   assign data_out_req_o        = axi_xbar_data_out_req;
   assign axi_xbar_data_out_rsp = data_out_rsp_i;
 
-  assign core_instr_req_o     = core_cache_instr_req; //TODO: add the AXI XBAR and route data out through it
-  assign core_cache_instr_rsp = core_instr_rsp_i;     //TODO: add the AXI XBAR and route data out through it
-
-  assign axi_xbar_data_in_req[redmule_tile_pkg::AXI_IDMA_IDX] = idma_axi_req;
-  assign idma_axi_rsp                                         = axi_xbar_data_in_rsp[redmule_tile_pkg::AXI_IDMA_IDX];
-  assign axi_xbar_data_in_req[redmule_tile_pkg::AXI_CORE_IDX] = core_l2_data_req;
-  assign core_l2_data_rsp                                     = axi_xbar_data_in_rsp[redmule_tile_pkg::AXI_CORE_IDX];
+  assign axi_xbar_data_in_req[redmule_tile_pkg::AXI_IDMA_IDX]       = idma_axi_req;
+  assign idma_axi_rsp                                               = axi_xbar_data_in_rsp[redmule_tile_pkg::AXI_IDMA_IDX];
+  assign axi_xbar_data_in_req[redmule_tile_pkg::AXI_CORE_DATA_IDX]  = core_l2_data_req;
+  assign core_l2_data_rsp                                           = axi_xbar_data_in_rsp[redmule_tile_pkg::AXI_CORE_DATA_IDX];
+  assign axi_xbar_data_in_req[redmule_tile_pkg::AXI_CORE_INSTR_IDX] = core_l2_instr_req;
+  assign core_l2_instr_rsp                                          = axi_xbar_data_in_rsp[redmule_tile_pkg::AXI_CORE_INSTR_IDX];
 
   assign axi_data_user     = '0;
   assign obi_rsp_data_user = '0;
@@ -295,40 +291,14 @@ module redmule_tile
     .obi_rsp_user_i      ( obi_rsp_data_user                           )
   );
 
-  instr2obi_req i_core_instr2obi_req (
-    .instr_req_i ( core_instr_req     ),
-    .obi_req_o   ( core_obi_instr_req )
+  instr2cache_req i_core_instr2cache_req (
+    .instr_req_i ( core_instr_req       ),
+    .cache_req_o ( core_cache_instr_req )
   );
 
-  obi2instr_rsp i_core_obi2instr_rsp (
-    .obi_rsp_i   ( core_obi_instr_rsp ),
-    .instr_rsp_o ( core_instr_rsp     )
-  );
-  
-  obi_to_axi #(
-    .ObiCfg       (                                        ),
-    .obi_req_t    ( redmule_tile_pkg::core_obi_instr_req_t ),
-    .obi_rsp_t    ( redmule_tile_pkg::core_obi_instr_rsp_t ),
-    .AxiLite      (                                        ),
-    .AxiAddrWidth ( redmule_tile_pkg::ADDR_W               ),
-    .AxiDataWidth ( redmule_tile_pkg::DATA_W               ),
-    .AxiUserWidth ( redmule_tile_pkg::AXI_INSTR_U_W        ),
-    .AxiBurstType (                                        ),
-    .axi_req_t    ( redmule_tile_pkg::core_axi_instr_req_t ),
-    .axi_rsp_t    ( redmule_tile_pkg::core_axi_instr_rsp_t ),
-    .MaxRequests  ( 1                                      )
-  ) i_core_instr_obi2axi (
-    .clk_i               ( sys_clk              ),
-    .rst_ni              ( rst_ni               ),
-    .obi_req_i           ( core_obi_instr_req   ),
-    .obi_rsp_o           ( core_obi_instr_rsp   ),
-    .user_i              ( axi_instr_user       ),
-    .axi_req_o           ( core_cache_instr_req ),
-    .axi_rsp_i           ( core_cache_instr_rsp ),
-    .axi_rsp_channel_sel (                      ),
-    .axi_rsp_b_user_o    (                      ),
-    .axi_rsp_r_user_o    (                      ),
-    .obi_rsp_user_i      ( obi_rsp_instr_user   )
+  cache2instr_rsp i_core_cache2instr_rsp (
+    .cache_rsp_i ( core_cache_instr_rsp ),
+    .instr_rsp_o ( core_instr_rsp       )
   );
 
   obi2hci_req #(
@@ -388,7 +358,7 @@ module redmule_tile
 /*******************************************************/
 
   hci_mem_intf #(
-    .AW ( redmule_tile_pkg::ADDR_W ),
+    .AW ( redmule_tile_pkg::AWM    ),
     .DW ( redmule_tile_pkg::DW_LIC ),
     .BW ( redmule_tile_pkg::BW_LIC ),
     .IW ( redmule_tile_pkg::IW     ),
@@ -398,37 +368,37 @@ module redmule_tile
   );
   
   hci_core_intf #(
-    .DW ( redmule_tile_pkg::ADDR_W ),
+    .DW ( redmule_tile_pkg::DW_LIC ),
     .AW ( redmule_tile_pkg::AWC    ),
     .OW ( redmule_tile_pkg::AWC    ),
-    .UW ( redmule_tile_pkg::UWH    )
+    .UW ( redmule_tile_pkg::UW_LIC )
   ) hci_core_if[redmule_tile_pkg::N_CORE-1:0] (
     .clk( sys_clk )
   );
 
   hci_core_intf #(
     .DW ( redmule_tile_pkg::REDMULE_DW ),
-    .AW ( redmule_tile_pkg::AWC        ),
-    .OW ( redmule_tile_pkg::AWC        ),
-    .UW ( redmule_tile_pkg::UWH        )
+    .AW ( redmule_tile_pkg::AWH        ),
+    .OW ( redmule_tile_pkg::OWH        ),
+    .UW ( redmule_tile_pkg::REDMULE_UW )
   ) hci_redmule_if[redmule_tile_pkg::N_HWPE-1:0] (
     .clk( sys_clk )
   );
 
   hci_core_intf #(
-    .DW ( redmule_tile_pkg::ADDR_W ),
+    .DW ( redmule_tile_pkg::DW_LIC ),
     .AW ( redmule_tile_pkg::AWC    ),
     .OW ( redmule_tile_pkg::AWC    ),
-    .UW ( redmule_tile_pkg::UWH    )
+    .UW ( redmule_tile_pkg::UW_LIC )
   ) hci_dma_if[redmule_tile_pkg::N_DMA-1:0] (
     .clk( sys_clk )
   );
 
   hci_core_intf #(
-    .DW ( redmule_tile_pkg::ADDR_W ),
+    .DW ( redmule_tile_pkg::DW_LIC ),
     .AW ( redmule_tile_pkg::AWC    ),
     .OW ( redmule_tile_pkg::AWC    ),
-    .UW ( redmule_tile_pkg::UWH    )
+    .UW ( redmule_tile_pkg::UW_LIC )
   ) hci_ext_if[redmule_tile_pkg::N_EXT-1:0] (
     .clk( sys_clk )
   );
@@ -700,7 +670,7 @@ module redmule_tile
   l1_spm #(
     .N_BANK   ( N_MEM_BANKS              ),
     .N_WORDS  ( N_WORDS_BANK             ),
-    .DATA_W   ( redmule_tile_pkg::DW_LIC ),
+    .DATA_W   ( redmule_tile_pkg::DATA_W ),
     .ID_W     ( redmule_tile_pkg::IW     ),
     .SIM_INIT ( "zeros"                  )
   ) i_l1_spm (
@@ -791,7 +761,45 @@ module redmule_tile
 /**                    i$ Beginning                   **/
 /*******************************************************/
 
-//TODO
+  pulp_icache_wrap #(
+  .NumFetchPorts       ( redmule_tile_pkg::NR_FETCH_PORTS       ),
+  .L0_LINE_COUNT       ( redmule_tile_pkg::L0_LINE_COUNT        ),
+  .LINE_WIDTH          ( redmule_tile_pkg::LINE_WIDTH           ),
+  .LINE_COUNT          ( redmule_tile_pkg::LINE_COUNT           ),
+  .SET_COUNT           ( redmule_tile_pkg::SET_COUNT            ),
+  .L1DataParityWidth   ( redmule_tile_pkg::L0_PARITY_W          ),
+  .L0DataParityWidth   ( redmule_tile_pkg::L1_PARITY_W          ),
+  .FetchAddrWidth      ( redmule_tile_pkg::FETCH_AW             ),
+  .FetchDataWidth      ( redmule_tile_pkg::FETCH_DW             ),
+  .AxiAddrWidth        ( redmule_tile_pkg::FILL_AW              ),
+  .AxiDataWidth        ( redmule_tile_pkg::FILL_DW              ),
+  .sram_cfg_data_t     ( /* Not Used */                         ),
+  .sram_cfg_tag_t      ( /* Not Used */                         ),
+  .axi_req_t           ( redmule_tile_pkg::core_axi_instr_req_t ),
+  .axi_rsp_t           ( redmule_tile_pkg::core_axi_instr_rsp_t )
+  ) i_icache (
+  .clk_i                ( sys_clk                     ),
+  .rst_ni               ( rst_ni                      ),
+
+  .fetch_req_i          ( core_cache_instr_req.req    ),
+  .fetch_addr_i         ( core_cache_instr_req.addr   ),
+  .fetch_gnt_o          ( core_cache_instr_rsp.gnt    ),
+  .fetch_rvalid_o       ( core_cache_instr_rsp.rvalid ),
+  .fetch_rdata_o        ( core_cache_instr_rsp.rdata  ),
+  .fetch_rerror_o       ( core_cache_instr_rsp.rerror ),
+
+  .enable_prefetching_i ( 1'b0                        ), //TODO: manage
+  .icache_l0_events_o   (                             ), //TODO: manage
+  .icache_l1_events_o   (                             ), //TODO: manage
+  .flush_valid_i        ( 1'b0                        ), //TODO: manage
+  .flush_ready_o        (                             ), //TODO: manage
+
+  .sram_cfg_data_i      ( '0                          ),
+  .sram_cfg_tag_i       ( '0                          ),
+  
+  .axi_req_o            ( core_l2_instr_req           ),
+  .axi_rsp_i            ( core_l2_instr_rsp           )
+  );
 
 /*******************************************************/
 /**                       i$ End                      **/

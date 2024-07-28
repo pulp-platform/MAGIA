@@ -9,7 +9,7 @@
 #define X_BASE (L1_BASE + 0x00012048)
 #define W_BASE (L1_BASE + 0x00016048)
 #define Y_BASE (L1_BASE + 0x0001A048)
-#define Z_BASE (L2_BASE + 0x00001000)
+#define Z_BASE (L2_BASE + 0x00012000)
 
 #define M_SIZE (96)
 #define N_SIZE (64)

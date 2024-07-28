@@ -38,9 +38,6 @@ module redmule_tile_vip
   input  redmule_mesh_pkg::axi_default_req_t      data_out_req,
   output redmule_mesh_pkg::axi_default_rsp_t      data_out_rsp,
 
-  input  redmule_tile_pkg::core_axi_instr_req_t   core_instr_req,
-  output redmule_tile_pkg::core_axi_instr_rsp_t   core_instr_rsp,
-
   output logic                                    scan_cg_en,
 
   output logic[31:0]                              boot_addr, //TODO: manage signal
@@ -117,7 +114,7 @@ module redmule_tile_vip
 
   // Preload instruction cache subroutine
   task automatic inst_preload(input string image);
-    $readmemh(image, i_instr_cache.mem);
+    $readmemh(image, i_l2_mem.mem);
   endtask: inst_preload
 
   // Preload data subroutine
@@ -151,52 +148,14 @@ module redmule_tile_vip
 /*******************************************************/
 /**                 TB Subroutines End                **/
 /*******************************************************/
-/**                    I$ Beginning                   **/
-/*******************************************************/
-
-  axi_sim_mem #(
-    .AddrWidth          ( redmule_tile_pkg::ADDR_W               ),
-    .DataWidth          ( redmule_tile_pkg::DATA_W               ),
-    .IdWidth            ( 1                                      ),
-    .UserWidth          ( 1                                      ),
-    .axi_req_t          ( redmule_tile_pkg::core_axi_instr_req_t ),
-    .axi_rsp_t          ( redmule_tile_pkg::core_axi_instr_rsp_t ),
-    .WarnUninitialized  ( 1                                      ),
-    .ClearErrOnAccess   ( 1                                      ),
-    .ApplDelay          ( CLK_PERIOD * T_APPL                    ),
-    .AcqDelay           ( CLK_PERIOD * T_TEST                    )
-  ) i_instr_cache (
-    .clk_i              ( clk            ),
-    .rst_ni             ( rst_n          ),
-    .axi_req_i          ( core_instr_req ),
-    .axi_rsp_o          ( core_instr_rsp ),
-    .mon_w_valid_o      (                ),
-    .mon_w_addr_o       (                ),
-    .mon_w_data_o       (                ),
-    .mon_w_id_o         (                ),
-    .mon_w_user_o       (                ),
-    .mon_w_beat_count_o (                ),
-    .mon_w_last_o       (                ),
-    .mon_r_valid_o      (                ),
-    .mon_r_addr_o       (                ),
-    .mon_r_data_o       (                ),
-    .mon_r_id_o         (                ),
-    .mon_r_user_o       (                ),
-    .mon_r_beat_count_o (                ),
-    .mon_r_last_o       (                )
-  );
-
-/*******************************************************/
-/**                       I$ End                      **/
-/*******************************************************/
 /**                  L2 MEM Beginning                 **/
 /*******************************************************/
 
   axi_sim_mem #(
     .AddrWidth          ( redmule_tile_pkg::ADDR_W            ),
     .DataWidth          ( redmule_tile_pkg::DATA_W            ),
-    .IdWidth            ( redmule_tile_pkg::AXI_DATA_ID_W + 1 ),  // AXI_MUX adds 1 bit to the id
-    .UserWidth          ( redmule_tile_pkg::AXI_DATA_U_W      ),
+    .IdWidth            ( redmule_mesh_pkg::AXI_NOC_ID_W      ),
+    .UserWidth          ( redmule_mesh_pkg::AXI_NOC_U_W       ),
     .axi_req_t          ( redmule_mesh_pkg::axi_default_req_t ),
     .axi_rsp_t          ( redmule_mesh_pkg::axi_default_rsp_t ),
     .WarnUninitialized  ( 1                                   ),

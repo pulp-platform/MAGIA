@@ -76,22 +76,25 @@ package redmule_tile_pkg;
   } hci_idma_ch_idx_e;                                                                // Index of the HCI DMA read and write channels
   parameter int unsigned N_EXT                     = 0;                               // Number of External ports - LEAVE TO 0 UNLESS YOU KNOW WHAT YOU ARE DOING
   parameter int unsigned AWC                       = ADDR_W;                          // Address width core   (slave ports)
-  localparam int unsigned AWM                      = $clog2(N_WORDS_BANK);            // Address width memory (master ports)
-  parameter int unsigned DW_LIC                    = DATA_W * N_MEM_BANKS;            // Data Width for Log Interconnect
+  localparam int unsigned AWM                      = 
+                          $clog2(N_WORDS_BANK*DW_LIC/BW_LIC);                         // Address width memory (master ports)
+  parameter int unsigned DW_LIC                    = DATA_W;                          // Data Width for Log Interconnect
   parameter int unsigned BW_LIC                    = BYTE_W;                          // Byte Width for Log Interconnect
   parameter int unsigned UW_LIC                    = USR_W;                           // User Width for Log Interconnect
+  localparam int unsigned SW_LIC                   = DW_LIC/BW_LIC;                   // Strobe Width for Log Interconnect
+  localparam int unsigned WD_LIC                   = DW_LIC/DW_LIC;                   // Number of words per data for Log Interconnect
   parameter int unsigned TS_BIT                    = 21;                              // TEST_SET_BIT (for Log Interconnect)
   parameter int unsigned IW                        = N_HWPE + N_CORE + N_DMA + N_EXT; // ID Width HCI
   parameter int unsigned EXPFIFO                   = 0;                               // FIFO Depth for HWPE Interconnect
-  parameter int unsigned DWH                       = DATA_W * N_MEM_BANKS;            // Data Width for HWPE Interconnect
+  parameter int unsigned DWH                       = 544;                             // Data Width for HWPE Interconnect: RedMulE Hx(P+1)xBits + Bank width = 8x(3+1)x16+32 
   parameter int unsigned AWH                       = ADDR_W;                          // Address Width for HWPE Interconnect
   parameter int unsigned BWH                       = BYTE_W;                          // Byte Width for HWPE Interconnect
   parameter int unsigned WWH                       = DWH;                             // Word Width for HWPE Interconnect
   parameter int unsigned OWH                       = AWH;                             // Offset Width for HWPE Interconnect
   parameter int unsigned UWH                       = USR_W;                           // User Width for HWPE Interconnect
   parameter int unsigned SEL_LIC                   = 1;                               // Log interconnect type selector
-  localparam int unsigned SW_LIC                   = DW_LIC/BW_LIC;                   // Strobe Width for HWPE Interconnect
-  localparam int unsigned WORDS_DATA               = DW_LIC/WWH;                      // Number of words per data
+  localparam int unsigned SWH                      = DWH/BWH;                         // Strobe Width for HWPE Interconnect
+  localparam int unsigned WDH                      = DWH/WWH;                         // Number of words per data for HWPE Interconnect
 
   // Parameters used by the core
   parameter bit          X_EXT_EN                  = 1;                               // Enable eXtension Interface (X) support, see eXtension Interface        
@@ -108,9 +111,9 @@ package redmule_tile_pkg;
   parameter int unsigned CLIC_ID_W                 = 1;                               // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
 
   // Parameters used by RedMulE
-  parameter int unsigned REDMULE_DW                = DW_LIC;                          // RedMulE Data Width
+  parameter int unsigned REDMULE_DW                = DWH;                             // RedMulE Data Width
   parameter int unsigned REDMULE_ID_W              = IW + ID_W_OFFSET;                // RedMulE ID Width
-  parameter int unsigned REDMULE_UW                = USR_W;                           // RedMulE User Width
+  parameter int unsigned REDMULE_UW                = UWH;                             // RedMulE User Width
   
   // Parameters used by OBI
   parameter int unsigned AUSER_WIDTH               = 1;                               // Width of the auser signal (see OBI documentation): not used by the CV32E40X
@@ -130,8 +133,10 @@ package redmule_tile_pkg;
   // Parameters used by AXI
   parameter int unsigned AXI_DATA_ID_W             = 2;                               // Width of the AXI Data ID (2 bits: Core, iDMA. I$)
   parameter int unsigned AXI_INSTR_ID_W            = 1;                               // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
+  parameter int unsigned AXI_ID_W                  = 2;                               // Width of the AXI Unified Communication Channel ID
   parameter int unsigned AXI_DATA_U_W              = USR_W;                           // Width of the AXI Data User
   parameter int unsigned AXI_INSTR_U_W             = USR_W;                           // Width of the AXI Instruction User
+  parameter int unsigned AXI_U_W                   = USR_W;                           // Width of the AXI Unified Communication Channel User
 
   // Parameters used by the iDMA
   localparam int unsigned iDMA_NumDims             = 3;                               // iDMA Number of dimensions
@@ -209,9 +214,9 @@ package redmule_tile_pkg;
   parameter logic[ DMA_FUNC3_W-1:0] SET_S_FUNC3    = 3'b111;                          // iDMA Decoder START instruction FUNC3
 
   // Parameters of the AXI XBAR
-  parameter int unsigned AxiXbarNoSlvPorts         = 2;                               // Number of Slave Ports (iDMA, Core) /*TODO: add i$*/
+  parameter int unsigned AxiXbarNoSlvPorts         = 3;                               // Number of Slave Ports (iDMA, Core Data and Core I$)
   localparam int unsigned AxiXbarSlvAxiIDWidth     = AXI_DATA_ID_W;                   // Number of bits to indentify each Slave Port
-  parameter int unsigned AxiXbarMaxWTrans          = 8;                               // Maximum number of outstanding transactions per write
+  parameter int unsigned AxiXbarMaxWTrans          = 16;                              // Maximum number of outstanding transactions per write
   parameter bit          AxiXbarFallThrough        = 1'b0;                            // Enabled -> MUX is purely combinational
   parameter bit          AxiXbarSpillAw            = 1'b0;                            // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
   parameter bit          AxiXbarSpillW             = 1'b0;                            // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
@@ -229,6 +234,19 @@ package redmule_tile_pkg;
     XIF_IDMA_IDX    = 1'b1
   } xif_inst_demux_idx_e;
   parameter int unsigned DEFAULT_IDX               = XIF_REDMULE_IDX;                 // RedMulE will handle the instructions by default 
+
+  // Parameters used by the i$
+  parameter int unsigned NR_FETCH_PORTS            = 1;                               // i$ Number of request (fetch) ports
+  parameter int unsigned L0_LINE_COUNT             = 16;                              // i$ L0 Cache Line Count
+  parameter int unsigned LINE_WIDTH                = 64;                              // i$ Cache Line Width
+  parameter int unsigned LINE_COUNT                = 16;                              // i$ The number of cache lines per set. Power of two; >= 2.
+  parameter int unsigned SET_COUNT                 = 4;                               // i$ The set associativity of the cache. Power of two; >= 1.
+  parameter int unsigned L0_PARITY_W               = 0;                               // i$ Parity of the L0 cache
+  parameter int unsigned L1_PARITY_W               = L0_PARITY_W;                     // i$ Parity of the L1 cache
+  parameter int unsigned FETCH_AW                  = ADDR_W;                          // i$ Fetch interface address width. Same as FETCH_AW; >= 1.
+  parameter int unsigned FETCH_DW                  = DATA_W;                          // i$ Fetch interface data width. Power of two; >= 8.
+  parameter int unsigned FILL_AW                   = ADDR_W;                          // i$ Fill interface address width. Same as FILL_AW; >= 1.
+  parameter int unsigned FILL_DW                   = DATA_W;                          // i$ Fill interface data width. Power of two; >= 8.
   
   typedef struct packed {
     int unsigned      idx;
@@ -271,14 +289,27 @@ package redmule_tile_pkg;
     logic             exokay;
   } core_data_rsp_t;
 
+  typedef struct packed {
+    logic[NR_FETCH_PORTS-1:0]               req;
+    logic[NR_FETCH_PORTS-1:0][FETCH_AW-1:0] addr;
+  } core_cache_instr_req_t;
+
+  typedef struct packed {
+    logic[NR_FETCH_PORTS-1:0]               gnt;
+    logic[NR_FETCH_PORTS-1:0]               rvalid;
+    logic[NR_FETCH_PORTS-1:0][FETCH_DW-1:0] rdata;
+    logic[NR_FETCH_PORTS-1:0]               rerror;
+  } core_cache_instr_rsp_t;
+
   typedef enum {
     L1SPM_IDX = 1,
     L2_IDX    = 0
   } mem_array_idx_e;
 
   typedef enum {
-    AXI_IDMA_IDX = 1,
-    AXI_CORE_IDX = 0
+    AXI_IDMA_IDX       = 2,
+    AXI_CORE_DATA_IDX  = 1,
+    AXI_CORE_INSTR_IDX = 0
   } axi_xbar_idx_e;
 
   typedef struct packed {
@@ -287,11 +318,11 @@ package redmule_tile_pkg;
 
   typedef logic[iDMA_AddrWidth-1:0] idma_addr_t;
 
-  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic[IW-1:0])
-  `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic[DW_LIC-1:0], logic[IW-1:0])
+  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic[IW-1:0])
+  `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic[DWH-1:0], logic[IW-1:0])
   
-  `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic signed[WORDS_DATA-1:0][AWH:0], logic[UWH-1:0])
-  `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0])
+  `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic signed[WDH-1:0][AWH:0], logic[UWH-1:0])
+  `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic[DWH-1:0], logic[UWH-1:0])
 
   `OBI_TYPEDEF_ALL_A_OPTIONAL(core_data_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
   `OBI_TYPEDEF_ALL_R_OPTIONAL(core_data_obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
@@ -307,11 +338,11 @@ package redmule_tile_pkg;
   `OBI_TYPEDEF_DEFAULT_REQ_T(core_obi_instr_req_t, core_instr_obi_a_chan_t)
   `OBI_TYPEDEF_RSP_T(core_obi_instr_rsp_t, core_instr_obi_r_chan_t)
 
-  `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic signed[WORDS_DATA-1:0][AWH:0], logic[UWH-1:0])
+  `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic signed[WD_LIC-1:0][AWH:0], logic[UWH-1:0])
   `HCI_TYPEDEF_RSP_T(core_hci_data_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0])
 
-  `AXI_TYPEDEF_ALL_CT(core_axi_data, core_axi_data_req_t, core_axi_data_rsp_t, logic[ADDR_W-1:0], logic[AXI_DATA_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_DATA_U_W-1:0])
-  `AXI_TYPEDEF_ALL_CT(core_axi_instr, core_axi_instr_req_t, core_axi_instr_rsp_t, logic[ADDR_W-1:0], logic[AXI_INSTR_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_INSTR_U_W-1:0])
+  `AXI_TYPEDEF_ALL_CT(core_axi_data, core_axi_data_req_t, core_axi_data_rsp_t, logic[ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_U_W-1:0])
+  `AXI_TYPEDEF_ALL_CT(core_axi_instr, core_axi_instr_req_t, core_axi_instr_rsp_t, logic[ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_U_W-1:0])
 
   `REG_BUS_TYPEDEF_ALL(idma_fe_reg, logic[ADDR_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0])
 
@@ -342,7 +373,7 @@ package redmule_tile_pkg;
 
   `AXI_ALIAS(core_axi_data, axi_xbar_slv, core_axi_data_req_t, axi_xbar_slv_req_t, core_axi_data_rsp_t, axi_xbar_slv_rsp_t)
 
-  `HCI_TYPEDEF_REQ_T(idma_hci_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic signed[WORDS_DATA-1:0][AWH:0], logic[UWH-1:0])
+  `HCI_TYPEDEF_REQ_T(idma_hci_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic signed[WD_LIC-1:0][AWH:0], logic[UWH-1:0])
   `HCI_TYPEDEF_RSP_T(idma_hci_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0])
 
 endpackage: redmule_tile_pkg

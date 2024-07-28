@@ -26,7 +26,7 @@ package redmule_mesh_pkg;
   `include "include/alias.svh"
 
   // Parameters used by the NoC
-  parameter int unsigned AXI_NOC_ID_W = 3;
+  parameter int unsigned AXI_NOC_ID_W = 4;
   parameter int unsigned AXI_NOC_U_W  = redmule_tile_pkg::USR_W;
 
   `AXI_TYPEDEF_ALL_CT(noc_axi_data, noc_axi_data_req_t, noc_axi_data_rsp_t, logic[redmule_tile_pkg::ADDR_W-1:0], logic[AXI_NOC_ID_W-1:0], logic[redmule_tile_pkg::DATA_W-1:0], logic[redmule_tile_pkg::STRB_W-1:0], logic[AXI_NOC_U_W-1:0])
