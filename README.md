@@ -20,7 +20,7 @@ make update-ips > update-ips.log mesh_dv=0
 ```
 **4)** Build the hardware (`redmule-mesh` folder):
 ```
-make build-hw > build-hw.log
+make build-hw > build-hw.log mesh_dv=0
 ```
 **5)** Comile the test code (`redmule-mesh` folder):
 ```
