@@ -51,7 +51,7 @@ module redmule_mesh_vip
   input  logic[63:0]                                                           mcycle[redmule_mesh_tb_pkg::N_TILES],
   output logic[63:0]                                                           time_var,
 
-  output logic[redmule_tile_pkg::N_IRQ-1:0]                                    irq, //TODO: manage signal
+  output logic[redmule_mesh_pkg::N_IRQ-1:0]                                    irq, //TODO: manage signal
 
   input  logic                                                                 fencei_flush_req[redmule_mesh_tb_pkg::N_TILES],
   output logic                                                                 fencei_flush_ack,
@@ -172,8 +172,8 @@ module redmule_mesh_vip
 /*******************************************************/
 
   axi_sim_mem #(
-    .AddrWidth          ( redmule_tile_pkg::ADDR_W              ),
-    .DataWidth          ( redmule_tile_pkg::DATA_W              ),
+    .AddrWidth          ( redmule_mesh_pkg::ADDR_W              ),
+    .DataWidth          ( redmule_mesh_pkg::DATA_W              ),
     .IdWidth            ( redmule_mesh_tb_pkg::L2_ID_W          ),
     .UserWidth          ( redmule_mesh_tb_pkg::L2_U_W           ),
     .axi_req_t          ( redmule_mesh_tb_pkg::axi_l2_vip_req_t ),

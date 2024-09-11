@@ -31,262 +31,250 @@ package redmule_tile_pkg;
   `include "hci/assign.svh"
 
   `include "../include/alias.svh"
-  
-  // Global constants
-  localparam int unsigned ADDR_W                   = 32;                              // System-wide address Width
-  localparam int unsigned DATA_W                   = 32;                              // System-wide data Width
-  localparam int unsigned INSTR_W                  = 32;                              // System-wide instruction Width
-  localparam int unsigned BYTE_W                   = 8;                               // System-wide byte Width
-  localparam int unsigned STRB_W                   = DATA_W/BYTE_W;                   // System-wide strobe Width
-  localparam int unsigned N_MEM_BANKS              = 32;                              // Number of TCDM banks (1 extra bank for missaligned accesses)
-  localparam int unsigned N_WORDS_BANK             = 4096;                            // Number of words per TCDM bank
-  localparam int unsigned N_IRQ                    = 32;                              // Number of IRQs
-  localparam int unsigned IRQ_ID_W                 = $clog2(N_IRQ);                   // IRQ ID Width
-  localparam int unsigned ID_W_OFFSET              = 4;                               // Offset to be added to ID Width
-  localparam int unsigned ID_W                     = 4;                               // Default ID Width
-  localparam int unsigned USR_W                    = 1;                               // Default User Width
 
   // IRQ constraints
-  localparam int unsigned IRQ_IDX_REDMULE_EVT_0   = 31;
-  localparam int unsigned IRQ_IDX_REDMULE_EVT_1   = 30;
-  localparam int unsigned IRQ_IDX_A2O_ERROR       = 29;
-  localparam int unsigned IRQ_IDX_O2A_ERROR       = 28;
-  localparam int unsigned IRQ_IDX_A2O_DONE        = 27;
-  localparam int unsigned IRQ_IDX_O2A_DONE        = 26;
-  localparam int unsigned IRQ_IDX_A2O_START       = 25;
-  localparam int unsigned IRQ_IDX_O2A_START       = 24;
-  localparam int unsigned IRQ_IDX_A2O_BUSY        = 23;
-  localparam int unsigned IRQ_IDX_O2A_BUSY        = 22;
-  localparam int unsigned IRQ_IDX_REDMULE_BUSY    = 21;
-  localparam int unsigned IRQ_USED                = 11;
+  localparam int unsigned IRQ_IDX_REDMULE_EVT_0 = 31;
+  localparam int unsigned IRQ_IDX_REDMULE_EVT_1 = 30;
+  localparam int unsigned IRQ_IDX_A2O_ERROR     = 29;
+  localparam int unsigned IRQ_IDX_O2A_ERROR     = 28;
+  localparam int unsigned IRQ_IDX_A2O_DONE      = 27;
+  localparam int unsigned IRQ_IDX_O2A_DONE      = 26;
+  localparam int unsigned IRQ_IDX_A2O_START     = 25;
+  localparam int unsigned IRQ_IDX_O2A_START     = 24;
+  localparam int unsigned IRQ_IDX_A2O_BUSY      = 23;
+  localparam int unsigned IRQ_IDX_O2A_BUSY      = 22;
+  localparam int unsigned IRQ_IDX_REDMULE_BUSY  = 21;
+  localparam int unsigned IRQ_USED              = 11;
 
   // Address map
-  localparam logic[ADDR_W-1:0] L1_ADDR_START       = 32'h1000_0000;
-  localparam logic[ADDR_W-1:0] L1_ADDR_END         = 32'h2000_0000;
-  localparam logic[ADDR_W-1:0] L2_ADDR_START       = 32'h2000_0000;
-  localparam logic[ADDR_W-1:0] L2_ADDR_END         = 32'h3000_0000;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_ADDR_START = 32'h1000_0000;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_ADDR_END   = 32'h2000_0000;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_ADDR_START = 32'h2000_0000;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_ADDR_END   = 32'h3000_0000;
   
   // Parameters used by the HCI
-  parameter int unsigned N_HWPE                    = 1;                               // Number of HWPEs attached to the port
-  parameter int unsigned N_CORE                    = 1;                               // Number of Core ports
-  parameter int unsigned N_DMA                     = 2;                               // Number of DMA ports (1 for the read channel and 1 for the write channel)
+  parameter int unsigned N_HWPE  = 1;                                                   // Number of HWPEs attached to the port
+  parameter int unsigned N_CORE  = 1;                                                   // Number of Core ports
+  parameter int unsigned N_DMA   = 2;                                                   // Number of DMA ports (1 for the read channel and 1 for the write channel)
   typedef enum logic{
     HCI_DMA_CH_READ_IDX  = 1'b0,
     HCI_DMA_CH_WRITE_IDX = 1'b1
-  } hci_idma_ch_idx_e;                                                                // Index of the HCI DMA read and write channels
-  parameter int unsigned N_EXT                     = 0;                               // Number of External ports - LEAVE TO 0 UNLESS YOU KNOW WHAT YOU ARE DOING
-  parameter int unsigned AWC                       = ADDR_W;                          // Address width core   (slave ports)
-  localparam int unsigned AWM                      = 
-                          $clog2(N_WORDS_BANK*DW_LIC/BW_LIC);                         // Address width memory (master ports)
-  parameter int unsigned DW_LIC                    = DATA_W;                          // Data Width for Log Interconnect
-  parameter int unsigned BW_LIC                    = BYTE_W;                          // Byte Width for Log Interconnect
-  parameter int unsigned UW_LIC                    = USR_W;                           // User Width for Log Interconnect
-  localparam int unsigned SW_LIC                   = DW_LIC/BW_LIC;                   // Strobe Width for Log Interconnect
-  localparam int unsigned WD_LIC                   = DW_LIC/DW_LIC;                   // Number of words per data for Log Interconnect
-  parameter int unsigned TS_BIT                    = 21;                              // TEST_SET_BIT (for Log Interconnect)
-  parameter int unsigned IW                        = N_HWPE + N_CORE + N_DMA + N_EXT; // ID Width HCI
-  parameter int unsigned EXPFIFO                   = 0;                               // FIFO Depth for HWPE Interconnect
-  parameter int unsigned DWH                       = 544;                             // Data Width for HWPE Interconnect: RedMulE Hx(P+1)xBits + Bank width = 8x(3+1)x16+32 
-  parameter int unsigned AWH                       = ADDR_W;                          // Address Width for HWPE Interconnect
-  parameter int unsigned BWH                       = BYTE_W;                          // Byte Width for HWPE Interconnect
-  parameter int unsigned WWH                       = DWH;                             // Word Width for HWPE Interconnect
-  parameter int unsigned OWH                       = AWH;                             // Offset Width for HWPE Interconnect
-  parameter int unsigned UWH                       = USR_W;                           // User Width for HWPE Interconnect
-  parameter int unsigned SEL_LIC                   = 1;                               // Log interconnect type selector
-  localparam int unsigned SWH                      = DWH/BWH;                         // Strobe Width for HWPE Interconnect
-  localparam int unsigned WDH                      = DWH/WWH;                         // Number of words per data for HWPE Interconnect
+  } hci_idma_ch_idx_e;                                                                  // Index of the HCI DMA read and write channels
+  parameter int unsigned N_EXT   = 0;                                                   // Number of External ports - LEAVE TO 0 UNLESS YOU KNOW WHAT YOU ARE DOING
+  parameter int unsigned AWC     = redmule_mesh_pkg::ADDR_W;                            // Address width core   (slave ports)
+  localparam int unsigned AWM    = 
+                          $clog2(redmule_mesh_pkg::N_WORDS_BANK*DW_LIC/BW_LIC);         // Address width memory (master ports)
+  parameter int unsigned DW_LIC  = redmule_mesh_pkg::DATA_W;                            // Data Width for Log Interconnect
+  parameter int unsigned BW_LIC  = redmule_mesh_pkg::BYTE_W;                            // Byte Width for Log Interconnect
+  parameter int unsigned UW_LIC  = redmule_mesh_pkg::USR_W;                             // User Width for Log Interconnect
+  localparam int unsigned SW_LIC = DW_LIC/BW_LIC;                                       // Strobe Width for Log Interconnect
+  localparam int unsigned WD_LIC = DW_LIC/DW_LIC;                                       // Number of words per data for Log Interconnect
+  parameter int unsigned TS_BIT  = 21;                                                  // TEST_SET_BIT (for Log Interconnect)
+  parameter int unsigned IW      = N_HWPE+N_CORE+N_DMA+N_EXT;                           // ID Width HCI
+  parameter int unsigned EXPFIFO = 0;                                                   // FIFO Depth for HWPE Interconnect
+  parameter int unsigned DWH     = 544;                                                 // Data Width for HWPE Interconnect: RedMulE Hx(P+1)xBits + Bank width = 8x(3+1)x16+32 
+  parameter int unsigned AWH     = redmule_mesh_pkg::ADDR_W;                            // Address Width for HWPE Interconnect
+  parameter int unsigned BWH     = redmule_mesh_pkg::BYTE_W;                            // Byte Width for HWPE Interconnect
+  parameter int unsigned WWH     = DWH;                                                 // Word Width for HWPE Interconnect
+  parameter int unsigned OWH     = AWH;                                                 // Offset Width for HWPE Interconnect
+  parameter int unsigned UWH     = redmule_mesh_pkg::USR_W;                             // User Width for HWPE Interconnect
+  parameter int unsigned SEL_LIC = 1;                                                   // Log interconnect type selector
+  localparam int unsigned SWH    = DWH/BWH;                                             // Strobe Width for HWPE Interconnect
+  localparam int unsigned WDH    = DWH/WWH;                                             // Number of words per data for HWPE Interconnect
 
   // Parameters used by the core
-  parameter bit          X_EXT_EN                  = 1;                               // Enable eXtension Interface (X) support, see eXtension Interface        
-  parameter int unsigned X_NUM_RS                  = 3;                               // Number of register file read ports that can be used by the eXtension interface
-  parameter int unsigned X_ID_W                    = IW + ID_W_OFFSET;                // Identification width for the eXtension interface
-  parameter int unsigned X_MEM_W                   = 32;                              // Memory access width for loads/stores via the eXtension interface
-  parameter int unsigned X_RFR_W                   = 32;                              // Register file read access width for the eXtension interface
-  parameter int unsigned X_RFW_W                   = 32;                              // Register file write access width for the eXtension interface
-  parameter bit[31:0]    X_MISA                    = 32'h0;                           // MISA extensions implemented on the eXtension interface, see Machine ISA (misa). X_MISA can only be used to set a subset of the following: {P, V, F, M}
-  parameter bit[1 :0]    X_ECS_XS                  = 2'b0;                            // Default value for mstatus.XS if X_EXT = 1, see Machine Status (mstatus)
-  parameter bit[31:0]    DM_REGION_START           = 32'hF0000000;                    // Start address of Debug Module region, see Debug & Trigger
-  parameter bit[31:0]    DM_REGION_END             = 32'hF0003FFF;                    // End address of Debug Module region, see Debug & Trigger
-  parameter bit          CLIC_EN                   = 1'b0;                            // Specifies whether Smclic, Smclicshv and Smclicconfig are supported
-  parameter int unsigned CLIC_ID_W                 = 1;                               // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
+  parameter bit          X_EXT_EN        = 1;                                           // Enable eXtension Interface (X) support, see eXtension Interface        
+  parameter int unsigned X_NUM_RS        = 3;                                           // Number of register file read ports that can be used by the eXtension interface
+  parameter int unsigned X_ID_W          = redmule_mesh_pkg::ID_W + 
+                                           redmule_mesh_pkg::ID_W_OFFSET;               // Identification width for the eXtension interface
+  parameter int unsigned X_MEM_W         = 32;                                          // Memory access width for loads/stores via the eXtension interface
+  parameter int unsigned X_RFR_W         = 32;                                          // Register file read access width for the eXtension interface
+  parameter int unsigned X_RFW_W         = 32;                                          // Register file write access width for the eXtension interface
+  parameter bit[31:0]    X_MISA          = 32'h0;                                       // MISA extensions implemented on the eXtension interface, see Machine ISA (misa). X_MISA can only be used to set a subset of the following: {P, V, F, M}
+  parameter bit[1 :0]    X_ECS_XS        = 2'b0;                                        // Default value for mstatus.XS if X_EXT = 1, see Machine Status (mstatus)
+  parameter bit[31:0]    DM_REGION_START = 32'hF0000000;                                // Start address of Debug Module region, see Debug & Trigger
+  parameter bit[31:0]    DM_REGION_END   = 32'hF0003FFF;                                // End address of Debug Module region, see Debug & Trigger
+  parameter bit          CLIC_EN         = 1'b0;                                        // Specifies whether Smclic, Smclicshv and Smclicconfig are supported
+  parameter int unsigned CLIC_ID_W       = 1;                                           // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
 
   // Parameters used by RedMulE
-  parameter int unsigned REDMULE_DW                = DWH;                             // RedMulE Data Width
-  parameter int unsigned REDMULE_ID_W              = IW + ID_W_OFFSET;                // RedMulE ID Width
-  parameter int unsigned REDMULE_UW                = UWH;                             // RedMulE User Width
+  parameter int unsigned REDMULE_DW   = DWH;                                            // RedMulE Data Width
+  parameter int unsigned REDMULE_ID_W = redmule_mesh_pkg::ID_W + 
+                                        redmule_mesh_pkg::ID_W_OFFSET;                  // RedMulE ID Width
+  parameter int unsigned REDMULE_UW   = UWH;                                            // RedMulE User Width
   
   // Parameters used by OBI
-  parameter int unsigned AUSER_WIDTH               = 1;                               // Width of the auser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned WUSER_WIDTH               = 1;                               // Width of the wuser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned ACHK_WIDTH                = 1;                               // Width of the achk  signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned RUSER_WIDTH               = 1;                               // Width of the ruser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned RCHK_WIDTH                = 1;                               // Width of the rchk  signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned AID_WIDTH                 = 1;                               // Width of the aid   signal (address channel identifier, see OBI documentation)
-  parameter int unsigned RID_WIDTH                 = 1;                               // Width of the rid   signal (response channel identifier, see OBI documentation)
-  parameter int unsigned MID_WIDTH                 = 1;                               // Width of the mid   signal (manager identifier, see OBI documentation)
-  parameter int unsigned N_SBR                     = 2;                               // Number of slaves (HCI, AXI XBAR)
-  parameter int unsigned N_MGR                     = 1;                               // Number of masters (Core)
-  parameter int unsigned N_MAX_TRAN                = 1;                               // Number of maximum outstanding transactions
-  parameter int unsigned N_ADDR_RULE               = 2;                               // Number of address rules
-  localparam int unsigned N_BIT_SBR                = $clog2(N_SBR);                   // Number of bits required to identify each slave
+  parameter int unsigned AUSER_WIDTH = 1;                                               // Width of the auser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned WUSER_WIDTH = 1;                                               // Width of the wuser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned ACHK_WIDTH  = 1;                                               // Width of the achk  signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned RUSER_WIDTH = 1;                                               // Width of the ruser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned RCHK_WIDTH  = 1;                                               // Width of the rchk  signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned AID_WIDTH   = 1;                                               // Width of the aid   signal (address channel identifier, see OBI documentation)
+  parameter int unsigned RID_WIDTH   = 1;                                               // Width of the rid   signal (response channel identifier, see OBI documentation)
+  parameter int unsigned MID_WIDTH   = 1;                                               // Width of the mid   signal (manager identifier, see OBI documentation)
+  parameter int unsigned N_SBR       = 2;                                               // Number of slaves (HCI, AXI XBAR)
+  parameter int unsigned N_MGR       = 1;                                               // Number of masters (Core)
+  parameter int unsigned N_MAX_TRAN  = 1;                                               // Number of maximum outstanding transactions
+  parameter int unsigned N_ADDR_RULE = 2;                                               // Number of address rules
+  localparam int unsigned N_BIT_SBR  = $clog2(N_SBR);                                   // Number of bits required to identify each slave
 
   // Parameters used by AXI
-  parameter int unsigned AXI_DATA_ID_W             = 2;                               // Width of the AXI Data ID (2 bits: Core, iDMA. I$)
-  parameter int unsigned AXI_INSTR_ID_W            = 1;                               // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
-  parameter int unsigned AXI_ID_W                  = 2;                               // Width of the AXI Unified Communication Channel ID
-  parameter int unsigned AXI_DATA_U_W              = USR_W;                           // Width of the AXI Data User
-  parameter int unsigned AXI_INSTR_U_W             = USR_W;                           // Width of the AXI Instruction User
-  parameter int unsigned AXI_U_W                   = USR_W;                           // Width of the AXI Unified Communication Channel User
+  parameter int unsigned AXI_DATA_ID_W  = 2;                                            // Width of the AXI Data ID (2 bits: Core, iDMA. I$)
+  parameter int unsigned AXI_INSTR_ID_W = 1;                                            // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
+  parameter int unsigned AXI_ID_W       = 2;                                            // Width of the AXI Unified Communication Channel ID
+  parameter int unsigned AXI_DATA_U_W   = redmule_mesh_pkg::USR_W;                      // Width of the AXI Data User
+  parameter int unsigned AXI_INSTR_U_W  = redmule_mesh_pkg::USR_W;                      // Width of the AXI Instruction User
+  parameter int unsigned AXI_U_W        = redmule_mesh_pkg::USR_W;                      // Width of the AXI Unified Communication Channel User
 
   // Parameters used by the iDMA
-  localparam int unsigned iDMA_NumDims             = 3;                               // iDMA Number of dimensions
-  localparam int unsigned NumDim                   = iDMA_NumDims;                    // Needed by the iDMA typedef (wtf?)
-  parameter int unsigned iDMA_DataWidth            = DATA_W;                          // iDMA Data Width
-  parameter int unsigned iDMA_AddrWidth            = ADDR_W;                          // iDMA Address Width
-  parameter int unsigned iDMA_UserWidth            = AXI_DATA_U_W;                    // iDMA AXI User Width
-  parameter int unsigned iDMA_StrbWidth            = STRB_W;                          // iDMA AXI Strobe Width
-  parameter int unsigned iDMA_AxiIdWidth           = AXI_DATA_ID_W;                   // iDMA AXI ID Width
-  parameter int unsigned iDMA_NumAxInFlight        = 2;                               // iDMA Number of transaction that can be in-flight concurrently
-  parameter int unsigned iDMA_BufferDepth          = 3;                               // iDMA depth of the internal reorder buffer: '2' - minimal possible configuration; '3' - efficiently handle misaligned transfers (recommended)
-  parameter int unsigned iDMA_TFLenWidth           = 32;                              // iDMA With of a transfer: max transfer size is `2**TFLenWidth` bytes
-  parameter int unsigned iDMA_MemSysDepth          = 0;                               // iDMA depth of the memory system the backend is attached to
-  parameter int unsigned iDMA_CombinedShifter      = 0;                               // iDMA Should both data shifts be done before the dataflow element? If this is enabled, then the data inserted into the dataflow element will no longer be word aligned, but only a single shifter is needed
-  parameter int unsigned iDMA_RAWCouplingAvail     = 0;                               // iDMA Should the `R`-`AW` coupling hardware be present? (recommended)
-  parameter int unsigned iDMA_MaskInvalidData      = 1;                               // iDMA Mask invalid data on the manager interface
-  parameter int unsigned iDMA_HardwareLegalizer    = 1;                               // iDMA Should hardware legalization be present? (recommended) If not, software legalization is required to ensure the transfers are AXI4-conformal
-  parameter int unsigned iDMA_RejectZeroTransfers  = 1;                               // iDMA Reject zero-length transfers
-  parameter int unsigned iDMA_PrintFifoInfo        = 0;                               // iDMA Print the info of the FIFO configuration
-  parameter int unsigned iDMA_NumRegs              = 1;                               // iDMA Number of configuration register ports
-  parameter int unsigned iDMA_NumStreams           = 1;                               // iDMA Number of streams (max 16)
-  parameter int unsigned iDMA_JobFifoDepth         = 2;                               // iDMA Stream FIFO depth
-  parameter int unsigned iDMA_IdCounterWidth       = 32;                              // iDMA Width of the transfer id (max 32-bit)
-  parameter int unsigned iDMA_RepWidth             = 32;                              // iDMA Width of the reps field
+  localparam int unsigned iDMA_NumDims            = 3;                                  // iDMA Number of dimensions
+  localparam int unsigned NumDim                  = iDMA_NumDims;                       // Needed by the iDMA typedef (wtf?)
+  parameter int unsigned iDMA_DataWidth           = redmule_mesh_pkg::DATA_W;           // iDMA Data Width
+  parameter int unsigned iDMA_AddrWidth           = redmule_mesh_pkg::ADDR_W;           // iDMA Address Width
+  parameter int unsigned iDMA_UserWidth           = AXI_DATA_U_W;                       // iDMA AXI User Width
+  parameter int unsigned iDMA_StrbWidth           = redmule_mesh_pkg::STRB_W;           // iDMA AXI Strobe Width
+  parameter int unsigned iDMA_AxiIdWidth          = AXI_DATA_ID_W;                      // iDMA AXI ID Width
+  parameter int unsigned iDMA_NumAxInFlight       = 2;                                  // iDMA Number of transaction that can be in-flight concurrently
+  parameter int unsigned iDMA_BufferDepth         = 3;                                  // iDMA depth of the internal reorder buffer: '2' - minimal possible configuration; '3' - efficiently handle misaligned transfers (recommended)
+  parameter int unsigned iDMA_TFLenWidth          = 32;                                 // iDMA With of a transfer: max transfer size is `2**TFLenWidth` bytes
+  parameter int unsigned iDMA_MemSysDepth         = 0;                                  // iDMA depth of the memory system the backend is attached to
+  parameter int unsigned iDMA_CombinedShifter     = 0;                                  // iDMA Should both data shifts be done before the dataflow element? If this is enabled, then the data inserted into the dataflow element will no longer be word aligned, but only a single shifter is needed
+  parameter int unsigned iDMA_RAWCouplingAvail    = 0;                                  // iDMA Should the `R`-`AW` coupling hardware be present? (recommended)
+  parameter int unsigned iDMA_MaskInvalidData     = 1;                                  // iDMA Mask invalid data on the manager interface
+  parameter int unsigned iDMA_HardwareLegalizer   = 1;                                  // iDMA Should hardware legalization be present? (recommended) If not, software legalization is required to ensure the transfers are AXI4-conformal
+  parameter int unsigned iDMA_RejectZeroTransfers = 1;                                  // iDMA Reject zero-length transfers
+  parameter int unsigned iDMA_PrintFifoInfo       = 0;                                  // iDMA Print the info of the FIFO configuration
+  parameter int unsigned iDMA_NumRegs             = 1;                                  // iDMA Number of configuration register ports
+  parameter int unsigned iDMA_NumStreams          = 1;                                  // iDMA Number of streams (max 16)
+  parameter int unsigned iDMA_JobFifoDepth        = 2;                                  // iDMA Stream FIFO depth
+  parameter int unsigned iDMA_IdCounterWidth      = 32;                                 // iDMA Width of the transfer id (max 32-bit)
+  parameter int unsigned iDMA_RepWidth            = 32;                                 // iDMA Width of the reps field
   localparam logic[iDMA_NumDims-1:0][31:0] 
-                         iDMA_RepWidths            = '{default: 32'd32};              // iDMA Width of the counters holding the number of repetitions
-  parameter int unsigned iDMA_StrideWidth          = 32;                              // iDMA Width of the stride field
+                         iDMA_RepWidths           = '{default: 32'd32};                 // iDMA Width of the counters holding the number of repetitions
+  parameter int unsigned iDMA_StrideWidth         = 32;                                 // iDMA Width of the stride field
   typedef enum logic{
     AXI2OBI = 1'b0,
     OBI2AXI = 1'b1
-  } idma_transfer_ch_e;                                                               // iDMA type of transfer channel
+  } idma_transfer_ch_e;                                                                 // iDMA type of transfer channel
 
   // Parameters used by the iDMA instruction decoder
-  parameter int unsigned DMA_INSTR_W               = INSTR_W;                         // iDMA Decoder instruction width
-  parameter int unsigned DMA_DATA_W                = DATA_W;                          // iDMA Decoder data width
-  parameter int unsigned DMA_ADDR_W                = ADDR_W;                          // iDMA Decoder address width
-  parameter int unsigned DMA_N_RF_PORTS            = X_NUM_RS;                        // iDMA Decoder number of register file read ports
-  parameter int unsigned DMA_OPCODE_W              = 7;                               // iDMA Decoder OPCODE field width
-  parameter int unsigned DMA_FUNC3_W               = 3;                               // iDMA Decoder FUNC3 field width
-  parameter int unsigned DMA_ND_EN_W               = 2;                               // iDMA Decoder ND_EN field width
-  parameter int unsigned DMA_DST_MAX_LOG_LEN_W     = 3;                               // iDMA Decoder DST_MAX_LOG_LEN field width
-  parameter int unsigned DMA_SRC_MAX_LOG_LEN_W     = 3;                               // iDMA Decoder SRC_MAX_LOG_LEN field width
-  parameter int unsigned DMA_DST_REDUCE_LEN_W      = 1;                               // iDMA Decoder DST_REDUCE_LEN field width
-  parameter int unsigned DMA_SRC_REDUCE_LEN_W      = 1;                               // iDMA Decoder SRC_REDUCE_LEN field width
-  parameter int unsigned DMA_DECOUPLE_R_W_W        = 1;                               // iDMA Decoder DECOUPLE_R_W field width
-  parameter int unsigned DMA_DECOUPLE_R_AW_W       = 1;                               // iDMA Decoder DECOUPLE_R_AW field width
-  parameter int unsigned DMA_DIRECTION_W           = 1;                               // iDMA Decoder DIRECTION field width
-  parameter int unsigned DMA_OPCODE_OFF            = 0;                               // iDMA Decoder OPCODE field offset
-  parameter int unsigned DMA_FUNC3_OFF             = 12;                              // iDMA Decoder FUNC3 field offset
-  parameter int unsigned DMA_ND_EN_OFF             = 26;                              // iDMA Decoder ND_EN field offset
-  parameter int unsigned DMA_DST_MAX_LOG_LEN_OFF   = 22;                              // iDMA Decoder DST_MAX_LOG_LEN field offset
-  parameter int unsigned DMA_SRC_MAX_LOG_LEN_OFF   = 19;                              // iDMA Decoder SRC_MAX_LOG_LEN field offset
-  parameter int unsigned DMA_DST_REDUCE_LEN_OFF    = 18;                              // iDMA Decoder DST_REDUCE_LEN field offset
-  parameter int unsigned DMA_SRC_REDUCE_LEN_OFF    = 17;                              // iDMA Decoder SRC_REDUCE_LEN field offset
-  parameter int unsigned DMA_DECOUPLE_R_W_OFF      = 16;                              // iDMA Decoder DECOUPLE_R_W field offset
-  parameter int unsigned DMA_DECOUPLE_R_AW_OFF     = 15;                              // iDMA Decoder DECOUPLE_R_AW field offset
-  parameter int unsigned DMA_DIRECTION_OFF         = 25;                              // iDMA Decoder DIRECTION field offset
-  parameter int unsigned DMA_N_CFG_REG             = 10;                              // iDMA Decoder number of configuration registers of the iDMA forntend: CONF, DST_ADDR, SRC_ADDR, LENGTH, DST_STRIDE_2, SRC_STRIDE_2, REPS_2, DST_STRIDE_3, SRC_STRIDE_3, REPS_3
-  parameter int unsigned DMA_CONF_IDX              = 0;                               // iDMA Decoder CONF cofiguration register index 
-  parameter int unsigned DMA_DST_ADDR_IDX          = 1;                               // iDMA Decoder DST_ADDR cofiguration register index 
-  parameter int unsigned DMA_SRC_ADDR_IDX          = 2;                               // iDMA Decoder SRC_ADDR cofiguration register index 
-  parameter int unsigned DMA_LENGTH_IDX            = 3;                               // iDMA Decoder LENGTH cofiguration register index 
-  parameter int unsigned DMA_DST_STRIDE_2_IDX      = 4;                               // iDMA Decoder DST_STRIDE_2 cofiguration register index 
-  parameter int unsigned DMA_SRC_STRIDE_2_IDX      = 5;                               // iDMA Decoder SRC_STRIDE_2 cofiguration register index 
-  parameter int unsigned DMA_REPS_2_IDX            = 6;                               // iDMA Decoder REPS_2 configuration register index
-  parameter int unsigned DMA_DST_STRIDE_3_IDX      = 7;                               // iDMA Decoder DST_STRIDE_3 cofiguration register index 
-  parameter int unsigned DMA_SRC_STRIDE_3_IDX      = 8;                               // iDMA Decoder SRC_STRIDE_3 cofiguration register index 
-  parameter int unsigned DMA_REPS_3_IDX            = 9;                               // iDMA Decoder REPS_3 configuration register index
-  parameter logic[DMA_OPCODE_W-1:0] CONF_OPCODE    = 7'b101_1011;                     // iDMA Decoder CONF instruction OPCODE
-  parameter logic[ DMA_FUNC3_W-1:0] CONF_FUNC3     = 3'b000;                          // iDMA Decoder CONF instruction FUNC3
-  parameter logic[DMA_OPCODE_W-1:0] SET_OPCODE     = 7'b111_1011;                     // iDMA Decoder SET (ADDR/LEN, STD_2/REP_2, STD_3/REP_3, START) instruction OPCODE
-  parameter logic[ DMA_FUNC3_W-1:0] SET_AL_FUNC3   = 3'b000;                          // iDMA Decoder ADDR/LEN instruction FUNC3
-  parameter logic[ DMA_FUNC3_W-1:0] SET_SR2_FUNC3  = 3'b001;                          // iDMA Decoder STD_2/REP_2 instruction FUNC3
-  parameter logic[ DMA_FUNC3_W-1:0] SET_SR3_FUNC3  = 3'b010;                          // iDMA Decoder STD_3/REP_3 instruction FUNC3
-  parameter logic[ DMA_FUNC3_W-1:0] SET_S_FUNC3    = 3'b111;                          // iDMA Decoder START instruction FUNC3
+  parameter int unsigned DMA_INSTR_W              = redmule_mesh_pkg::INSTR_W;          // iDMA Decoder instruction width
+  parameter int unsigned DMA_DATA_W               = redmule_mesh_pkg::DATA_W;           // iDMA Decoder data width
+  parameter int unsigned DMA_ADDR_W               = redmule_mesh_pkg::ADDR_W;           // iDMA Decoder address width
+  parameter int unsigned DMA_N_RF_PORTS           = X_NUM_RS;                           // iDMA Decoder number of register file read ports
+  parameter int unsigned DMA_OPCODE_W             = 7;                                  // iDMA Decoder OPCODE field width
+  parameter int unsigned DMA_FUNC3_W              = 3;                                  // iDMA Decoder FUNC3 field width
+  parameter int unsigned DMA_ND_EN_W              = 2;                                  // iDMA Decoder ND_EN field width
+  parameter int unsigned DMA_DST_MAX_LOG_LEN_W    = 3;                                  // iDMA Decoder DST_MAX_LOG_LEN field width
+  parameter int unsigned DMA_SRC_MAX_LOG_LEN_W    = 3;                                  // iDMA Decoder SRC_MAX_LOG_LEN field width
+  parameter int unsigned DMA_DST_REDUCE_LEN_W     = 1;                                  // iDMA Decoder DST_REDUCE_LEN field width
+  parameter int unsigned DMA_SRC_REDUCE_LEN_W     = 1;                                  // iDMA Decoder SRC_REDUCE_LEN field width
+  parameter int unsigned DMA_DECOUPLE_R_W_W       = 1;                                  // iDMA Decoder DECOUPLE_R_W field width
+  parameter int unsigned DMA_DECOUPLE_R_AW_W      = 1;                                  // iDMA Decoder DECOUPLE_R_AW field width
+  parameter int unsigned DMA_DIRECTION_W          = 1;                                  // iDMA Decoder DIRECTION field width
+  parameter int unsigned DMA_OPCODE_OFF           = 0;                                  // iDMA Decoder OPCODE field offset
+  parameter int unsigned DMA_FUNC3_OFF            = 12;                                 // iDMA Decoder FUNC3 field offset
+  parameter int unsigned DMA_ND_EN_OFF            = 26;                                 // iDMA Decoder ND_EN field offset
+  parameter int unsigned DMA_DST_MAX_LOG_LEN_OFF  = 22;                                 // iDMA Decoder DST_MAX_LOG_LEN field offset
+  parameter int unsigned DMA_SRC_MAX_LOG_LEN_OFF  = 19;                                 // iDMA Decoder SRC_MAX_LOG_LEN field offset
+  parameter int unsigned DMA_DST_REDUCE_LEN_OFF   = 18;                                 // iDMA Decoder DST_REDUCE_LEN field offset
+  parameter int unsigned DMA_SRC_REDUCE_LEN_OFF   = 17;                                 // iDMA Decoder SRC_REDUCE_LEN field offset
+  parameter int unsigned DMA_DECOUPLE_R_W_OFF     = 16;                                 // iDMA Decoder DECOUPLE_R_W field offset
+  parameter int unsigned DMA_DECOUPLE_R_AW_OFF    = 15;                                 // iDMA Decoder DECOUPLE_R_AW field offset
+  parameter int unsigned DMA_DIRECTION_OFF        = 25;                                 // iDMA Decoder DIRECTION field offset
+  parameter int unsigned DMA_N_CFG_REG            = 10;                                 // iDMA Decoder number of configuration registers of the iDMA forntend: CONF, DST_ADDR, SRC_ADDR, LENGTH, DST_STRIDE_2, SRC_STRIDE_2, REPS_2, DST_STRIDE_3, SRC_STRIDE_3, REPS_3
+  parameter int unsigned DMA_CONF_IDX             = 0;                                  // iDMA Decoder CONF cofiguration register index 
+  parameter int unsigned DMA_DST_ADDR_IDX         = 1;                                  // iDMA Decoder DST_ADDR cofiguration register index 
+  parameter int unsigned DMA_SRC_ADDR_IDX         = 2;                                  // iDMA Decoder SRC_ADDR cofiguration register index 
+  parameter int unsigned DMA_LENGTH_IDX           = 3;                                  // iDMA Decoder LENGTH cofiguration register index 
+  parameter int unsigned DMA_DST_STRIDE_2_IDX     = 4;                                  // iDMA Decoder DST_STRIDE_2 cofiguration register index 
+  parameter int unsigned DMA_SRC_STRIDE_2_IDX     = 5;                                  // iDMA Decoder SRC_STRIDE_2 cofiguration register index 
+  parameter int unsigned DMA_REPS_2_IDX           = 6;                                  // iDMA Decoder REPS_2 configuration register index
+  parameter int unsigned DMA_DST_STRIDE_3_IDX     = 7;                                  // iDMA Decoder DST_STRIDE_3 cofiguration register index 
+  parameter int unsigned DMA_SRC_STRIDE_3_IDX     = 8;                                  // iDMA Decoder SRC_STRIDE_3 cofiguration register index 
+  parameter int unsigned DMA_REPS_3_IDX           = 9;                                  // iDMA Decoder REPS_3 configuration register index
+  parameter logic[DMA_OPCODE_W-1:0] CONF_OPCODE   = 7'b101_1011;                        // iDMA Decoder CONF instruction OPCODE
+  parameter logic[ DMA_FUNC3_W-1:0] CONF_FUNC3    = 3'b000;                             // iDMA Decoder CONF instruction FUNC3
+  parameter logic[DMA_OPCODE_W-1:0] SET_OPCODE    = 7'b111_1011;                        // iDMA Decoder SET (ADDR/LEN, STD_2/REP_2, STD_3/REP_3, START) instruction OPCODE
+  parameter logic[ DMA_FUNC3_W-1:0] SET_AL_FUNC3  = 3'b000;                             // iDMA Decoder ADDR/LEN instruction FUNC3
+  parameter logic[ DMA_FUNC3_W-1:0] SET_SR2_FUNC3 = 3'b001;                             // iDMA Decoder STD_2/REP_2 instruction FUNC3
+  parameter logic[ DMA_FUNC3_W-1:0] SET_SR3_FUNC3 = 3'b010;                             // iDMA Decoder STD_3/REP_3 instruction FUNC3
+  parameter logic[ DMA_FUNC3_W-1:0] SET_S_FUNC3   = 3'b111;                             // iDMA Decoder START instruction FUNC3
 
   // Parameters of the AXI XBAR
-  parameter int unsigned AxiXbarNoSlvPorts         = 3;                               // Number of Slave Ports (iDMA, Core Data and Core I$)
-  localparam int unsigned AxiXbarSlvAxiIDWidth     = AXI_DATA_ID_W;                   // Number of bits to indentify each Slave Port
-  parameter int unsigned AxiXbarMaxWTrans          = 16;                              // Maximum number of outstanding transactions per write
-  parameter bit          AxiXbarFallThrough        = 1'b0;                            // Enabled -> MUX is purely combinational
-  parameter bit          AxiXbarSpillAw            = 1'b0;                            // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
-  parameter bit          AxiXbarSpillW             = 1'b0;                            // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
-  parameter bit          AxiXbarSpillB             = 1'b0;                            // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
-  parameter bit          AxiXbarSpillAr            = 1'b0;                            // Enabled -> Spill register on read master ports, +1 cycle of latency on write channels
-  parameter bit          AxiXbarSpillR             = 1'b0;                            // Enabled -> Spill register on read master ports, +1 cycle of latency on write channels 
+  parameter int unsigned AxiXbarNoSlvPorts     = 3;                                     // Number of Slave Ports (iDMA, Core Data and Core I$)
+  localparam int unsigned AxiXbarSlvAxiIDWidth = AXI_DATA_ID_W;                         // Number of bits to indentify each Slave Port
+  parameter int unsigned AxiXbarMaxWTrans      = 16;                                    // Maximum number of outstanding transactions per write
+  parameter bit          AxiXbarFallThrough    = 1'b0;                                  // Enabled -> MUX is purely combinational
+  parameter bit          AxiXbarSpillAw        = 1'b0;                                  // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
+  parameter bit          AxiXbarSpillW         = 1'b0;                                  // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
+  parameter bit          AxiXbarSpillB         = 1'b0;                                  // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
+  parameter bit          AxiXbarSpillAr        = 1'b0;                                  // Enabled -> Spill register on read master ports, +1 cycle of latency on write channels
+  parameter bit          AxiXbarSpillR         = 1'b0;                                  // Enabled -> Spill register on read master ports, +1 cycle of latency on write channels 
   
   // Parameters used by the Xif Instruction Demuxer
-  parameter int unsigned N_COPROC                  = 2;                               // RedMulE and iDMA
-  parameter int unsigned N_REDMULE_OPCODE          = 2;                               // Number of opcodes in the programming model of RedMulE
-  parameter int unsigned N_IDMA_OPCODE             = 2;                               // Number of opcodes in the programming model of the iDMA decoder
-  parameter int unsigned N_OPCODE                  = 2;                               // Number of opcodes = max{RedMulE_opcode, iDMA_opcode}
+  parameter int unsigned N_COPROC         = 2;                                          // RedMulE and iDMA
+  parameter int unsigned N_REDMULE_OPCODE = 2;                                          // Number of opcodes in the programming model of RedMulE
+  parameter int unsigned N_IDMA_OPCODE    = 2;                                          // Number of opcodes in the programming model of the iDMA decoder
+  parameter int unsigned N_OPCODE         = 2;                                          // Number of opcodes = max{RedMulE_opcode, iDMA_opcode}
   typedef enum logic{
     XIF_REDMULE_IDX = 1'b0,
     XIF_IDMA_IDX    = 1'b1
   } xif_inst_demux_idx_e;
-  parameter int unsigned DEFAULT_IDX               = XIF_REDMULE_IDX;                 // RedMulE will handle the instructions by default 
+  parameter int unsigned DEFAULT_IDX      = XIF_REDMULE_IDX;                            // RedMulE will handle the instructions by default 
 
   // Parameters used by the i$
-  parameter int unsigned NR_FETCH_PORTS            = 1;                               // i$ Number of request (fetch) ports
-  parameter int unsigned L0_LINE_COUNT             = 16;                              // i$ L0 Cache Line Count
-  parameter int unsigned LINE_WIDTH                = 64;                              // i$ Cache Line Width
-  parameter int unsigned LINE_COUNT                = 16;                              // i$ The number of cache lines per set. Power of two; >= 2.
-  parameter int unsigned SET_COUNT                 = 4;                               // i$ The set associativity of the cache. Power of two; >= 1.
-  parameter int unsigned L0_PARITY_W               = 0;                               // i$ Parity of the L0 cache
-  parameter int unsigned L1_PARITY_W               = L0_PARITY_W;                     // i$ Parity of the L1 cache
-  parameter int unsigned FETCH_AW                  = ADDR_W;                          // i$ Fetch interface address width. Same as FETCH_AW; >= 1.
-  parameter int unsigned FETCH_DW                  = DATA_W;                          // i$ Fetch interface data width. Power of two; >= 8.
-  parameter int unsigned FILL_AW                   = ADDR_W;                          // i$ Fill interface address width. Same as FILL_AW; >= 1.
-  parameter int unsigned FILL_DW                   = DATA_W;                          // i$ Fill interface data width. Power of two; >= 8.
+  parameter int unsigned NR_FETCH_PORTS = 1;                                            // i$ Number of request (fetch) ports
+  parameter int unsigned L0_LINE_COUNT  = 16;                                           // i$ L0 Cache Line Count
+  parameter int unsigned LINE_WIDTH     = 64;                                           // i$ Cache Line Width
+  parameter int unsigned LINE_COUNT     = 16;                                           // i$ The number of cache lines per set. Power of two; >= 2.
+  parameter int unsigned SET_COUNT      = 4;                                            // i$ The set associativity of the cache. Power of two; >= 1.
+  parameter int unsigned L0_PARITY_W    = 0;                                            // i$ Parity of the L0 cache
+  parameter int unsigned L1_PARITY_W    = L0_PARITY_W;                                  // i$ Parity of the L1 cache
+  parameter int unsigned FETCH_AW       = redmule_mesh_pkg::ADDR_W;                     // i$ Fetch interface address width. Same as FETCH_AW; >= 1.
+  parameter int unsigned FETCH_DW       = redmule_mesh_pkg::DATA_W;                     // i$ Fetch interface data width. Power of two; >= 8.
+  parameter int unsigned FILL_AW        = redmule_mesh_pkg::ADDR_W;                     // i$ Fill interface address width. Same as FILL_AW; >= 1.
+  parameter int unsigned FILL_DW        = redmule_mesh_pkg::DATA_W;                     // i$ Fill interface data width. Power of two; >= 8.
   
   typedef struct packed {
-    int unsigned      idx;
-    logic[ADDR_W-1:0] start_addr;
-    logic[ADDR_W-1:0] end_addr;
+    int unsigned                        idx;
+    logic[redmule_mesh_pkg::ADDR_W-1:0] start_addr;
+    logic[redmule_mesh_pkg::ADDR_W-1:0] end_addr;
   } obi_xbar_rule_t;
 
   typedef struct packed {
-    logic              req;
-    logic[INSTR_W-1:0] addr;
-    logic[1        :0] memtype;
-    logic[2        :0] prot;
-    logic              dbg;
+    logic                                req;
+    logic[redmule_mesh_pkg::INSTR_W-1:0] addr;
+    logic[1                          :0] memtype;
+    logic[2                          :0] prot;
+    logic                                dbg;
   } core_instr_req_t;
 
   typedef struct packed {
-    logic              gnt;
-    logic              rvalid;
-    logic[INSTR_W-1:0] rdata;
-    logic              err;
+    logic                                gnt;
+    logic                                rvalid;
+    logic[redmule_mesh_pkg::INSTR_W-1:0] rdata;
+    logic                                err;
   } core_instr_rsp_t;
 
   typedef struct packed {
-    logic             req;
-    logic[ADDR_W-1:0] addr;
-    logic[5       :0] atop;
-    logic[3       :0] be;
-    logic[1       :0] memtype;
-    logic[2       :0] prot;
-    logic             dbg;
-    logic[DATA_W-1:0] wdata;
-    logic             we;
+    logic                               req;
+    logic[redmule_mesh_pkg::ADDR_W-1:0] addr;
+    logic[5                         :0] atop;
+    logic[3                         :0] be;
+    logic[1                         :0] memtype;
+    logic[2                         :0] prot;
+    logic                               dbg;
+    logic[redmule_mesh_pkg::DATA_W-1:0] wdata;
+    logic                               we;
   } core_data_req_t;
 
   typedef struct packed {
-    logic             gnt;
-    logic             rvalid;
-    logic[DATA_W-1:0] rdata;
-    logic             err;
-    logic             exokay;
+    logic                               gnt;
+    logic                               rvalid;
+    logic[redmule_mesh_pkg::DATA_W-1:0] rdata;
+    logic                               err;
+    logic                               exokay;
   } core_data_rsp_t;
 
   typedef struct packed {
@@ -326,25 +314,25 @@ package redmule_tile_pkg;
 
   `OBI_TYPEDEF_ALL_A_OPTIONAL(core_data_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
   `OBI_TYPEDEF_ALL_R_OPTIONAL(core_data_obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
-  `OBI_TYPEDEF_A_CHAN_T(core_data_obi_a_chan_t, ADDR_W, DATA_W, AID_WIDTH, core_data_obi_a_optional_t)
-  `OBI_TYPEDEF_R_CHAN_T(core_data_obi_r_chan_t, DATA_W, RID_WIDTH, core_data_obi_r_optional_t)
+  `OBI_TYPEDEF_A_CHAN_T(core_data_obi_a_chan_t, redmule_mesh_pkg::ADDR_W, redmule_mesh_pkg::DATA_W, AID_WIDTH, core_data_obi_a_optional_t)
+  `OBI_TYPEDEF_R_CHAN_T(core_data_obi_r_chan_t, redmule_mesh_pkg::DATA_W, RID_WIDTH, core_data_obi_r_optional_t)
   `OBI_TYPEDEF_DEFAULT_REQ_T(core_obi_data_req_t, core_data_obi_a_chan_t)
   `OBI_TYPEDEF_RSP_T(core_obi_data_rsp_t, core_data_obi_r_chan_t)
 
   `OBI_TYPEDEF_ALL_A_OPTIONAL(core_instr_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
   `OBI_TYPEDEF_ALL_R_OPTIONAL(core_instr_obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
-  `OBI_TYPEDEF_A_CHAN_T(core_instr_obi_a_chan_t, ADDR_W, DATA_W, AID_WIDTH, core_instr_obi_a_optional_t)
-  `OBI_TYPEDEF_R_CHAN_T(core_instr_obi_r_chan_t, DATA_W, RID_WIDTH, core_instr_obi_r_optional_t)
+  `OBI_TYPEDEF_A_CHAN_T(core_instr_obi_a_chan_t, redmule_mesh_pkg::ADDR_W, redmule_mesh_pkg::DATA_W, AID_WIDTH, core_instr_obi_a_optional_t)
+  `OBI_TYPEDEF_R_CHAN_T(core_instr_obi_r_chan_t, redmule_mesh_pkg::DATA_W, RID_WIDTH, core_instr_obi_r_optional_t)
   `OBI_TYPEDEF_DEFAULT_REQ_T(core_obi_instr_req_t, core_instr_obi_a_chan_t)
   `OBI_TYPEDEF_RSP_T(core_obi_instr_rsp_t, core_instr_obi_r_chan_t)
 
   `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic signed[WD_LIC-1:0][AWH:0], logic[UWH-1:0])
   `HCI_TYPEDEF_RSP_T(core_hci_data_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0])
 
-  `AXI_TYPEDEF_ALL_CT(core_axi_data, core_axi_data_req_t, core_axi_data_rsp_t, logic[ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_U_W-1:0])
-  `AXI_TYPEDEF_ALL_CT(core_axi_instr, core_axi_instr_req_t, core_axi_instr_rsp_t, logic[ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_U_W-1:0])
+  `AXI_TYPEDEF_ALL_CT(core_axi_data, core_axi_data_req_t, core_axi_data_rsp_t, logic[redmule_mesh_pkg::ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[redmule_mesh_pkg::DATA_W-1:0], logic[redmule_mesh_pkg::STRB_W-1:0], logic[AXI_U_W-1:0])
+  `AXI_TYPEDEF_ALL_CT(core_axi_instr, core_axi_instr_req_t, core_axi_instr_rsp_t, logic[redmule_mesh_pkg::ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[redmule_mesh_pkg::DATA_W-1:0], logic[redmule_mesh_pkg::STRB_W-1:0], logic[AXI_U_W-1:0])
 
-  `REG_BUS_TYPEDEF_ALL(idma_fe_reg, logic[ADDR_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0])
+  `REG_BUS_TYPEDEF_ALL(idma_fe_reg, logic[redmule_mesh_pkg::ADDR_W-1:0], logic[redmule_mesh_pkg::DATA_W-1:0], logic[redmule_mesh_pkg::STRB_W-1:0])
 
   `IDMA_TYPEDEF_FULL_REQ_T(idma_be_req_t, logic[iDMA_AxiIdWidth-1:0], idma_addr_t, logic[iDMA_TFLenWidth-1:0])
   `IDMA_TYPEDEF_FULL_RSP_T(idma_be_rsp_t, idma_addr_t)

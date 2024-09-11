@@ -42,8 +42,8 @@ export_include_dirs:
 
 sources:
   # RedMulE Packages
-  - hw/tile/redmule_tile_pkg.sv
   - hw/mesh/redmule_mesh_pkg.sv
+  - hw/tile/redmule_tile_pkg.sv
   # RedMulE Tile
   - hw/tile/data2obi.sv
   - hw/tile/instr2obi.sv

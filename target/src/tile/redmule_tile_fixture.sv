@@ -49,7 +49,7 @@ module redmule_tile_fixture;
   logic[63:0]                              mcycle;
   logic[63:0]                              time_var;
 
-  logic[redmule_tile_pkg::N_IRQ-1:0]       irq;
+  logic[redmule_mesh_pkg::N_IRQ-1:0]       irq;
 
   logic                                    fencei_flush_req;
   logic                                    fencei_flush_ack;

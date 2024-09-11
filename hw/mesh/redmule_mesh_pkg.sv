@@ -25,11 +25,25 @@ package redmule_mesh_pkg;
 
   `include "../include/alias.svh"
 
-  // Parameters used by the NoC
-  parameter int unsigned AXI_NOC_ID_W = 4;
-  parameter int unsigned AXI_NOC_U_W  = redmule_tile_pkg::USR_W;
+  // Global constants
+  localparam int unsigned ADDR_W       = 32;                              // System-wide address Width
+  localparam int unsigned DATA_W       = 32;                              // System-wide data Width
+  localparam int unsigned INSTR_W      = 32;                              // System-wide instruction Width
+  localparam int unsigned BYTE_W       = 8;                               // System-wide byte Width
+  localparam int unsigned STRB_W       = DATA_W/BYTE_W;                   // System-wide strobe Width
+  localparam int unsigned N_MEM_BANKS  = 32;                              // Number of TCDM banks (1 extra bank for missaligned accesses)
+  localparam int unsigned N_WORDS_BANK = 4096;                            // Number of words per TCDM bank
+  localparam int unsigned N_IRQ        = 32;                              // Number of IRQs
+  localparam int unsigned IRQ_ID_W     = $clog2(N_IRQ);                   // IRQ ID Width
+  localparam int unsigned ID_W_OFFSET  = 1;                               // Offset to be added to ID Width
+  localparam int unsigned ID_W         = 1;                               // Default ID Width
+  localparam int unsigned USR_W        = 1;                               // Default User Width
 
-  `AXI_TYPEDEF_ALL_CT(noc_axi_data, noc_axi_data_req_t, noc_axi_data_rsp_t, logic[redmule_tile_pkg::ADDR_W-1:0], logic[AXI_NOC_ID_W-1:0], logic[redmule_tile_pkg::DATA_W-1:0], logic[redmule_tile_pkg::STRB_W-1:0], logic[AXI_NOC_U_W-1:0])
+  // Parameters used by the NoC
+  parameter int unsigned AXI_NOC_ID_W = 4;                                // AXI NoC ID Width: 2 bits on slave port + 2 bits to select from i$, iDMA and core data
+  parameter int unsigned AXI_NOC_U_W  = USR_W;
+
+  `AXI_TYPEDEF_ALL_CT(noc_axi_data, noc_axi_data_req_t, noc_axi_data_rsp_t, logic[ADDR_W-1:0], logic[AXI_NOC_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_NOC_U_W-1:0])
   `AXI_ALIAS(noc_axi_data, axi_xbar_mst, noc_axi_data_req_t, axi_xbar_mst_req_t, noc_axi_data_rsp_t, axi_xbar_mst_rsp_t)
   `AXI_ALIAS(noc_axi_data, axi_default, noc_axi_data_req_t, axi_default_req_t, noc_axi_data_rsp_t, axi_default_rsp_t)
 
