@@ -16,21 +16,20 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * RedMulE Tile Package
+ * RedMulE Mesh Testbench Package
  */
 
-package redmule_mesh_pkg;
+package redmule_mesh_tb_pkg;
 
   `include "axi/typedef.svh"
 
-  `include "include/alias.svh"
+  parameter int unsigned N_MEM_BANKS  = 32;    // Number of memory banks 
+  parameter int unsigned N_WORDS_BANK = 4096;  // Number of words per memory bank   
+  parameter int unsigned N_TILES      = 2;     // Number of tiles per mesh
 
-  // Parameters used by the NoC
-  parameter int unsigned AXI_NOC_ID_W = 4;
-  parameter int unsigned AXI_NOC_U_W  = redmule_tile_pkg::USR_W;
+  parameter int unsigned L2_ID_W      = redmule_mesh_pkg::AXI_NOC_ID_W + $clog2(N_TILES);
+  parameter int unsigned L2_U_W       = redmule_mesh_pkg::AXI_NOC_U_W;
 
-  `AXI_TYPEDEF_ALL_CT(noc_axi_data, noc_axi_data_req_t, noc_axi_data_rsp_t, logic[redmule_tile_pkg::ADDR_W-1:0], logic[AXI_NOC_ID_W-1:0], logic[redmule_tile_pkg::DATA_W-1:0], logic[redmule_tile_pkg::STRB_W-1:0], logic[AXI_NOC_U_W-1:0])
-  `AXI_ALIAS(noc_axi_data, axi_xbar_mst, noc_axi_data_req_t, axi_xbar_mst_req_t, noc_axi_data_rsp_t, axi_xbar_mst_rsp_t)
-  `AXI_ALIAS(noc_axi_data, axi_default, noc_axi_data_req_t, axi_default_req_t, noc_axi_data_rsp_t, axi_default_rsp_t)
+  `AXI_TYPEDEF_ALL_CT(axi_l2_vip, axi_l2_vip_req_t, axi_l2_vip_rsp_t, logic[redmule_mesh_pkg::ADDR_W-1:0], logic[L2_ID_W-1:0], logic[redmule_mesh_pkg::DATA_W-1:0], logic[redmule_mesh_pkg::STRB_W-1:0], logic[L2_U_W-1:0])
 
-endpackage: redmule_mesh_pkg
+endpackage: redmule_mesh_tb_pkg

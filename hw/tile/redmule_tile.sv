@@ -31,8 +31,8 @@ module redmule_tile
   import obi_pkg::*;
 #(
   // Parameters used by hci_interconnect and l1_spm
-  parameter int unsigned          N_MEM_BANKS   = redmule_tile_pkg::N_MEM_BANKS,  // Number of memory banks 
-  parameter int unsigned          N_WORDS_BANK  = redmule_tile_pkg::N_WORDS_BANK, // Number of words per memory bank      
+  parameter int unsigned          N_MEM_BANKS   = redmule_mesh_pkg::N_MEM_BANKS,  // Number of memory banks 
+  parameter int unsigned          N_WORDS_BANK  = redmule_mesh_pkg::N_WORDS_BANK, // Number of words per memory bank      
 
   // Parameters used by the core
   parameter cv32e40x_pkg::rv32_e  CORE_ISA      = cv32e40x_pkg::RV32I,            // RV32I (default) 32 registers in the RF - RV32E 16 registers in the RF
@@ -64,7 +64,7 @@ module redmule_tile
   output logic[63:0]                              mcycle_o,
   input  logic[63:0]                              time_i,
 
-  input  logic[redmule_tile_pkg::N_IRQ-1:0]       irq_i,
+  input  logic[redmule_mesh_pkg::N_IRQ-1:0]       irq_i,
   
   output logic                                    fencei_flush_req_o,
   input  logic                                    fencei_flush_ack_i,
@@ -171,7 +171,7 @@ module redmule_tile
   logic sys_clk;
   logic sys_clk_en;
 
-  logic[redmule_tile_pkg::N_IRQ-1:0]       irq;
+  logic[redmule_mesh_pkg::N_IRQ-1:0]       irq;
   logic                                    redmule_busy;
   logic[redmule_tile_pkg::N_CORE-1:0][1:0] redmule_evt;
 
@@ -270,8 +270,8 @@ module redmule_tile
     .obi_req_t    ( redmule_tile_pkg::core_obi_data_req_t ),
     .obi_rsp_t    ( redmule_tile_pkg::core_obi_data_rsp_t ),
     .AxiLite      (                                       ),
-    .AxiAddrWidth ( redmule_tile_pkg::ADDR_W              ),
-    .AxiDataWidth ( redmule_tile_pkg::DATA_W              ),
+    .AxiAddrWidth ( redmule_mesh_pkg::ADDR_W              ),
+    .AxiDataWidth ( redmule_mesh_pkg::DATA_W              ),
     .AxiUserWidth ( redmule_tile_pkg::AXI_DATA_U_W        ),
     .AxiBurstType (                                       ),
     .axi_req_t    ( redmule_tile_pkg::core_axi_data_req_t ),
@@ -446,8 +446,8 @@ module redmule_tile
     .DW                 ( redmule_tile_pkg::REDMULE_DW         ),
     .UW                 ( redmule_tile_pkg::REDMULE_UW         ),
     .X_EXT              ( redmule_tile_pkg::X_EXT_EN           ),
-    .SysInstWidth       ( redmule_tile_pkg::INSTR_W            ),
-    .SysDataWidth       ( redmule_tile_pkg::DATA_W             ),
+    .SysInstWidth       ( redmule_mesh_pkg::INSTR_W            ),
+    .SysDataWidth       ( redmule_mesh_pkg::DATA_W             ),
     .redmule_data_req_t ( redmule_tile_pkg::redmule_data_req_t ),
     .redmule_data_rsp_t ( redmule_tile_pkg::redmule_data_rsp_t ),
     .redmule_ctrl_req_t ( redmule_tile_pkg::redmule_ctrl_req_t ),
@@ -670,7 +670,7 @@ module redmule_tile
   l1_spm #(
     .N_BANK   ( N_MEM_BANKS              ),
     .N_WORDS  ( N_WORDS_BANK             ),
-    .DATA_W   ( redmule_tile_pkg::DATA_W ),
+    .DATA_W   ( redmule_mesh_pkg::DATA_W ),
     .ID_W     ( redmule_tile_pkg::IW     ),
     .SIM_INIT ( "zeros"                  )
   ) i_l1_spm (
