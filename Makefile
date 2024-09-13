@@ -58,7 +58,11 @@ data_hex_name ?= stim_data.txt
 inst_entry    ?= 0x2C000000
 data_entry    ?= 0x2c010000
 boot_addr     ?= 0x2c000080
-log_path      ?= ./core_traces.log
+# Add here a path to the core traces of each tile you want to monitor
+log_path_0    ?= ./core_0_traces.log
+log_path_1    ?= ./core_1_traces.log
+log_path_2    ?= ./core_2_traces.log
+log_path_3    ?= ./core_3_traces.log
 itb_file      ?= $(ITB)
 test          ?= hello_world
 mesh_dv       ?= 1
@@ -138,8 +142,11 @@ ifeq ($(gui), 0)
 	+DATA_HEX=$(data_hex_name)                                \
 	+INST_ENTRY=$(inst_entry)                                 \
 	+DATA_ENTRY=$(data_entry)                                 \
-	+BOOT_ADDR=$(boot_addr)					                  \
-	+log_file=$(log_path)                                     \
+	+BOOT_ADDR=$(boot_addr)                                   \
+	+log_file_0=$(log_path_0)                                 \
+	+log_file_1=$(log_path_1)                                 \
+	+log_file_2=$(log_path_2)                                 \
+	+log_file_3=$(log_path_3)                                 \
 	+itb_file=$(itb_file)
 else
 	cd $(BUILD_DIR)/$(TEST_SRCS);             \
@@ -151,7 +158,10 @@ else
 	+INST_ENTRY=$(inst_entry)                 \
 	+DATA_ENTRY=$(data_entry)                 \
 	+BOOT_ADDR=$(boot_addr)                   \
-	+log_file=$(log_path)                     \
+	+log_file_0=$(log_path_0)                 \
+	+log_file_1=$(log_path_1)                 \
+	+log_file_2=$(log_path_2)                 \
+	+log_file_3=$(log_path_3)                 \
 	+itb_file=$(itb_file)
 endif
 
@@ -221,7 +231,7 @@ clean:
 	rm -rf $(BUILD_DIR)/$(TEST_SRCS)
 
 dis:
-	$(OBJDUMP) -d $(BIN) > $(DUMP)
+	$(OBJDUMP) -d -S $(BIN) > $(DUMP)
 
 objdump:
 	$(OBJDUMP) -d -l -s $(BIN) > $(ODUMP)

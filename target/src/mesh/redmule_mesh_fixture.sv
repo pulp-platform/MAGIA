@@ -118,6 +118,10 @@ module redmule_mesh_fixture;
       .core_sleep_o        ( core_sleep[i]       ),
       .wu_wfe_i            ( wu_wfe              )
     );
+`ifdef CORE_TRACES
+    localparam string core_trace_file_name = $sformatf("%s%0d", "log_file_", i);
+    defparam dut.i_cv32e40x_core.rvfi_i.tracer_i.LOGFILE_PATH_PLUSARG = core_trace_file_name;
+`endif
   end
 
 /*******************************************************/
