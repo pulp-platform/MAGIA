@@ -63,6 +63,10 @@ log_path_0    ?= ./core_0_traces.log
 log_path_1    ?= ./core_1_traces.log
 log_path_2    ?= ./core_2_traces.log
 log_path_3    ?= ./core_3_traces.log
+log_path_4    ?= ./core_4_traces.log
+log_path_5    ?= ./core_5_traces.log
+log_path_6    ?= ./core_6_traces.log
+log_path_7    ?= ./core_7_traces.log
 itb_file      ?= $(ITB)
 test          ?= hello_world
 mesh_dv       ?= 1
@@ -147,6 +151,10 @@ ifeq ($(gui), 0)
 	+log_file_1=$(log_path_1)                                 \
 	+log_file_2=$(log_path_2)                                 \
 	+log_file_3=$(log_path_3)                                 \
+	+log_file_4=$(log_path_4)                                 \
+	+log_file_5=$(log_path_5)                                 \
+	+log_file_6=$(log_path_6)                                 \
+	+log_file_7=$(log_path_7)                                 \
 	+itb_file=$(itb_file)
 else
 	cd $(BUILD_DIR)/$(TEST_SRCS);             \
@@ -162,6 +170,10 @@ else
 	+log_file_1=$(log_path_1)                 \
 	+log_file_2=$(log_path_2)                 \
 	+log_file_3=$(log_path_3)                 \
+	+log_file_4=$(log_path_4)                 \
+	+log_file_5=$(log_path_5)                 \
+	+log_file_6=$(log_path_6)                 \
+	+log_file_7=$(log_path_7)                 \
 	+itb_file=$(itb_file)
 endif
 
