@@ -33,7 +33,7 @@
 
 #define IRQ_EN
 
-void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uint32_t dst_address, uint32_t mhartid){
+void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uint32_t dst_address){
   uint32_t dst_addr;
   uint32_t src_addr;
   uint32_t len;
@@ -51,17 +51,17 @@ void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uin
 #endif
 
   for (int i = 0; i < x_dim*y_dim; i++)
-    mmio16(T_BASE + mhartid*MHARTID_OFFSET + 2*i) = src_data[i];
+    mmio16(T_BASE + get_hartid()*MHARTID_OFFSET + 2*i) = src_data[i];
 
   idma_conf_in();
 
   dst_addr = (uint32_t)dst_address;
-  src_addr = (uint32_t)(T_BASE + mhartid*MHARTID_OFFSET);
+  src_addr = (uint32_t)(T_BASE + get_hartid()*MHARTID_OFFSET);
   len      = (uint32_t)(x_dim*y_dim*2); // 2 Bytes per element
 #if VERBOSE > 10
-  printf("[mhartid %d] dst_addr: 0x%8x\n", mhartid, dst_addr);
-  printf("[mhartid %d] src_addr: 0x%8x\n", mhartid, src_addr);
-  printf("[mhartid %d] len: %0d\n", mhartid, len);
+  h_pprintf("dst_addr: 0x"); n_pprintf(hs(dst_addr));
+  h_pprintf("src_addr: 0x"); n_pprintf(hs(src_addr));
+  h_pprintf("len:        "); n_pprintf(ds(len));
 #endif
   asm volatile ("addi t2, %0, 0" :: "r"(dst_addr));
   asm volatile ("addi t1, %0, 0" :: "r"(src_addr));
@@ -72,9 +72,9 @@ void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uin
   src_std_2 = 0;
   reps_2    = 1;
 #if VERBOSE > 100
-  printf("[mhartid %d] dst_std_2: 0x%8x\n", mhartid, dst_std_2);
-  printf("[mhartid %d] src_std_2: 0x%8x\n", mhartid, src_std_2);
-  printf("[mhartid %d] reps_2: 0x%8x\n", mhartid, reps_2);
+  h_pprintf("dst_std_2: 0x"); n_pprintf(hs(dst_std_2));
+  h_pprintf("src_std_2: 0x"); n_pprintf(hs(src_std_2));
+  h_pprintf("reps_2:    0x"); n_pprintf(hs(reps_2));
 #endif
   asm volatile ("addi t2, %0, 0" :: "r"(dst_std_2));
   asm volatile ("addi t1, %0, 0" :: "r"(src_std_2));
@@ -85,9 +85,9 @@ void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uin
   src_std_3 = 0;
   reps_3    = 1;
 #if VERBOSE > 100
-  printf("[mhartid %d] dst_std_3: 0x%8x\n", mhartid, dst_std_3);
-  printf("[mhartid %d] src_std_3: 0x%8x\n", mhartid, src_std_3);
-  printf("[mhartid %d] reps_3: 0x%8x\n", mhartid, reps_3);
+  h_pprintf("dst_std_3: 0x"); n_pprintf(hs(dst_std_3));
+  h_pprintf("src_std_3: 0x"); n_pprintf(hs(src_std_3));
+  h_pprintf("reps_3:    0x"); n_pprintf(hs(reps_3));
 #endif
   asm volatile ("addi t2, %0, 0" :: "r"(dst_std_3));
   asm volatile ("addi t1, %0, 0" :: "r"(src_std_3));
@@ -98,30 +98,32 @@ void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uin
 
 #ifdef IRQ_EN
   asm volatile("wfi" ::: "memory");
-  printf("[mhartid %d] Detected IRQ...\n", mhartid);
+  h_pprintf("Detected IRQ...\n");
 #else
   wait_print(WAIT_CYCLES);
 #endif
 
 #if VERBOSE > 100
-  for (int i = 0; i < x_dim*y_dim; i++)
-    printf("[mhartid %d] DST[%8x]: 0x%4x\n", mhartid, dst_address + 2*i, mmio16(dst_address + 2*i));
+  for (int i = 0; i < x_dim*y_dim; i++){
+    h_pprintf("DST[0x"); pprintf(hs(dst_addr + 2*i)); pprintf("]: 0x"); n_pprintf(hs(mmio16(dst_addr + 2*i)));
+  }
 #endif
 
 #if VERBOSE > 10
   unsigned int num_errors;
   num_errors = 0;
   for (int i = 0; i < x_dim*y_dim; i++) {
-    if (mmio16(dst_address + 2*i) != src_data[i]) {
+    if (mmio16(dst_addr + 2*i) != src_data[i]) {
       num_errors++;
-      printf("[mhartid %d] DST[%8x]: 0x%4x != SRC[%0d]: 0x%4x\n", mhartid, dst_address + 2*i, mmio16(dst_address + 2*i), i, src_data[i]);
+      h_pprintf("DST[0x"); pprintf(hs(dst_addr + 2*i)); pprintf("]: 0x"); pprintf(hs(mmio16(dst_addr + 2*i))); 
+      pprintf(" != SRC["); pprintf(ds(i)); pprintf("]: 0x"); n_pprintf(ds(src_data[i]));
     }
   }
-  printf("[mhartid %d] Detected %0d error(s) in the transfer...\n", mhartid, num_errors);
+  h_pprintf("Detected "); pprintf(ds(num_errors)); n_pprintf(" error(s) in the transfer...");
 #endif
 }
 
-void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, uint32_t dst_address, uint32_t mhartid){
+void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, uint32_t dst_address){
   uint32_t dst_addr;
   uint32_t src_addr;
   uint32_t len;
@@ -140,13 +142,13 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
 
   idma_conf_out();
 
-  dst_addr = (uint32_t)(dst_address + mhartid*MHARTID_OFFSET);
+  dst_addr = (uint32_t)dst_address;
   src_addr = (uint32_t)src_address;
   len      = (uint32_t)(x_dim*y_dim*2); // 2 Bytes per element
 #if VERBOSE > 10
-  printf("[mhartid %d] dst_addr: 0x%8x\n", mhartid, dst_addr);
-  printf("[mhartid %d] src_addr: 0x%8x\n", mhartid, src_addr);
-  printf("[mhartid %d] len: %0d\n", mhartid, len);
+  h_pprintf("dst_addr: 0x"); n_pprintf(hs(dst_addr));
+  h_pprintf("src_addr: 0x"); n_pprintf(hs(src_addr));
+  h_pprintf("len:        "); n_pprintf(ds(len));
 #endif
   asm volatile ("addi t2, %0, 0" :: "r"(dst_addr));
   asm volatile ("addi t1, %0, 0" :: "r"(src_addr));
@@ -157,9 +159,9 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
   src_std_2 = 0;
   reps_2    = 1;
 #if VERBOSE > 100
-  printf("[mhartid %d] dst_std_2: 0x%8x\n", mhartid, dst_std_2);
-  printf("[mhartid %d] src_std_2: 0x%8x\n", mhartid, src_std_2);
-  printf("[mhartid %d] reps_2: 0x%8x\n", mhartid, reps_2);
+  h_pprintf("dst_std_2: 0x"); n_pprintf(hs(dst_std_2));
+  h_pprintf("src_std_2: 0x"); n_pprintf(hs(src_std_2));
+  h_pprintf("reps_2:    0x"); n_pprintf(hs(reps_2));
 #endif
   asm volatile ("addi t2, %0, 0" :: "r"(dst_std_2));
   asm volatile ("addi t1, %0, 0" :: "r"(src_std_2));
@@ -170,9 +172,9 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
   src_std_3 = 0;
   reps_3    = 1;
 #if VERBOSE > 100
-  printf("[mhartid %d] dst_std_3: 0x%8x\n", mhartid, dst_std_3);
-  printf("[mhartid %d] src_std_3: 0x%8x\n", mhartid, src_std_3);
-  printf("[mhartid %d] reps_3: 0x%8x\n", mhartid, reps_3);
+  h_pprintf("dst_std_3: 0x"); n_pprintf(hs(dst_std_3));
+  h_pprintf("src_std_3: 0x"); n_pprintf(hs(src_std_3));
+  h_pprintf("reps_3:    0x"); n_pprintf(hs(reps_3));
 #endif
   asm volatile ("addi t2, %0, 0" :: "r"(dst_std_3));
   asm volatile ("addi t1, %0, 0" :: "r"(src_std_3));
@@ -183,52 +185,43 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
 
 #ifdef IRQ_EN
   asm volatile("wfi" ::: "memory");
-  printf("[mhartid %d] Detected IRQ...\n", mhartid);
+  h_pprintf("Detected IRQ...\n");
 #else
   wait_print(WAIT_CYCLES);
 #endif
 
 #if VERBOSE > 100
-  for (int i = 0; i < x_dim*y_dim; i++)
-    printf("[mhartid %d] DST[%8x]: 0x%4x\n", mhartid, dst_address + 2*i, mmio16(dst_address + 2*i));
+  for (int i = 0; i < x_dim*y_dim; i++){
+    h_pprintf("DST[0x"); pprintf(hs(dst_addr + 2*i)); pprintf("]: 0x"); n_pprintf(hs(mmio16(dst_addr + 2*i)));
+  }
 #endif
 
 #if VERBOSE > 10
   unsigned int num_errors;
   num_errors = 0;
   for (int i = 0; i < x_dim*y_dim; i++) {
-    if (mmio16(dst_address + 2*i) != mmio16(src_address + 2*i)) {
+    if (mmio16(dst_addr + 2*i) != mmio16(src_addr + 2*i)) {
       num_errors++;
-      printf("[mhartid %d] DST[%8x]: 0x%4x != SRC[%8x]: 0x%4x\n", mhartid, dst_address + 2*i, mmio16(dst_address + 2*i), src_address + 2*i, mmio16(src_address + 2*i));
+      h_pprintf("DST[0x"); pprintf(hs(dst_addr + 2*i)); pprintf("]: 0x"); pprintf(hs(mmio16(dst_addr + 2*i)));
+      pprintf(" != SRC[0x"); pprintf(hs(src_addr + 2*i)); pprintf("]: 0x"); n_pprintf(hs(mmio16(src_addr + 2*i)));
     }
   }
-  printf("[mhartid %d] Detected %0d error(s) in the transfer...\n", mhartid, num_errors);
+  h_pprintf("Detected "); pprintf(ds(num_errors)); n_pprintf(" error(s) in the transfer...");
 #endif
 }
 
 int main(void) {
-  if (get_hartid() == 0) {
-    // Z - golden (reference)
-    printf("[mhartid %d] Initializing Z - golden...\n", get_hartid());
-    for (int i = 0; i < M_SIZE*K_SIZE; i++)
-        mmio16(Z_BASE + 2*i) = z_oup[i];
-#if VERBOSE > 100
-    for (int i = 0; i < M_SIZE*K_SIZE; i++)
-        printf("[mhartid %d] Z[%8x]: 0x%4x\n", get_hartid(), Z_BASE + 2*i, mmio16(Z_BASE + 2*i));
-#endif
-  }
-  
   // X
-  printf("[mhartid %d] Initializing X through iDMA...\n", get_hartid());
-  idma_mv_in(M_SIZE, N_SIZE, x_inp, X_BASE, get_hartid());
+  h_pprintf("Initializing X through iDMA...\n");
+  idma_mv_in(M_SIZE, N_SIZE, x_inp, X_BASE);
 
   // W
-  printf("[mhartid %d] Initializing W through iDMA...\n", get_hartid());
-  idma_mv_in(N_SIZE, K_SIZE, w_inp, W_BASE, get_hartid());
+  h_pprintf("Initializing W through iDMA...\n");
+  idma_mv_in(N_SIZE, K_SIZE, w_inp, W_BASE);
 
   // Y
-  printf("[mhartid %d] Initializing Y through iDMA...\n", get_hartid());
-  idma_mv_in(M_SIZE, K_SIZE, y_inp, Y_BASE, get_hartid());
+  h_pprintf("Initializing Y through iDMA...\n");
+  idma_mv_in(M_SIZE, K_SIZE, y_inp, Y_BASE);
 
   uint32_t cfg_reg0[NUM_HARTS];
   uint32_t cfg_reg1[NUM_HARTS];
@@ -237,11 +230,11 @@ int main(void) {
   cfg_reg1[get_hartid()] = (((uint16_t)N_SIZE) << 0);
 
 #if VERBOSE > 10
-  printf("[mhartid %d] K_SIZE: %4x\n", get_hartid(), K_SIZE);
-  printf("[mhartid %d] M_SIZE: %4x\n", get_hartid(), M_SIZE);
-  printf("[mhartid %d] N_SIZE: %4x\n", get_hartid(), N_SIZE);  
-  printf("[mhartid %d] cfg_reg0: %8x\n", get_hartid(), cfg_reg0[get_hartid()]);
-  printf("[mhartid %d] cfg_reg1: %8x\n", get_hartid(), cfg_reg1[get_hartid()]);
+  h_pprintf("K_SIZE: 0x");   n_pprintf(hs(K_SIZE));
+  h_pprintf("M_SIZE: 0x");   n_pprintf(hs(M_SIZE));
+  h_pprintf("N_SIZE: 0x");   n_pprintf(hs(N_SIZE));
+  h_pprintf("cfg_reg0: 0x"); n_pprintf(hs(cfg_reg0[get_hartid()]));
+  h_pprintf("cfg_reg1: 0x"); n_pprintf(hs(cfg_reg1[get_hartid()]));
 #endif
 
   asm volatile("addi t0, %0, 0" ::"r"((uint32_t)X_BASE));
@@ -258,20 +251,20 @@ int main(void) {
   irq_en(1<<IRQ_REDMULE_EVT_0);
 #endif
 
-  printf("[mhartid %d] Testing matrix multiplication with RedMulE...\n", get_hartid());
+  h_pprintf("Testing matrix multiplication with RedMulE...\n");
 
 #ifdef IRQ_EN
   // Wait for end of computation
   asm volatile("wfi" ::: "memory");
-  printf("[mhartid %d] Detected IRQ...\n", get_hartid());
+  h_pprintf("Detected IRQ...\n");
 #else
   wait_print(WAIT_CYCLES);
 #endif
 
-  printf("[mhartid %d] Moving results through iDMA...\n", get_hartid());
-  idma_mv_out(M_SIZE, K_SIZE, Y_BASE, V_BASE, get_hartid());
+  h_pprintf("Moving results through iDMA...\n");
+  idma_mv_out(M_SIZE, K_SIZE, Y_BASE, V_BASE + get_hartid()*MHARTID_OFFSET);
 
-  printf("[mhartid %d] Verifying results...\n", get_hartid());
+  h_pprintf("Verifying results...\n");
   
   unsigned int num_errors[NUM_HARTS];
   num_errors[get_hartid()] = 0;
@@ -279,14 +272,15 @@ int main(void) {
   uint16_t computed[NUM_HARTS], expected[NUM_HARTS], diff[NUM_HARTS];
   for(int i = 0; i < M_SIZE*K_SIZE; i++){
     computed[get_hartid()] = mmio16(V_BASE + get_hartid()*MHARTID_OFFSET + 2*i);
-    expected[get_hartid()] = mmio16(Z_BASE + 2*i);
+    expected[get_hartid()] = z_oup[i];
     diff[get_hartid()] = (computed[get_hartid()] > expected[get_hartid()]) ? (computed[get_hartid()] - expected[get_hartid()]) : (expected[get_hartid()] - computed[get_hartid()]);
     if(diff[get_hartid()] > DIFF_TH){
       num_errors[get_hartid()]++;
-      printf("[mhartid %d] **ERROR**: V[%8x](=0x%4x) != Z[%8x](=0x%4x)\n", get_hartid(), V_BASE + get_hartid()*MHARTID_OFFSET + 2*i, computed[get_hartid()], Z_BASE + 2*i, expected[get_hartid()]);
+      h_pprintf("**ERROR**: V[0x"); pprintf(hs(V_BASE + get_hartid()*MHARTID_OFFSET + 2*i)); pprintf("](=0x"); pprintf(hs(computed[get_hartid()]));
+      pprintf(") != Z["); pprintf(ds(i)); pprintf("](=0x"); pprintf(hs(expected[get_hartid()])); n_pprintf(")");
     }
   }
-  printf("[mhartid %d] Finished test with %0d errors\n", get_hartid(), num_errors[get_hartid()]);
+  h_pprintf("Finished test with "); pprintf(ds(num_errors[get_hartid()])); n_pprintf(" error(s)");
 
   uint32_t exit_code[NUM_HARTS];
   if(num_errors[get_hartid()])
