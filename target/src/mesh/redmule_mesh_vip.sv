@@ -248,53 +248,47 @@ module redmule_mesh_vip
 /**                 Printing Beginning                **/
 /*******************************************************/
 
-int errors = -1;
-bit stdio_ready  = 0;
-bit stderr_ready = 0;
-typedef struct packed {
-  bit[31:0] data;
-  bit[31:0] id;
-} string_char_t;
-bit print_line[2**redmule_mesh_tb_pkg::L2_ID_W];
-string_char_t chars[$];
-bit[redmule_mesh_tb_pkg::L2_ID_W-1:0] write_id;
-always @(posedge clk) begin: print_monitor
-  if ((data_mst_req.aw.addr == 32'h2FFF0000) && (data_mst_req.aw_valid))
-    stderr_ready = 1'b1;
-  if ((data_mst_req.aw.addr == 32'h2FFF0004) && (data_mst_req.aw_valid)) begin
-    stdio_ready  = 1'b1;
-    write_id = data_mst_req.aw.id;
-  end
-  if ((data_mst_req.w_valid) && stderr_ready) begin
-    // NOTE: This is stupid! But unless we keep track of the outstanding AXI writes (which would require some logic) this should work,
-    //       unless other modules (not related to the print function) transfer bytes (instead of words) to the L2
-    if (data_mst_req.w.data < 256 && data_mst_req.w.data > 0) begin
-      errors       = data_mst_req.w.data;
-      stderr_ready = 1'b0;
-    end
-  end
-  if ((data_mst_req.w_valid) && stdio_ready) begin
-    // NOTE: This is stupid! But unless we keep track of the outstanding AXI writes (which would require some logic) this should work,
-    //       unless other modules (not related to the print function) transfer bytes (instead of words) to the L2
-    if (data_mst_req.w.data < 256 && data_mst_req.w.data > 0) begin
-      if (data_mst_req.w.data == 10)  // ASCII code for new line (\n) is 10
-        print_line[write_id] = 1'b1;
-      chars.push_back('{data_mst_req.w.data, write_id});
-      stdio_ready = 1'b0;
-    end
-  end
-  for (int i = 0; i < 2**redmule_mesh_tb_pkg::L2_ID_W; i++) begin
-    if (print_line[i] == 1'b1) begin
-      for (int j = 0; j < chars.size(); j++) begin
-        if (chars[j].id == i) begin
-          $write("%c", chars[j].data);
-          chars.delete(j--);
+  for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++) begin: gen_tile_print
+    int errors = -1;
+    bit stdio_ready  = 0;
+    bit stderr_ready = 0;
+    typedef struct packed {
+      bit[31:0] data;
+      bit[31:0] id;
+    } string_char_t;
+    bit print_line[2**redmule_mesh_tb_pkg::L2_ID_W];
+    string_char_t chars[$];
+    bit[redmule_mesh_tb_pkg::L2_ID_W-1:0] write_id;
+    always @(posedge clk) begin: print_monitor
+      if ((gen_tile[i].dut.i_axi_xbar.mst_req_o.aw.addr == 32'h2FFF0000) && (gen_tile[i].dut.i_axi_xbar.mst_req_o.aw_valid))
+        stderr_ready = 1'b1;
+      if ((gen_tile[i].dut.i_axi_xbar.mst_req_o.aw.addr == 32'h2FFF0004+(i*4)) && (gen_tile[i].dut.i_axi_xbar.mst_req_o.aw_valid)) begin
+        stdio_ready  = 1'b1;
+        write_id = gen_tile[i].dut.i_axi_xbar.mst_req_o.aw.id;
+      end
+      if ((gen_tile[i].dut.i_axi_xbar.mst_req_o.w_valid) && stderr_ready) begin
+        errors       = gen_tile[i].dut.i_axi_xbar.mst_req_o.w.data[7:0];
+        stderr_ready = 1'b0;
+      end
+      if ((gen_tile[i].dut.i_axi_xbar.mst_req_o.w_valid) && stdio_ready) begin
+        if (gen_tile[i].dut.i_axi_xbar.mst_req_o.w.data[7:0] == 10)  // ASCII code for new line (\n) is 10
+          print_line[write_id] = 1'b1;
+        chars.push_back('{gen_tile[i].dut.i_axi_xbar.mst_req_o.w.data[7:0], write_id});
+        stdio_ready = 1'b0;
+      end
+      for (int k = 0; k < 2**redmule_mesh_tb_pkg::L2_ID_W; k++) begin
+        if (print_line[k] == 1'b1) begin
+          for (int j = 0; j < chars.size(); j++) begin
+            if (chars[j].id == k) begin
+              $write("%c", chars[j].data);
+              chars.delete(j--);
+            end
+          end
+          print_line[k] = 1'b0;
         end
       end
-      print_line[i] = 1'b0;
     end
   end
-end
 
 /*******************************************************/
 /**                    Printing End                   **/
