@@ -27,5 +27,7 @@ int main(void) {
     h_pprintf("Detected IRQ...\n");
   }
 
+  mmio32(TEST_END_ADDR + get_hartid()) = DEFAULT_EXIT_CODE - get_hartid();
+
   return 0;
 }
