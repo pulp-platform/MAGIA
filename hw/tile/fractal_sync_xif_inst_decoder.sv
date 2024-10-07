@@ -156,7 +156,7 @@ module fractal_sync_xif_inst_decoder
       SYNC: begin
         sync_if_o.sync  = 1'b1;
         sync_if_o.level = cfg_reg_q[redmule_tile_pkg::FSYNC_LEVEL_IDX][FSYNC_LVL_W-1:0];
-        n_sync_state    = WAIT
+        n_sync_state    = WAIT;
       end
       WAIT: begin
         n_sync_state    = sync_if_o.wake ? ACK : WAIT;

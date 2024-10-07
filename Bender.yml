@@ -61,6 +61,7 @@ sources:
       - hw/tile/xif_inst_demux.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
       - hw/tile/idma_ctrl.sv
+      - hw/tile/fractal_sync_xif_inst_decoder.sv
       - hw/tile/redmule_tile.sv
       # RedMulE Mesh
       # RedMulE DV
@@ -89,5 +90,6 @@ sources:
     - hw/tile/xif_inst_demux.sv
     - hw/tile/idma_axi_obi_transfer_ch.sv
     - hw/tile/idma_ctrl.sv
+    - hw/tile/fractal_sync_xif_inst_decoder.sv
     - hw/tile/redmule_tile.sv
     # RedMulE Mesh

@@ -159,6 +159,21 @@ package redmule_tile_pkg;
     OBI2AXI = 1'b1
   } idma_transfer_ch_e;                                                                 // iDMA type of transfer channel
 
+  // Parameters used by the Xif Instruction Demuxer
+  parameter int unsigned N_COPROC         = 3;                                          // RedMulE, iDMA and Fractal Sync
+  parameter int unsigned N_REDMULE_OPCODE = 2;                                          // Number of opcodes in the programming model of RedMulE
+  parameter int unsigned N_IDMA_OPCODE    = 2;                                          // Number of opcodes in the programming model of the iDMA decoder
+  parameter int unsigned N_FSYNC_OPCODE   = 1;                                          // Number of opcodes in the programming model of Fractal Sync
+  parameter int unsigned N_OPCODE         = 2;                                          // Number of opcodes = max{RedMulE_opcode, iDMA_opcode, FractalSync_opcode}
+  typedef enum logic[1:0]{
+    XIF_REDMULE_IDX = 2'b00,
+    XIF_IDMA_IDX    = 2'b01,
+    XIF_FSYNC_IDX   = 2'b10
+  } xif_inst_demux_idx_e;
+  parameter int unsigned DEFAULT_IDX      = XIF_REDMULE_IDX;                            // RedMulE will handle the instructions by default
+  parameter int unsigned OPCODE_W         = 7;                                          // ISA OPCODE Width
+  parameter int unsigned OPCODE_OFF       = 0;                                          // ISA OPCODE Offset
+
   // Parameters used by the iDMA instruction decoder
   parameter int unsigned DMA_INSTR_W              = redmule_mesh_pkg::INSTR_W;          // iDMA Decoder instruction width
   parameter int unsigned DMA_DATA_W               = redmule_mesh_pkg::DATA_W;           // iDMA Decoder data width
@@ -228,21 +243,6 @@ package redmule_tile_pkg;
   parameter bit          AxiXbarSpillB         = 1'b0;                                  // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
   parameter bit          AxiXbarSpillAr        = 1'b0;                                  // Enabled -> Spill register on read master ports, +1 cycle of latency on write channels
   parameter bit          AxiXbarSpillR         = 1'b0;                                  // Enabled -> Spill register on read master ports, +1 cycle of latency on write channels 
-  
-  // Parameters used by the Xif Instruction Demuxer
-  parameter int unsigned N_COPROC         = 3;                                          // RedMulE, iDMA and Fractal Sync
-  parameter int unsigned N_REDMULE_OPCODE = 2;                                          // Number of opcodes in the programming model of RedMulE
-  parameter int unsigned N_IDMA_OPCODE    = 2;                                          // Number of opcodes in the programming model of the iDMA decoder
-  parameter int unsigned N_FSYNC_OPCODE   = 1;                                          // Number of opcodes in the programming model of Fractal Sync
-  parameter int unsigned N_OPCODE         = 2;                                          // Number of opcodes = max{RedMulE_opcode, iDMA_opcode, FractalSync_opcode}
-  typedef enum logic[1:0]{
-    XIF_REDMULE_IDX = 2'b00,
-    XIF_IDMA_IDX    = 2'b01,
-    XIF_FSYNC_IDX   = 2'b10
-  } xif_inst_demux_idx_e;
-  parameter int unsigned DEFAULT_IDX      = XIF_REDMULE_IDX;                            // RedMulE will handle the instructions by default
-  parameter int unsigned OPCODE_W         = 7;                                          // ISA OPCODE Width
-  parameter int unsigned OPCODE_OFF       = 0;                                          // ISA OPCODE Offset
 
   // Parameters used by the i$
   parameter int unsigned NR_FETCH_PORTS = 1;                                            // i$ Number of request (fetch) ports

@@ -41,7 +41,10 @@ module redmule_tile
   parameter cv32e40x_pkg::m_ext_e CORE_M        = cv32e40x_pkg::M,                // Multiply and Divide support (dafault: full support)
 
   // Parameters used by the iDMA
-  parameter idma_pkg::error_cap_e ERROR_CAP     = idma_pkg::NO_ERROR_HANDLING     // Error handaling capability of the iDMA
+  parameter idma_pkg::error_cap_e ERROR_CAP     = idma_pkg::NO_ERROR_HANDLING,    // Error handaling capability of the iDMA
+
+  // Parameter used by the Fractal Sync
+  parameter int unsigned          FSYNC_WIDTH   = redmule_mesh_pkg::TILE_FSYNC_W  // Level width of the Fractal Sync interface
 )(
   input  logic                                    clk_i,
   input  logic                                    rst_ni,
