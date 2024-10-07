@@ -252,7 +252,7 @@ module idma_xif_inst_decoder
 
     if (xif_issue_if_i.issue_valid) begin
       case (opcode)
-        CONF_OPCODE: begin
+        CONF_OPCODE: if (func3 == CONF_FUNC3) begin
           xif_issue_if_i.issue_ready                       = 1'b1;
           xif_issue_if_i.issue_resp.accept                 = 1'b1;
           dec_clk_req                                      = 1'b1;

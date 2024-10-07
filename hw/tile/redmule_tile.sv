@@ -51,6 +51,9 @@ module redmule_tile
   output redmule_mesh_pkg::axi_default_req_t      data_out_req_o,
   input  redmule_mesh_pkg::axi_default_rsp_t      data_out_rsp_i,
 
+  // Fractal Sync interface
+  fractal_if.mst_port                             sync_if_o,
+
   // Signals used by the core
   input  logic                                    scan_cg_en_i,
 
@@ -175,6 +178,10 @@ module redmule_tile
   logic                                    redmule_busy;
   logic[redmule_tile_pkg::N_CORE-1:0][1:0] redmule_evt;
 
+  logic fsync_clear;   //TODO: figure out who should clear the Fractal Sync
+  logic fsync_done;
+  logic fsync_error;
+
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
 /*******************************************************/
@@ -210,28 +217,34 @@ module redmule_tile
 
   assign idma_clear = 1'b0;  //TODO: Figure out how to manage the iDMA clear
 
+  assign fsync_clear = 1'b0;  //TODO: Figure out how to manage the Fractal Sync clear
+
   assign xif_coproc_rules[redmule_tile_pkg::XIF_REDMULE_IDX] = '{opcode_list: {{redmule_pkg::MCNFIG}, {redmule_pkg::MARITH}}};
   assign xif_coproc_rules[redmule_tile_pkg::XIF_IDMA_IDX]    = '{opcode_list: {{redmule_tile_pkg::CONF_OPCODE}, {redmule_tile_pkg::SET_OPCODE}}};
+  assign xif_coproc_rules[redmule_tile_pkg::XIF_FSYNC_IDX]   = '{opcode_list: {{redmule_tile_pkg::FSYNC_OPCODE}, {redmule_tile_pkg::FSYNC_OPCODE}}};
 
-  assign irq[IRQ_IDX_REDMULE_EVT_0] = redmule_evt[0][0];  // Only 1 core supported
-  assign irq[IRQ_IDX_REDMULE_EVT_1] = redmule_evt[0][1];  // Only 1 core supported
-  assign irq[IRQ_IDX_A2O_ERROR]     = idma_axi2obi_error;
-  assign irq[IRQ_IDX_O2A_ERROR]     = idma_obi2axi_error;
-  assign irq[IRQ_IDX_A2O_DONE]      = idma_axi2obi_done;
-  assign irq[IRQ_IDX_O2A_DONE]      = idma_obi2axi_done;
-  assign irq[IRQ_IDX_A2O_START]     = idma_axi2obi_start;
-  assign irq[IRQ_IDX_O2A_START]     = idma_obi2axi_start;
-  assign irq[IRQ_IDX_A2O_BUSY]      = idma_axi2obi_busy;
-  assign irq[IRQ_IDX_O2A_BUSY]      = idma_obi2axi_busy;
-  assign irq[IRQ_IDX_REDMULE_BUSY]  = redmule_busy;
-  assign irq[N_IRQ-IRQ_USED-1:16]   = irq_i[N_IRQ-IRQ_USED-1:16];
-  assign irq[15:12]                 = '0;
-  assign irq[11]                    = irq_i[11];
-  assign irq[10:8]                  = '0;
-  assign irq[7]                     = irq_i[7];
-  assign irq[6:4]                   = '0;
-  assign irq[3]                     = irq_i[3];
-  assign irq[2:0]                   = '0;
+  assign irq[redmule_tile_pkg::IRQ_IDX_REDMULE_EVT_0] = redmule_evt[0][0];  // Only 1 core supported
+  assign irq[redmule_tile_pkg::IRQ_IDX_REDMULE_EVT_1] = redmule_evt[0][1];  // Only 1 core supported
+  assign irq[redmule_tile_pkg::IRQ_IDX_A2O_ERROR]     = idma_axi2obi_error;
+  assign irq[redmule_tile_pkg::IRQ_IDX_O2A_ERROR]     = idma_obi2axi_error;
+  assign irq[redmule_tile_pkg::IRQ_IDX_A2O_DONE]      = idma_axi2obi_done;
+  assign irq[redmule_tile_pkg::IRQ_IDX_O2A_DONE]      = idma_obi2axi_done;
+  assign irq[redmule_tile_pkg::IRQ_IDX_A2O_START]     = idma_axi2obi_start;
+  assign irq[redmule_tile_pkg::IRQ_IDX_O2A_START]     = idma_obi2axi_start;
+  assign irq[redmule_tile_pkg::IRQ_IDX_A2O_BUSY]      = idma_axi2obi_busy;
+  assign irq[redmule_tile_pkg::IRQ_IDX_O2A_BUSY]      = idma_obi2axi_busy;
+  assign irq[redmule_tile_pkg::IRQ_IDX_REDMULE_BUSY]  = redmule_busy;
+  assign irq[redmule_tile_pkg::IRQ_IDX_FSYNC_DONE]    = fsync_done;
+  assign irq[redmule_tile_pkg::IRQ_IDX_FSYNC_ERROR]   = fsync_error;
+  assign irq[redmule_mesh_pkg::N_IRQ-redmule_tile_pkg::IRQ_USED-1:16]   
+                                                      = irq_i[redmule_mesh_pkg::N_IRQ-redmule_tile_pkg::IRQ_USED-1:16];
+  assign irq[15:12]                                   = '0;
+  assign irq[11]                                      = irq_i[11];
+  assign irq[10:8]                                    = '0;
+  assign irq[7]                                       = irq_i[7];
+  assign irq[6:4]                                     = '0;
+  assign irq[3]                                       = irq_i[3];
+  assign irq[2:0]                                     = '0;
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -421,7 +434,7 @@ module redmule_tile
     .X_RFW_WIDTH ( redmule_tile_pkg::X_RFW_W  ),
     .X_MISA      ( redmule_tile_pkg::X_MISA   ),
     .X_ECS_XS    ( redmule_tile_pkg::X_ECS_XS )
-  ) xif_coproc_if[redmule_tile_pkg::N_COPROC] (); // Index 0 -> RedMulE, Index 1 -> iDMA
+  ) xif_coproc_if[redmule_tile_pkg::N_COPROC] (); // Index 0 -> RedMulE, Index 1 -> iDMA, Index 2 -> Fractal Sync
 
 /*******************************************************/
 /**             Interface Definitions End             **/
@@ -842,6 +855,33 @@ module redmule_tile
 
 /*******************************************************/
 /**            Data Out - L2 (AXI XBAR) End           **/
+/*******************************************************/
+/**             Fractal Sync Out Beginning            **/
+/*******************************************************/
+
+  fractal_sync_xif_inst_decoder #(
+    .INSTR_W    ( redmule_tile_pkg::FSYNC_INSTR_W    ),
+    .DATA_W     ( redmule_tile_pkg::FSYNC_DATA_W     ),
+    .ADDR_W     ( redmule_tile_pkg::FSYNC_ADDR_W     ),
+    .N_RF_PORTS ( redmule_tile_pkg::FSYNC_N_RF_PORTS ),
+    .OPCODE_W   ( redmule_tile_pkg::FSYNC_OPCODE_W   ),
+    .FUNC3_W    ( redmule_tile_pkg::FSYNC_FUNC3_W    ),
+    .OPCODE_OFF ( redmule_tile_pkg::FSYNC_OPCODE_OFF ),
+    .FUNC3_OFF  ( redmule_tile_pkg::FSYNC_FUNC3_OFF  ),
+    .N_CFG_REG  ( redmule_tile_pkg::FSYNC_N_CFG_REG  ),
+    .LVL_W      ( redmule_tile_pkg::FSYNC_LVL_W      )
+  ) i_fsync_dec (
+    .clk_i          ( sys_clk                                                     ),
+    .rst_ni         ( rst_ni                                                      ),
+    .clear_i        ( fsync_clear                                                 ),
+    .xif_issue_if_i ( xif_coproc_if.coproc_issue[redmule_tile_pkg::XIF_FSYNC_IDX] ),
+    .sync_if_o      ( sync_if_o                                                   ),
+    .done_o         ( fsync_done                                                  ),
+    .error_o        ( fsync_error                                                 )
+  );
+
+/*******************************************************/
+/**                Fractal Sync Out End               **/
 /*******************************************************/
 
 endmodule: redmule_tile

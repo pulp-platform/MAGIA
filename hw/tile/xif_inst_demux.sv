@@ -26,8 +26,8 @@ module xif_inst_demux
   parameter int unsigned N_COPROC    = redmule_tile_pkg::N_COPROC,
   parameter int unsigned N_OPCODE    = redmule_tile_pkg::N_OPCODE,
   parameter int unsigned DEFAULT_IDX = redmule_tile_pkg::DEFAULT_IDX,
-  parameter int unsigned OPCODE_OFF  = redmule_tile_pkg::DMA_OPCODE_OFF,
-  parameter int unsigned OPCODE_W    = redmule_tile_pkg::DMA_OPCODE_W,
+  parameter int unsigned OPCODE_OFF  = redmule_tile_pkg::OPCODE_OFF,
+  parameter int unsigned OPCODE_W    = redmule_tile_pkg::OPCODE_W,
   parameter type xif_inst_rule_t     = redmule_tile_pkg::xif_inst_rule_t
 )(
   cv32e40x_if_xif.coproc_issue                          xif_issue_if_i,
