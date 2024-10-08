@@ -32,7 +32,8 @@ module fractal_sync_xif_inst_decoder
   parameter int unsigned OPCODE_OFF = redmule_tile_pkg::FSYNC_OPCODE_OFF,
   parameter int unsigned FUNC3_OFF  = redmule_tile_pkg::FSYNC_FUNC3_OFF,
   parameter int unsigned N_CFG_REG  = redmule_tile_pkg::FSYNC_N_CFG_REG,
-  parameter int unsigned LVL_W      = redmule_tile_pkg::FSYNC_LVL_W
+  parameter int unsigned LVL_W      = redmule_tile_pkg::FSYNC_LVL_W,
+  parameter bit          STALL      = redmule_tile_pkg::FSYNC_STALL
 )(
   input  logic                 clk_i,
   input  logic                 rst_ni,
@@ -107,27 +108,47 @@ module fractal_sync_xif_inst_decoder
 /**               Decoder FSM Beginning               **/
 /*******************************************************/
 
-  always_comb begin: instruction_decoder
-    clk_dec_en                 = 1'b0;
-    cfg_reg_d                  = cfg_reg_q;
-    sync                       = 1'b0;
-    xif_issue_if_i.issue_ready = 1'b0;
-    xif_issue_if_i.issue_resp  = '0;
+  generate if (STALL) begin: gen_stalling_decoder
+    always_comb begin: instruction_decoder
+      clk_dec_en = 1'b0;
+      cfg_reg_d  = cfg_reg_q;
+      sync       = 1'b0;
 
-    if (xif_issue_if_i.issue_valid) begin
-      case (opcode)
-        FSYNC_OPCODE: begin
-          xif_issue_if_i.issue_ready       = 1'b1;
-          xif_issue_if_i.issue_resp.accept = 1'b1;
-          clk_dec_en                       = 1'b1;
-          if ((func3 == FSYNC_FUNC3) && (xif_issue_if_i.issue_req.rs_valid)) begin
-            cfg_reg_d[redmule_tile_pkg::FSYNC_LEVEL_IDX] = xif_issue_if_i.issue_req.rs[0];
-            sync                                         = 1'b1;
+      if (xif_issue_if_i.issue_valid) begin
+        case (opcode)
+          FSYNC_OPCODE: begin
+            clk_dec_en = 1'b1;
+            if ((func3 == FSYNC_FUNC3) && (xif_issue_if_i.issue_req.rs_valid)) begin
+              cfg_reg_d[redmule_tile_pkg::FSYNC_LEVEL_IDX] = xif_issue_if_i.issue_req.rs[0];
+              sync                                         = 1'b1;
+            end
           end
-        end
-      endcase
+        endcase
+      end
     end
-  end
+  end else begin: gen_non_stalling_decoder
+    always_comb begin: instruction_decoder
+      clk_dec_en                 = 1'b0;
+      cfg_reg_d                  = cfg_reg_q;
+      sync                       = 1'b0;
+      xif_issue_if_i.issue_ready = 1'b0;
+      xif_issue_if_i.issue_resp  = '0;
+
+      if (xif_issue_if_i.issue_valid) begin
+        case (opcode)
+          FSYNC_OPCODE: begin
+            xif_issue_if_i.issue_ready       = 1'b1;
+            xif_issue_if_i.issue_resp.accept = 1'b1;
+            clk_dec_en                       = 1'b1;
+            if ((func3 == FSYNC_FUNC3) && (xif_issue_if_i.issue_req.rs_valid)) begin
+              cfg_reg_d[redmule_tile_pkg::FSYNC_LEVEL_IDX] = xif_issue_if_i.issue_req.rs[0];
+              sync                                         = 1'b1;
+            end
+          end
+        endcase
+      end
+    end
+  end endgenerate
 
   always_ff @(posedge clk_dec_g, negedge rst_ni) begin: configuration_register
     if (~rst_ni)   cfg_reg_q <= '0;
@@ -143,31 +164,63 @@ module fractal_sync_xif_inst_decoder
 /**           Synchronization FSM Beginning           **/
 /*******************************************************/
 
-  always_comb begin: sync_logic
-    n_sync_state    = c_sync_state;
-    clk_sync_en     = 1'b1;
-    done            = 1'b0;
-    sync_if_o.sync  = 1'b0;
-    sync_if_o.level = '0;
-    sync_if_o.ack   = 1'b0;
+  generate if (STALL) begin: gen_stalling_sync
+    always_comb begin: sync_logic
+      n_sync_state               = c_sync_state;
+      clk_sync_en                = 1'b1;
+      done                       = 1'b0;
+      sync_if_o.sync             = 1'b0;
+      sync_if_o.level            = '0;
+      sync_if_o.ack              = 1'b0;
+      xif_issue_if_i.issue_ready = 1'b0;
+      xif_issue_if_i.issue_resp  = '0;
 
-    case (c_sync_state)
-      IDLE: if (sync) n_sync_state = SYNC; else clk_sync_en = 1'b0;
-      SYNC: begin
-        sync_if_o.sync  = 1'b1;
-        sync_if_o.level = cfg_reg_q[redmule_tile_pkg::FSYNC_LEVEL_IDX][FSYNC_LVL_W-1:0];
-        n_sync_state    = WAIT;
-      end
-      WAIT: begin
-        n_sync_state    = sync_if_o.wake ? ACK : WAIT;
-      end
-      ACK: begin
-        sync_if_o.ack   = 1'b1;
-        done            = 1'b1;
-        n_sync_state    = IDLE;
-      end
-    endcase
-  end
+      case (c_sync_state)
+        IDLE: if (sync) n_sync_state = SYNC; else clk_sync_en = 1'b0;
+        SYNC: begin
+          sync_if_o.sync                   = 1'b1;
+          sync_if_o.level                  = cfg_reg_q[redmule_tile_pkg::FSYNC_LEVEL_IDX][FSYNC_LVL_W-1:0];
+          n_sync_state                     = WAIT;
+        end
+        WAIT: begin
+          n_sync_state                     = sync_if_o.wake ? ACK : WAIT;
+        end
+        ACK: begin
+          sync_if_o.ack                    = 1'b1;
+          done                             = 1'b1;
+          n_sync_state                     = IDLE;
+          xif_issue_if_i.issue_ready       = 1'b1;
+          xif_issue_if_i.issue_resp.accept = 1'b1;
+        end
+      endcase
+    end
+  end else begin: gen_non_stalling_sync
+    always_comb begin: sync_logic
+      n_sync_state    = c_sync_state;
+      clk_sync_en     = 1'b1;
+      done            = 1'b0;
+      sync_if_o.sync  = 1'b0;
+      sync_if_o.level = '0;
+      sync_if_o.ack   = 1'b0;
+
+      case (c_sync_state)
+        IDLE: if (sync) n_sync_state = SYNC; else clk_sync_en = 1'b0;
+        SYNC: begin
+          sync_if_o.sync  = 1'b1;
+          sync_if_o.level = cfg_reg_q[redmule_tile_pkg::FSYNC_LEVEL_IDX][FSYNC_LVL_W-1:0];
+          n_sync_state    = WAIT;
+        end
+        WAIT: begin
+          n_sync_state    = sync_if_o.wake ? ACK : WAIT;
+        end
+        ACK: begin
+          sync_if_o.ack   = 1'b1;
+          done            = 1'b1;
+          n_sync_state    = IDLE;
+        end
+      endcase
+    end
+  end endgenerate
 
   always_ff @(posedge clk_sync_g, negedge rst_ni) begin: sync_state
     if (~rst_ni)   c_sync_state <= IDLE;

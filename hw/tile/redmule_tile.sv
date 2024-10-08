@@ -222,9 +222,21 @@ module redmule_tile
 
   assign fsync_clear = 1'b0;  //TODO: Figure out how to manage the Fractal Sync clear
 
-  assign xif_coproc_rules[redmule_tile_pkg::XIF_REDMULE_IDX] = '{opcode_list: {{redmule_pkg::MCNFIG}, {redmule_pkg::MARITH}}};
-  assign xif_coproc_rules[redmule_tile_pkg::XIF_IDMA_IDX]    = '{opcode_list: {{redmule_tile_pkg::CONF_OPCODE}, {redmule_tile_pkg::SET_OPCODE}}};
-  assign xif_coproc_rules[redmule_tile_pkg::XIF_FSYNC_IDX]   = '{opcode_list: {{redmule_tile_pkg::FSYNC_OPCODE}, {redmule_tile_pkg::FSYNC_OPCODE}}};
+  assign xif_coproc_rules[redmule_tile_pkg::XIF_REDMULE_IDX] = '{sign_list: '{ {{redmule_pkg::MCNFIG, 3'h0}}, 
+                                                                               {{redmule_pkg::MARITH, 3'h0}}, {{redmule_pkg::MARITH, 3'h1}}, 
+                                                                               {{redmule_pkg::MARITH, 3'h2}}, {{redmule_pkg::MARITH, 3'h3}}, 
+                                                                               {{redmule_pkg::MARITH, 3'h4}}, {{redmule_pkg::MARITH, 3'h5}}, 
+                                                                               {{redmule_pkg::MARITH, 3'h6}}, {{redmule_pkg::MARITH, 3'h7}} }};
+  assign xif_coproc_rules[redmule_tile_pkg::XIF_IDMA_IDX]    = '{sign_list: '{ {{redmule_tile_pkg::CONF_OPCODE, redmule_tile_pkg::CONF_FUNC3}}, 
+                                                                               {{redmule_tile_pkg::SET_OPCODE, redmule_tile_pkg::SET_AL_FUNC3}},
+                                                                               {{redmule_tile_pkg::SET_OPCODE, redmule_tile_pkg::SET_SR2_FUNC3}},
+                                                                               {{redmule_tile_pkg::SET_OPCODE, redmule_tile_pkg::SET_SR3_FUNC3}},
+                                                                               {{redmule_tile_pkg::SET_OPCODE, redmule_tile_pkg::SET_S_FUNC3}},
+                                                                               {{redmule_tile_pkg::SET_OPCODE, redmule_tile_pkg::SET_S_FUNC3}},
+                                                                               {{redmule_tile_pkg::SET_OPCODE, redmule_tile_pkg::SET_S_FUNC3}},
+                                                                               {{redmule_tile_pkg::SET_OPCODE, redmule_tile_pkg::SET_S_FUNC3}},
+                                                                               {{redmule_tile_pkg::SET_OPCODE, redmule_tile_pkg::SET_S_FUNC3}} }};
+  assign xif_coproc_rules[redmule_tile_pkg::XIF_FSYNC_IDX]   = '{sign_list: '{ default: {redmule_tile_pkg::FSYNC_OPCODE, redmule_tile_pkg::FSYNC_FUNC3} }};
 
   assign irq[redmule_tile_pkg::IRQ_IDX_REDMULE_EVT_0] = redmule_evt[0][0];  // Only 1 core supported
   assign irq[redmule_tile_pkg::IRQ_IDX_REDMULE_EVT_1] = redmule_evt[0][1];  // Only 1 core supported
@@ -872,7 +884,8 @@ module redmule_tile
     .OPCODE_OFF ( redmule_tile_pkg::FSYNC_OPCODE_OFF ),
     .FUNC3_OFF  ( redmule_tile_pkg::FSYNC_FUNC3_OFF  ),
     .N_CFG_REG  ( redmule_tile_pkg::FSYNC_N_CFG_REG  ),
-    .LVL_W      ( redmule_tile_pkg::FSYNC_LVL_W      )
+    .LVL_W      ( redmule_tile_pkg::FSYNC_LVL_W      ),
+    .STALL      ( redmule_tile_pkg::FSYNC_STALL      )
   ) i_fsync_dec (
     .clk_i          ( sys_clk                                                     ),
     .rst_ni         ( rst_ni                                                      ),

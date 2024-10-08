@@ -6,6 +6,8 @@
 
 #define NUM_LEVELS (1)
 
+#define STALLING
+
 #define VERBOSE (100)
 
 int main(void) {
@@ -14,7 +16,9 @@ int main(void) {
   for (int i = 0; i < NUM_LEVELS; i++){
     h_pprintf("Fractal Sync at level "); pprintf(ds(i)); n_pprintf("...");
 
+#ifndef STALLING
     irq_en(1<<IRQ_FSYNC_DONE);
+#endif
     
     levels[get_hartid()] = (uint32_t)(i+1);
 #if VERBOSE > 10
@@ -23,9 +27,15 @@ int main(void) {
     asm volatile("addi t0, %0, 0" ::"r"(levels[get_hartid()]));
     fsync();
 
+#ifndef STALLING
     asm volatile("wfi" ::: "memory");
     h_pprintf("Detected IRQ...\n");
+#endif
+
+    h_pprintf("Synchronized...\n");
   }
+
+  h_pprintf("Fractal Sync test finished...\n");
 
   mmio32(TEST_END_ADDR + get_hartid()) = DEFAULT_EXIT_CODE - get_hartid();
 
