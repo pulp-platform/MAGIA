@@ -82,8 +82,8 @@ module redmule_mesh_vip
 /**       Internal Signal Definitions Beginning       **/
 /*******************************************************/
 
-  redmule_mesh_tb_pkg::axi_l2_vip_req_t data_mst_req;
-  redmule_mesh_tb_pkg::axi_l2_vip_rsp_t data_mst_rsp;
+  redmule_mesh_tb_pkg::axi_l2_vip_req_t[redmule_mesh_tb_pkg::N_TILES:0] data_mst_req; // N_TILES + L2
+  redmule_mesh_tb_pkg::axi_l2_vip_rsp_t[redmule_mesh_tb_pkg::N_TILES:0] data_mst_rsp; // N_TILES + L2
 
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
@@ -158,13 +158,13 @@ module redmule_mesh_vip
     while (!eoc) begin
       eoc = 1'b1;
       for (int i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++)
-        if (i_l2_mem.mem[32'h2C03_0000 + i]  == 0)
+        if (i_l2_mem.mem[32'h5C03_0000 + i]  == 0)
           eoc = 1'b0;
       #10000;
     end
     
     for (int i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++)
-      exit_code |= i_l2_mem.mem[32'h2C03_0000 + i] << i*8;
+      exit_code |= i_l2_mem.mem[32'h5C03_0000 + i] << i*8;
   endtask: wait_for_eoc
 
 /*******************************************************/
@@ -185,10 +185,10 @@ module redmule_mesh_vip
     .ApplDelay          ( CLK_PERIOD * T_APPL                   ),
     .AcqDelay           ( CLK_PERIOD * T_TEST                   )
   ) i_l2_mem (
-    .clk_i              ( clk          ),
-    .rst_ni             ( rst_n        ),
-    .axi_req_i          ( data_mst_req ),
-    .axi_rsp_o          ( data_mst_rsp ),
+    .clk_i              ( clk                                         ),
+    .rst_ni             ( rst_n                                       ),
+    .axi_req_i          ( data_mst_req[redmule_mesh_tb_pkg::N_TILES]  ),
+    .axi_rsp_o          ( data_mst_rsp[redmule_mesh_tb_pkg::N_TILES]  ),
     .mon_w_valid_o      (              ),
     .mon_w_addr_o       (              ),
     .mon_w_data_o       (              ),
@@ -211,37 +211,51 @@ module redmule_mesh_vip
 /**          Tiles - L2 (AXI XBAR) Beginning          **/
 /*******************************************************/
 
-  axi_mux #(
-    .SlvAxiIDWidth ( redmule_mesh_pkg::AXI_NOC_ID_W            ),
-    .slv_aw_chan_t ( redmule_mesh_pkg::axi_default_aw_chan_t   ),
-    .mst_aw_chan_t ( redmule_mesh_tb_pkg::axi_l2_vip_aw_chan_t ),
-    .w_chan_t      ( redmule_mesh_tb_pkg::axi_l2_vip_w_chan_t  ),
-    .slv_b_chan_t  ( redmule_mesh_pkg::axi_default_b_chan_t    ),
-    .mst_b_chan_t  ( redmule_mesh_tb_pkg::axi_l2_vip_b_chan_t  ),
-    .slv_ar_chan_t ( redmule_mesh_pkg::axi_default_ar_chan_t   ),
-    .mst_ar_chan_t ( redmule_mesh_tb_pkg::axi_l2_vip_ar_chan_t ),
-    .slv_r_chan_t  ( redmule_mesh_pkg::axi_default_r_chan_t    ),
-    .mst_r_chan_t  ( redmule_mesh_tb_pkg::axi_l2_vip_r_chan_t  ),
-    .slv_req_t     ( redmule_mesh_pkg::axi_default_req_t       ),
-    .slv_resp_t    ( redmule_mesh_pkg::axi_default_rsp_t       ),
-    .mst_req_t     ( redmule_mesh_tb_pkg::axi_l2_vip_req_t     ),
-    .mst_resp_t    ( redmule_mesh_tb_pkg::axi_l2_vip_rsp_t     ),
-    .NoSlvPorts    ( redmule_mesh_tb_pkg::N_TILES              ),
-    .MaxWTrans     ( redmule_tile_pkg::AxiXbarMaxWTrans*4      ),
-    .FallThrough   ( redmule_tile_pkg::AxiXbarFallThrough      ),
-    .SpillAw       ( redmule_tile_pkg::AxiXbarSpillAw          ),
-    .SpillW        ( redmule_tile_pkg::AxiXbarSpillW           ),
-    .SpillB        ( redmule_tile_pkg::AxiXbarSpillB           ),
-    .SpillAr       ( redmule_tile_pkg::AxiXbarSpillAr          ),
-    .SpillR        ( redmule_tile_pkg::AxiXbarSpillR           )
+  localparam int unsigned TILE_0_END_ADDR = redmule_tile_pkg::L1_ADDR_START + redmule_tile_pkg::L1_SIZE - 1;
+  localparam int unsigned TILE_1_START_ADDR = redmule_tile_pkg::L1_ADDR_START + redmule_tile_pkg::L1_SIZE;
+  localparam int unsigned TILE_1_END_ADDR = TILE_0_END_ADDR + redmule_tile_pkg::L1_SIZE;
+  localparam int unsigned TILE_2_START_ADDR = TILE_1_START_ADDR + redmule_tile_pkg::L1_SIZE;
+  localparam int unsigned TILE_2_END_ADDR = TILE_1_END_ADDR + redmule_tile_pkg::L1_SIZE;
+  localparam int unsigned TILE_3_START_ADDR = TILE_2_START_ADDR + redmule_tile_pkg::L1_SIZE;
+  localparam int unsigned TILE_3_END_ADDR = TILE_2_END_ADDR + redmule_tile_pkg::L1_SIZE;
+
+  localparam redmule_mesh_pkg::mesh_xbar_rule_t[redmule_mesh_pkg::mesh_xbar_cfg.NoAddrRules-1:0] MeshAxiAddrMap = '{
+    '{idx: 32'd0, start_addr: redmule_tile_pkg::L1_ADDR_START,  end_addr: TILE_0_END_ADDR               },
+    '{idx: 32'd1, start_addr: TILE_1_START_ADDR,                end_addr: TILE_1_END_ADDR               },
+    '{idx: 32'd1, start_addr: TILE_2_START_ADDR,                end_addr: TILE_2_END_ADDR               },
+    '{idx: 32'd1, start_addr: TILE_3_START_ADDR,                end_addr: TILE_3_END_ADDR               },
+    '{idx: 32'd4, start_addr: redmule_tile_pkg::L2_ADDR_START,  end_addr: redmule_tile_pkg::L2_ADDR_END }
+  };
+
+  axi_xbar #(
+    .Cfg            ( redmule_mesh_pkg::mesh_xbar_cfg             ),
+    .ATOPs          ( 1'b1                                        ),
+    .Connectivity   ( '1                                          ),
+    .slv_aw_chan_t  ( redmule_mesh_pkg::axi_default_aw_chan_t     ),
+    .mst_aw_chan_t  ( redmule_mesh_tb_pkg::axi_l2_vip_aw_chan_t   ),
+    .w_chan_t       ( redmule_mesh_tb_pkg::axi_l2_vip_w_chan_t    ),
+    .slv_b_chan_t   ( redmule_mesh_pkg::axi_default_b_chan_t      ),
+    .mst_b_chan_t   ( redmule_mesh_tb_pkg::axi_l2_vip_b_chan_t    ),
+    .slv_ar_chan_t  ( redmule_mesh_pkg::axi_default_ar_chan_t     ),
+    .mst_ar_chan_t  ( redmule_mesh_tb_pkg::axi_l2_vip_ar_chan_t   ),
+    .slv_r_chan_t   ( redmule_mesh_pkg::axi_default_r_chan_t      ),
+    .mst_r_chan_t   ( redmule_mesh_tb_pkg::axi_l2_vip_r_chan_t    ),
+    .slv_req_t      ( redmule_mesh_pkg::axi_default_req_t         ),
+    .mst_req_t      ( redmule_mesh_tb_pkg::axi_l2_vip_req_t       ),
+    .slv_resp_t     ( redmule_mesh_pkg::axi_default_rsp_t         ),
+    .mst_resp_t     ( redmule_mesh_tb_pkg::axi_l2_vip_rsp_t       ),
+    .rule_t         ( redmule_mesh_pkg::mesh_xbar_rule_t          )
   ) i_axi_xbar (
-    .clk_i       ( clk                   ),
-    .rst_ni      ( rst_n                 ),
-    .test_i      ( 1'b0                  ),
-    .slv_reqs_i  ( data_out_req          ),
-    .slv_resps_o ( data_out_rsp          ),
-    .mst_req_o   ( data_mst_req          ),
-    .mst_resp_i  ( data_mst_rsp          )   
+    .clk_i                  ( clk                   ),
+    .rst_ni                 ( rst_n                 ),
+    .test_i                 ( 1'b0                  ),
+    .slv_ports_req_i        ( data_out_req          ),
+    .slv_ports_resp_o       ( data_out_rsp          ),
+    .mst_ports_req_o        ( data_mst_req          ),
+    .mst_ports_resp_i       ( data_mst_rsp          ),
+    .addr_map_i             ( MeshAxiAddrMap        ),
+    .en_default_mst_port_i  ( '0                    ),
+    .default_mst_port_i     ( '0                    )
   );
 
 /*******************************************************/
@@ -295,20 +309,20 @@ module redmule_mesh_vip
     string_char_t chars[$];
     bit[redmule_mesh_tb_pkg::L2_ID_W-1:0] write_id;
     always @(posedge clk) begin: print_monitor
-      if ((gen_tile[i].dut.i_axi_xbar.mst_req_o.aw.addr == 32'h2FFF0000) && (gen_tile[i].dut.i_axi_xbar.mst_req_o.aw_valid))
+      if ((gen_tile[i].dut.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'h5FFF0000) && (gen_tile[i].dut.i_axi_xbar.mst_ports_req_o[0].aw_valid))
         stderr_ready = 1'b1;
-      if ((gen_tile[i].dut.i_axi_xbar.mst_req_o.aw.addr == 32'h2FFF0004+(i*4)) && (gen_tile[i].dut.i_axi_xbar.mst_req_o.aw_valid)) begin
+      if ((gen_tile[i].dut.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'h5FFF0004+(i*4)) && (gen_tile[i].dut.i_axi_xbar.mst_ports_req_o[0].aw_valid)) begin
         stdio_ready  = 1'b1;
-        write_id = gen_tile[i].dut.i_axi_xbar.mst_req_o.aw.id;
+        write_id = gen_tile[i].dut.i_axi_xbar.mst_ports_req_o[0].aw.id;
       end
-      if ((gen_tile[i].dut.i_axi_xbar.mst_req_o.w_valid) && stderr_ready) begin
-        errors       = gen_tile[i].dut.i_axi_xbar.mst_req_o.w.data[7:0];
+      if ((gen_tile[i].dut.i_axi_xbar.mst_ports_req_o[0].w_valid) && stderr_ready) begin
+        errors       = gen_tile[i].dut.i_axi_xbar.mst_ports_req_o[0].w.data[7:0];
         stderr_ready = 1'b0;
       end
-      if ((gen_tile[i].dut.i_axi_xbar.mst_req_o.w_valid) && stdio_ready) begin
-        if (gen_tile[i].dut.i_axi_xbar.mst_req_o.w.data[7:0] == 10)  // ASCII code for new line (\n) is 10
+      if ((gen_tile[i].dut.i_axi_xbar.mst_ports_req_o[0].w_valid) && stdio_ready) begin
+        if (gen_tile[i].dut.i_axi_xbar.mst_ports_req_o[0].w.data[7:0] == 10)  // ASCII code for new line (\n) is 10
           print_line[write_id] = 1'b1;
-        chars.push_back('{gen_tile[i].dut.i_axi_xbar.mst_req_o.w.data[7:0], write_id});
+        chars.push_back('{gen_tile[i].dut.i_axi_xbar.mst_ports_req_o[0].w.data[7:0], write_id});
         stdio_ready = 1'b0;
       end
       for (int k = 0; k < 2**redmule_mesh_tb_pkg::L2_ID_W; k++) begin

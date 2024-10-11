@@ -38,6 +38,12 @@ module redmule_mesh_fixture;
   redmule_mesh_pkg::axi_default_req_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_out_req;
   redmule_mesh_pkg::axi_default_rsp_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_out_rsp;
 
+  redmule_mesh_tb_pkg::axi_l2_vip_req_t[redmule_mesh_tb_pkg::N_TILES:0] data_mst_req;
+  redmule_mesh_tb_pkg::axi_l2_vip_rsp_t[redmule_mesh_tb_pkg::N_TILES:0] data_mst_rsp;
+
+  redmule_tile_pkg::axi_xbar_slv_req_t[redmule_mesh_tb_pkg::N_TILES:0]  tile_data_mst_req;
+  redmule_tile_pkg::axi_xbar_slv_rsp_t[redmule_mesh_tb_pkg::N_TILES:0]  tile_data_mst_rsp;
+
   fractal_if #(.LVL_WIDTH($clog2(redmule_mesh_tb_pkg::N_TILES)+1))      sync_if[redmule_mesh_tb_pkg::N_TILES]();
   
   logic                                                                 scan_cg_en;
@@ -71,11 +77,41 @@ module redmule_mesh_fixture;
 /*******************************************************/
 /**           Internal Signal Definitions End         **/
 /*******************************************************/
+/**                   AXI ID resize                   **/
+/*******************************************************/
+
+  for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++) begin: gen_iw_conv
+    axi_iw_converter #(
+      .AxiSlvPortIdWidth      ( redmule_mesh_tb_pkg::L2_ID_W          ),
+      .AxiMstPortIdWidth      ( redmule_tile_pkg::AXI_ID_W            ),
+      .AxiSlvPortMaxUniqIds   ( 32'd2                                 ),
+      .AxiSlvPortMaxTxnsPerId ( 32'd4                                 ),
+      .AxiSlvPortMaxTxns      ( 32'd16                                ),
+      .AxiMstPortMaxUniqIds   ( 32'd2                                 ),
+      .AxiMstPortMaxTxnsPerId ( 32'd4                                 ),
+      .AxiAddrWidth           ( redmule_mesh_pkg::ADDR_W              ),
+      .AxiDataWidth           ( redmule_mesh_pkg::DATA_W              ),
+      .AxiUserWidth           ( redmule_mesh_pkg::USR_W               ),
+      .slv_req_t              ( redmule_mesh_tb_pkg::axi_l2_vip_req_t ),
+      .slv_resp_t             ( redmule_mesh_tb_pkg::axi_l2_vip_rsp_t ),
+      .mst_req_t              ( redmule_tile_pkg::axi_xbar_slv_req_t  ),
+      .mst_resp_t             ( redmule_tile_pkg::axi_xbar_slv_rsp_t  )
+    ) i_axi_iw_converter (
+      .clk_i      ( clk                   ),
+      .rst_ni     ( rst_n                 ),
+      .slv_req_i  ( data_mst_req[i]       ),
+      .slv_resp_o ( data_mst_rsp[i]       ),
+      .mst_req_o  ( tile_data_mst_req[i]  ),
+      .mst_resp_i ( tile_data_mst_rsp[i]  )
+    );
+  end
+/*******************************************************/
 /**                   DUT Beginning                   **/
 /*******************************************************/
 
   for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++) begin: gen_tile
     redmule_tile #(
+      .TILE_ID      ( i                                 ),
       .N_MEM_BANKS  ( redmule_tile_tb_pkg::N_MEM_BANKS  ),
       .N_WORDS_BANK ( redmule_tile_tb_pkg::N_WORDS_BANK ),
 
@@ -90,7 +126,10 @@ module redmule_mesh_fixture;
       .tile_enable_i       ( tile_enable         ),
 
       .data_out_req_o      ( data_out_req[i]     ),
-      .data_out_rsp_i      ( data_out_rsp[i]     ), 
+      .data_out_rsp_i      ( data_out_rsp[i]     ),
+
+      .data_in_req_i       ( tile_data_mst_req[i]     ),
+      .data_in_rsp_o       ( tile_data_mst_rsp[i]     ),
 
       .sync_if_o           ( sync_if[i]          ),
       

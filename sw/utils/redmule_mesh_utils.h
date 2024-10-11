@@ -10,9 +10,6 @@
 #define n_pprintf(x) (n_psprint(get_hartid(), x))
 #define   pprintf(x) (  psprint(get_hartid(), x))
 #define   pprintln   (  pprintf("\n"))
-#define bs(x) (itoa(x, STR_BASE, 2))
-#define ds(x) (itoa(x, STR_BASE, 10))
-#define hs(x) (itoa(x, STR_BASE, 16))
 
 inline uint32_t get_hartid(){
     uint32_t hartid;
@@ -52,39 +49,60 @@ char* itoa(int value, char* result, int base) {
     return result;
 }
 
+char* bs(uint32_t x) {
+    uint32_t hartid = get_hartid();
+    char *address = STR_BASE + L1_SIZE*hartid;
+
+    return itoa(x, address, 2);
+}
+
+char* ds(uint32_t x) {
+    uint32_t hartid = get_hartid();
+    char *address = STR_BASE + L1_SIZE*hartid;
+
+    return itoa(x, address, 10);
+}
+
+char* hs(uint32_t x) {
+    uint32_t hartid = get_hartid();
+    char *address = STR_BASE + L1_SIZE*hartid;
+
+    return itoa(x, address, 16);
+}
+
 void h_psprint(uint32_t hartid, const char* string){
-    mmio8(0x2FFF0004 + (hartid*4)) = '[';
-    mmio8(0x2FFF0004 + (hartid*4)) = 'm';
-    mmio8(0x2FFF0004 + (hartid*4)) = 'h';
-    mmio8(0x2FFF0004 + (hartid*4)) = 'a';
-    mmio8(0x2FFF0004 + (hartid*4)) = 'r';
-    mmio8(0x2FFF0004 + (hartid*4)) = 't';
-    mmio8(0x2FFF0004 + (hartid*4)) = 'i';
-    mmio8(0x2FFF0004 + (hartid*4)) = 'd';
-    mmio8(0x2FFF0004 + (hartid*4)) = ' ';
+    mmio8(0x5FFF0004 + (hartid*4)) = '[';
+    mmio8(0x5FFF0004 + (hartid*4)) = 'm';
+    mmio8(0x5FFF0004 + (hartid*4)) = 'h';
+    mmio8(0x5FFF0004 + (hartid*4)) = 'a';
+    mmio8(0x5FFF0004 + (hartid*4)) = 'r';
+    mmio8(0x5FFF0004 + (hartid*4)) = 't';
+    mmio8(0x5FFF0004 + (hartid*4)) = 'i';
+    mmio8(0x5FFF0004 + (hartid*4)) = 'd';
+    mmio8(0x5FFF0004 + (hartid*4)) = ' ';
     char*   mhardid_str = ds(hartid);
     uint8_t mhartid_idx = 0;
     while (mhardid_str[mhartid_idx] != '\0')
-        mmio8(0x2FFF0004 + (hartid*4)) = mhardid_str[mhartid_idx++];
-    mmio8(0x2FFF0004 + (hartid*4)) = ']';
-    mmio8(0x2FFF0004 + (hartid*4)) = ' ';
+        mmio8(0x5FFF0004 + (hartid*4)) = mhardid_str[mhartid_idx++];
+    mmio8(0x5FFF0004 + (hartid*4)) = ']';
+    mmio8(0x5FFF0004 + (hartid*4)) = ' ';
 
     uint8_t index = 0;
     while (string[index] != '\0')
-        mmio8(0x2FFF0004 + (hartid*4)) = string[index++];
+        mmio8(0x5FFF0004 + (hartid*4)) = string[index++];
 }
 
 void n_psprint(uint32_t hartid, const char* string){
     uint8_t index = 0;
     while (string[index] != '\0')
-        mmio8(0x2FFF0004 + (hartid*4)) = string[index++];
-    mmio8(0x2FFF0004 + (hartid*4)) = '\n';
+        mmio8(0x5FFF0004 + (hartid*4)) = string[index++];
+    mmio8(0x5FFF0004 + (hartid*4)) = '\n';
 }
 
 void psprint(uint32_t hartid, const char* string){
     uint8_t index = 0;
     while (string[index] != '\0')
-        mmio8(0x2FFF0004 + (hartid*4)) = string[index++];
+        mmio8(0x5FFF0004 + (hartid*4)) = string[index++];
 }
 
 #endif /*REDMULE_MESH_UTILS_H*/
