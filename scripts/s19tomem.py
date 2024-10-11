@@ -23,7 +23,7 @@ import sys
 # Stack starts at 0x2c04_0000
 # We only keep last 2 bytes so memory will be filled with no offset.
 # The CPU will also reference it as to not have any offset.
-MEM_START  = 0x2c000000
+MEM_START  = 0x5c000000
 INSTR_SIZE = 0x8000
 INSTR_END  = MEM_START + INSTR_SIZE
 DATA_BASE  = MEM_START + 0x10000

@@ -108,7 +108,7 @@ regs Kusti, 23.10.2004
 */
 
 void putf(char *null, char c) {
-  *(volatile int *) (0x2FFF0004) = (int)c;
+  *(volatile int *) (0x5FFF0004) = (int)c;
 }
 
 #ifndef __TFP_PRINTF__
