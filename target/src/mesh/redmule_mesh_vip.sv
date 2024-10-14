@@ -19,6 +19,8 @@
  * RedMulE Mesh Verification IP
  */
 
+ `include "axi/assign.svh"
+
 module redmule_mesh_vip
   import redmule_tile_pkg::*;
   import redmule_mesh_pkg::*;
@@ -38,6 +40,9 @@ module redmule_mesh_vip
 
   input  redmule_mesh_pkg::axi_default_req_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_out_req,
   output redmule_mesh_pkg::axi_default_rsp_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_out_rsp,
+
+  output redmule_mesh_tb_pkg::axi_l2_vip_req_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_in_req,
+  input  redmule_mesh_tb_pkg::axi_l2_vip_rsp_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_in_rsp,
 
   output logic                                                                 scan_cg_en,
 
@@ -86,7 +91,20 @@ module redmule_mesh_vip
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
 /*******************************************************/
-/**            Hardwired Signals Beginning            **/
+/**          Interface Assignments Beginning          **/
+/*******************************************************/
+
+  generate
+    for(genvar i=0; i<redmule_mesh_tb_pkg::N_TILES; i++) begin
+      /* assign data_in_req[i] = data_mst_req[i];
+      assign data_mst_rsp[i] = data_in_rsp[i]; */
+      `AXI_ASSIGN_REQ_STRUCT(data_in_req[i], data_mst_req[i])
+      `AXI_ASSIGN_RESP_STRUCT(data_mst_rsp[i], data_in_rsp[i])
+    end
+  endgenerate
+
+/*******************************************************/
+/**             Interface Assignments End             **/
 /*******************************************************/
 
   assign test_mode         = 1'b0;
@@ -220,8 +238,8 @@ module redmule_mesh_vip
   localparam redmule_mesh_pkg::mesh_xbar_rule_t[redmule_mesh_pkg::mesh_xbar_cfg.NoAddrRules-1:0] MeshAxiAddrMap = '{
     '{idx: 32'd0, start_addr: redmule_tile_pkg::L1_ADDR_START,  end_addr: TILE_0_END_ADDR               },
     '{idx: 32'd1, start_addr: TILE_1_START_ADDR,                end_addr: TILE_1_END_ADDR               },
-    '{idx: 32'd1, start_addr: TILE_2_START_ADDR,                end_addr: TILE_2_END_ADDR               },
-    '{idx: 32'd1, start_addr: TILE_3_START_ADDR,                end_addr: TILE_3_END_ADDR               },
+    '{idx: 32'd2, start_addr: TILE_2_START_ADDR,                end_addr: TILE_2_END_ADDR               },
+    '{idx: 32'd3, start_addr: TILE_3_START_ADDR,                end_addr: TILE_3_END_ADDR               },
     '{idx: 32'd4, start_addr: redmule_tile_pkg::L2_ADDR_START,  end_addr: redmule_tile_pkg::L2_ADDR_END }
   };
 

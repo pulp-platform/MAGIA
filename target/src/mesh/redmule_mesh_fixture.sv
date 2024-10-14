@@ -38,8 +38,8 @@ module redmule_mesh_fixture;
   redmule_mesh_pkg::axi_default_req_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_out_req;
   redmule_mesh_pkg::axi_default_rsp_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_out_rsp;
 
-  redmule_mesh_tb_pkg::axi_l2_vip_req_t[redmule_mesh_tb_pkg::N_TILES:0] data_mst_req;
-  redmule_mesh_tb_pkg::axi_l2_vip_rsp_t[redmule_mesh_tb_pkg::N_TILES:0] data_mst_rsp;
+  redmule_mesh_tb_pkg::axi_l2_vip_req_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_in_req;
+  redmule_mesh_tb_pkg::axi_l2_vip_rsp_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_in_rsp;
 
   redmule_tile_pkg::axi_xbar_slv_req_t[redmule_mesh_tb_pkg::N_TILES:0]  tile_data_mst_req;
   redmule_tile_pkg::axi_xbar_slv_rsp_t[redmule_mesh_tb_pkg::N_TILES:0]  tile_data_mst_rsp;
@@ -97,8 +97,8 @@ module redmule_mesh_fixture;
     ) i_axi_iw_converter (
       .clk_i      ( clk                   ),
       .rst_ni     ( rst_n                 ),
-      .slv_req_i  ( data_mst_req[i]       ),
-      .slv_resp_o ( data_mst_rsp[i]       ),
+      .slv_req_i  ( data_in_req[i]        ),
+      .slv_resp_o ( data_in_rsp[i]        ),
       .mst_req_o  ( tile_data_mst_req[i]  ),
       .mst_resp_i ( tile_data_mst_rsp[i]  )
     );
