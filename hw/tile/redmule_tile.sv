@@ -382,6 +382,52 @@ module redmule_tile
     .obi_rsp_o ( idma_obi_write_rsp )
   );
 
+  axi_to_obi #(
+    .ObiCfg       (                                           ),
+    .obi_req_t    ( redmule_tile_pkg::core_obi_data_req_t     ),
+    .obi_rsp_t    ( redmule_tile_pkg::core_obi_data_rsp_t     ),
+    .obi_a_chan_t ( redmule_tile_pkg::core_data_obi_a_chan_t  ),
+    .obi_r_chan_t ( redmule_tile_pkg::core_data_obi_r_chan_t  ),
+    .AxiAddrWidth ( redmule_mesh_pkg::ADDR_W                  ),
+    .AxiDataWidth ( redmule_mesh_pkg::DATA_W                  ),
+    .AxiIdWidth   ( redmule_mesh_pkg::AXI_NOC_ID_W            ),
+    .AxiUserWidth ( redmule_mesh_pkg::AXI_NOC_U_W             ),
+    .MaxTrans     ( 32'd1                                     ),
+    .axi_req_t    ( redmule_mesh_pkg::axi_xbar_mst_req_t      ),
+    .axi_rsp_t    ( redmule_mesh_pkg::axi_xbar_mst_rsp_t      )
+  ) i_axi_to_obi (
+    .clk_i                  ( sys_clk             ),
+    .rst_ni                 ( rst_ni              ),
+    .testmode_i             ( test_mode_i         ),
+    .axi_req_i              ( axi_xbar_mst_req[1] ),
+    .axi_rsp_o              ( axi_xbar_mst_rsp[1] ),
+    .obi_req_o              ( ext_obi_data_req    ),
+    .obi_rsp_i              ( ext_obi_data_rsp    ),
+    .req_aw_id_o            (                     ),
+    .req_aw_user_o          (                     ),
+    .req_w_user_o           (                     ),
+    .req_write_aid_i        ( '0                  ),
+    .req_write_auser_i      ( '0                  ),
+    .req_write_wuser_i      ( '0                  ),
+    .req_ar_id_o            (                     ),
+    .req_ar_user_o          (                     ),
+    .req_read_aid_i         ( '0                  ),
+    .req_read_auser_i       ( '0                  ),
+    .rsp_write_aw_user_o    (                     ),
+    .rsp_write_w_user_o     (                     ),
+    .rsp_write_bank_strb_o  (                     ),
+    .rsp_write_rid_o        (                     ),
+    .rsp_write_ruser_o      (                     ),
+    .rsp_write_last_o       (                     ),
+    .rsp_write_hs_o         (                     ),
+    .rsp_b_user_i           ( '0                  ),
+    .rsp_read_ar_user_o     (                     ),
+    .rsp_read_size_enable_o (                     ),
+    .rsp_read_rid_o         (                     ),
+    .rsp_read_ruser_o       (                     ),
+    .rsp_r_user_i           ( '0                  )
+  );
+
 /*******************************************************/
 /**                Type Conversions End               **/
 /*******************************************************/
@@ -490,26 +536,6 @@ module redmule_tile
 
   `AXI_ASSIGN_REQ_STRUCT(axi_xbar_data_out_req, axi_xbar_mst_req[0])
   `AXI_ASSIGN_RESP_STRUCT(axi_xbar_mst_rsp[0], axi_xbar_data_out_rsp)
-
-  // Temporary AXI error slave until the connection between the Xbar and the internal L1 is ready
-  generate
-    for (genvar i=1; i<redmule_tile_pkg::AxiXbarNoMstPorts; i++) begin
-      axi_err_slv #(
-        .AxiIdWidth ( redmule_mesh_pkg::AXI_NOC_ID_W        ),
-        .axi_req_t  ( redmule_mesh_pkg::axi_xbar_mst_req_t  ),
-        .axi_resp_t ( redmule_mesh_pkg::axi_xbar_mst_rsp_t  )
-      ) i_axi_err_slv (
-        .clk_i  ( sys_clk ),
-        .rst_ni ( rst_ni  ),
-        .test_i ( 1'b0    ),
-        .slv_req_i  ( axi_xbar_mst_req[i] ),
-        .slv_resp_o ( axi_xbar_mst_rsp[i])
-      );
-    end
-  endgenerate
-
-  // Tie ext_obi_data_req until we have the path form the AXI Xbar to the L1
-  assign ext_obi_data_req = '0;
 
 /*******************************************************/
 /**             Interface Assignments End             **/
