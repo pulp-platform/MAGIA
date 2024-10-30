@@ -37,6 +37,8 @@ module redmule_tile_fixture;
   redmule_mesh_pkg::axi_default_req_t      data_out_req;
   redmule_mesh_pkg::axi_default_rsp_t      data_out_rsp;
 
+  fractal_if #(.LVL_WIDTH(1))              sync_if[1]();
+  
   logic                                    scan_cg_en;
 
   logic[31:0]                              boot_addr;
@@ -88,6 +90,8 @@ module redmule_tile_fixture;
     .data_out_req_o      ( data_out_req      ),
     .data_out_rsp_i      ( data_out_rsp      ), 
 
+    .sync_if_o           ( sync_if[0]        ),
+    
     .scan_cg_en_i        ( scan_cg_en        ),
 
     .boot_addr_i         ( boot_addr         ),

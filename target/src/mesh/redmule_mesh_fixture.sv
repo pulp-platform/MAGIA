@@ -38,6 +38,8 @@ module redmule_mesh_fixture;
   redmule_mesh_pkg::axi_default_req_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_out_req;
   redmule_mesh_pkg::axi_default_rsp_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_out_rsp;
 
+  fractal_if #(.LVL_WIDTH($clog2(redmule_mesh_tb_pkg::N_TILES)+1))      sync_if[redmule_mesh_tb_pkg::N_TILES]();
+  
   logic                                                                 scan_cg_en;
 
   logic[31:0]                                                           boot_addr;
@@ -90,6 +92,8 @@ module redmule_mesh_fixture;
       .data_out_req_o      ( data_out_req[i]     ),
       .data_out_rsp_i      ( data_out_rsp[i]     ), 
 
+      .sync_if_o           ( sync_if[i]          ),
+      
       .scan_cg_en_i        ( scan_cg_en          ),
 
       .boot_addr_i         ( boot_addr           ),

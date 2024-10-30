@@ -36,6 +36,7 @@ dependencies:
   safety_island     : { git: "https://github.com/pulp-platform/safety_island.git"     , rev: 1cc316a6874cd2e08355fa17f0ede06406ba0407 } # branch: vi/redmule_scaleup
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
+  fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: 1d8933ca2bf88885f41591bd3db1b790ba293328 } #branch: bender
 
 export_include_dirs:
   - hw/include
@@ -60,6 +61,7 @@ sources:
       - hw/tile/xif_inst_demux.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
       - hw/tile/idma_ctrl.sv
+      - hw/tile/fractal_sync_xif_inst_decoder.sv
       - hw/tile/redmule_tile.sv
       # RedMulE Mesh
       # RedMulE DV
@@ -88,5 +90,6 @@ sources:
     - hw/tile/xif_inst_demux.sv
     - hw/tile/idma_axi_obi_transfer_ch.sv
     - hw/tile/idma_ctrl.sv
+    - hw/tile/fractal_sync_xif_inst_decoder.sv
     - hw/tile/redmule_tile.sv
     # RedMulE Mesh

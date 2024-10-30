@@ -38,6 +38,8 @@ module redmule_tile_vip
   input  redmule_mesh_pkg::axi_default_req_t      data_out_req,
   output redmule_mesh_pkg::axi_default_rsp_t      data_out_rsp,
 
+  fractal_if.slv_port                             sync_if[1],
+  
   output logic                                    scan_cg_en,
 
   output logic[31:0]                              boot_addr, //TODO: manage signal
@@ -91,6 +93,8 @@ module redmule_tile_vip
   assign fencei_flush_ack  = 1'b0;
   assign debug_req         = 1'b0;
   assign wu_wfe            = 1'b0;
+  assign sync_if[0].wake   = 1'b0;
+  assign sync_if[0].error  = 1'b0;
 
 /*******************************************************/
 /**               Hardwired Signals End               **/

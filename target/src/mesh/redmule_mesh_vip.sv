@@ -39,6 +39,8 @@ module redmule_mesh_vip
   input  redmule_mesh_pkg::axi_default_req_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_out_req,
   output redmule_mesh_pkg::axi_default_rsp_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_out_rsp,
 
+  fractal_if.slv_port                                                          sync_if[redmule_mesh_tb_pkg::N_TILES],
+  
   output logic                                                                 scan_cg_en,
 
   output logic[31:0]                                                           boot_addr, //TODO: manage signal
@@ -244,6 +246,39 @@ module redmule_mesh_vip
 
 /*******************************************************/
 /**             Tiles - L2 (AXI XBAR) End             **/
+/*******************************************************/
+/**         Synchronization Network Beginning         **/
+/*******************************************************/
+
+  //NOTE: The current VIP only support a synchronization network for 2 tiles
+
+  fractal_if #(.LVL_WIDTH(1)) if_top[1]();
+
+  fractal_sync #(
+    .SLV_WIDTH ( 2 )
+  ) i_fractal_sync (
+    .clk_i   ( clk     ),
+    .rstn_i  ( rst_n   ),
+    .slaves  ( sync_if ),
+    .masters ( if_top  )
+  );
+
+  always begin
+    if_top[0].wake  = 1'b0;
+    if_top[0].error = 1'b0;
+    @(negedge clk);
+    if (if_top[0].sync) begin
+      @(negedge clk);
+      if_top[0].wake  = 1'b1;
+      if_top[0].error = 1'b1;
+      do
+        @(negedge clk);
+      while (!if_top[0].ack);
+    end
+  end
+
+/*******************************************************/
+/**            Synchronization Network End            **/
 /*******************************************************/
 /**                 Printing Beginning                **/
 /*******************************************************/
