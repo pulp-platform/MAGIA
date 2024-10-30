@@ -140,9 +140,9 @@ module redmule_tile_vip
   endtask: elf_run
 
   task automatic wait_for_eoc(output bit[31:0] exit_code);
-    while (i_l2_mem.mem[32'h2C03_0000] == 0)
+    while (i_l2_mem.mem[32'h5C03_0000] == 0)
       #10000;
-    exit_code = i_l2_mem.mem[32'h2C03_0000];
+    exit_code = i_l2_mem.mem[32'h5C03_0000];
   endtask: wait_for_eoc
 
 /*******************************************************/
@@ -193,8 +193,8 @@ int errors = -1;
 bit stdio_ready  = 0;
 bit stderr_ready = 0;
 always @(posedge clk) begin: print_monitor
-  if ((data_out_req.aw.addr == 32'h2FFF0000) && (data_out_req.aw_valid)) stderr_ready = 1'b1;
-  if ((data_out_req.aw.addr == 32'h2FFF0004) && (data_out_req.aw_valid)) stdio_ready  = 1'b1;
+  if ((data_out_req.aw.addr == 32'h5FFF0000) && (data_out_req.aw_valid)) stderr_ready = 1'b1;
+  if ((data_out_req.aw.addr == 32'h5FFF0004) && (data_out_req.aw_valid)) stdio_ready  = 1'b1;
   if ((data_out_req.w_valid) && stderr_ready) begin
     // NOTE: This is stupid! But unless we keep track of the outstanding AXI writes (which would require some logic) this should work,
     //       unless other modules (not related to the print function) transfer bytes (instead of words) to the L2

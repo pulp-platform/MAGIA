@@ -200,8 +200,9 @@ module redmule_tile
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
 
-  assign obi_xbar_rule[redmule_tile_pkg::L2_IDX]    = '{idx: 32'd0, start_addr: redmule_tile_pkg::L2_ADDR_START, end_addr: redmule_tile_pkg::L2_ADDR_END};
-  assign obi_xbar_rule[redmule_tile_pkg::L1SPM_IDX] = '{idx: 32'd1, start_addr: TILE_L1_START_ADDR, end_addr: TILE_L1_END_ADDR};
+  assign obi_xbar_rule[redmule_tile_pkg::L2_IDX]    = '{idx: 32'd0, start_addr: redmule_tile_pkg::L2_ADDR_START,    end_addr: redmule_tile_pkg::L2_ADDR_END     };
+  assign obi_xbar_rule[redmule_tile_pkg::L1SPM_IDX] = '{idx: 32'd1, start_addr: TILE_L1_START_ADDR,                 end_addr: TILE_L1_END_ADDR                  };
+  assign obi_xbar_rule[redmule_tile_pkg::STACK_IDX] = '{idx: 32'd1, start_addr: redmule_tile_pkg::STACK_ADDR_START, end_addr: redmule_tile_pkg::STACK_ADDR_END  };
   
   assign obi_xbar_en_default_idx = '1; // Routing to the AXI Xbar all requests with an address outside the range of the internal L1 and the external L2
   assign obi_xbar_default_idx    = '0;

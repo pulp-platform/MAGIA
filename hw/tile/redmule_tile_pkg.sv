@@ -47,11 +47,14 @@ package redmule_tile_pkg;
   localparam int unsigned IRQ_USED              = 11;
 
   // Address map
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_ADDR_START = 32'h1000_0000;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_SIZE       = 32'h1000_0000;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_ADDR_START = L1_ADDR_START + 4*L1_SIZE; // redmule_mesh_tb_pkg::N_TILES*L1_SIZE;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_SIZE       = 32'h1000_0000;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_ADDR_END   = L2_ADDR_START + L2_SIZE;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] STACK_ADDR_START = 32'h0000_0000;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] STACK_SIZE       = 32'h1000_0000;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] STACK_ADDR_END   = STACK_ADDR_START + STACK_SIZE;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_ADDR_START    = 32'h1000_0000;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_SIZE          = 32'h1000_0000;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_ADDR_START    = L1_ADDR_START + 4*L1_SIZE; // redmule_mesh_tb_pkg::N_TILES*L1_SIZE;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_SIZE          = 32'h1000_0000;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_ADDR_END      = L2_ADDR_START + L2_SIZE;
   
   // Parameters used by the HCI
   parameter int unsigned N_HWPE  = 1;                                                   // Number of HWPEs attached to the port
@@ -116,7 +119,7 @@ package redmule_tile_pkg;
   parameter int unsigned N_SBR       = 2;                                               // Number of slaves (HCI, AXI XBAR)
   parameter int unsigned N_MGR       = 2;                                               // Number of masters (Core)
   parameter int unsigned N_MAX_TRAN  = 1;                                               // Number of maximum outstanding transactions
-  parameter int unsigned N_ADDR_RULE = 2;                                               // Number of address rules
+  parameter int unsigned N_ADDR_RULE = 3;                                               // Number of address rules
   localparam int unsigned N_BIT_SBR  = $clog2(N_SBR);                                   // Number of bits required to identify each slave
 
   // Parameters used by AXI
@@ -294,6 +297,7 @@ package redmule_tile_pkg;
   } core_cache_instr_rsp_t;
 
   typedef enum {
+    STACK_IDX = 2,
     L1SPM_IDX = 1,
     L2_IDX    = 0
   } mem_array_idx_e;
