@@ -1,7 +1,7 @@
 #ifndef FSYNC_ISA_UTILS_H
 #define FSYNC_ISA_UTILS_H
 
-/* set instruction */
+/* synch instruction */
   // asm volatile(
   //      ".word (0x0       << 20) | \     /* Reserved - 0x0 */
   //             (0b00101   << 15) | \     /* R1 - t0 */
