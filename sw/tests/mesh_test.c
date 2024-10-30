@@ -17,7 +17,7 @@
 
 #define MHARTID_OFFSET (0x00010000)
 
-#define NUM_HARTS (2)
+#define NUM_HARTS (4)
 
 #define M_SIZE (96)
 #define N_SIZE (64)
@@ -213,15 +213,15 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
 int main(void) {
   // X
   h_pprintf("Initializing X through iDMA...\n");
-  idma_mv_in(M_SIZE, N_SIZE, x_inp, X_BASE);
+  idma_mv_in(M_SIZE, N_SIZE, x_inp, (X_BASE + get_hartid()*0x10000000));
 
   // W
   h_pprintf("Initializing W through iDMA...\n");
-  idma_mv_in(N_SIZE, K_SIZE, w_inp, W_BASE);
+  idma_mv_in(N_SIZE, K_SIZE, w_inp, (W_BASE + get_hartid()*0x10000000));
 
   // Y
   h_pprintf("Initializing Y through iDMA...\n");
-  idma_mv_in(M_SIZE, K_SIZE, y_inp, Y_BASE);
+  idma_mv_in(M_SIZE, K_SIZE, y_inp, (Y_BASE + get_hartid()*0x10000000));
 
   uint32_t cfg_reg0[NUM_HARTS];
   uint32_t cfg_reg1[NUM_HARTS];
@@ -237,9 +237,9 @@ int main(void) {
   h_pprintf("cfg_reg1: 0x"); n_pprintf(hs(cfg_reg1[get_hartid()]));
 #endif
 
-  asm volatile("addi t0, %0, 0" ::"r"((uint32_t)X_BASE));
-  asm volatile("addi t1, %0, 0" ::"r"((uint32_t)W_BASE));
-  asm volatile("addi t2, %0, 0" ::"r"((uint32_t)Y_BASE));
+  asm volatile("addi t0, %0, 0" ::"r"((uint32_t)(X_BASE + get_hartid()*0x10000000)));
+  asm volatile("addi t1, %0, 0" ::"r"((uint32_t)(W_BASE + get_hartid()*0x10000000)));
+  asm volatile("addi t2, %0, 0" ::"r"((uint32_t)(Y_BASE + get_hartid()*0x10000000)));
   asm volatile("addi t3, %0, 0" ::"r"(cfg_reg0[get_hartid()]));
   asm volatile("addi t4, %0, 0" ::"r"(cfg_reg1[get_hartid()]));
 
@@ -262,7 +262,7 @@ int main(void) {
 #endif
 
   h_pprintf("Moving results through iDMA...\n");
-  idma_mv_out(M_SIZE, K_SIZE, Y_BASE, V_BASE + get_hartid()*MHARTID_OFFSET);
+  idma_mv_out(M_SIZE, K_SIZE, Y_BASE + get_hartid() * 0x10000000, V_BASE + get_hartid() * MHARTID_OFFSET);
 
   h_pprintf("Verifying results...\n");
   
@@ -288,7 +288,7 @@ int main(void) {
   else
     exit_code[get_hartid()] = PASS_EXIT_CODE;
 
-  mmio32(TEST_END_ADDR + get_hartid()) = exit_code[get_hartid()] - get_hartid();
+  mmio8(TEST_END_ADDR + get_hartid()) = exit_code[get_hartid()] - get_hartid();
 
   return 0;
 }
