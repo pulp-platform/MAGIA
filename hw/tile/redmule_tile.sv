@@ -47,7 +47,7 @@ module redmule_tile
   parameter idma_pkg::error_cap_e ERROR_CAP     = idma_pkg::NO_ERROR_HANDLING,    // Error handaling capability of the iDMA
 
   // Parameter used by the Fractal Sync
-  parameter int unsigned          FSYNC_WIDTH   = redmule_mesh_pkg::TILE_FSYNC_W  // Level width of the Fractal Sync interface
+  parameter int unsigned          FSYNC_WIDTH   = redmule_mesh_pkg::TILE_FSYNC_W, // Level width of the Fractal Sync interface
 
   // Dependent parameters
   localparam int unsigned         TILE_L1_START_ADDR  = redmule_tile_pkg::L1_ADDR_START + TILE_ID*redmule_tile_pkg::L1_SIZE,
