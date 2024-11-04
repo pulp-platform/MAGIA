@@ -44,7 +44,9 @@ package redmule_tile_pkg;
   localparam int unsigned IRQ_IDX_A2O_BUSY      = 23;
   localparam int unsigned IRQ_IDX_O2A_BUSY      = 22;
   localparam int unsigned IRQ_IDX_REDMULE_BUSY  = 21;
-  localparam int unsigned IRQ_USED              = 11;
+  localparam int unsigned IRQ_IDX_FSYNC_DONE    = 20;
+  localparam int unsigned IRQ_IDX_FSYNC_ERROR   = 19;
+  localparam int unsigned IRQ_USED              = 13;
 
   // Address map
   localparam logic[redmule_mesh_pkg::ADDR_W-1:0] STACK_ADDR_START = 32'h0000_0000;
@@ -161,13 +163,32 @@ package redmule_tile_pkg;
     OBI2AXI = 1'b1
   } idma_transfer_ch_e;                                                                 // iDMA type of transfer channel
 
+  // Parameters used by the Xif Instruction Demuxer
+  parameter int unsigned N_COPROC         = 3;                                          // RedMulE, iDMA and Fractal Sync
+  parameter int unsigned N_REDMULE_SIGN   = 9;                                          // Number of signitures (= {opcode, func3}) in the programming model of RedMulE
+  parameter int unsigned N_IDMA_SIGN      = 5;                                          // Number of signitures (= {opcode, func3}) in the programming model of the iDMA decoder
+  parameter int unsigned N_FSYNC_SIGN     = 1;                                          // Number of signitures (= {opcode, func3}) in the programming model of Fractal Sync
+  parameter int unsigned N_SIGN           = 9;                                          // Number of opcodes = max{RedMulE_signitures, iDMA_signitures, FractalSync_signitures}
+  typedef enum logic[1:0]{
+    XIF_REDMULE_IDX = 2'b00,
+    XIF_IDMA_IDX    = 2'b01,
+    XIF_FSYNC_IDX   = 2'b10
+  } xif_inst_demux_idx_e;
+  parameter int unsigned DEFAULT_IDX      = XIF_REDMULE_IDX;                            // RedMulE will handle the instructions by default
+  parameter int unsigned OPCODE_W         = 7;                                          // ISA OPCODE Width
+  parameter int unsigned OPCODE_OFF       = 0;                                          // ISA OPCODE Offset
+  parameter int unsigned FUNC3_W          = 3;                                          // ISA FUNC3 Width
+  parameter int unsigned FUNC3_OFF        = 12;                                         // ISA FUNC3 Offset
+  parameter int unsigned SIGN_W           = OPCODE_W + FUNC3_W;                         // Width of the instruction signiture
+  parameter bit          PRIORITY         = 0;                                          // Indicates that the dispatcher should rout the instruction to only 1 coprocessor (with highest priority)
+
   // Parameters used by the iDMA instruction decoder
   parameter int unsigned DMA_INSTR_W              = redmule_mesh_pkg::INSTR_W;          // iDMA Decoder instruction width
   parameter int unsigned DMA_DATA_W               = redmule_mesh_pkg::DATA_W;           // iDMA Decoder data width
   parameter int unsigned DMA_ADDR_W               = redmule_mesh_pkg::ADDR_W;           // iDMA Decoder address width
   parameter int unsigned DMA_N_RF_PORTS           = X_NUM_RS;                           // iDMA Decoder number of register file read ports
-  parameter int unsigned DMA_OPCODE_W             = 7;                                  // iDMA Decoder OPCODE field width
-  parameter int unsigned DMA_FUNC3_W              = 3;                                  // iDMA Decoder FUNC3 field width
+  parameter int unsigned DMA_OPCODE_W             = OPCODE_W;                           // iDMA Decoder OPCODE field width
+  parameter int unsigned DMA_FUNC3_W              = FUNC3_W;                            // iDMA Decoder FUNC3 field width
   parameter int unsigned DMA_ND_EN_W              = 2;                                  // iDMA Decoder ND_EN field width
   parameter int unsigned DMA_DST_MAX_LOG_LEN_W    = 3;                                  // iDMA Decoder DST_MAX_LOG_LEN field width
   parameter int unsigned DMA_SRC_MAX_LOG_LEN_W    = 3;                                  // iDMA Decoder SRC_MAX_LOG_LEN field width
@@ -176,8 +197,8 @@ package redmule_tile_pkg;
   parameter int unsigned DMA_DECOUPLE_R_W_W       = 1;                                  // iDMA Decoder DECOUPLE_R_W field width
   parameter int unsigned DMA_DECOUPLE_R_AW_W      = 1;                                  // iDMA Decoder DECOUPLE_R_AW field width
   parameter int unsigned DMA_DIRECTION_W          = 1;                                  // iDMA Decoder DIRECTION field width
-  parameter int unsigned DMA_OPCODE_OFF           = 0;                                  // iDMA Decoder OPCODE field offset
-  parameter int unsigned DMA_FUNC3_OFF            = 12;                                 // iDMA Decoder FUNC3 field offset
+  parameter int unsigned DMA_OPCODE_OFF           = OPCODE_OFF;                         // iDMA Decoder OPCODE field offset
+  parameter int unsigned DMA_FUNC3_OFF            = FUNC3_OFF;                          // iDMA Decoder FUNC3 field offset
   parameter int unsigned DMA_ND_EN_OFF            = 26;                                 // iDMA Decoder ND_EN field offset
   parameter int unsigned DMA_DST_MAX_LOG_LEN_OFF  = 22;                                 // iDMA Decoder DST_MAX_LOG_LEN field offset
   parameter int unsigned DMA_SRC_MAX_LOG_LEN_OFF  = 19;                                 // iDMA Decoder SRC_MAX_LOG_LEN field offset
@@ -205,6 +226,22 @@ package redmule_tile_pkg;
   parameter logic[ DMA_FUNC3_W-1:0] SET_SR3_FUNC3 = 3'b010;                             // iDMA Decoder STD_3/REP_3 instruction FUNC3
   parameter logic[ DMA_FUNC3_W-1:0] SET_S_FUNC3   = 3'b111;                             // iDMA Decoder START instruction FUNC3
 
+  // Parameters used by the Fractal Sync instruction decoder
+  parameter int unsigned FSYNC_INSTR_W              = redmule_mesh_pkg::INSTR_W;        // Fractal Sync Decoder instruction width
+  parameter int unsigned FSYNC_DATA_W               = redmule_mesh_pkg::DATA_W;         // Fractal Sync Decoder data width
+  parameter int unsigned FSYNC_ADDR_W               = redmule_mesh_pkg::ADDR_W;         // Fractal Sync Decoder address width
+  parameter int unsigned FSYNC_N_RF_PORTS           = X_NUM_RS;                         // Fractal Sync Decoder number of register file read ports
+  parameter int unsigned FSYNC_OPCODE_W             = OPCODE_W;                         // Fractal Sync Decoder OPCODE field width
+  parameter int unsigned FSYNC_FUNC3_W              = FUNC3_W;                          // Fractal Sync Decoder FUNC3 field width
+  parameter int unsigned FSYNC_OPCODE_OFF           = OPCODE_OFF;                       // Fractal Sync Decoder OPCODE field offset
+  parameter int unsigned FSYNC_FUNC3_OFF            = FUNC3_OFF;                        // Fractal Sync Decoder FUNC3 field offset
+  parameter int unsigned FSYNC_N_CFG_REG            = 1;                                // Fractal Sync Decoder number of configuration registers: level
+  parameter int unsigned FSYNC_LEVEL_IDX            = 0;                                // Fractal Sync Decoder LEVEL cofiguration register index 
+  parameter logic[FSYNC_OPCODE_W-1:0] FSYNC_OPCODE  = 7'b101_1011;                      // Fractal Sync Decoder instruction OPCODE
+  parameter logic[ FSYNC_FUNC3_W-1:0] FSYNC_FUNC3   = 3'b010;                           // Fractal Sync Decoder instruction FUNC3
+  parameter int unsigned FSYNC_LVL_W                = 4;                                // Fractal Sync Level width
+  parameter bit          FSYNC_STALL                = 1;                                // Fractal Sync Stall during synchronization
+
   // Parameters of the AXI XBAR
   parameter int unsigned AxiXbarNoSlvPorts     = 4;                                     // Number of Slave Ports (iDMA, Core Data, Core I$ and ext.)
   parameter int unsigned AxiXbarNoMstPorts     = 2;                                     // Number of Master Ports (to ext. and to internal L1 from ext.)
@@ -218,17 +255,6 @@ package redmule_tile_pkg;
   parameter bit          AxiXbarSpillB         = 1'b0;                                  // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
   parameter bit          AxiXbarSpillAr        = 1'b0;                                  // Enabled -> Spill register on read master ports, +1 cycle of latency on write channels
   parameter bit          AxiXbarSpillR         = 1'b0;                                  // Enabled -> Spill register on read master ports, +1 cycle of latency on write channels 
-  
-  // Parameters used by the Xif Instruction Demuxer
-  parameter int unsigned N_COPROC         = 2;                                          // RedMulE and iDMA
-  parameter int unsigned N_REDMULE_OPCODE = 2;                                          // Number of opcodes in the programming model of RedMulE
-  parameter int unsigned N_IDMA_OPCODE    = 2;                                          // Number of opcodes in the programming model of the iDMA decoder
-  parameter int unsigned N_OPCODE         = 2;                                          // Number of opcodes = max{RedMulE_opcode, iDMA_opcode}
-  typedef enum logic{
-    XIF_REDMULE_IDX = 1'b0,
-    XIF_IDMA_IDX    = 1'b1
-  } xif_inst_demux_idx_e;
-  parameter int unsigned DEFAULT_IDX      = XIF_REDMULE_IDX;                            // RedMulE will handle the instructions by default 
 
   // Parameters used by the i$
   parameter int unsigned NR_FETCH_PORTS = 1;                                            // i$ Number of request (fetch) ports
@@ -310,7 +336,7 @@ package redmule_tile_pkg;
   } axi_xbar_idx_e;
 
   typedef struct packed {
-    logic[N_OPCODE-1:0][DMA_OPCODE_W-1:0] opcode_list;
+    logic[N_SIGN-1:0][SIGN_W-1:0] sign_list;
   } xif_inst_rule_t;
 
   typedef logic[iDMA_AddrWidth-1:0] idma_addr_t;

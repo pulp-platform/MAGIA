@@ -43,6 +43,9 @@ package redmule_mesh_pkg;
   parameter int unsigned AXI_NOC_ID_W = 4;                                // AXI NoC ID Width: 2 bits on slave port + 2 bits to select from i$, iDMA and core data
   parameter int unsigned AXI_NOC_U_W  = USR_W;
 
+  // Parameter used for the Fractal Sync network
+  parameter int unsigned TILE_FSYNC_W = 2;                                // Level width of the Fractal Sync interface
+
   `AXI_TYPEDEF_ALL_CT(noc_axi_data, noc_axi_data_req_t, noc_axi_data_rsp_t, logic[ADDR_W-1:0], logic[AXI_NOC_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_NOC_U_W-1:0])
   `AXI_ALIAS(noc_axi_data, axi_xbar_mst, noc_axi_data_req_t, axi_xbar_mst_req_t, noc_axi_data_rsp_t, axi_xbar_mst_rsp_t)
   `AXI_ALIAS(noc_axi_data, axi_default, noc_axi_data_req_t, axi_default_req_t, noc_axi_data_rsp_t, axi_default_rsp_t)

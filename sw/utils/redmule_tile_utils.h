@@ -29,6 +29,8 @@
 #define IRQ_A2O_BUSY      (23)
 #define IRQ_O2A_BUSY      (22)
 #define IRQ_REDMULE_BUSY  (21)
+#define IRQ_FSYNC_DONE    (20)
+#define IRQ_FSYNC_ERROR   (19)
 
 #define mmio64(x) (*(volatile uint64_t *)(x))
 #define mmio32(x) (*(volatile uint32_t *)(x))
