@@ -2,9 +2,9 @@
 #include "redmule_mesh_utils.h"
 #include "fsync_isa_utils.h"
 
-#define NUM_HARTS (2)
+#define NUM_HARTS (4)
 
-#define NUM_LEVELS (1)
+#define NUM_LEVELS (2)
 
 #define STALLING
 
@@ -37,7 +37,7 @@ int main(void) {
 
   h_pprintf("Fractal Sync test finished...\n");
 
-  mmio32(TEST_END_ADDR + get_hartid()) = DEFAULT_EXIT_CODE - get_hartid();
+  mmio8(TEST_END_ADDR + get_hartid()) = DEFAULT_EXIT_CODE - get_hartid();
 
   return 0;
 }
