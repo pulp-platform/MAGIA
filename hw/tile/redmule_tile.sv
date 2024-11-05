@@ -65,7 +65,7 @@ module redmule_tile
   output redmule_tile_pkg::axi_xbar_slv_rsp_t     data_in_rsp_o,
 
   // Fractal Sync interface
-  fractal_if.mst_port                             cu_if_o,
+  fractal_if.mst_port                             sync_if_o,
 
   // Signals used by the core
   input  logic                                    scan_cg_en_i,
@@ -973,7 +973,7 @@ module redmule_tile
     .rst_ni         ( rst_ni                                                      ),
     .clear_i        ( fsync_clear                                                 ),
     .xif_issue_if_i ( xif_coproc_if.coproc_issue[redmule_tile_pkg::XIF_FSYNC_IDX] ),
-    .sync_if_o      ( cu_if_o                                                     ),
+    .sync_if_o      ( sync_if_o                                                   ),
     .done_o         ( fsync_done                                                  ),
     .error_o        ( fsync_error                                                 )
   );

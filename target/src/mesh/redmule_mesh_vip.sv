@@ -44,7 +44,7 @@ module redmule_mesh_vip
   output redmule_mesh_tb_pkg::axi_l2_vip_req_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_in_req,
   input  redmule_mesh_tb_pkg::axi_l2_vip_rsp_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_in_rsp,
 
-  fractal_if.slv_port                                                          cu_if[redmule_mesh_tb_pkg::N_TILES],
+  fractal_if.slv_port                                                          sync_if[redmule_mesh_tb_pkg::N_TILES],
 
   output logic                                                                 scan_cg_en,
 
@@ -286,30 +286,30 @@ module redmule_mesh_vip
   localparam int unsigned TOP_LVL_WIDTH = 2;
   localparam int unsigned SYNC_PORTS = $clog2(redmule_mesh_tb_pkg::N_TILES);
 
-  fractal_if #(.LVL_WIDTH(CU_LVL_WIDTH-1)) if_sync[SYNC_PORTS-1:0]();
+  fractal_if #(.LVL_WIDTH(CU_LVL_WIDTH-1)) if_sync_net[SYNC_PORTS-1:0]();
   fractal_if #(.LVL_WIDTH(1)) if_top[1]();
 
   // LEVEL 0 - tiles'
   for (genvar i = 0; i < 2**(LEVELS-1); i++) begin: gen_cu_sync
     fractal_sync #(
-      .SLV_WIDTH  ( CU_LVL_WIDTH  )
+      .SLV_WIDTH  ( CU_LVL_WIDTH )
     ) i_cu_fractal_sync (
-      .clk_i    ( clk                         ),
-      .rstn_i   ( rst_n                       ),
-      .slaves   ( '{cu_if[2*i], cu_if[2*i+1]} ),
-      .masters  ( '{if_sync[i]}               )
+      .clk_i    ( clk                             ),
+      .rstn_i   ( rst_n                           ),
+      .slaves   ( '{sync_if[2*i], sync_if[2*i+1]} ),
+      .masters  ( '{if_sync_net[i]}               )
     );
   end
 
   // LEVEL 1 - sync tree
   for (genvar i = 0; i < 2**(LEVELS-2); i++) begin: gen_top_sync
     fractal_sync #(
-      .SLV_WIDTH ( TOP_LVL_WIDTH  )
+      .SLV_WIDTH ( TOP_LVL_WIDTH )
     ) i_top_fractal_sync (
-      .clk_i    ( clk                             ),
-      .rstn_i   ( rst_n                           ),
-      .slaves   ( '{if_sync[2*i], if_sync[2*i+1]} ),
-      .masters  ( if_top                          )
+      .clk_i    ( clk                                     ),
+      .rstn_i   ( rst_n                                   ),
+      .slaves   ( '{if_sync_net[2*i], if_sync_net[2*i+1]} ),
+      .masters  ( if_top                                  )
     );
   end
 

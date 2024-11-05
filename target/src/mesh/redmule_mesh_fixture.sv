@@ -44,7 +44,7 @@ module redmule_mesh_fixture;
   redmule_tile_pkg::axi_xbar_slv_req_t[redmule_mesh_tb_pkg::N_TILES:0]  tile_data_mst_req;
   redmule_tile_pkg::axi_xbar_slv_rsp_t[redmule_mesh_tb_pkg::N_TILES:0]  tile_data_mst_rsp;
 
-  fractal_if #(.LVL_WIDTH($clog2(redmule_mesh_tb_pkg::N_TILES)+1))      cu_if[redmule_mesh_tb_pkg::N_TILES]();
+  fractal_if #(.LVL_WIDTH($clog2(redmule_mesh_tb_pkg::N_TILES)+1))      sync_if[redmule_mesh_tb_pkg::N_TILES]();
   
   logic                                                                 scan_cg_en;
 
@@ -131,7 +131,7 @@ module redmule_mesh_fixture;
       .data_in_req_i       ( tile_data_mst_req[i]     ),
       .data_in_rsp_o       ( tile_data_mst_rsp[i]     ),
 
-      .cu_if_o             ( cu_if[i]            ),
+      .sync_if_o           ( sync_if[i]          ),
       
       .scan_cg_en_i        ( scan_cg_en          ),
 
