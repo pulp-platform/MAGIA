@@ -55,9 +55,9 @@ gui           ?= 0
 ipstools      ?= 0
 inst_hex_name ?= stim_instr.txt 
 data_hex_name ?= stim_data.txt 
-inst_entry    ?= 0x2C000000
-data_entry    ?= 0x2c010000
-boot_addr     ?= 0x2c000080
+inst_entry    ?= 0x5C000000
+data_entry    ?= 0x5c010000
+boot_addr     ?= 0x5c000080
 # Add here a path to the core traces of each tile you want to monitor
 log_path_0    ?= ./core_0_traces.log
 log_path_1    ?= ./core_1_traces.log

@@ -113,7 +113,7 @@ int main(void) {
   else
     exit_code = PASS_EXIT_CODE;
 
-  mmio32(TEST_END_ADDR) = exit_code;
+  mmio8(TEST_END_ADDR) = exit_code;
 
   return 0;
 }

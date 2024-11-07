@@ -30,52 +30,89 @@ module redmule_mesh_fixture;
 /**        Internal Signal Definitions Beginning      **/
 /*******************************************************/
 
-  logic                                                                 clk;
-  logic                                                                 rst_n;
-  logic                                                                 test_mode;
-  logic                                                                 tile_enable;
+  logic                                                                   clk;
+  logic                                                                   rst_n;
+  logic                                                                   test_mode;
+  logic                                                                   tile_enable;
 
-  redmule_mesh_pkg::axi_default_req_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_out_req;
-  redmule_mesh_pkg::axi_default_rsp_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_out_rsp;
+  redmule_mesh_pkg::axi_default_req_t[redmule_mesh_tb_pkg::N_TILES-1:0]   data_out_req;
+  redmule_mesh_pkg::axi_default_rsp_t[redmule_mesh_tb_pkg::N_TILES-1:0]   data_out_rsp;
 
-  fractal_if #(.LVL_WIDTH($clog2(redmule_mesh_tb_pkg::N_TILES)+1))      sync_if[redmule_mesh_tb_pkg::N_TILES]();
+  redmule_mesh_tb_pkg::axi_l2_vip_req_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_in_req;
+  redmule_mesh_tb_pkg::axi_l2_vip_rsp_t[redmule_mesh_tb_pkg::N_TILES-1:0] data_in_rsp;
+
+  redmule_tile_pkg::axi_xbar_slv_req_t[redmule_mesh_tb_pkg::N_TILES:0]    tile_data_mst_req;
+  redmule_tile_pkg::axi_xbar_slv_rsp_t[redmule_mesh_tb_pkg::N_TILES:0]    tile_data_mst_rsp;
+
+  fractal_if #(.LVL_WIDTH($clog2(redmule_mesh_tb_pkg::N_TILES)+1))        sync_if[redmule_mesh_tb_pkg::N_TILES]();
   
-  logic                                                                 scan_cg_en;
+  logic                                                                   scan_cg_en;
 
-  logic[31:0]                                                           boot_addr;
-  logic[31:0]                                                           mtvec_addr;
-  logic[31:0]                                                           dm_halt_addr;
-  logic[31:0]                                                           dm_exception_addr;
-  logic[31:0]                                                           mhartid[redmule_mesh_tb_pkg::N_TILES];
-  logic[ 3:0]                                                           mimpid_patch;
+  logic[31:0]                                                             boot_addr;
+  logic[31:0]                                                             mtvec_addr;
+  logic[31:0]                                                             dm_halt_addr;
+  logic[31:0]                                                             dm_exception_addr;
+  logic[31:0]                                                             mhartid[redmule_mesh_tb_pkg::N_TILES];
+  logic[ 3:0]                                                             mimpid_patch;
 
-  logic[63:0]                                                           mcycle[redmule_mesh_tb_pkg::N_TILES];
-  logic[63:0]                                                           time_var;
+  logic[63:0]                                                             mcycle[redmule_mesh_tb_pkg::N_TILES];
+  logic[63:0]                                                             time_var;
 
-  logic[redmule_mesh_pkg::N_IRQ-1:0]                                    irq;
+  logic[redmule_mesh_pkg::N_IRQ-1:0]                                      irq;
 
-  logic                                                                 fencei_flush_req[redmule_mesh_tb_pkg::N_TILES];
-  logic                                                                 fencei_flush_ack;
+  logic                                                                   fencei_flush_req[redmule_mesh_tb_pkg::N_TILES];
+  logic                                                                   fencei_flush_ack;
 
-  logic                                                                 debug_req;
-  logic                                                                 debug_havereset[redmule_mesh_tb_pkg::N_TILES];
-  logic                                                                 debug_running[redmule_mesh_tb_pkg::N_TILES];
-  logic                                                                 debug_halted[redmule_mesh_tb_pkg::N_TILES];
-  logic                                                                 debug_pc_valid[redmule_mesh_tb_pkg::N_TILES];
-  logic[31:0]                                                           debug_pc[redmule_mesh_tb_pkg::N_TILES];
+  logic                                                                   debug_req;
+  logic                                                                   debug_havereset[redmule_mesh_tb_pkg::N_TILES];
+  logic                                                                   debug_running[redmule_mesh_tb_pkg::N_TILES];
+  logic                                                                   debug_halted[redmule_mesh_tb_pkg::N_TILES];
+  logic                                                                   debug_pc_valid[redmule_mesh_tb_pkg::N_TILES];
+  logic[31:0]                                                             debug_pc[redmule_mesh_tb_pkg::N_TILES];
 
-  logic                                                                 fetch_enable;
-  logic                                                                 core_sleep[redmule_mesh_tb_pkg::N_TILES];
-  logic                                                                 wu_wfe;
+  logic                                                                   fetch_enable;
+  logic                                                                   core_sleep[redmule_mesh_tb_pkg::N_TILES];
+  logic                                                                   wu_wfe;
 
 /*******************************************************/
 /**           Internal Signal Definitions End         **/
+/*******************************************************/
+/**                   AXI ID resize                   **/
+/*******************************************************/
+
+  for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++) begin: gen_iw_conv
+    axi_iw_converter #(
+      .AxiSlvPortIdWidth      ( redmule_mesh_tb_pkg::L2_ID_W          ),
+      .AxiMstPortIdWidth      ( redmule_tile_pkg::AXI_ID_W            ),
+      .AxiSlvPortMaxUniqIds   ( 32'd2                                 ),
+      .AxiSlvPortMaxTxnsPerId ( 32'd4                                 ),
+      .AxiSlvPortMaxTxns      ( 32'd16                                ),
+      .AxiMstPortMaxUniqIds   ( 32'd2                                 ),
+      .AxiMstPortMaxTxnsPerId ( 32'd4                                 ),
+      .AxiAddrWidth           ( redmule_mesh_pkg::ADDR_W              ),
+      .AxiDataWidth           ( redmule_mesh_pkg::DATA_W              ),
+      .AxiUserWidth           ( redmule_mesh_pkg::USR_W               ),
+      .slv_req_t              ( redmule_mesh_tb_pkg::axi_l2_vip_req_t ),
+      .slv_resp_t             ( redmule_mesh_tb_pkg::axi_l2_vip_rsp_t ),
+      .mst_req_t              ( redmule_tile_pkg::axi_xbar_slv_req_t  ),
+      .mst_resp_t             ( redmule_tile_pkg::axi_xbar_slv_rsp_t  )
+    ) i_axi_iw_converter (
+      .clk_i      ( clk                   ),
+      .rst_ni     ( rst_n                 ),
+      .slv_req_i  ( data_in_req[i]        ),
+      .slv_resp_o ( data_in_rsp[i]        ),
+      .mst_req_o  ( tile_data_mst_req[i]  ),
+      .mst_resp_i ( tile_data_mst_rsp[i]  )
+    );
+  end
+  
 /*******************************************************/
 /**                   DUT Beginning                   **/
 /*******************************************************/
 
   for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++) begin: gen_tile
     redmule_tile #(
+      .TILE_ID      ( i                                 ),
       .N_MEM_BANKS  ( redmule_tile_tb_pkg::N_MEM_BANKS  ),
       .N_WORDS_BANK ( redmule_tile_tb_pkg::N_WORDS_BANK ),
 
@@ -84,43 +121,46 @@ module redmule_mesh_fixture;
       .CORE_B       (                                   ),
       .CORE_M       (                                   )
     ) dut (
-      .clk_i               ( clk                 ),
-      .rst_ni              ( rst_n               ),
-      .test_mode_i         ( test_mode           ),
-      .tile_enable_i       ( tile_enable         ),
+      .clk_i               ( clk                  ),
+      .rst_ni              ( rst_n                ),
+      .test_mode_i         ( test_mode            ),
+      .tile_enable_i       ( tile_enable          ),
 
-      .data_out_req_o      ( data_out_req[i]     ),
-      .data_out_rsp_i      ( data_out_rsp[i]     ), 
+      .data_out_req_o      ( data_out_req[i]      ),
+      .data_out_rsp_i      ( data_out_rsp[i]      ),
 
-      .sync_if_o           ( sync_if[i]          ),
+      .data_in_req_i       ( tile_data_mst_req[i] ),
+      .data_in_rsp_o       ( tile_data_mst_rsp[i] ),
+
+      .sync_if_o           ( sync_if[i]           ),
       
-      .scan_cg_en_i        ( scan_cg_en          ),
+      .scan_cg_en_i        ( scan_cg_en           ),
 
-      .boot_addr_i         ( boot_addr           ),
-      .mtvec_addr_i        ( mtvec_addr          ),
-      .dm_halt_addr_i      ( dm_halt_addr        ),
-      .dm_exception_addr_i ( dm_exception_addr   ),
-      .mhartid_i           ( mhartid[i]          ),
-      .mimpid_patch_i      ( mimpid_patch        ),
+      .boot_addr_i         ( boot_addr            ),
+      .mtvec_addr_i        ( mtvec_addr           ),
+      .dm_halt_addr_i      ( dm_halt_addr         ),
+      .dm_exception_addr_i ( dm_exception_addr    ),
+      .mhartid_i           ( mhartid[i]           ),
+      .mimpid_patch_i      ( mimpid_patch         ),
 
-      .mcycle_o            ( mcycle[i]           ),
-      .time_i              ( time_var            ),
+      .mcycle_o            ( mcycle[i]            ),
+      .time_i              ( time_var             ),
 
-      .irq_i               ( irq                 ),
+      .irq_i               ( irq                  ),
 
-      .fencei_flush_req_o  ( fencei_flush_req[i] ),
-      .fencei_flush_ack_i  ( fencei_flush_ack    ),
+      .fencei_flush_req_o  ( fencei_flush_req[i]  ),
+      .fencei_flush_ack_i  ( fencei_flush_ack     ),
 
-      .debug_req_i         ( debug_req           ),
-      .debug_havereset_o   ( debug_havereset[i]  ),
-      .debug_running_o     ( debug_running[i]    ),
-      .debug_halted_o      ( debug_halted[i]     ),
-      .debug_pc_valid_o    ( debug_pc_valid[i]   ),
-      .debug_pc_o          ( debug_pc[i]         ),
+      .debug_req_i         ( debug_req            ),
+      .debug_havereset_o   ( debug_havereset[i]   ),
+      .debug_running_o     ( debug_running[i]     ),
+      .debug_halted_o      ( debug_halted[i]      ),
+      .debug_pc_valid_o    ( debug_pc_valid[i]    ),
+      .debug_pc_o          ( debug_pc[i]          ),
 
-      .fetch_enable_i      ( fetch_enable        ),
-      .core_sleep_o        ( core_sleep[i]       ),
-      .wu_wfe_i            ( wu_wfe              )
+      .fetch_enable_i      ( fetch_enable         ),
+      .core_sleep_o        ( core_sleep[i]        ),
+      .wu_wfe_i            ( wu_wfe               )
     );
 `ifdef CORE_TRACES
     localparam string core_trace_file_name = $sformatf("%s%0d", "log_file_", i);

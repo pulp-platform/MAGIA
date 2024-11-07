@@ -20,9 +20,9 @@ __DYNAMIC  =  0;
 
 MEMORY
 {
-    instrram    : ORIGIN = 0x2c000000, LENGTH = 0x8000
-    dataram     : ORIGIN = 0x2c010000, LENGTH = 0x30000
-    stack       : ORIGIN = 0x2c040000, LENGTH = 0x30000
+    instrram    : ORIGIN = 0x5c000000, LENGTH = 0x8000
+    dataram     : ORIGIN = 0x5c010000, LENGTH = 0x30000
+    stack       : ORIGIN = 0x0c08E000, LENGTH = 0x2000 /* 8K, maybe it's a bit too much (?) */
 }
 
 /* Stack information variables */

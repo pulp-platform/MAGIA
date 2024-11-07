@@ -7,9 +7,12 @@
 #define WORDS_BANK   (4096)
 #define BITS_WORD    (32)
 
+#define STACK_START   (0x0C08E000)
+#define STACK_END     (0x0C090000)
 #define L1_BASE       (0x1C010000)
-#define L2_BASE       (0x2C010000)
-#define TEST_END_ADDR (0x2C030000)
+#define L1_SIZE       (0x10000000)
+#define L2_BASE       (0x5C010000)
+#define TEST_END_ADDR (0x5C030000)
 
 #define DEFAULT_EXIT_CODE (0xAF)
 #define PASS_EXIT_CODE    (0xA)
