@@ -54,7 +54,7 @@ package redmule_tile_pkg;
   localparam logic[redmule_mesh_pkg::ADDR_W-1:0] STACK_ADDR_END   = STACK_ADDR_START + STACK_SIZE;
   localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_ADDR_START    = 32'h1000_0000;
   localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_SIZE          = 32'h1000_0000;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_ADDR_START    = L1_ADDR_START + 4*L1_SIZE; // redmule_mesh_tb_pkg::N_TILES*L1_SIZE;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_ADDR_START    = L1_ADDR_START + 4*L1_SIZE; // TODO: redmule_mesh_tb_pkg::N_TILES*L1_SIZE;
   localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_SIZE          = 32'h1000_0000;
   localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_ADDR_END      = L2_ADDR_START + L2_SIZE;
   
@@ -119,13 +119,13 @@ package redmule_tile_pkg;
   parameter int unsigned RID_WIDTH   = 1;                                               // Width of the rid   signal (response channel identifier, see OBI documentation)
   parameter int unsigned MID_WIDTH   = 1;                                               // Width of the mid   signal (manager identifier, see OBI documentation)
   parameter int unsigned N_SBR       = 2;                                               // Number of slaves (HCI, AXI XBAR)
-  parameter int unsigned N_MGR       = 2;                                               // Number of masters (Core)
+  parameter int unsigned N_MGR       = 2;                                               // Number of masters (Core, AXI XBAR)
   parameter int unsigned N_MAX_TRAN  = 1;                                               // Number of maximum outstanding transactions
   parameter int unsigned N_ADDR_RULE = 3;                                               // Number of address rules
   localparam int unsigned N_BIT_SBR  = $clog2(N_SBR);                                   // Number of bits required to identify each slave
 
   // Parameters used by AXI
-  parameter int unsigned AXI_DATA_ID_W  = 2;                                            // Width of the AXI Data ID (2 bits: Core, iDMA. I$ ext.)
+  parameter int unsigned AXI_DATA_ID_W  = 2;                                            // Width of the AXI Data ID (2 bits: Core, iDMA, I$, ext)
   parameter int unsigned AXI_INSTR_ID_W = 1;                                            // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
   parameter int unsigned AXI_ID_W       = 2;                                            // Width of the AXI Unified Communication Channel ID
   parameter int unsigned AXI_DATA_U_W   = redmule_mesh_pkg::USR_W;                      // Width of the AXI Data User
@@ -243,12 +243,12 @@ package redmule_tile_pkg;
   parameter bit          FSYNC_STALL                = 1;                                // Fractal Sync Stall during synchronization
 
   // Parameters of the AXI XBAR
-  parameter int unsigned AxiXbarNoSlvPorts     = 4;                                     // Number of Slave Ports (iDMA, Core Data, Core I$ and ext.)
-  parameter int unsigned AxiXbarNoMstPorts     = 2;                                     // Number of Master Ports (to ext. and to internal L1 from ext.)
+  parameter int unsigned AxiXbarNoSlvPorts     = 4;                                     // Number of Slave Ports (iDMA, Core Data, Core I$ and ext)
+  parameter int unsigned AxiXbarNoMstPorts     = 2;                                     // Number of Master Ports (to ext and to internal L1 from ext)
   localparam int unsigned AxiXbarSlvAxiIDWidth = AXI_DATA_ID_W;                         // Number of bits to indentify each Slave Port
   parameter int unsigned AxiXbarMaxWTrans      = 16;                                    // Maximum number of outstanding transactions per write
-  parameter int unsigned AxiXbarMaxMstTrans    = 16;
-  parameter int unsigned AxiXbarMaxSlvTrans    = 16;
+  parameter int unsigned AxiXbarMaxMstTrans    = AxiXbarMaxWTrans;                      // Maximum number of outstanding transactions per master
+  parameter int unsigned AxiXbarMaxSlvTrans    = AxiXbarMaxWTrans;                      // Maximum number of outstanding transactions per slave
   parameter bit          AxiXbarFallThrough    = 1'b0;                                  // Enabled -> MUX is purely combinational
   parameter bit          AxiXbarSpillAw        = 1'b0;                                  // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
   parameter bit          AxiXbarSpillW         = 1'b0;                                  // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
@@ -274,6 +274,11 @@ package redmule_tile_pkg;
     logic[redmule_mesh_pkg::ADDR_W-1:0] start_addr;
     logic[redmule_mesh_pkg::ADDR_W-1:0] end_addr;
   } obi_xbar_rule_t;
+
+  typedef enum {
+    OBI_EXT_IDX  = 1,
+    OBI_CORE_IDX = 0
+  } obi_xbar_idx_e;
 
   typedef struct packed {
     logic                                req;
@@ -402,7 +407,7 @@ package redmule_tile_pkg;
 
   typedef axi_pkg::xbar_rule_32_t tile_xbar_rule_t;
   
-  localparam axi_pkg::xbar_cfg_t tile_xbar_cfg = '{
+  localparam axi_pkg::xbar_cfg_t axi_xbar_cfg = '{
     NoSlvPorts          : AxiXbarNoSlvPorts,
     NoMstPorts          : AxiXbarNoMstPorts,
     MaxMstTrans         : AxiXbarMaxMstTrans,

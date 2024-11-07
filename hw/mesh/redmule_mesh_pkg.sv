@@ -53,19 +53,19 @@ package redmule_mesh_pkg;
   typedef axi_pkg::xbar_rule_32_t mesh_xbar_rule_t;
 
   localparam axi_pkg::xbar_cfg_t mesh_xbar_cfg = '{
-    NoSlvPorts          : 4,    // redmule_mesh_tb_pkg::N_TILES,
-    NoMstPorts          : 5,    // redmule_mesh_tb_pkg::N_TILES + 1,
-    MaxMstTrans         : 64,   // redmule_tile_pkg::AxiXbarMaxWTrans*4
+    NoSlvPorts          : 4,    // TODO: redmule_mesh_tb_pkg::N_TILES,
+    NoMstPorts          : 5,    // TODO: redmule_mesh_tb_pkg::N_TILES + 1,
+    MaxMstTrans         : 64,   // TODO: redmule_tile_pkg::AxiXbarMaxWTrans*4
     MaxSlvTrans         : 64,
     FallThrough         : 1'b0,
     LatencyMode         : axi_pkg::CUT_ALL_PORTS,
     PipelineStages      : '0,   // TODO: make it parametric
     AxiIdWidthSlvPorts  : AXI_NOC_ID_W,
-    AxiIdUsedSlvPorts   : AXI_NOC_ID_W, // check me!
+    AxiIdUsedSlvPorts   : AXI_NOC_ID_W, // TODO: check me!
     UniqueIds           : 1'b0,
     AxiAddrWidth        : ADDR_W,
     AxiDataWidth        : DATA_W,
-    NoAddrRules         : 5    // redmule_mesh_tb_pkg::N_TILES + 1
+    NoAddrRules         : 5    // TODO: redmule_mesh_tb_pkg::N_TILES + 1
   };
 
 endpackage: redmule_mesh_pkg
