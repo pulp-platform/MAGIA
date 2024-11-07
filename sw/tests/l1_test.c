@@ -10,13 +10,13 @@
 
 // Defining the actual number of words per bank
 // to be checked in order to avoid overwriting the stack
-#define ACTIVE_WORDS (((STACK_START+0x10000000-L1_BASE)/4 - 31)/32)
+#define ACTIVE_WORDS (((STACK_START+L1_SIZE-L1_BASE+1)/4)/32)
 
 int main(void) {
   uint8_t exit_code;
 
 #ifdef FULL_L1
-  uint32_t expected_result = (uint32_t)((NUM_L1_BANKS*ACTIVE_WORDS/STEP)*(NUM_L1_BANKS*ACTIVE_WORDS/STEP + 1)/2);
+  uint32_t expected_result = (NUM_L1_BANKS*ACTIVE_WORDS/STEP)*(NUM_L1_BANKS*ACTIVE_WORDS/STEP + 1)/2;
 #endif
 #ifndef FULL_L1
 #ifdef DIAGONAL_L1
