@@ -191,8 +191,9 @@ bender_defs += -D COREV_ASSERT_OFF
 bender_targs += -t rtl
 bender_targs += -t test
 bender_targs += -t cv32e40p_exclude_tracer
-# Target needed to avoid error even though the module is not used
+# Targets needed to avoid error even though the module is not used
 bender_targs += -t snitch_cluster
+bender_targs += -t idma_test
 
 #ifeq ($(REDMULE_COMPLEX),1)
 #	tb := redmule_complex_tb
