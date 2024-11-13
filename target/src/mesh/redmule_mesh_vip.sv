@@ -225,58 +225,23 @@ module redmule_mesh_vip
 /*******************************************************/
 /**                     L2 MEM End                    **/
 /*******************************************************/
-/**          Tiles - L2 (AXI XBAR) Beginning          **/
+/**          Tiles - L2 (FlooNoC) Beginning           **/
 /*******************************************************/
 
-  localparam int unsigned TILE_0_END_ADDR   = redmule_tile_pkg::L1_ADDR_START + redmule_tile_pkg::L1_SIZE - 1;
-  localparam int unsigned TILE_1_START_ADDR = redmule_tile_pkg::L1_ADDR_START + redmule_tile_pkg::L1_SIZE;
-  localparam int unsigned TILE_1_END_ADDR   = TILE_0_END_ADDR   + redmule_tile_pkg::L1_SIZE;
-  localparam int unsigned TILE_2_START_ADDR = TILE_1_START_ADDR + redmule_tile_pkg::L1_SIZE;
-  localparam int unsigned TILE_2_END_ADDR   = TILE_1_END_ADDR   + redmule_tile_pkg::L1_SIZE;
-  localparam int unsigned TILE_3_START_ADDR = TILE_2_START_ADDR + redmule_tile_pkg::L1_SIZE;
-  localparam int unsigned TILE_3_END_ADDR   = TILE_2_END_ADDR   + redmule_tile_pkg::L1_SIZE;
-
-  localparam redmule_mesh_pkg::mesh_xbar_rule_t[redmule_mesh_pkg::mesh_xbar_cfg.NoAddrRules-1:0] MeshAxiAddrMap = '{
-    '{idx: 32'd0, start_addr: redmule_tile_pkg::L1_ADDR_START, end_addr: TILE_0_END_ADDR               },
-    '{idx: 32'd1, start_addr: TILE_1_START_ADDR,               end_addr: TILE_1_END_ADDR               },
-    '{idx: 32'd2, start_addr: TILE_2_START_ADDR,               end_addr: TILE_2_END_ADDR               },
-    '{idx: 32'd3, start_addr: TILE_3_START_ADDR,               end_addr: TILE_3_END_ADDR               },
-    '{idx: 32'd4, start_addr: redmule_tile_pkg::L2_ADDR_START, end_addr: redmule_tile_pkg::L2_ADDR_END }
-  };
-
-  axi_xbar #(
-    .Cfg            ( redmule_mesh_pkg::mesh_xbar_cfg             ),
-    .ATOPs          ( 1'b1                                        ),
-    .Connectivity   ( '1                                          ),
-    .slv_aw_chan_t  ( redmule_mesh_pkg::axi_default_aw_chan_t     ),
-    .mst_aw_chan_t  ( redmule_mesh_tb_pkg::axi_l2_vip_aw_chan_t   ),
-    .w_chan_t       ( redmule_mesh_tb_pkg::axi_l2_vip_w_chan_t    ),
-    .slv_b_chan_t   ( redmule_mesh_pkg::axi_default_b_chan_t      ),
-    .mst_b_chan_t   ( redmule_mesh_tb_pkg::axi_l2_vip_b_chan_t    ),
-    .slv_ar_chan_t  ( redmule_mesh_pkg::axi_default_ar_chan_t     ),
-    .mst_ar_chan_t  ( redmule_mesh_tb_pkg::axi_l2_vip_ar_chan_t   ),
-    .slv_r_chan_t   ( redmule_mesh_pkg::axi_default_r_chan_t      ),
-    .mst_r_chan_t   ( redmule_mesh_tb_pkg::axi_l2_vip_r_chan_t    ),
-    .slv_req_t      ( redmule_mesh_pkg::axi_default_req_t         ),
-    .mst_req_t      ( redmule_mesh_tb_pkg::axi_l2_vip_req_t       ),
-    .slv_resp_t     ( redmule_mesh_pkg::axi_default_rsp_t         ),
-    .mst_resp_t     ( redmule_mesh_tb_pkg::axi_l2_vip_rsp_t       ),
-    .rule_t         ( redmule_mesh_pkg::mesh_xbar_rule_t          )
-  ) i_axi_xbar (
-    .clk_i                  ( clk                   ),
-    .rst_ni                 ( rst_n                 ),
-    .test_i                 ( 1'b0                  ),
-    .slv_ports_req_i        ( data_out_req          ),
-    .slv_ports_resp_o       ( data_out_rsp          ),
-    .mst_ports_req_o        ( data_mst_req          ),
-    .mst_ports_resp_i       ( data_mst_rsp          ),
-    .addr_map_i             ( MeshAxiAddrMap        ),
-    .en_default_mst_port_i  ( '0                    ),
-    .default_mst_port_i     ( '0                    )
+  floo_redmule_single_router_axi_2x2_noc i_mesh_noc (
+    .clk_i                        ( clk                                             ),
+    .rst_ni                       ( rst_n                                           ),
+    .test_enable_i                ( 1'b0                                            ),
+    .redmule_tile_data_slv_req_i  ( data_out_req                                    ),
+    .redmule_tile_data_slv_rsp_o  ( data_out_rsp                                    ),
+    .redmule_tile_data_mst_req_o  ( data_mst_req[redmule_mesh_tb_pkg::N_TILES-1:0]  ),
+    .redmule_tile_data_mst_rsp_i  ( data_mst_rsp[redmule_mesh_tb_pkg::N_TILES-1:0]  ),
+    .L2_data_mst_req_o            ( data_mst_req[redmule_mesh_tb_pkg::N_TILES]      ),
+    .L2_data_mst_rsp_i            ( data_mst_rsp[redmule_mesh_tb_pkg::N_TILES]      )
   );
 
 /*******************************************************/
-/**             Tiles - L2 (AXI XBAR) End             **/
+/**             Tiles - L2 (FlooNoC) End               */
 /*******************************************************/
 /**         Synchronization Network Beginning         **/
 /*******************************************************/

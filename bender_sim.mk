@@ -15,6 +15,7 @@
 
 sim_targs += -t rtl
 sim_targs += -t test
+sim_targs += -t idma_test
 
 #ifeq ($(REDMULE_COMPLEX),1)
 #	sim_targs += -t redmule_test_complex

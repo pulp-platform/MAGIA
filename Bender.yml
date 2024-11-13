@@ -37,6 +37,7 @@ dependencies:
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
   fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: 1d8933ca2bf88885f41591bd3db1b790ba293328 } #branch: bender
+  floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , rev: 507bb0baf1dcd9c68b6547b265248d64c8c771e7 } # branch: main
 
 export_include_dirs:
   - hw/include
@@ -64,6 +65,7 @@ sources:
       - hw/tile/fractal_sync_xif_inst_decoder.sv
       - hw/tile/redmule_tile.sv
       # RedMulE Mesh
+      - hw/noc/floo_redmule_single_router_axi_2x2_noc.sv
       # RedMulE DV
       - target/src/tile/redmule_tile_tb_pkg.sv
       - target/src/tile/redmule_tile_vip.sv
