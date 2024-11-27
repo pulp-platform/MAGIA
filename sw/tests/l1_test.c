@@ -6,7 +6,7 @@
 
 #define STEP (1)
 
-#define ALIVE_CYCLE (4096)
+#define ALIVE_CYCLE (8192)
 
 // Defining the actual number of words per bank
 // to be checked in order to avoid overwriting the stack

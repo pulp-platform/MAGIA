@@ -4,7 +4,7 @@
 #include "tinyprintf.h"
 
 #define NUM_L1_BANKS (32)
-#define WORDS_BANK   (4096)
+#define WORDS_BANK   (8192)
 #define BITS_WORD    (32)
 
 #define STACK_START   (0x0C08E000)
