@@ -31,7 +31,7 @@ dependencies:
   cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , rev: 917ecbf908bdaa22c5713bbcff277d142506bb16 } # branch: michaero/astral
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
   obi               : { git: "https://github.com/pulp-platform/obi.git"               , version: 0.1.1                                }
-  axi               : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.1                               }
+  axi               : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: 0.4.4                                }
   safety_island     : { git: "https://github.com/pulp-platform/safety_island.git"     , rev: 1cc316a6874cd2e08355fa17f0ede06406ba0407 } # branch: vi/redmule_scaleup
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
@@ -66,6 +66,7 @@ sources:
       - hw/tile/redmule_tile.sv
       # RedMulE Mesh
       - hw/noc/floo_redmule_single_router_axi_2x2_noc.sv
+      - hw/noc/floo_redmule_axi_2x2_mesh_noc.sv
       # RedMulE DV
       - target/src/tile/redmule_tile_tb_pkg.sv
       - target/src/tile/redmule_tile_vip.sv

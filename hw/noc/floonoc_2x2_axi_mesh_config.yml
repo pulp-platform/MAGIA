@@ -1,0 +1,63 @@
+name: redmule_axi_2x2_mesh
+description: "Configuration file for a 2x2 RedMulE mesh NoC"
+network_type: "axi"
+
+routing:
+  route_algo: "XY"
+  use_id_table: true
+
+protocols:
+  - name: "data_mst"
+    protocol: "AXI4"
+    data_width: 32
+    addr_width: 32
+    id_width: 6
+    user_width: 1
+  - name: "data_slv"
+    protocol: "AXI4"
+    data_width: 32
+    addr_width: 32
+    id_width: 4
+    user_width: 1
+
+endpoints:
+  - name: "redmule_tile"
+    array: [2, 2]
+    addr_range:
+      base: 0x1000_0000
+      size: 0x1000_0000
+    mgr_port_protocol:
+      - "data_slv"
+    sbr_port_protocol:
+      - "data_mst"
+  - name: "L2"
+    array: [2]
+    addr_range:
+      base: 0x5000_0000
+      size: 0x0800_0000
+    sbr_port_protocol:
+      - "data_mst"
+
+routers:
+  - name: "router"
+    array: [2, 2]
+    degree: 5
+
+connections:
+  - src: "redmule_tile"
+    dst: "router"
+    src_range:
+    - [0, 1]
+    - [0, 1]
+    dst_range:
+    - [0, 1]
+    - [0, 1]
+    dst_dir: "Eject"
+  - src: "L2"
+    dst: "router"
+    src_range:
+    - [0, 1]
+    dst_range:
+    - [0, 0]
+    - [0, 1]
+    dst_dir: "West"
