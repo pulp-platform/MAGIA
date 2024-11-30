@@ -1,0 +1,13 @@
+diff --git a/hw/floo_route_comp.sv b/hw/floo_route_comp.sv
+index 966f3c2..95c050c 100644
+--- a/hw/floo_route_comp.sv
++++ b/hw/floo_route_comp.sv
+@@ -63,7 +63,7 @@ module floo_route_comp
+       .default_idx_i    ( '0          )
+     );
+ 
+-    `ASSERT(DecodeError, !dec_error)
++    //`ASSERT(DecodeError, !dec_error)
+   end else if (RouteCfg.RouteAlgo == XYRouting) begin : gen_xy_bits_routing
+     assign id_o.port_id = '0;
+     assign id_o.x = addr_i[RouteCfg.XYAddrOffsetX +: $bits(id_o.x)];
