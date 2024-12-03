@@ -68,10 +68,10 @@ package redmule_tile_pkg;
   } hci_idma_ch_idx_e;                                                                  // Index of the HCI DMA read and write channels
   parameter int unsigned N_EXT   = 0;                                                   // Number of External ports - LEAVE TO 0 UNLESS YOU KNOW WHAT YOU ARE DOING
   parameter int unsigned AWC     = redmule_mesh_pkg::ADDR_W;                            // Address width core   (slave ports)
-  localparam int unsigned AWM    = 
-                          $clog2(redmule_mesh_pkg::N_WORDS_BANK*DW_LIC/BW_LIC);         // Address width memory (master ports)
   parameter int unsigned DW_LIC  = redmule_mesh_pkg::DATA_W;                            // Data Width for Log Interconnect
   parameter int unsigned BW_LIC  = redmule_mesh_pkg::BYTE_W;                            // Byte Width for Log Interconnect
+  localparam int unsigned AWM    = 
+                          $clog2(redmule_mesh_pkg::N_WORDS_BANK*DW_LIC/BW_LIC);         // Address width memory (master ports)
   parameter int unsigned UW_LIC  = redmule_mesh_pkg::USR_W;                             // User Width for Log Interconnect
   localparam int unsigned SW_LIC = DW_LIC/BW_LIC;                                       // Strobe Width for Log Interconnect
   localparam int unsigned WD_LIC = DW_LIC/DW_LIC;                                       // Number of words per data for Log Interconnect
@@ -379,7 +379,33 @@ package redmule_tile_pkg;
   `IDMA_TYPEDEF_FULL_ND_REQ_T(idma_nd_req_t, idma_be_req_t, logic[iDMA_RepWidth-1:0], logic[iDMA_StrideWidth-1:0])
 
   `AXI_TYPEDEF_ALL_CT(idma_axi, idma_axi_req_t, idma_axi_rsp_t, logic[iDMA_AddrWidth-1:0], logic[iDMA_AxiIdWidth-1:0], logic[iDMA_DataWidth-1:0], logic[iDMA_StrbWidth-1:0], logic[iDMA_UserWidth-1:0])
-  `OBI_TYPEDEF_ALL(idma_obi, obi_pkg::obi_default_cfg(.AddrWidth(iDMA_AddrWidth), .DataWidth(iDMA_DataWidth), .IdWidth(iDMA_AxiIdWidth), .OptionalCfg(obi_pkg::ObiMinimalOptionalConfig)))
+  
+  parameter obi_pkg::obi_optional_cfg_t OptionalCfg = obi_pkg::ObiMinimalOptionalConfig;
+  parameter obi_pkg::obi_cfg_t obi_cfg = '{
+       OptionalCfg : OptionalCfg,
+       AddrWidth   : iDMA_AddrWidth, 
+       DataWidth   : iDMA_DataWidth,
+       IdWidth     : iDMA_AxiIdWidth,
+       UseRReady   : 1'b0,
+       CombGnt     : 1'b0,
+       Integrity   : 1'b0,
+       BeFull      : 1'b1
+  };
+
+  parameter obi_pkg::obi_optional_cfg_t OptionalCfg_2_axi = obi_pkg::obi_all_optional_config(1, 1, 1, 1, 1, 1);
+
+  parameter obi_pkg::obi_cfg_t obi_2_axi_cfg = '{
+       OptionalCfg : OptionalCfg_2_axi,
+       AddrWidth   : 32, 
+       DataWidth   : 32,
+       IdWidth     : 1,
+       UseRReady   : 1'b0,
+       CombGnt     : 1'b0,
+       Integrity   : 1'b0,
+       BeFull      : 1'b1
+  };
+
+  `OBI_TYPEDEF_ALL(idma_obi, obi_cfg)
 
   typedef struct packed {
     struct packed {

@@ -178,20 +178,20 @@ module redmule_tile
   logic[redmule_tile_pkg::N_MGR-1:0][redmule_tile_pkg::N_BIT_SBR-1:0] obi_xbar_default_idx;
 
   logic[redmule_tile_pkg::AXI_DATA_U_W-1:0]                   axi_data_user;
-  logic[obi_pkg::ObiDefaultConfig.OptionalCfg.RUserWidth-1:0] obi_rsp_data_user;
+  logic[redmule_tile_pkg::obi_2_axi_cfg.OptionalCfg.RUserWidth-1:0] obi_rsp_data_user;
 
   logic[redmule_tile_pkg::AXI_INSTR_U_W-1:0]                  axi_instr_user;
   logic[obi_pkg::ObiDefaultConfig.OptionalCfg.RUserWidth-1:0] obi_rsp_instr_user;
 
-  logic[redmule_tile_pkg::AID_WIDTH]   axi2obi_req_write_aid;
-  logic[redmule_tile_pkg::AUSER_WIDTH] axi2obi_req_write_auser;
-  logic[redmule_tile_pkg::WUSER_WIDTH] axi2obi_req_write_wuser;
+  logic[redmule_tile_pkg::AID_WIDTH-1:0]   axi2obi_req_write_aid;
+  logic[redmule_tile_pkg::AUSER_WIDTH-1:0] axi2obi_req_write_auser;
+  logic[redmule_tile_pkg::WUSER_WIDTH-1:0] axi2obi_req_write_wuser;
 
-  logic[redmule_tile_pkg::AID_WIDTH]   axi2obi_req_read_aid;
-  logic[redmule_tile_pkg::AUSER_WIDTH] axi2obi_req_read_auser;
+  logic[redmule_tile_pkg::AID_WIDTH-1:0]   axi2obi_req_read_aid;
+  logic[redmule_tile_pkg::AUSER_WIDTH-1:0] axi2obi_req_read_auser;
 
-  logic                                axi2obi_rsp_b_user;
-  logic                                axi2obi_rsp_r_user;
+  logic                                    axi2obi_rsp_b_user;
+  logic                                    axi2obi_rsp_r_user;
 
   logic idma_clear;         //TODO: figure out who should clear the iDMA
   logic idma_axi2obi_start;
@@ -345,7 +345,7 @@ module redmule_tile
   );
 
   obi_to_axi #(
-    .ObiCfg       (                                       ),
+    .ObiCfg       ( redmule_tile_pkg::obi_2_axi_cfg       ),
     .obi_req_t    ( redmule_tile_pkg::core_obi_data_req_t ),
     .obi_rsp_t    ( redmule_tile_pkg::core_obi_data_rsp_t ),
     .AxiLite      (                                       ),
@@ -413,7 +413,7 @@ module redmule_tile
   );
 
   axi_to_obi #(
-    .ObiCfg       (                                           ),
+    .ObiCfg       ( redmule_tile_pkg::obi_2_axi_cfg           ),
     .obi_req_t    ( redmule_tile_pkg::core_obi_data_req_t     ),
     .obi_rsp_t    ( redmule_tile_pkg::core_obi_data_rsp_t     ),
     .obi_a_chan_t ( redmule_tile_pkg::core_data_obi_a_chan_t  ),
