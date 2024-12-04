@@ -74,22 +74,24 @@ sources:
       - target/src/mesh/redmule_mesh_fixture.sv
       - target/src/mesh/redmule_mesh_tb.sv
 
-  - target: all(not(redmule_mesh_dv))
+  - target: all(not(redmule_mesh_dv), asic)
     files:
       # RedMulE Packages
-    - hw/mesh/redmule_mesh_pkg.sv
-    - hw/tile/redmule_tile_pkg.sv
-    # RedMulE Tile
-    - hw/tile/data2obi.sv
-    - hw/tile/instr2obi.sv
-    - hw/tile/instr2cache.sv
-    - hw/tile/obi2hci.sv
-    - hw/tile/obi_demux_addr.sv
-    - hw/tile/l1_spm.sv
-    - hw/tile/idma_xif_inst_decoder.sv
-    - hw/tile/xif_inst_demux.sv
-    - hw/tile/idma_axi_obi_transfer_ch.sv
-    - hw/tile/idma_ctrl.sv
-    - hw/tile/fractal_sync_xif_inst_decoder.sv
-    - hw/tile/redmule_tile.sv
-    # RedMulE Mesh
+      - hw/mesh/redmule_mesh_pkg.sv
+      - hw/tile/redmule_tile_pkg.sv
+      # RedMulE Tile
+      - hw/tile/data2obi.sv
+      - hw/tile/instr2obi.sv
+      - hw/tile/instr2cache.sv
+      - hw/tile/obi2hci.sv
+      - hw/tile/obi_demux_addr.sv
+      - hw/tile/l1_spm.sv
+      - hw/tile/idma_xif_inst_decoder.sv
+      - hw/tile/xif_inst_demux.sv
+      - hw/tile/idma_axi_obi_transfer_ch.sv
+      - hw/tile/idma_ctrl.sv
+      - hw/tile/fractal_sync_xif_inst_decoder.sv
+      - hw/tile/redmule_tile.sv
+      # RedMulE Mesh
+      # Tech
+      - redmule_mesh_gf12/sourcecode/tc_sram.sv

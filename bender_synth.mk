@@ -15,6 +15,8 @@
 
 synth_targs += -t rtl
 synth_targs += -t redmule_complex
+synth_targs += -t asic
+synth_targs += -t synopsys
 
 #ifeq ($(REDMULE_COMPLEX),1)
 synth_defs += -D REDMULE_COMPLEX_SYNTH
