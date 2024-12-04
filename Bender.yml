@@ -95,3 +95,4 @@ sources:
       # RedMulE Mesh
       # Tech
       - redmule_mesh_gf12/sourcecode/tc_sram.sv
+      - redmule_mesh_gf12/sourcecode/tc_clk.sv
