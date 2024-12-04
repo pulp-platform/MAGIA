@@ -39,7 +39,7 @@ module redmule_tile
 
   // Parameters used by the core
   parameter cv32e40x_pkg::rv32_e  CORE_ISA            = cv32e40x_pkg::RV32I,            // RV32I (default) 32 registers in the RF - RV32E 16 registers in the RF
-  parameter cv32e40x_pkg::a_ext_e CORE_A              = cv32e40x_pkg::A_NONE,           // Atomic Istruction (A) support (dafault: not enabled)
+  parameter cv32e40x_pkg::a_ext_e CORE_A              = cv32e40x_pkg::A,                // Atomic Istruction (A) support (dafault: full support)
   parameter cv32e40x_pkg::b_ext_e CORE_B              = cv32e40x_pkg::B_NONE,           // Bit Manipulation support (dafault: not enabled)
   parameter cv32e40x_pkg::m_ext_e CORE_M              = cv32e40x_pkg::M,                // Multiply and Divide support (dafault: full support)
 
@@ -116,6 +116,9 @@ module redmule_tile
   redmule_tile_pkg::core_obi_data_req_t[redmule_tile_pkg::N_SBR-1:0] core_mem_data_req; // Index 0 -> L2, Index 1 -> L1SPM
   redmule_tile_pkg::core_obi_data_rsp_t[redmule_tile_pkg::N_SBR-1:0] core_mem_data_rsp; // Index 0 -> L2, Index 1 -> L1SPM
 
+  redmule_tile_pkg::core_obi_data_req_t core_l1_data_amo_req;
+  redmule_tile_pkg::core_obi_data_rsp_t core_l1_data_amo_rsp;
+
   redmule_tile_pkg::core_obi_data_req_t[redmule_tile_pkg::N_MGR-1:0] obi_xbar_slv_req; // Index 0 -> core request, Index 1 -> ext request
   redmule_tile_pkg::core_obi_data_rsp_t[redmule_tile_pkg::N_MGR-1:0] obi_xbar_slv_rsp; // Index 0 -> core request, Index 1 -> ext request
 
@@ -177,11 +180,11 @@ module redmule_tile
   logic[redmule_tile_pkg::N_MGR-1:0]                                  obi_xbar_en_default_idx;
   logic[redmule_tile_pkg::N_MGR-1:0][redmule_tile_pkg::N_BIT_SBR-1:0] obi_xbar_default_idx;
 
-  logic[redmule_tile_pkg::AXI_DATA_U_W-1:0]                   axi_data_user;
-  logic[obi_pkg::ObiDefaultConfig.OptionalCfg.RUserWidth-1:0] obi_rsp_data_user;
+  logic[redmule_tile_pkg::AXI_DATA_U_W-1:0] axi_data_user;
+  logic[redmule_tile_pkg::RUSER_WIDTH-1:0]  obi_rsp_data_user;
 
-  logic[redmule_tile_pkg::AXI_INSTR_U_W-1:0]                  axi_instr_user;
-  logic[obi_pkg::ObiDefaultConfig.OptionalCfg.RUserWidth-1:0] obi_rsp_instr_user;
+  logic[redmule_tile_pkg::AXI_INSTR_U_W-1:0] axi_instr_user;
+  logic[redmule_tile_pkg::RUSER_WIDTH-1:0]   obi_rsp_instr_user;
 
   logic[redmule_tile_pkg::AID_WIDTH]   axi2obi_req_write_aid;
   logic[redmule_tile_pkg::AUSER_WIDTH] axi2obi_req_write_auser;
@@ -332,20 +335,20 @@ module redmule_tile
     .obi_req_t ( redmule_tile_pkg::core_obi_data_req_t ),
     .hic_req_t ( redmule_tile_pkg::core_hci_data_req_t )
   ) i_core_data_obi2hci_req (
-    .obi_req_i ( core_mem_data_req[redmule_tile_pkg::L1SPM_IDX] ),
-    .hci_req_o ( core_l1_data_req                               )
+    .obi_req_i ( core_l1_data_amo_req ),
+    .hci_req_o ( core_l1_data_req     )
   );
 
   hci2obi_rsp #(
     .hci_rsp_t ( redmule_tile_pkg::core_hci_data_rsp_t ),
     .obi_rsp_t ( redmule_tile_pkg::core_obi_data_rsp_t )
   ) i_core_data_hci2obi_rsp (
-    .hci_rsp_i ( core_l1_data_rsp                               ),
-    .obi_rsp_o ( core_mem_data_rsp[redmule_tile_pkg::L1SPM_IDX] )
+    .hci_rsp_i ( core_l1_data_rsp     ),
+    .obi_rsp_o ( core_l1_data_amo_rsp )
   );
 
   obi_to_axi #(
-    .ObiCfg       (                                       ),
+    .ObiCfg       ( redmule_tile_pkg::obi_amo_cfg         ),
     .obi_req_t    ( redmule_tile_pkg::core_obi_data_req_t ),
     .obi_rsp_t    ( redmule_tile_pkg::core_obi_data_rsp_t ),
     .AxiLite      (                                       ),
@@ -413,7 +416,7 @@ module redmule_tile
   );
 
   axi_to_obi #(
-    .ObiCfg       (                                           ),
+    .ObiCfg       ( redmule_tile_pkg::obi_amo_cfg             ),
     .obi_req_t    ( redmule_tile_pkg::core_obi_data_req_t     ),
     .obi_rsp_t    ( redmule_tile_pkg::core_obi_data_rsp_t     ),
     .obi_a_chan_t ( redmule_tile_pkg::core_data_obi_a_chan_t  ),
@@ -721,8 +724,29 @@ module redmule_tile
 /**      Core Data Demuxing (OBI XBAR) Beginning      **/
 /*******************************************************/
 
+  obi_atop_resolver #(
+    .SbrPortObiCfg             ( redmule_tile_pkg::obi_amo_cfg                ),
+    .MgrPortObiCfg             ( obi_pkg::ObiDefaultConfig                    ),
+    .sbr_port_obi_req_t        ( redmule_tile_pkg::core_obi_data_req_t        ),
+    .sbr_port_obi_rsp_t        ( redmule_tile_pkg::core_obi_data_rsp_t        ),
+    .mgr_port_obi_req_t        (                                              ),
+    .mgr_port_obi_rsp_t        (                                              ),
+    .mgr_port_obi_a_optional_t ( redmule_tile_pkg::core_data_obi_a_optional_t ),
+    .mgr_port_obi_r_optional_t ( redmule_tile_pkg::core_data_obi_r_optional_t ),
+    .LrScEnable                (                                              ),
+    .RegisterAmo               (                                              )
+  ) i_obi_atomics (
+    .clk_i          ( sys_clk                                        ),
+    .rst_ni         ( rst_ni                                         ),
+    .testmode_i     ( test_mode_i                                    ),
+    .sbr_port_req_i ( core_mem_data_req[redmule_tile_pkg::L1SPM_IDX] ),
+    .sbr_port_rsp_o ( core_mem_data_rsp[redmule_tile_pkg::L1SPM_IDX] ),
+    .mgr_port_req_o ( core_l1_data_amo_req                           ),
+    .mgr_port_rsp_i ( core_l1_data_amo_rsp                           )
+  );
+  
   obi_xbar #(
-    .SbrPortObiCfg      (                                          ),
+    .SbrPortObiCfg      ( redmule_tile_pkg::obi_amo_cfg            ),
     .MgrPortObiCfg      (                                          ),
     .sbr_port_obi_req_t ( redmule_tile_pkg::core_obi_data_req_t    ),
     .sbr_port_a_chan_t  ( redmule_tile_pkg::core_data_obi_a_chan_t ),

@@ -6,5 +6,5 @@ echo "Exporting SDK and GCC Toolchain paths"
 export PATH=/usr/pack/pulpsdk-1.0-kgf/artifactory/pulp-sdk-release/pkg/pulp_riscv_gcc/1.0.16/bin:$PATH
 export PATH=/usr/pack/gcc-5.2.0-af/x86_64-rhe6-linux/bin:$PATH
 export XLEN=32
-export XTEN=imc
+export XTEN=imac
 echo "Finished setting up the environment"
