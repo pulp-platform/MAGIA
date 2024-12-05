@@ -8,7 +8,8 @@
   //             (0b010     << 12) | \     /* FUNC3 */
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1011011 <<  0)   \n"); /* OPCODE */
-inline void fsync(){
+inline void fsync(uint32_t level){
+  asm volatile("addi t0, %0, 0" ::"r"(level));
   asm volatile(
        ".word (0x0       << 20) | \
               (0b00101   << 15) | \

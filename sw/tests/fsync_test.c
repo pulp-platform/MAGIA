@@ -24,8 +24,7 @@ int main(void) {
 #if VERBOSE > 10
     h_pprintf("levels: 0x"); n_pprintf(hs(levels[get_hartid()]));
 #endif
-    asm volatile("addi t0, %0, 0" ::"r"(levels[get_hartid()]));
-    fsync();
+    fsync(levels[get_hartid()]);
 
 #ifndef STALLING
     asm volatile("wfi" ::: "memory");
