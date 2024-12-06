@@ -119,7 +119,6 @@ module redmule_mesh_vip
     assign mhartid[i]      = i;
   end
   assign mimpid_patch      = '0;
-  assign time_var          = '0;
   assign fencei_flush_ack  = 1'b0;
   assign debug_req         = 1'b0;
   assign wu_wfe            = 1'b0;
@@ -377,6 +376,34 @@ module redmule_mesh_vip
 
 /*******************************************************/
 /**                    Printing End                   **/
+/*******************************************************/
+/**                  Timer Beginning                  **/
+/*******************************************************/
+
+  initial time_var = 0;
+
+  always @(negedge clk) begin: timer
+    time_var = time_var + CLK_PERIOD;
+  end
+
+/*******************************************************/
+/**                     Timer End                     **/
+/*******************************************************/
+/**           Instruction Monitor Beginning           **/
+/*******************************************************/
+
+  bit[31:0] curr_instr[redmule_mesh_tb_pkg::N_TILES]; 
+  for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++) begin: gen_tile_instr_monitor
+    assign curr_instr[i] = gen_tile[i].dut.i_cv32e40x_core.core_i.if_stage_i.if_id_pipe_o.instr.bus_resp.rdata;
+    always @(curr_instr[i]) begin: instr_reporter
+      if (curr_instr[i] == 32'h50500013) $display("[TB][mhartid %0d] detected sentinel instruction at time %0dns", i, time_var);
+      if (curr_instr[i] == 32'h0002A05B) $display("[TB][mhartid %0d] detected fsync instruction at time %0dns", i, time_var);
+      if (curr_instr[i] == 32'h0062A3AF) $display("[TB][mhartid %0d] detected AMO (sync) instruction at time %0dns", i, time_var);
+    end
+  end
+
+/*******************************************************/
+/**              Instruction Monitor End              **/
 /*******************************************************/
 
 endmodule: redmule_mesh_vip

@@ -5,7 +5,7 @@
 
 #define NUM_HARTS (4)
 
-#define SYNC_SETTLE (10000)
+#define SYNC_SETTLE (NUM_HARTS*1000)
 
 #define TILE_OFFSET (0x10000000)
 #define SYNCH_BASE  (L1_BASE + 0x00012048)
@@ -20,7 +20,7 @@ int main(void) {
   h_pprintf("Starting AMO test...\n");
   mmio32(SYNCH_BASE + get_hartid()*TILE_OFFSET) = INITIAL_VAL;
   for (int i = 0; i < NUM_ITER; i++){
-    for (int i = 0; i < get_hartid(); i++) asm volatile("addi x0, x0, 0" ::);
+    wait_nop(get_hartid());
     for (int i = 0; i < AMO_TILES; i++){
       asm volatile("addi t0, %0, 0" ::"r"((uint32_t)(SYNCH_BASE + ((get_hartid()+i)%NUM_HARTS)*TILE_OFFSET)));
       asm volatile("li t1, 1" ::);
@@ -32,7 +32,7 @@ int main(void) {
 #endif
   }
 
-  for (int i = 0; i < SYNC_SETTLE; i++) asm volatile("addi x0, x0, 0" ::);
+  wait_nop(SYNC_SETTLE);
 
   h_pprintf("Verifying results...\n");
   uint32_t exit_code[NUM_HARTS];

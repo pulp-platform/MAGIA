@@ -89,7 +89,6 @@ module redmule_tile_vip
   assign dm_exception_addr = '0;
   assign mhartid           = '0;
   assign mimpid_patch      = '0;
-  assign time_var          = '0;
   assign fencei_flush_ack  = 1'b0;
   assign debug_req         = 1'b0;
   assign wu_wfe            = 1'b0;
@@ -219,6 +218,30 @@ end
 
 /*******************************************************/
 /**                    Printing End                   **/
+/*******************************************************/
+/**                  Timer Beginning                  **/
+/*******************************************************/
+
+initial time_var = 0;
+
+always @(negedge clk) begin: timer
+  time_var = time_var + CLK_PERIOD;
+end
+
+/*******************************************************/
+/**                     Timer End                     **/
+/*******************************************************/
+/**           Instruction Monitor Beginning           **/
+/*******************************************************/
+
+  bit[31:0] curr_instr; 
+  assign curr_instr = dut.i_cv32e40x_core.core_i.if_stage_i.if_id_pipe_o.instr.bus_resp.rdata;
+  always @(curr_instr) begin: instr_reporter
+    if (curr_instr == 32'h50500013) $display("[TB] detected sentinel instruction at time %0dns", time_var);
+  end
+
+/*******************************************************/
+/**              Instruction Monitor End              **/
 /*******************************************************/
 
 endmodule: redmule_tile_vip
