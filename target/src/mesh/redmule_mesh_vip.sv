@@ -364,13 +364,18 @@ module redmule_mesh_vip
 /**           Instruction Monitor Beginning           **/
 /*******************************************************/
 
-  bit[31:0] curr_instr[redmule_mesh_tb_pkg::N_TILES]; 
-  for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++) begin: gen_tile_instr_monitor
-    assign curr_instr[i] = gen_tile[i].dut.i_cv32e40x_core.core_i.if_stage_i.if_id_pipe_o.instr.bus_resp.rdata;
-    always @(curr_instr[i]) begin: instr_reporter
-      if (curr_instr[i] == 32'h50500013) $display("[TB][mhartid %0d] detected sentinel instruction at time %0dns", i, time_var);
-      if (curr_instr[i] == 32'h0002A05B) $display("[TB][mhartid %0d] detected fsync instruction at time %0dns", i, time_var);
-      if (curr_instr[i] == 32'h0062A3AF) $display("[TB][mhartid %0d] detected AMO (sync) instruction at time %0dns", i, time_var);
+  bit[31:0] curr_instr[redmule_mesh_tb_pkg::N_TILES];
+  for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES_X; i++) begin: gen_tile_instr_monitor_x
+    for (genvar j = 0; j < redmule_mesh_tb_pkg::N_TILES_Y; j++) begin: gen_tile_instr_monitor_y 
+      assign curr_instr[i*redmule_mesh_tb_pkg::N_TILES_Y+j] = gen_x_tile[i].gen_y_tile[j].dut.i_cv32e40x_core.core_i.if_stage_i.if_id_pipe_o.instr.bus_resp.rdata;
+      always @(curr_instr[i*redmule_mesh_tb_pkg::N_TILES_Y+j]) begin: instr_reporter
+        if (curr_instr[i*redmule_mesh_tb_pkg::N_TILES_Y+j] == 32'h50500013) 
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected sentinel instruction at time %0dns",i*redmule_mesh_tb_pkg::N_TILES_Y+j , j, i, time_var);
+        if (curr_instr[i*redmule_mesh_tb_pkg::N_TILES_Y+j] == 32'h0002A05B) 
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected fsync instruction at time %0dns",i*redmule_mesh_tb_pkg::N_TILES_Y+j , j, i, time_var);
+        if (curr_instr[i*redmule_mesh_tb_pkg::N_TILES_Y+j] == 32'h0062A3AF) 
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected AMO (sync) instruction at time %0dns",i*redmule_mesh_tb_pkg::N_TILES_Y+j , j, i, time_var);
+      end
     end
   end
 
