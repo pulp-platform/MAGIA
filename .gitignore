@@ -1,0 +1,6 @@
+.bender
+Bender.lock
+bender
+modelsim.ini
+scripts/compile.tcl
+work/

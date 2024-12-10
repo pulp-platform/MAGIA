@@ -111,8 +111,8 @@ int main(void) {
 #endif
 
   mmio32(SYNCH_BASE + get_hartid()*TILE_OFFSET) = 0;
-  if ((get_hartid() == 0) || (get_hartid() == 2)){
-    amo_increment(SYNCH_BASE + (get_hartid()+1)*TILE_OFFSET);
+  if ((get_hartid() == 2) || (get_hartid() == 3)){
+    amo_increment(SYNCH_BASE + (get_hartid()-2)*TILE_OFFSET);
     do {
 #if VERBOSE > 10
       sync_count[get_hartid()] = mmio32(SYNCH_BASE + get_hartid()*TILE_OFFSET);
@@ -127,7 +127,7 @@ int main(void) {
 #endif
     } while (mmio32(SYNCH_BASE + get_hartid()*TILE_OFFSET) != 1);
     if (get_hartid() == 1) {
-      amo_increment(SYNCH_BASE + (get_hartid()+2)*TILE_OFFSET);
+      amo_increment(SYNCH_BASE + (get_hartid()-1)*TILE_OFFSET);
       do {
 #if VERBOSE > 10
         sync_count[get_hartid()] = mmio32(SYNCH_BASE + get_hartid()*TILE_OFFSET);
@@ -141,9 +141,9 @@ int main(void) {
         h_pprintf("current sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
 #endif
       } while (mmio32(SYNCH_BASE + get_hartid()*TILE_OFFSET) != 2);
-      amo_increment(SYNCH_BASE + (get_hartid()-2)*TILE_OFFSET);
+      amo_increment(SYNCH_BASE + (get_hartid()+1)*TILE_OFFSET);
     }
-    amo_increment(SYNCH_BASE + (get_hartid()-1)*TILE_OFFSET);
+    amo_increment(SYNCH_BASE + (get_hartid()+2)*TILE_OFFSET);
   }
   sentinel_instr(); // Indicate occurred synchronization
 

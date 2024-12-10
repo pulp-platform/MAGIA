@@ -19,6 +19,7 @@ int main(void) {
   uint32_t current_count[NUM_HARTS];
   h_pprintf("Starting AMO test...\n");
   mmio32(SYNCH_BASE + get_hartid()*TILE_OFFSET) = INITIAL_VAL;
+  wait_nop(SYNC_SETTLE);
   for (int i = 0; i < NUM_ITER; i++){
     wait_nop(get_hartid());
     for (int i = 0; i < AMO_TILES; i++){
