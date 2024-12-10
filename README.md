@@ -16,7 +16,7 @@ make bender
 ```
 **3)** Clone the dependencies and **generate** the compilation script (`redmule-mesh` folder):
 ```bash
-make update-ips > update-ips.log mesh_dv=0
+make update-ips > update-ips.log mesh_dv=1
 ```
 **3\*)** Apply flooNoC patch (`floo_noc` folder, e.g. `.bender/git/checkouts/floo_noc-d566867a3b179444/`)
 ```bash
@@ -24,13 +24,13 @@ git apply ../../../../floonoc.patch
 ```
 **4)** **Build** the hardware (`redmule-mesh` folder):
 ```bash
-make build-hw > build-hw.log mesh_dv=0
+make build-hw > build-hw.log mesh_dv=1
 ```
 **5)** **Comile** the test code (`redmule-mesh` folder):
 ```bash
-make all test=boot_test
+make all test=mesh_test
 ```
 **6)** **Run** test (`redmule-mesh` folder):
 ```bash
-make run test=boot_test gui=1 mesh_dv=0
+make run test=mesh_test gui=1 mesh_dv=1
 ```
