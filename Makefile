@@ -28,7 +28,7 @@ BENDER         ?= bender
 ISA            ?= riscv
 ARCH           ?= rv
 XLEN           ?= 32
-XTEN           ?= imc
+XTEN           ?= imac
 
 #ifeq ($(REDMULE_COMPLEX),1)
 #	TEST_SRCS := sw/redmule_complex.c

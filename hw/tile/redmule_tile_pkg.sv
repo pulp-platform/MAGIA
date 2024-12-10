@@ -110,19 +110,20 @@ package redmule_tile_pkg;
   parameter int unsigned REDMULE_UW   = UWH;                                            // RedMulE User Width
   
   // Parameters used by OBI
-  parameter int unsigned AUSER_WIDTH = 1;                                               // Width of the auser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned WUSER_WIDTH = 1;                                               // Width of the wuser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned ACHK_WIDTH  = 1;                                               // Width of the achk  signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned RUSER_WIDTH = 1;                                               // Width of the ruser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned RCHK_WIDTH  = 1;                                               // Width of the rchk  signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned AID_WIDTH   = 1;                                               // Width of the aid   signal (address channel identifier, see OBI documentation)
-  parameter int unsigned RID_WIDTH   = 1;                                               // Width of the rid   signal (response channel identifier, see OBI documentation)
-  parameter int unsigned MID_WIDTH   = 1;                                               // Width of the mid   signal (manager identifier, see OBI documentation)
-  parameter int unsigned N_SBR       = 2;                                               // Number of slaves (HCI, AXI XBAR)
-  parameter int unsigned N_MGR       = 2;                                               // Number of masters (Core, AXI XBAR)
-  parameter int unsigned N_MAX_TRAN  = 1;                                               // Number of maximum outstanding transactions
-  parameter int unsigned N_ADDR_RULE = 3;                                               // Number of address rules
-  localparam int unsigned N_BIT_SBR  = $clog2(N_SBR);                                   // Number of bits required to identify each slave
+  parameter int unsigned AUSER_WIDTH  = 1;                                              // Width of the auser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned WUSER_WIDTH  = 1;                                              // Width of the wuser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned ACHK_WIDTH   = 1;                                              // Width of the achk  signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned RUSER_WIDTH  = 1;                                              // Width of the ruser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned RCHK_WIDTH   = 1;                                              // Width of the rchk  signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned AID_WIDTH    = 1;                                              // Width of the aid   signal (address channel identifier, see OBI documentation)
+  parameter int unsigned RID_WIDTH    = 1;                                              // Width of the rid   signal (response channel identifier, see OBI documentation)
+  parameter int unsigned MID_WIDTH    = 1;                                              // Width of the mid   signal (manager identifier, see OBI documentation)
+  parameter int unsigned OBI_ID_WIDTH = 1;                                              // Width of the id - configuration
+  parameter int unsigned N_SBR        = 2;                                              // Number of slaves (HCI, AXI XBAR)
+  parameter int unsigned N_MGR        = 2;                                              // Number of masters (Core, AXI XBAR)
+  parameter int unsigned N_MAX_TRAN   = 1;                                              // Number of maximum outstanding transactions
+  parameter int unsigned N_ADDR_RULE  = 3;                                              // Number of address rules
+  localparam int unsigned N_BIT_SBR   = $clog2(N_SBR);                                  // Number of bits required to identify each slave
 
   // Parameters used by AXI
   parameter int unsigned AXI_DATA_ID_W  = 2;                                            // Width of the AXI Data ID (2 bits: Core, iDMA, I$, ext)
@@ -352,6 +353,9 @@ package redmule_tile_pkg;
   `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic signed[WDH-1:0][AWH:0], logic[UWH-1:0])
   `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic[DWH-1:0], logic[UWH-1:0])
 
+  localparam obi_pkg::obi_optional_cfg_t obi_amo_optional_cfg = obi_pkg::obi_all_optional_config(AUSER_WIDTH, WUSER_WIDTH, RUSER_WIDTH, MID_WIDTH, ACHK_WIDTH, RCHK_WIDTH);
+  localparam obi_pkg::obi_cfg_t          obi_amo_cfg          = obi_pkg::obi_default_cfg(redmule_mesh_pkg::ADDR_W, redmule_mesh_pkg::DATA_W, OBI_ID_WIDTH, obi_amo_optional_cfg);
+  
   `OBI_TYPEDEF_ALL_A_OPTIONAL(core_data_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
   `OBI_TYPEDEF_ALL_R_OPTIONAL(core_data_obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
   `OBI_TYPEDEF_A_CHAN_T(core_data_obi_a_chan_t, redmule_mesh_pkg::ADDR_W, redmule_mesh_pkg::DATA_W, AID_WIDTH, core_data_obi_a_optional_t)

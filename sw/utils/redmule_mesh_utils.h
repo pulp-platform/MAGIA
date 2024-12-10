@@ -18,6 +18,12 @@ inline uint32_t get_hartid(){
     return hartid;
 }
 
+inline void amo_increment(uint32_t addr){
+    asm volatile("addi t0, %0, 0" ::"r"(addr));
+    asm volatile("li t1, 1" ::);
+    asm volatile("amoadd.w t2, t1, (t0)" ::);
+}
+
 /**
  * C++ version 0.4 char* style "itoa":
  * Written by Lukás Chmela
