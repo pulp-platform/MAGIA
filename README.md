@@ -18,6 +18,10 @@ make bender
 ```bash
 make update-ips > update-ips.log mesh_dv=0
 ```
+**3\*)** Apply flooNoC patch (`floo_noc` folder, e.g. `.bender/git/checkouts/floo_noc-d566867a3b179444/`)
+```bash
+git apply ../../../../floonoc.patch
+```
 **4)** **Build** the hardware (`redmule-mesh` folder):
 ```bash
 make build-hw > build-hw.log mesh_dv=0

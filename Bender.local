@@ -5,3 +5,4 @@ overrides:
   cv32e40x           : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: e51af131252027374d083a745ab6727fb9959daa }
   axi                : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
   register_interface : { git: "https://github.com/pulp-platform/register_interface.git", rev: e25b36670ff7aab3402f40efcc2b11ee0f31cf19 }
+  idma               : { git: " https://github.com/pulp-platform/iDMA.git"             , rev: c12caf59bb482fe44b27361f6924ad346b2d22fe }

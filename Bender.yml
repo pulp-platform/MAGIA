@@ -80,19 +80,21 @@ sources:
   - target: all(not(redmule_mesh_dv))
     files:
       # RedMulE Packages
-    - hw/mesh/redmule_mesh_pkg.sv
-    - hw/tile/redmule_tile_pkg.sv
-    # RedMulE Tile
-    - hw/tile/data2obi.sv
-    - hw/tile/instr2obi.sv
-    - hw/tile/instr2cache.sv
-    - hw/tile/obi2hci.sv
-    - hw/tile/obi_demux_addr.sv
-    - hw/tile/l1_spm.sv
-    - hw/tile/idma_xif_inst_decoder.sv
-    - hw/tile/xif_inst_demux.sv
-    - hw/tile/idma_axi_obi_transfer_ch.sv
-    - hw/tile/idma_ctrl.sv
-    - hw/tile/fractal_sync_xif_inst_decoder.sv
-    - hw/tile/redmule_tile.sv
-    # RedMulE Mesh
+      - hw/mesh/redmule_mesh_pkg.sv
+      - hw/tile/redmule_tile_pkg.sv
+      # RedMulE Tile
+      - hw/tile/data2obi.sv
+      - hw/tile/instr2obi.sv
+      - hw/tile/instr2cache.sv
+      - hw/tile/obi2hci.sv
+      - hw/tile/obi_demux_addr.sv
+      - hw/tile/l1_spm.sv
+      - hw/tile/idma_xif_inst_decoder.sv
+      - hw/tile/xif_inst_demux.sv
+      - hw/tile/idma_axi_obi_transfer_ch.sv
+      - hw/tile/idma_ctrl.sv
+      - hw/tile/fractal_sync_xif_inst_decoder.sv
+      - hw/tile/redmule_tile.sv
+      # RedMulE Mesh
+      - hw/noc/floo_redmule_single_router_axi_2x2_noc.sv
+      - hw/noc/floo_redmule_axi_2x2_mesh_noc.sv
