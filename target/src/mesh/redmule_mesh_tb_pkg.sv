@@ -24,7 +24,7 @@ package redmule_mesh_tb_pkg;
   `include "axi/typedef.svh"
 
   parameter int unsigned N_MEM_BANKS  = 32;                     // Number of memory banks 
-  parameter int unsigned N_WORDS_BANK = 8192;                   // Number of words per memory bank   
+  parameter int unsigned N_WORDS_BANK = 4096;                   // Number of words per memory bank   
   parameter int unsigned N_TILES_X    = 2;                      // Number of tiles per row
   parameter int unsigned N_TILES_Y    = 2;                      // Number of tiles per column
   localparam int unsigned N_TILES     = N_TILES_X*N_TILES_Y;    // Number of tiles per mesh
