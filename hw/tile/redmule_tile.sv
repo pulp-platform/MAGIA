@@ -640,17 +640,17 @@ module redmule_tile
     .CLIC_ID_WIDTH    ( redmule_tile_pkg::CLIC_ID_W       )     // Width of clic_irq_id_i and clic_irq_id_o
   ) i_cv32e40x_core (
     // Clock and reset
-    .clk_i               ( sys_clk                  ),
-    .rst_ni              ( rst_ni                   ),
-    .scan_cg_en_i                                    ,
+    .clk_i               ( sys_clk                ),
+    .rst_ni              ( rst_ni                 ),
+    .scan_cg_en_i                                  ,
 
     // Configuration
-    .boot_addr_i                                     ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .mtvec_addr_i                                    ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .dm_halt_addr_i                                  ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .dm_exception_addr_i                             ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .mhartid_i                                       ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .mimpid_patch_i                                  ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .boot_addr_i                                   ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .mtvec_addr_i                                  ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .dm_halt_addr_i                                ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .dm_exception_addr_i                           ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .mhartid_i                                     ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .mimpid_patch_i                                ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
 
     // Instruction memory interface
     .instr_req_o         ( core_instr_req.req     ),
@@ -664,57 +664,57 @@ module redmule_tile
     .instr_err_i         ( core_instr_rsp.err     ),
 
     // Data memory interface
-    .data_req_o          ( core_data_req.req     ),
-    .data_gnt_i          ( core_data_rsp.gnt     ),
-    .data_addr_o         ( core_data_req.addr    ),
-    .data_atop_o         ( core_data_req.atop    ),
-    .data_be_o           ( core_data_req.be      ),
-    .data_memtype_o      ( core_data_req.memtype ),
-    .data_prot_o         ( core_data_req.prot    ),
-    .data_dbg_o          ( core_data_req.dbg     ),
-    .data_wdata_o        ( core_data_req.wdata   ),
-    .data_we_o           ( core_data_req.we      ),
-    .data_rvalid_i       ( core_data_rsp.rvalid  ),
-    .data_rdata_i        ( core_data_rsp.rdata   ),
-    .data_err_i          ( core_data_rsp.err     ),
-    .data_exokay_i       ( core_data_rsp.exokay  ),
+    .data_req_o          ( core_data_req.req      ),
+    .data_gnt_i          ( core_data_rsp.gnt      ),
+    .data_addr_o         ( core_data_req.addr     ),
+    .data_atop_o         ( core_data_req.atop     ),
+    .data_be_o           ( core_data_req.be       ),
+    .data_memtype_o      ( core_data_req.memtype  ),
+    .data_prot_o         ( core_data_req.prot     ),
+    .data_dbg_o          ( core_data_req.dbg      ),
+    .data_wdata_o        ( core_data_req.wdata    ),
+    .data_we_o           ( core_data_req.we       ),
+    .data_rvalid_i       ( core_data_rsp.rvalid   ),
+    .data_rdata_i        ( core_data_rsp.rdata    ),
+    .data_err_i          ( core_data_rsp.err      ),
+    .data_exokay_i       ( core_data_rsp.exokay   ),
 
     // Cycle, Time
-    .mcycle_o                                        ,  //TODO: do we need these or can we hardwire them?
-    .time_i                                          ,  //TODO: do we need these or can we hardwire them?
+    .mcycle_o                                      ,  //TODO: do we need these or can we hardwire them?
+    .time_i                                        ,  //TODO: do we need these or can we hardwire them?
 
     // eXtension interface
-    .xif_compressed_if   ( xif_if.cpu_compressed    ),
-    .xif_issue_if        ( xif_if.cpu_issue         ),
-    .xif_commit_if       ( xif_if.cpu_commit        ),
-    .xif_mem_if          ( xif_if.cpu_mem           ),
-    .xif_mem_result_if   ( xif_if.cpu_mem_result    ),
-    .xif_result_if       ( xif_if.cpu_result        ),
+    .xif_compressed_if   ( xif_if.cpu_compressed  ),
+    .xif_issue_if        ( xif_if.cpu_issue       ),
+    .xif_commit_if       ( xif_if.cpu_commit      ),
+    .xif_mem_if          ( xif_if.cpu_mem         ),
+    .xif_mem_result_if   ( xif_if.cpu_mem_result  ),
+    .xif_result_if       ( xif_if.cpu_result      ),
 
      // Interrupt interface
-    .irq_i               ( irq                      ),
+    .irq_i               ( irq                    ),
 
-    .clic_irq_i          ( '0                       ),
-    .clic_irq_id_i       ( '0                       ),
-    .clic_irq_level_i    ( '0                       ),
-    .clic_irq_priv_i     ( '0                       ),
-    .clic_irq_shv_i      ( '0                       ),
+    .clic_irq_i          ( '0                     ),
+    .clic_irq_id_i       ( '0                     ),
+    .clic_irq_level_i    ( '0                     ),
+    .clic_irq_priv_i     ( '0                     ),
+    .clic_irq_shv_i      ( '0                     ),
 
     // Fencei flush handshake
-    .fencei_flush_req_o                              ,  //TODO: manage Fence.i flushing in the future or hardwire?  
-    .fencei_flush_ack_i                              ,  //TODO: manage Fence.i flushing in the future or hardwire?
+    .fencei_flush_req_o                            ,  //TODO: manage Fence.i flushing in the future or hardwire?  
+    .fencei_flush_ack_i                            ,  //TODO: manage Fence.i flushing in the future or hardwire?
 
     // Debug interface
-    .debug_req_i                                     ,  //TODO: do we need these or can we hardwire them?
-    .debug_havereset_o                               ,  //TODO: do we need these or can we hardwire them?
-    .debug_running_o                                 ,  //TODO: do we need these or can we hardwire them?
-    .debug_halted_o                                  ,  //TODO: do we need these or can we hardwire them?
-    .debug_pc_valid_o                                ,  //TODO: do we need these or can we hardwire them?
-    .debug_pc_o                                      ,  //TODO: do we need these or can we hardwire them?
+    .debug_req_i                                   ,  //TODO: do we need these or can we hardwire them?
+    .debug_havereset_o                             ,  //TODO: do we need these or can we hardwire them?
+    .debug_running_o                               ,  //TODO: do we need these or can we hardwire them?
+    .debug_halted_o                                ,  //TODO: do we need these or can we hardwire them?
+    .debug_pc_valid_o                              ,  //TODO: do we need these or can we hardwire them?
+    .debug_pc_o                                    ,  //TODO: do we need these or can we hardwire them?
 
     // Special control signals
-    .fetch_enable_i                                  ,
-    .core_sleep_o                                    ,
+    .fetch_enable_i                                ,
+    .core_sleep_o                                  ,
     .wu_wfe_i            
   );
 
