@@ -23,11 +23,11 @@ package redmule_mesh_tb_pkg;
 
   `include "axi/typedef.svh"
 
-  parameter int unsigned N_MEM_BANKS  = 32;                   // Number of memory banks 
-  parameter int unsigned N_WORDS_BANK = 8192;                 // Number of words per memory bank   
-  parameter int unsigned N_TILES_X    = 2;                    // Number of tiles per row
-  parameter int unsigned N_TILES_Y    = 2;                    // Number of tiles per column
-  localparam int unsigned N_TILES     = N_TILES_X*N_TILES_Y;  // Number of tiles per mesh
+  parameter int unsigned N_MEM_BANKS  = redmule_mesh_pkg::N_MEM_BANKS;  // Number of TCDM banks (1 extra bank for missaligned accesses)
+  parameter int unsigned N_WORDS_BANK = redmule_mesh_pkg::N_WORDS_BANK; // Number of words per TCDM bank
+  parameter int unsigned N_TILES_X    = redmule_mesh_pkg::N_TILES_X;    // Number of Tile columns
+  parameter int unsigned N_TILES_Y    = redmule_mesh_pkg::N_TILES_Y;    // Number of Tile rowns
+  parameter int unsigned N_TILES      = redmule_mesh_pkg::N_TILES;      // Number of Tiles in the Mesh
 
   parameter int unsigned L2_ID_W      = redmule_mesh_pkg::AXI_NOC_ID_W + $clog2(N_TILES);
   parameter int unsigned L2_U_W       = redmule_mesh_pkg::AXI_NOC_U_W;

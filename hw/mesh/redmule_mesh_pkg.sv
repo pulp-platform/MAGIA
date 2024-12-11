@@ -33,6 +33,9 @@ package redmule_mesh_pkg;
   localparam int unsigned STRB_W       = DATA_W/BYTE_W;                   // System-wide strobe Width
   localparam int unsigned N_MEM_BANKS  = 32;                              // Number of TCDM banks (1 extra bank for missaligned accesses)
   localparam int unsigned N_WORDS_BANK = 8192;                            // Number of words per TCDM bank
+  localparam int unsigned N_TILES_X    = 2;                               // Number of Tile columns
+  localparam int unsigned N_TILES_Y    = 2;                               // Number of Tile rowns
+  localparam int unsigned N_TILES      = N_TILES_X*N_TILES_Y;             // Number of Tiles in the Mesh
   localparam int unsigned N_IRQ        = 32;                              // Number of IRQs
   localparam int unsigned IRQ_ID_W     = $clog2(N_IRQ);                   // IRQ ID Width
   localparam int unsigned ID_W_OFFSET  = 1;                               // Offset to be added to ID Width
@@ -49,23 +52,5 @@ package redmule_mesh_pkg;
   `AXI_TYPEDEF_ALL_CT(noc_axi_data, noc_axi_data_req_t, noc_axi_data_rsp_t, logic[ADDR_W-1:0], logic[AXI_NOC_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_NOC_U_W-1:0])
   `AXI_ALIAS(noc_axi_data, axi_xbar_mst, noc_axi_data_req_t, axi_xbar_mst_req_t, noc_axi_data_rsp_t, axi_xbar_mst_rsp_t)
   `AXI_ALIAS(noc_axi_data, axi_default, noc_axi_data_req_t, axi_default_req_t, noc_axi_data_rsp_t, axi_default_rsp_t)
-
-  typedef axi_pkg::xbar_rule_32_t mesh_xbar_rule_t;
-
-  localparam axi_pkg::xbar_cfg_t mesh_xbar_cfg = '{
-    NoSlvPorts          : 4,    // TODO: redmule_mesh_tb_pkg::N_TILES,
-    NoMstPorts          : 5,    // TODO: redmule_mesh_tb_pkg::N_TILES + 1,
-    MaxMstTrans         : 64,   // TODO: redmule_tile_pkg::AxiXbarMaxWTrans*4
-    MaxSlvTrans         : 64,
-    FallThrough         : 1'b0,
-    LatencyMode         : axi_pkg::CUT_ALL_PORTS,
-    PipelineStages      : '0,   // TODO: make it parametric
-    AxiIdWidthSlvPorts  : AXI_NOC_ID_W,
-    AxiIdUsedSlvPorts   : AXI_NOC_ID_W, // TODO: check me!
-    UniqueIds           : 1'b0,
-    AxiAddrWidth        : ADDR_W,
-    AxiDataWidth        : DATA_W,
-    NoAddrRules         : 5    // TODO: redmule_mesh_tb_pkg::N_TILES + 1
-  };
 
 endpackage: redmule_mesh_pkg
