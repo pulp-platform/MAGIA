@@ -3,10 +3,15 @@
 
 #define VERBOSE (10)
 
-#define NUM_HARTS (4)
+#define MESH_X_TILES (2)
+#define MESH_Y_TILES (2)
+#define NUM_HARTS    (MESH_X_TILES*MESH_Y_TILES)
 
+#define SINGLE
 #define NAIVE
 #define XY
+
+#define NAIVE_SYNC_NODE (((MESH_X_TILES-1)/2)*MESH_Y_TILES + (MESH_Y_TILES-1)/2)
 
 /// Only measure via 1 method (cycles xor time) otherwise the 2 methods interfere with each other
 /// Note SW performance measures add overhead
@@ -16,6 +21,7 @@
 
 int main(void) {
   uint32_t sync_count[NUM_HARTS];
+  mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) = 0;
   h_pprintf("Starting NoC Synch test...\n");
 
 #ifdef PERF_MEASURE
@@ -30,8 +36,8 @@ int main(void) {
 #endif
 #endif
 
-#ifdef NAIVE
-  h_pprintf("Running naive algorithm...\n");
+#ifdef SINGLE
+  h_pprintf("Running sigle source-sink algorithm...\n");
 
 #ifdef PERF_MEASURE
 #ifdef P_CYCLES
@@ -42,17 +48,16 @@ int main(void) {
 #endif
 #endif
 
-  mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) = 0;
-  if (get_hartid() == 0) {
+  if (get_hartid() % 2) {
     do {
 #if VERBOSE > 10
       sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
       h_pprintf("current sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
 #endif
-    } while (mmio32(SYNC_BASE) != (NUM_HARTS-1));
-    for (int i = 1; i < NUM_HARTS; i++) amo_increment(SYNC_BASE + i*L1_TILE_OFFSET);
+    } while (mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) != 1);
+    amo_increment(SYNC_BASE + (get_hartid()-1)*L1_TILE_OFFSET);
   } else {
-    amo_increment(SYNC_BASE);
+    amo_increment(SYNC_BASE + (get_hartid()+1)*L1_TILE_OFFSET);
     do {
 #if VERBOSE > 10
       sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
@@ -93,6 +98,74 @@ int main(void) {
 #endif
 #endif
 
+  mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) = 0;
+
+#endif
+
+#ifdef NAIVE
+  h_pprintf("Running naive algorithm...\n");
+
+#ifdef PERF_MEASURE
+#ifdef P_CYCLES
+    start_cycle[get_hartid()] = get_cycle();
+#endif
+#ifdef P_TIME
+    start_time[get_hartid()]  = get_time();
+#endif
+#endif
+
+  if (get_hartid() == NAIVE_SYNC_NODE) {
+    do {
+#if VERBOSE > 10
+      sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
+      h_pprintf("current sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+#endif
+    } while (mmio32(SYNC_BASE) != (NUM_HARTS-1));
+    for (int i = 1; i < NUM_HARTS; i++) amo_increment(SYNC_BASE + i*L1_TILE_OFFSET);
+  } else {
+    amo_increment(SYNC_BASE + NAIVE_SYNC_NODE*L1_TILE_OFFSET);
+    do {
+#if VERBOSE > 10
+      sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
+      h_pprintf("current sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+#endif
+    } while (mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) != 1);
+  }
+  sentinel_instr(); // Indicate occurred synchronization
+
+#ifdef PERF_MEASURE
+#ifdef P_CYCLES
+    end_cycle[get_hartid()] = get_cycle();
+#endif
+#ifdef P_TIME
+    end_time[get_hartid()]  = get_time();
+#endif
+#endif
+
+  sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
+  h_pprintf("sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+
+#ifdef PERF_MEASURE
+#ifdef P_CYCLES
+    if (start_cycle[get_hartid()] && end_cycle[get_hartid()]){
+      h_pprintf("PERFORMANCE COUNTER: "); pprintf(ds(end_cycle[get_hartid()] - start_cycle[get_hartid()])); pprintf(" cycles (");
+      pprintf(ds(start_cycle[get_hartid()])); pprintf(" - "); pprintf(ds(end_cycle[get_hartid()])); n_pprintf(")cycle");
+    }
+    else
+      h_pprintf("PERFORMANCE COUNTER: ERROR cycle counter overlow...\n");
+#endif
+#ifdef P_TIME
+    if (start_time[get_hartid()] && end_time[get_hartid()]){
+      h_pprintf("PERFORMANCE COUNTER: "); pprintf(ds(end_time[get_hartid()] - start_time[get_hartid()])); pprintf("ns (");
+      pprintf(ds(start_time[get_hartid()])); pprintf(" - "); pprintf(ds(end_time[get_hartid()])); n_pprintf(")ns");
+    }
+    else
+      h_pprintf("PERFORMANCE COUNTER: ERROR time counter overlow...\n");
+#endif
+#endif
+
+  mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) = 0;
+
 #endif
 
 #ifdef XY
@@ -107,7 +180,6 @@ int main(void) {
 #endif
 #endif
 
-  mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) = 0;
   if ((get_hartid() == 2) || (get_hartid() == 3)){
     amo_increment(SYNC_BASE + (get_hartid()-2)*L1_TILE_OFFSET);
     do {
@@ -174,6 +246,8 @@ int main(void) {
       h_pprintf("PERFORMANCE COUNTER: ERROR time counter overlow...\n");
 #endif
 #endif
+
+  mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) = 0;
 
 #endif
 
