@@ -18,19 +18,19 @@
 import numpy as np
 import sys
 
-# Instructions start at 0x2c00_0000
-# Data starts at 0x2c01_0000
-# Stack starts at 0x2c04_0000
+# Instructions start at 0xcc00_0000
+# Data starts at 0xcc01_0000
+# Stack starts at 0x0001_0000
 # We only keep last 2 bytes so memory will be filled with no offset.
 # The CPU will also reference it as to not have any offset.
-MEM_START  = 0x5c000000
+MEM_START  = 0xcc000000
 INSTR_SIZE = 0x8000
 INSTR_END  = MEM_START + INSTR_SIZE
 DATA_BASE  = MEM_START + 0x10000
 DATA_SIZE  = 0x30000
 DATA_END   = DATA_BASE + DATA_SIZE
-STACK_BASE = DATA_END
-STACK_SIZE = 0x30000
+STACK_BASE = 0x10000
+STACK_SIZE = 0x10000
 STACK_END  = STACK_BASE + STACK_SIZE
 
 INSTR_MEM_SIZE = INSTR_SIZE

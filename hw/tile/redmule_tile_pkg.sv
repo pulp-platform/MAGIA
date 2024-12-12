@@ -49,14 +49,19 @@ package redmule_tile_pkg;
   localparam int unsigned IRQ_USED              = 13;
 
   // Address map
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] STACK_ADDR_START = 32'h0000_0000;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] STACK_SIZE       = 32'h1000_0000;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] STACK_ADDR_END   = STACK_ADDR_START + STACK_SIZE;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_ADDR_START    = 32'h1000_0000;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_SIZE          = 32'h1000_0000;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_ADDR_START    = L1_ADDR_START + 4*L1_SIZE; // TODO: redmule_mesh_tb_pkg::N_TILES*L1_SIZE;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_SIZE          = 32'h1000_0000;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_ADDR_END      = L2_ADDR_START + L2_SIZE;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] RESERVED_ADDR_START = 32'h0000_0000;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] RESERVED_SIZE       = 32'h0001_0000;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] RESERVED_ADDR_END   = RESERVED_ADDR_START + RESERVED_SIZE;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] STACK_ADDR_START    = RESERVED_ADDR_END;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] STACK_SIZE          = 32'h0001_0000;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] STACK_ADDR_END      = STACK_ADDR_START + STACK_SIZE;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_ADDR_START       = STACK_ADDR_END;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_SIZE             = 32'h000E_0000;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_ADDR_END         = L1_ADDR_START + L1_SIZE;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_TILE_OFFSET      = 32'h0010_0000;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_ADDR_START       = 32'hC000_0000;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_SIZE             = 32'h4000_0000;
+  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_ADDR_END         = L2_ADDR_START + L2_SIZE;
   
   // Parameters used by the HCI
   parameter int unsigned N_HWPE  = 1;                                                   // Number of HWPEs attached to the port

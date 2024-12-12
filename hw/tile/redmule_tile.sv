@@ -50,8 +50,8 @@ module redmule_tile
   parameter int unsigned          FSYNC_WIDTH         = redmule_mesh_pkg::TILE_FSYNC_W, // Level width of the Fractal Sync interface
 
   // Dependent parameters
-  localparam int unsigned         TILE_L1_START_ADDR  = redmule_tile_pkg::L1_ADDR_START + TILE_ID*redmule_tile_pkg::L1_SIZE,
-  localparam int unsigned         TILE_L1_END_ADDR    = TILE_L1_START_ADDR + redmule_tile_pkg::L1_SIZE
+  localparam int unsigned         TILE_L1_START_ADDR  = redmule_tile_pkg::L1_ADDR_START + TILE_ID*redmule_tile_pkg::L1_TILE_OFFSET,
+  localparam int unsigned         TILE_L1_END_ADDR    = redmule_tile_pkg::L1_ADDR_END   + TILE_ID*redmule_tile_pkg::L1_TILE_OFFSET
 )(
   input  logic                                    clk_i,
   input  logic                                    rst_ni,

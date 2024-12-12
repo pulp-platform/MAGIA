@@ -178,13 +178,13 @@ module redmule_mesh_vip
     while (!eoc) begin
       eoc = 1'b1;
       for (int i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++)
-        if (i_l2_mem.mem[32'h5C03_0000 + i]  == 0)
+        if (i_l2_mem.mem[32'hCC03_0000 + i]  == 0)
           eoc = 1'b0;
       #10000;
     end
     
     for (int i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++)
-      exit_code |= i_l2_mem.mem[32'h5C03_0000 + i] << i*8;
+      exit_code |= i_l2_mem.mem[32'hCC03_0000 + i] << i*8;
   endtask: wait_for_eoc
 
 /*******************************************************/
@@ -258,7 +258,7 @@ module redmule_mesh_vip
   fractal_if #(.LVL_WIDTH(CU_LVL_WIDTH-1)) if_sync_net[SYNC_PORTS-1:0]();
   fractal_if #(.LVL_WIDTH(1)) if_top[1]();
 
-  // LEVEL 0 - tiles'
+  // LEVEL 0 - tiles
   for (genvar i = 0; i < 2**(LEVELS-1); i++) begin: gen_cu_sync
     fractal_sync #(
       .SLV_WIDTH  ( CU_LVL_WIDTH )
@@ -315,9 +315,9 @@ module redmule_mesh_vip
       string_char_t chars[$];
       bit[redmule_mesh_tb_pkg::L2_ID_W-1:0] write_id;
       always @(posedge clk) begin: print_monitor
-        if ((gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'h5FFF0000) && (gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].aw_valid))
+        if ((gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0000) && (gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].aw_valid))
           stderr_ready = 1'b1;
-        if ((gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'h5FFF0004+((i*redmule_mesh_tb_pkg::N_TILES_Y+j)*4)) && (gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].aw_valid)) begin
+        if ((gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0004+((i*redmule_mesh_tb_pkg::N_TILES_Y+j)*4)) && (gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].aw_valid)) begin
           stdio_ready  = 1'b1;
           write_id = gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].aw.id;
         end

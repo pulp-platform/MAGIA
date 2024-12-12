@@ -10,7 +10,7 @@
 
 // Defining the actual number of words per bank
 // to be checked in order to avoid overwriting the stack
-#define ACTIVE_WORDS (((STACK_START+L1_SIZE-L1_BASE+1)/4)/32)
+#define ACTIVE_WORDS ((L1_SIZE/(BITS_WORD/BITS_BYTE))/NUM_L1_BANKS)
 
 int main(void) {
   uint8_t exit_code;

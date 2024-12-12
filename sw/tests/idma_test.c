@@ -56,10 +56,7 @@ int main(void) {
   printf("src_addr: 0x%8x (Z_BASE)\n", src_addr);
   printf("len: %0d\n", len);
 #endif
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_addr));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_addr));
-  asm volatile ("addi t0, %0, 0" :: "r"(len));
-  idma_set_addr_len_in();
+  idma_set_addr_len_in(dst_addr, src_addr, len);
 
   dst_std_2 = 0;
   src_std_2 = 0;
@@ -69,10 +66,7 @@ int main(void) {
   printf("src_std_2: 0x%8x\n", src_std_2);
   printf("reps_2: 0x%8x\n", reps_2);
 #endif
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_std_2));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_std_2));
-  asm volatile ("addi t0, %0, 0" :: "r"(reps_2));
-  idma_set_std2_rep2_in();
+  idma_set_std2_rep2_in(dst_std_2, src_std_2, reps_2);
 
   dst_std_3 = 0;
   src_std_3 = 0;
@@ -82,10 +76,7 @@ int main(void) {
   printf("src_std_3: 0x%8x\n", src_std_3);
   printf("reps_3: 0x%8x\n", reps_3);
 #endif
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_std_3));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_std_3));
-  asm volatile ("addi t0, %0, 0" :: "r"(reps_3));
-  idma_set_std3_rep3_in();
+  idma_set_std3_rep3_in(dst_std_3, src_std_3, reps_3);
 
   idma_start_in();
   printf("iDMA moving data from L2 to L1...\n");
@@ -106,10 +97,7 @@ int main(void) {
   printf("src_addr: 0x%8x (X_BASE)\n", src_addr);
   printf("len: %0d\n", len);
 #endif
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_addr));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_addr));
-  asm volatile ("addi t0, %0, 0" :: "r"(len));
-  idma_set_addr_len_out();
+  idma_set_addr_len_out(dst_addr, src_addr, len);
 
   dst_std_2 = 0;
   src_std_2 = 0;
@@ -119,10 +107,7 @@ int main(void) {
   printf("src_std_2: 0x%8x\n", src_std_2);
   printf("reps_2: 0x%8x\n", reps_2);
 #endif
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_std_2));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_std_2));
-  asm volatile ("addi t0, %0, 0" :: "r"(reps_2));
-  idma_set_std2_rep2_out();
+  idma_set_std2_rep2_out(dst_std_2, src_std_2, reps_2);
 
   dst_std_3 = 0;
   src_std_3 = 0;
@@ -132,10 +117,7 @@ int main(void) {
   printf("src_std_3: 0x%8x\n", src_std_3);
   printf("reps_3: 0x%8x\n", reps_3);
 #endif
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_std_3));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_std_3));
-  asm volatile ("addi t0, %0, 0" :: "r"(reps_3));
-  idma_set_std3_rep3_out();
+  idma_set_std3_rep3_out(dst_std_3, src_std_3, reps_3);
 
 #ifdef CONCURRENT
   idma_conf_in();
@@ -148,10 +130,7 @@ int main(void) {
   printf("src_addr: 0x%8x (Z_BASE)\n", src_addr);
   printf("len: %0d\n", len);
 #endif
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_addr));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_addr));
-  asm volatile ("addi t0, %0, 0" :: "r"(len));
-  idma_set_addr_len_in();
+  idma_set_addr_len_in(dst_addr, src_addr, len);
 
   dst_std_2 = 0;
   src_std_2 = 0;
@@ -161,10 +140,7 @@ int main(void) {
   printf("src_std_2: 0x%8x\n", src_std_2);
   printf("reps_2: 0x%8x\n", reps_2);
 #endif
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_std_2));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_std_2));
-  asm volatile ("addi t0, %0, 0" :: "r"(reps_2));
-  idma_set_std2_rep2_in();
+  idma_set_std2_rep2_in(dst_std_2, src_std_2, reps_2);
 
   dst_std_3 = 0;
   src_std_3 = 0;
@@ -174,10 +150,7 @@ int main(void) {
   printf("src_std_3: 0x%8x\n", src_std_3);
   printf("reps_3: 0x%8x\n", reps_3);
 #endif
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_std_3));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_std_3));
-  asm volatile ("addi t0, %0, 0" :: "r"(reps_3));
-  idma_set_std3_rep3_in();
+  idma_set_std3_rep3_in(dst_std_3, src_std_3, reps_3);
 
   idma_start_out();
 
