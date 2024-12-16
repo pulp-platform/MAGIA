@@ -11,13 +11,11 @@
 #define X_BASE (L1_BASE + 0x00012048)
 #define W_BASE (L1_BASE + 0x00016048)
 #define Y_BASE (L1_BASE + 0x0001A048)
-#define Z_BASE (L2_BASE + 0x00012000)
-#define V_BASE (L2_BASE + 0x00016000)
-#define T_BASE (L2_BASE + 0x0001A000)
+#define Z_BASE (L2_BASE + 0x00042000) // Note: for a large number of tiles (e.g. 64x64 mesh) we might exceed memory range of L2
+#define V_BASE (L2_BASE + 0x00046000) // Note: for a large number of tiles (e.g. 64x64 mesh) we might exceed memory range of L2
+#define T_BASE (L2_BASE + 0x0004A000) // Note: for a large number of tiles (e.g. 64x64 mesh) we might exceed memory range of L2
 
 #define MHARTID_OFFSET (0x00010000)
-
-#define TILE_OFFSET (0x10000000)
 
 #define NUM_HARTS (4)
 
@@ -65,10 +63,7 @@ void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uin
   h_pprintf("src_addr: 0x"); n_pprintf(hs(src_addr));
   h_pprintf("len:        "); n_pprintf(ds(len));
 #endif
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_addr));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_addr));
-  asm volatile ("addi t0, %0, 0" :: "r"(len));
-  idma_set_addr_len_in();
+  idma_set_addr_len_in(dst_addr, src_addr, len);
 
   dst_std_2 = 0;
   src_std_2 = 0;
@@ -78,10 +73,7 @@ void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uin
   h_pprintf("src_std_2: 0x"); n_pprintf(hs(src_std_2));
   h_pprintf("reps_2:    0x"); n_pprintf(hs(reps_2));
 #endif
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_std_2));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_std_2));
-  asm volatile ("addi t0, %0, 0" :: "r"(reps_2));
-  idma_set_std2_rep2_in();
+  idma_set_std2_rep2_in(dst_std_2, src_std_2, reps_2);
 
   dst_std_3 = 0;
   src_std_3 = 0;
@@ -91,10 +83,7 @@ void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uin
   h_pprintf("src_std_3: 0x"); n_pprintf(hs(src_std_3));
   h_pprintf("reps_3:    0x"); n_pprintf(hs(reps_3));
 #endif
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_std_3));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_std_3));
-  asm volatile ("addi t0, %0, 0" :: "r"(reps_3));
-  idma_set_std3_rep3_in();
+  idma_set_std3_rep3_in(dst_std_3, src_std_3, reps_3);
 
   idma_start_in();
 
@@ -152,10 +141,7 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
   h_pprintf("src_addr: 0x"); n_pprintf(hs(src_addr));
   h_pprintf("len:        "); n_pprintf(ds(len));
 #endif
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_addr));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_addr));
-  asm volatile ("addi t0, %0, 0" :: "r"(len));
-  idma_set_addr_len_out();
+  idma_set_addr_len_out(dst_addr, src_addr, len);
 
   dst_std_2 = 0;
   src_std_2 = 0;
@@ -165,10 +151,7 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
   h_pprintf("src_std_2: 0x"); n_pprintf(hs(src_std_2));
   h_pprintf("reps_2:    0x"); n_pprintf(hs(reps_2));
 #endif
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_std_2));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_std_2));
-  asm volatile ("addi t0, %0, 0" :: "r"(reps_2));
-  idma_set_std2_rep2_out();
+  idma_set_std2_rep2_out(dst_std_2, src_std_2, reps_2);
 
   dst_std_3 = 0;
   src_std_3 = 0;
@@ -178,10 +161,7 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
   h_pprintf("src_std_3: 0x"); n_pprintf(hs(src_std_3));
   h_pprintf("reps_3:    0x"); n_pprintf(hs(reps_3));
 #endif
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_std_3));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_std_3));
-  asm volatile ("addi t0, %0, 0" :: "r"(reps_3));
-  idma_set_std3_rep3_out();
+  idma_set_std3_rep3_out(dst_std_3, src_std_3, reps_3);
 
   idma_start_out();
 
@@ -215,15 +195,15 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
 int main(void) {
   // X
   h_pprintf("Initializing X through iDMA...\n");
-  idma_mv_in(M_SIZE, N_SIZE, x_inp, (X_BASE + get_hartid()*TILE_OFFSET));
+  idma_mv_in(M_SIZE, N_SIZE, x_inp, (X_BASE + get_hartid()*L1_TILE_OFFSET));
 
   // W
   h_pprintf("Initializing W through iDMA...\n");
-  idma_mv_in(N_SIZE, K_SIZE, w_inp, (W_BASE + get_hartid()*TILE_OFFSET));
+  idma_mv_in(N_SIZE, K_SIZE, w_inp, (W_BASE + get_hartid()*L1_TILE_OFFSET));
 
   // Y
   h_pprintf("Initializing Y through iDMA...\n");
-  idma_mv_in(M_SIZE, K_SIZE, y_inp, (Y_BASE + get_hartid()*TILE_OFFSET));
+  idma_mv_in(M_SIZE, K_SIZE, y_inp, (Y_BASE + get_hartid()*L1_TILE_OFFSET));
 
   uint32_t cfg_reg0[NUM_HARTS];
   uint32_t cfg_reg1[NUM_HARTS];
@@ -239,9 +219,9 @@ int main(void) {
   h_pprintf("cfg_reg1: 0x"); n_pprintf(hs(cfg_reg1[get_hartid()]));
 #endif
 
-  asm volatile("addi t0, %0, 0" ::"r"((uint32_t)(X_BASE + get_hartid()*TILE_OFFSET)));
-  asm volatile("addi t1, %0, 0" ::"r"((uint32_t)(W_BASE + get_hartid()*TILE_OFFSET)));
-  asm volatile("addi t2, %0, 0" ::"r"((uint32_t)(Y_BASE + get_hartid()*TILE_OFFSET)));
+  asm volatile("addi t0, %0, 0" ::"r"((uint32_t)(X_BASE + get_hartid()*L1_TILE_OFFSET)));
+  asm volatile("addi t1, %0, 0" ::"r"((uint32_t)(W_BASE + get_hartid()*L1_TILE_OFFSET)));
+  asm volatile("addi t2, %0, 0" ::"r"((uint32_t)(Y_BASE + get_hartid()*L1_TILE_OFFSET)));
   asm volatile("addi t3, %0, 0" ::"r"(cfg_reg0[get_hartid()]));
   asm volatile("addi t4, %0, 0" ::"r"(cfg_reg1[get_hartid()]));
 
@@ -264,7 +244,7 @@ int main(void) {
 #endif
 
   h_pprintf("Moving results through iDMA...\n");
-  idma_mv_out(M_SIZE, K_SIZE, Y_BASE + get_hartid()*TILE_OFFSET, V_BASE + get_hartid()*MHARTID_OFFSET);
+  idma_mv_out(M_SIZE, K_SIZE, Y_BASE + get_hartid()*L1_TILE_OFFSET, V_BASE + get_hartid()*MHARTID_OFFSET);
 
   h_pprintf("Verifying results...\n");
   

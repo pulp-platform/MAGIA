@@ -32,26 +32,28 @@ module redmule_tile
   import obi_pkg::*;
 #(
   // Parameters used by hci_interconnect and l1_spm
-  parameter int unsigned          N_MEM_BANKS         = redmule_mesh_pkg::N_MEM_BANKS,  // Number of memory banks 
-  parameter int unsigned          N_WORDS_BANK        = redmule_mesh_pkg::N_WORDS_BANK, // Number of words per memory bank      
+  parameter int unsigned          N_MEM_BANKS              = redmule_mesh_pkg::N_MEM_BANKS,  // Number of memory banks 
+  parameter int unsigned          N_WORDS_BANK             = redmule_mesh_pkg::N_WORDS_BANK, // Number of words per memory bank      
 
-  parameter int unsigned          TILE_ID             = 0,                              // TODO: fetch the ID from a register within the tile
+  parameter int unsigned          TILE_ID                  = 0,                              // TODO: fetch the ID from a register within the tile
 
   // Parameters used by the core
-  parameter cv32e40x_pkg::rv32_e  CORE_ISA            = cv32e40x_pkg::RV32I,            // RV32I (default) 32 registers in the RF - RV32E 16 registers in the RF
-  parameter cv32e40x_pkg::a_ext_e CORE_A              = cv32e40x_pkg::A,                // Atomic Istruction (A) support (dafault: full support)
-  parameter cv32e40x_pkg::b_ext_e CORE_B              = cv32e40x_pkg::B_NONE,           // Bit Manipulation support (dafault: not enabled)
-  parameter cv32e40x_pkg::m_ext_e CORE_M              = cv32e40x_pkg::M,                // Multiply and Divide support (dafault: full support)
+  parameter cv32e40x_pkg::rv32_e  CORE_ISA                 = cv32e40x_pkg::RV32I,            // RV32I (default) 32 registers in the RF - RV32E 16 registers in the RF
+  parameter cv32e40x_pkg::a_ext_e CORE_A                   = cv32e40x_pkg::A,                // Atomic Istruction (A) support (dafault: full support)
+  parameter cv32e40x_pkg::b_ext_e CORE_B                   = cv32e40x_pkg::B_NONE,           // Bit Manipulation support (dafault: not enabled)
+  parameter cv32e40x_pkg::m_ext_e CORE_M                   = cv32e40x_pkg::M,                // Multiply and Divide support (dafault: full support)
 
   // Parameters used by the iDMA
-  parameter idma_pkg::error_cap_e ERROR_CAP           = idma_pkg::NO_ERROR_HANDLING,    // Error handaling capability of the iDMA
+  parameter idma_pkg::error_cap_e ERROR_CAP                = idma_pkg::NO_ERROR_HANDLING,    // Error handaling capability of the iDMA
 
   // Parameter used by the Fractal Sync
-  parameter int unsigned          FSYNC_WIDTH         = redmule_mesh_pkg::TILE_FSYNC_W, // Level width of the Fractal Sync interface
+  parameter int unsigned          FSYNC_WIDTH              = redmule_mesh_pkg::TILE_FSYNC_W, // Level width of the Fractal Sync interface
 
   // Dependent parameters
-  localparam int unsigned         TILE_L1_START_ADDR  = redmule_tile_pkg::L1_ADDR_START + TILE_ID*redmule_tile_pkg::L1_SIZE,
-  localparam int unsigned         TILE_L1_END_ADDR    = TILE_L1_START_ADDR + redmule_tile_pkg::L1_SIZE
+  localparam int unsigned         TILE_L1_START_ADDR       = redmule_tile_pkg::L1_ADDR_START       + TILE_ID*redmule_tile_pkg::L1_TILE_OFFSET,
+  localparam int unsigned         TILE_L1_END_ADDR         = redmule_tile_pkg::L1_ADDR_END         + TILE_ID*redmule_tile_pkg::L1_TILE_OFFSET,
+  localparam int unsigned         TILE_RESERVED_START_ADDR = redmule_tile_pkg::RESERVED_ADDR_START + TILE_ID*redmule_tile_pkg::L1_TILE_OFFSET,
+  localparam int unsigned         TILE_RESERVED_END_ADDR   = redmule_tile_pkg::RESERVED_ADDR_END   + TILE_ID*redmule_tile_pkg::L1_TILE_OFFSET
 )(
   input  logic                                    clk_i,
   input  logic                                    rst_ni,
@@ -225,9 +227,10 @@ module redmule_tile
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
 
-  assign obi_xbar_rule[redmule_tile_pkg::L2_IDX]    = '{idx: 32'd0, start_addr: redmule_tile_pkg::L2_ADDR_START,    end_addr: redmule_tile_pkg::L2_ADDR_END     };
-  assign obi_xbar_rule[redmule_tile_pkg::L1SPM_IDX] = '{idx: 32'd1, start_addr: TILE_L1_START_ADDR,                 end_addr: TILE_L1_END_ADDR                  };
-  assign obi_xbar_rule[redmule_tile_pkg::STACK_IDX] = '{idx: 32'd1, start_addr: redmule_tile_pkg::STACK_ADDR_START, end_addr: redmule_tile_pkg::STACK_ADDR_END  };
+  assign obi_xbar_rule[redmule_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: redmule_tile_pkg::L2_ADDR_START,    end_addr: redmule_tile_pkg::L2_ADDR_END    };
+  assign obi_xbar_rule[redmule_tile_pkg::L1SPM_IDX]    = '{idx: 32'd1, start_addr: TILE_L1_START_ADDR,                 end_addr: TILE_L1_END_ADDR                 };
+  assign obi_xbar_rule[redmule_tile_pkg::STACK_IDX]    = '{idx: 32'd1, start_addr: redmule_tile_pkg::STACK_ADDR_START, end_addr: redmule_tile_pkg::STACK_ADDR_END };
+  assign obi_xbar_rule[redmule_tile_pkg::RESERVED_IDX] = '{idx: 32'd1, start_addr: TILE_RESERVED_START_ADDR,           end_addr: TILE_RESERVED_END_ADDR           };
   
   assign obi_xbar_en_default_idx = '1; // Routing to the AXI Xbar all requests with an address outside the range of the internal L1 and the external L2
   assign obi_xbar_default_idx    = '0;
@@ -640,17 +643,17 @@ module redmule_tile
     .CLIC_ID_WIDTH    ( redmule_tile_pkg::CLIC_ID_W       )     // Width of clic_irq_id_i and clic_irq_id_o
   ) i_cv32e40x_core (
     // Clock and reset
-    .clk_i               ( sys_clk                  ),
-    .rst_ni              ( rst_ni                   ),
-    .scan_cg_en_i                                    ,
+    .clk_i               ( sys_clk                ),
+    .rst_ni              ( rst_ni                 ),
+    .scan_cg_en_i                                  ,
 
     // Configuration
-    .boot_addr_i                                     ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .mtvec_addr_i                                    ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .dm_halt_addr_i                                  ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .dm_exception_addr_i                             ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .mhartid_i                                       ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .mimpid_patch_i                                  ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .boot_addr_i                                   ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .mtvec_addr_i                                  ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .dm_halt_addr_i                                ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .dm_exception_addr_i                           ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .mhartid_i                                     ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .mimpid_patch_i                                ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
 
     // Instruction memory interface
     .instr_req_o         ( core_instr_req.req     ),
@@ -664,57 +667,57 @@ module redmule_tile
     .instr_err_i         ( core_instr_rsp.err     ),
 
     // Data memory interface
-    .data_req_o          ( core_data_req.req     ),
-    .data_gnt_i          ( core_data_rsp.gnt     ),
-    .data_addr_o         ( core_data_req.addr    ),
-    .data_atop_o         ( core_data_req.atop    ),
-    .data_be_o           ( core_data_req.be      ),
-    .data_memtype_o      ( core_data_req.memtype ),
-    .data_prot_o         ( core_data_req.prot    ),
-    .data_dbg_o          ( core_data_req.dbg     ),
-    .data_wdata_o        ( core_data_req.wdata   ),
-    .data_we_o           ( core_data_req.we      ),
-    .data_rvalid_i       ( core_data_rsp.rvalid  ),
-    .data_rdata_i        ( core_data_rsp.rdata   ),
-    .data_err_i          ( core_data_rsp.err     ),
-    .data_exokay_i       ( core_data_rsp.exokay  ),
+    .data_req_o          ( core_data_req.req      ),
+    .data_gnt_i          ( core_data_rsp.gnt      ),
+    .data_addr_o         ( core_data_req.addr     ),
+    .data_atop_o         ( core_data_req.atop     ),
+    .data_be_o           ( core_data_req.be       ),
+    .data_memtype_o      ( core_data_req.memtype  ),
+    .data_prot_o         ( core_data_req.prot     ),
+    .data_dbg_o          ( core_data_req.dbg      ),
+    .data_wdata_o        ( core_data_req.wdata    ),
+    .data_we_o           ( core_data_req.we       ),
+    .data_rvalid_i       ( core_data_rsp.rvalid   ),
+    .data_rdata_i        ( core_data_rsp.rdata    ),
+    .data_err_i          ( core_data_rsp.err      ),
+    .data_exokay_i       ( core_data_rsp.exokay   ),
 
     // Cycle, Time
-    .mcycle_o                                        ,  //TODO: do we need these or can we hardwire them?
-    .time_i                                          ,  //TODO: do we need these or can we hardwire them?
+    .mcycle_o                                      ,  //TODO: do we need these or can we hardwire them?
+    .time_i                                        ,  //TODO: do we need these or can we hardwire them?
 
     // eXtension interface
-    .xif_compressed_if   ( xif_if.cpu_compressed    ),
-    .xif_issue_if        ( xif_if.cpu_issue         ),
-    .xif_commit_if       ( xif_if.cpu_commit        ),
-    .xif_mem_if          ( xif_if.cpu_mem           ),
-    .xif_mem_result_if   ( xif_if.cpu_mem_result    ),
-    .xif_result_if       ( xif_if.cpu_result        ),
+    .xif_compressed_if   ( xif_if.cpu_compressed  ),
+    .xif_issue_if        ( xif_if.cpu_issue       ),
+    .xif_commit_if       ( xif_if.cpu_commit      ),
+    .xif_mem_if          ( xif_if.cpu_mem         ),
+    .xif_mem_result_if   ( xif_if.cpu_mem_result  ),
+    .xif_result_if       ( xif_if.cpu_result      ),
 
      // Interrupt interface
-    .irq_i               ( irq                      ),
+    .irq_i               ( irq                    ),
 
-    .clic_irq_i          ( '0                       ),
-    .clic_irq_id_i       ( '0                       ),
-    .clic_irq_level_i    ( '0                       ),
-    .clic_irq_priv_i     ( '0                       ),
-    .clic_irq_shv_i      ( '0                       ),
+    .clic_irq_i          ( '0                     ),
+    .clic_irq_id_i       ( '0                     ),
+    .clic_irq_level_i    ( '0                     ),
+    .clic_irq_priv_i     ( '0                     ),
+    .clic_irq_shv_i      ( '0                     ),
 
     // Fencei flush handshake
-    .fencei_flush_req_o                              ,  //TODO: manage Fence.i flushing in the future or hardwire?  
-    .fencei_flush_ack_i                              ,  //TODO: manage Fence.i flushing in the future or hardwire?
+    .fencei_flush_req_o                            ,  //TODO: manage Fence.i flushing in the future or hardwire?  
+    .fencei_flush_ack_i                            ,  //TODO: manage Fence.i flushing in the future or hardwire?
 
     // Debug interface
-    .debug_req_i                                     ,  //TODO: do we need these or can we hardwire them?
-    .debug_havereset_o                               ,  //TODO: do we need these or can we hardwire them?
-    .debug_running_o                                 ,  //TODO: do we need these or can we hardwire them?
-    .debug_halted_o                                  ,  //TODO: do we need these or can we hardwire them?
-    .debug_pc_valid_o                                ,  //TODO: do we need these or can we hardwire them?
-    .debug_pc_o                                      ,  //TODO: do we need these or can we hardwire them?
+    .debug_req_i                                   ,  //TODO: do we need these or can we hardwire them?
+    .debug_havereset_o                             ,  //TODO: do we need these or can we hardwire them?
+    .debug_running_o                               ,  //TODO: do we need these or can we hardwire them?
+    .debug_halted_o                                ,  //TODO: do we need these or can we hardwire them?
+    .debug_pc_valid_o                              ,  //TODO: do we need these or can we hardwire them?
+    .debug_pc_o                                    ,  //TODO: do we need these or can we hardwire them?
 
     // Special control signals
-    .fetch_enable_i                                  ,
-    .core_sleep_o                                    ,
+    .fetch_enable_i                                ,
+    .core_sleep_o                                  ,
     .wu_wfe_i            
   );
 
@@ -964,7 +967,8 @@ module redmule_tile
 
   localparam axi_pkg::xbar_rule_32_t[redmule_tile_pkg::axi_xbar_cfg.NoAddrRules-1:0] TileAxiAddrMap = '{
     '{idx: 32'd0, start_addr: redmule_tile_pkg::L2_ADDR_START, end_addr: redmule_tile_pkg::L2_ADDR_END },
-    '{idx: 32'd1, start_addr: TILE_L1_START_ADDR,              end_addr: TILE_L1_END_ADDR              }
+    '{idx: 32'd1, start_addr: TILE_L1_START_ADDR,              end_addr: TILE_L1_END_ADDR              },
+    '{idx: 32'd1, start_addr: TILE_RESERVED_START_ADDR,        end_addr: TILE_RESERVED_END_ADDR        }
   };
 
   axi_xbar #(
