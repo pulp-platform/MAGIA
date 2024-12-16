@@ -1,5 +1,5 @@
-name: redmule_axi_2x2_mesh
-description: "Configuration file for a 2x2 RedMulE mesh NoC"
+name: axi_mesh_2x2
+description: "Configuration file for a 2x2 RedMulE Mesh NoC"
 network_type: "axi"
 
 routing:
@@ -24,8 +24,8 @@ endpoints:
   - name: "redmule_tile"
     array: [2, 2]
     addr_range:
-      base: 0x1000_0000
-      size: 0x1000_0000
+      base: 0x0000_0000
+      size: 0x0010_0000
     mgr_port_protocol:
       - "data_slv"
     sbr_port_protocol:
@@ -33,7 +33,7 @@ endpoints:
   - name: "L2"
     array: [2]
     addr_range:
-      base: 0x5000_0000
+      base: 0xC000_0000
       size: 0x0800_0000
     sbr_port_protocol:
       - "data_mst"

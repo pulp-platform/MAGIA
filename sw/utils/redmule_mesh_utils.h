@@ -5,7 +5,7 @@
 
 #define STR_OFFSET  (0x00000000)
 #define STR_BASE    (RESERVED_START + STR_OFFSET)
-#define SYNC_OFFSET (0x0000FFFF)
+#define SYNC_OFFSET (0x0000F000)
 #define SYNC_BASE   (RESERVED_START + SYNC_OFFSET)
 
 #define h_pprintf(x) (h_psprint(get_hartid(), x))

@@ -7,7 +7,7 @@
 `include "axi/typedef.svh"
 `include "floo_noc/typedef.svh"
 
-package floo_redmule_axi_2x2_mesh_noc_pkg;
+package floo_axi_mesh_2x2_noc_pkg;
 
   import floo_pkg::*;
 
@@ -48,12 +48,12 @@ typedef struct packed {
 } sam_rule_t;
 
 localparam sam_rule_t[SamNumRules-1:0] Sam = '{
-'{idx: '{x: 0, y: 1, port_id: 0}, start_addr: 32'h58000000, end_addr: 32'h60000000},// L2_ni_1
-'{idx: '{x: 0, y: 0, port_id: 0}, start_addr: 32'h50000000, end_addr: 32'h58000000},// L2_ni_0
-'{idx: '{x: 2, y: 1, port_id: 0}, start_addr: 32'h40000000, end_addr: 32'h50000000},// redmule_tile_ni_1_1
-'{idx: '{x: 2, y: 0, port_id: 0}, start_addr: 32'h30000000, end_addr: 32'h40000000},// redmule_tile_ni_1_0
-'{idx: '{x: 1, y: 1, port_id: 0}, start_addr: 32'h20000000, end_addr: 32'h30000000},// redmule_tile_ni_0_1
-'{idx: '{x: 1, y: 0, port_id: 0}, start_addr: 32'h10000000, end_addr: 32'h20000000} // redmule_tile_ni_0_0
+'{idx: '{x: 0, y: 1, port_id: 0}, start_addr: 32'hc8000000, end_addr: 32'hd0000000},// L2_ni_1
+'{idx: '{x: 0, y: 0, port_id: 0}, start_addr: 32'hc0000000, end_addr: 32'hc8000000},// L2_ni_0
+'{idx: '{x: 2, y: 1, port_id: 0}, start_addr: 32'h00300000, end_addr: 32'h00400000},// redmule_tile_ni_1_1
+'{idx: '{x: 2, y: 0, port_id: 0}, start_addr: 32'h00200000, end_addr: 32'h00300000},// redmule_tile_ni_1_0
+'{idx: '{x: 1, y: 1, port_id: 0}, start_addr: 32'h00100000, end_addr: 32'h00200000},// redmule_tile_ni_0_1
+'{idx: '{x: 1, y: 0, port_id: 0}, start_addr: 32'h00000000, end_addr: 32'h00100000} // redmule_tile_ni_0_0
 
 };
 
@@ -61,8 +61,8 @@ localparam sam_rule_t[SamNumRules-1:0] Sam = '{
 
   localparam route_cfg_t RouteCfg = '{    RouteAlgo: XYRouting,
     UseIdTable: 1'b1,
-    XYAddrOffsetX: 31,
-    XYAddrOffsetY: 33,
+    XYAddrOffsetX: 32,
+    XYAddrOffsetY: 34,
     IdAddrOffset: 0,
     NumSamRules: 6,
     NumRoutes: 0};
@@ -98,9 +98,9 @@ typedef logic[0:0] axi_data_slv_user_t;
 
 endpackage
 
-module floo_redmule_axi_2x2_mesh_noc
+module floo_axi_mesh_2x2_noc
   import floo_pkg::*;
-  import floo_redmule_axi_2x2_mesh_noc_pkg::*;
+  import floo_axi_mesh_2x2_noc_pkg::*;
 (
   input logic clk_i,
   input logic rst_ni,

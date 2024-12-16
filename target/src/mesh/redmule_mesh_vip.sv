@@ -232,7 +232,7 @@ module redmule_mesh_vip
 /**           Tiles - L2 (FlooNoC) Beginning          **/
 /*******************************************************/
 
-  floo_redmule_axi_2x2_mesh_noc i_mesh_noc (
+  floo_axi_mesh_2x2_noc i_mesh_noc (
     .clk_i                        ( clk             ),
     .rst_ni                       ( rst_n           ),
     .test_enable_i                ( 1'b0            ),

@@ -65,8 +65,7 @@ sources:
       - hw/tile/fractal_sync_xif_inst_decoder.sv
       - hw/tile/redmule_tile.sv
       # RedMulE Mesh
-      - hw/noc/floo_redmule_single_router_axi_2x2_noc.sv
-      - hw/noc/floo_redmule_axi_2x2_mesh_noc.sv
+      - hw/mesh/floo_axi_mesh_2x2_noc.sv
       # RedMulE DV
       - target/src/tile/redmule_tile_tb_pkg.sv
       - target/src/tile/redmule_tile_vip.sv
@@ -96,5 +95,4 @@ sources:
       - hw/tile/fractal_sync_xif_inst_decoder.sv
       - hw/tile/redmule_tile.sv
       # RedMulE Mesh
-      - hw/noc/floo_redmule_single_router_axi_2x2_noc.sv
-      - hw/noc/floo_redmule_axi_2x2_mesh_noc.sv
+      - hw/mesh/floo_axi_mesh_2x2_noc.sv
