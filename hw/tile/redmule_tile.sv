@@ -63,8 +63,8 @@ module redmule_tile
   output redmule_mesh_pkg::axi_default_req_t      data_out_req_o,
   input  redmule_mesh_pkg::axi_default_rsp_t      data_out_rsp_i,
 
-  input  redmule_tile_pkg::axi_xbar_slv_req_t     data_in_req_i,
-  output redmule_tile_pkg::axi_xbar_slv_rsp_t     data_in_rsp_o,
+  input  redmule_mesh_pkg::axi_default_req_t      data_in_req_i,
+  output redmule_mesh_pkg::axi_default_rsp_t      data_in_rsp_o,
 
   // Fractal Sync interface
   fractal_if.mst_port                             sync_if_o,

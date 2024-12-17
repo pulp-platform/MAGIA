@@ -71,7 +71,7 @@ localparam sam_rule_t[SamNumRules-1:0] Sam = '{
   typedef logic[31:0] axi_data_mst_addr_t;
 typedef logic[31:0] axi_data_mst_data_t;
 typedef logic[3:0] axi_data_mst_strb_t;
-typedef logic[5:0] axi_data_mst_id_t;
+typedef logic[3:0] axi_data_mst_id_t;
 typedef logic[0:0] axi_data_mst_user_t;
 `AXI_TYPEDEF_ALL_CT(axi_data_mst,             axi_data_mst_req_t,             axi_data_mst_rsp_t,             axi_data_mst_addr_t,             axi_data_mst_id_t,             axi_data_mst_data_t,             axi_data_mst_strb_t,             axi_data_mst_user_t)
 
@@ -90,7 +90,7 @@ typedef logic[0:0] axi_data_slv_user_t;
     DataWidth: 32,
     UserWidth: 1,
     InIdWidth: 4,
-    OutIdWidth: 6};
+    OutIdWidth: 4};
 `FLOO_TYPEDEF_AXI_CHAN_ALL(axi, req, rsp, axi_data_slv, AxiCfg, hdr_t)
 
 `FLOO_TYPEDEF_AXI_LINK_ALL(req, rsp, req, rsp)
