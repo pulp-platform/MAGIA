@@ -230,6 +230,11 @@ synth-ips:
 	$(synth_targs)  $(synth_defs)  \
 	> ${compile_script_synth}
 
+floonoc-patch:
+	cd .bender/git/checkouts/floo_noc-d566867a3b179444 && \
+	git apply ../../../../floonoc.patch &&                \
+	cd ../../../../
+
 build-hw: hw-all
 
 sdk:
