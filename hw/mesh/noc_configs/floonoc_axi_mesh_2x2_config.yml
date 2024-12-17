@@ -11,7 +11,7 @@ protocols:
     protocol: "AXI4"
     data_width: 32
     addr_width: 32
-    id_width: 6
+    id_width: 4
     user_width: 1
   - name: "data_slv"
     protocol: "AXI4"
