@@ -2,7 +2,7 @@
 
 #define MEM_OFFSET (0x1000)
 
-#define SETTLE_CYCLE (NUM_HARTS*500)
+#define SETTLE_CYCLE (MESH_X_TILES*500)
 
 int main() {
   uint32_t error[NUM_HARTS];

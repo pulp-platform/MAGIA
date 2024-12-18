@@ -3,7 +3,7 @@
 
 #define VERBOSE (10)
 
-#define SYNC_SETTLE (NUM_HARTS*500)
+#define SYNC_SETTLE (MESH_X_TILES*500)
 
 #define GET_X_ID(mhartid)  (mhartid/MESH_Y_TILES)
 #define GET_Y_ID(mhartid)  (mhartid%MESH_Y_TILES)
@@ -53,7 +53,7 @@ int main(void) {
       sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
       h_pprintf("current sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
 #endif
-    } while (mmio32(SYNC_BASE) != (NUM_HARTS-1));
+    } while (mmio32(SYNC_BASE + SYNC_NODE_ID*L1_TILE_OFFSET) != (NUM_HARTS-1));
     for (int i = 0; i < NUM_HARTS; i++) amo_increment(SYNC_BASE + i*L1_TILE_OFFSET);
   } else {
     amo_increment(SYNC_BASE + SYNC_NODE_ID*L1_TILE_OFFSET);

@@ -3,7 +3,7 @@
 
 #define VERBOSE (10)
 
-#define SYNC_SETTLE (NUM_HARTS*500)
+#define SYNC_SETTLE (MESH_X_TILES*500)
 
 #define GET_X_ID(mhartid)  (mhartid/MESH_Y_TILES)
 #define GET_Y_ID(mhartid)  (mhartid%MESH_Y_TILES)
