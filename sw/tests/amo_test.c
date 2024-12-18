@@ -3,7 +3,7 @@
 
 #define VERBOSE (100)
 
-#define SYNC_SETTLE (NUM_HARTS*1000)
+#define SYNC_SETTLE (NUM_HARTS*500)
 
 #define NUM_ITER     (1000)
 #define INITIAL_VAL  (1234)

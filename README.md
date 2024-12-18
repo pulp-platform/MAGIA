@@ -24,7 +24,7 @@ make floonoc-patch
 ```
 **4)** **Build** the hardware (`redmule-mesh` folder):
 ```bash
-make build-hw > build-hw.log mesh_dv=1
+make build-hw > build-hw.log mesh_dv=1 fast_sim=0
 ```
 **5)** **Comile** the test code (`redmule-mesh` folder):
 ```bash
@@ -37,5 +37,7 @@ make run test=mesh_test gui=1 mesh_dv=1
 
 ## Changing number of Tiles
 **Scripts**: `num_cores` parameter in the `Makefile`
+
 **Tests**  : `MESH_X_TILES` and `MESH_Y_TILES` parameters in `redmule_mesh_utils.h`
+
 **RTL/TB** : `N_TILES_X` and `N_TILES_Y` parameters in `redmule_mesh_pkg.sv`

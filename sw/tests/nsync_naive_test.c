@@ -1,11 +1,16 @@
 #include "redmule_tile_utils.h"
 #include "redmule_mesh_utils.h"
-#include "fsync_isa_utils.h"
 
-#define VERBOSE (1000)
+#define VERBOSE (10)
 
-#define NUM_LEVELS (2)
-#define STALLING
+#define SYNC_SETTLE (NUM_HARTS*500)
+
+#define GET_X_ID(mhartid)  (mhartid/MESH_Y_TILES)
+#define GET_Y_ID(mhartid)  (mhartid%MESH_Y_TILES)
+#define GET_ID(y_id, x_id) ((x_id*MESH_Y_TILES)+y_id)
+#define SYNC_NODE_X_ID     ((MESH_X_TILES-1)/2)
+#define SYNC_NODE_Y_ID     ((MESH_Y_TILES-1)/2)
+#define SYNC_NODE_ID       (GET_ID(SYNC_NODE_Y_ID, SYNC_NODE_X_ID))
 
 /// Only measure via 1 method (cycles xor time) otherwise the 2 methods interfere with each other
 /// Note SW performance measures add overhead
@@ -14,7 +19,10 @@
 #define P_TIME
 
 int main(void) {
-  uint32_t levels[NUM_HARTS];
+  uint32_t sync_count[NUM_HARTS];
+  mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) = 0;
+  h_pprintf("Starting NoC Synch test...\n");
+  wait_nop(SYNC_SETTLE);
 
 #ifdef PERF_MEASURE
 #ifdef P_CYCLES
@@ -28,17 +36,7 @@ int main(void) {
 #endif
 #endif
 
-  for (int i = 0; i < NUM_LEVELS; i++){
-    h_pprintf("Fractal Sync at level "); pprintf(ds(i)); n_pprintf("...");
-
-#ifndef STALLING
-    irq_en(1<<IRQ_FSYNC_DONE);
-#endif
-    
-    levels[get_hartid()] = (uint32_t)(i+1);
-#if VERBOSE > 10
-    h_pprintf("levels: 0x"); n_pprintf(hs(levels[get_hartid()]));
-#endif
+  h_pprintf("Running naive algorithm...\n");
 
 #ifdef PERF_MEASURE
 #ifdef P_CYCLES
@@ -49,13 +47,24 @@ int main(void) {
 #endif
 #endif
 
-    fsync(levels[get_hartid()]);
-    sentinel_instr();   // Indicate occurred synchronization
-
-#ifndef STALLING
-    asm volatile("wfi" ::: "memory");
-    h_pprintf("Detected IRQ...\n");
+  if (get_hartid() == SYNC_NODE_ID) {
+    do {
+#if VERBOSE > 10
+      sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
+      h_pprintf("current sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
 #endif
+    } while (mmio32(SYNC_BASE) != (NUM_HARTS-1));
+    for (int i = 0; i < NUM_HARTS; i++) amo_increment(SYNC_BASE + i*L1_TILE_OFFSET);
+  } else {
+    amo_increment(SYNC_BASE + SYNC_NODE_ID*L1_TILE_OFFSET);
+    do {
+#if VERBOSE > 10
+      sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
+      h_pprintf("current sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+#endif
+    } while (mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) != 1);
+  }
+  sentinel_instr(); // Indicate occurred synchronization
 
 #ifdef PERF_MEASURE
 #ifdef P_CYCLES
@@ -66,7 +75,8 @@ int main(void) {
 #endif
 #endif
 
-    h_pprintf("Synchronized...\n");
+  sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
+  h_pprintf("sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
 
 #ifdef PERF_MEASURE
 #ifdef P_CYCLES
@@ -86,7 +96,6 @@ int main(void) {
       h_pprintf("PERFORMANCE COUNTER: ERROR time counter overlow...\n");
 #endif
 #endif
-  }
 
 #ifdef PERF_MEASURE
 #ifdef P_CYCLES
@@ -94,7 +103,7 @@ int main(void) {
 #endif
 #endif
 
-  h_pprintf("Fractal Sync test finished...\n");
+  h_pprintf("NoC Synch test finished...\n");
 
   mmio8(TEST_END_ADDR + get_hartid()) = DEFAULT_EXIT_CODE - get_hartid();
 

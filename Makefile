@@ -44,8 +44,10 @@ compile_script_synth ?= scripts/synth_compile.tcl
 compile_flag         ?= -suppress 2583 -suppress 13314 -suppress 3009
 
 questa_compile_flag  += -t 1ns -suppress 3009
-questa_opt_flag      += -suppress 3009 -debugdb
+questa_opt_flag      += -suppress 3009 -debugdb +acc=npr
+questa_opt_fast_flag += -suppress 3009
 questa_run_flag      += -t 1ns -debugDB -suppress 3009
+questa_run_fast_flag += -t 1ns -suppress 3009
 
 INI_PATH  = $(mkfile_path)/modelsim.ini
 WORK_PATH = $(BUILD_DIR)
@@ -60,8 +62,9 @@ data_entry    ?= 0xCC010000
 boot_addr     ?= 0xCC000080
 test          ?= hello_world
 mesh_dv       ?= 1
+fast_sim      ?= 0
 # Add here a path to the core traces of each tile you want to monitor
-num_cores     ?= 4
+num_cores     ?= 16
 $(foreach i, $(shell seq 0 $(shell echo $$(($(num_cores)-1)))), \
 	$(eval log_path_$(i) := ./core_$(i)_traces.log)               \
 )
@@ -137,7 +140,7 @@ all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb
 run: $(CRT)
 ifeq ($(gui), 0)
 	cd $(BUILD_DIR)/$(TEST_SRCS);                                                                \
-	$(QUESTA) vsim -c vopt_tb $(questa_run_flag) -do "run -a"                                    \
+	$(QUESTA) vsim -c vopt_tb $(questa_run_fast_flag) -do "run -a"                               \
 	+INST_HEX=$(inst_hex_name)                                                                   \
 	+DATA_HEX=$(data_hex_name)                                                                   \
 	+INST_ENTRY=$(inst_entry)                                                                    \
@@ -266,7 +269,11 @@ hw-clean-all:
 	rm -rf .cached_ipdb.json
 
 hw-opt:
-	$(QUESTA) vopt $(questa_opt_flag) +acc=npr -o vopt_tb $(tb) -floatparameters+$(tb) -work $(BUILD_DIR)
+ifeq ($(fast_sim), 0)
+	$(QUESTA) vopt $(questa_opt_flag) -o vopt_tb $(tb) -floatparameters+$(tb) -work $(BUILD_DIR)
+else
+	$(QUESTA) vopt $(questa_opt_fast_flag) -o vopt_tb $(tb) -floatparameters+$(tb) -work $(BUILD_DIR)
+endif
 
 hw-compile:
 	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_ADD_IDS=$(IDMA_ADD_IDS)

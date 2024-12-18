@@ -66,6 +66,7 @@ sources:
       - hw/tile/redmule_tile.sv
       # RedMulE Mesh
       - hw/mesh/floo_axi_mesh_2x2_noc.sv
+      - hw/mesh/floo_axi_mesh_4x4_noc.sv
       # RedMulE DV
       - target/src/tile/redmule_tile_tb_pkg.sv
       - target/src/tile/redmule_tile_vip.sv
@@ -96,3 +97,4 @@ sources:
       - hw/tile/redmule_tile.sv
       # RedMulE Mesh
       - hw/mesh/floo_axi_mesh_2x2_noc.sv
+      - hw/mesh/floo_axi_mesh_4x4_noc.sv
