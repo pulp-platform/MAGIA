@@ -9,9 +9,9 @@
 
 /// Only measure via 1 method (cycles xor time) otherwise the 2 methods interfere with each other
 /// Note SW performance measures add overhead
-#define PERF_MEASURE
+// #define PERF_MEASURE
 // #define P_CYCLES
-#define P_TIME
+// #define P_TIME
 
 int main(void) {
   uint32_t levels[NUM_HARTS];
