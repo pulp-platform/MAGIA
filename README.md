@@ -34,3 +34,8 @@ make all test=mesh_test
 ```bash
 make run test=mesh_test gui=1 mesh_dv=1
 ```
+
+## Changing number of Tiles
+**Scripts**: `num_cores` parameter in the `Makefile`
+**Tests**  : `MESH_X_TILES` and `MESH_Y_TILES` parameters in `redmule_mesh_utils.h`
+**RTL/TB** : `N_TILES_X` and `N_TILES_Y` parameters in `redmule_mesh_pkg.sv`

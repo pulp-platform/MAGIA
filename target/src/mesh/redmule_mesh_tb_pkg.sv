@@ -29,8 +29,8 @@ package redmule_mesh_tb_pkg;
   parameter int unsigned N_TILES_Y    = redmule_mesh_pkg::N_TILES_Y;    // Number of Tile rowns
   parameter int unsigned N_TILES      = redmule_mesh_pkg::N_TILES;      // Number of Tiles in the Mesh
 
-  parameter int unsigned L2_ID_W      = redmule_mesh_pkg::AXI_NOC_ID_W;
-  parameter int unsigned L2_U_W       = redmule_mesh_pkg::AXI_NOC_U_W;
+  parameter int unsigned L2_ID_W      = redmule_tile_pkg::AXI_ID_W;
+  parameter int unsigned L2_U_W       = redmule_tile_pkg::AXI_U_W;
 
   `AXI_TYPEDEF_ALL_CT(axi_l2_vip, axi_l2_vip_req_t, axi_l2_vip_rsp_t, logic[redmule_mesh_pkg::ADDR_W-1:0], logic[L2_ID_W-1:0], logic[redmule_mesh_pkg::DATA_W-1:0], logic[redmule_mesh_pkg::STRB_W-1:0], logic[L2_U_W-1:0])
 

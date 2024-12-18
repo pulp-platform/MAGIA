@@ -48,8 +48,8 @@ typedef struct packed {
 } sam_rule_t;
 
 localparam sam_rule_t[SamNumRules-1:0] Sam = '{
-'{idx: '{x: 0, y: 1, port_id: 0}, start_addr: 32'hc8000000, end_addr: 32'hd0000000},// L2_ni_1
-'{idx: '{x: 0, y: 0, port_id: 0}, start_addr: 32'hc0000000, end_addr: 32'hc8000000},// L2_ni_0
+'{idx: '{x: 0, y: 1, port_id: 0}, start_addr: 32'he0000000, end_addr: 32'h100000000},// L2_ni_1
+'{idx: '{x: 0, y: 0, port_id: 0}, start_addr: 32'hc0000000, end_addr: 32'he0000000},// L2_ni_0
 '{idx: '{x: 2, y: 1, port_id: 0}, start_addr: 32'h00300000, end_addr: 32'h00400000},// redmule_tile_ni_1_1
 '{idx: '{x: 2, y: 0, port_id: 0}, start_addr: 32'h00200000, end_addr: 32'h00300000},// redmule_tile_ni_1_0
 '{idx: '{x: 1, y: 1, port_id: 0}, start_addr: 32'h00100000, end_addr: 32'h00200000},// redmule_tile_ni_0_1
@@ -71,7 +71,7 @@ localparam sam_rule_t[SamNumRules-1:0] Sam = '{
   typedef logic[31:0] axi_data_mst_addr_t;
 typedef logic[31:0] axi_data_mst_data_t;
 typedef logic[3:0] axi_data_mst_strb_t;
-typedef logic[3:0] axi_data_mst_id_t;
+typedef logic[1:0] axi_data_mst_id_t;
 typedef logic[0:0] axi_data_mst_user_t;
 `AXI_TYPEDEF_ALL_CT(axi_data_mst,             axi_data_mst_req_t,             axi_data_mst_rsp_t,             axi_data_mst_addr_t,             axi_data_mst_id_t,             axi_data_mst_data_t,             axi_data_mst_strb_t,             axi_data_mst_user_t)
 
@@ -90,7 +90,7 @@ typedef logic[0:0] axi_data_slv_user_t;
     DataWidth: 32,
     UserWidth: 1,
     InIdWidth: 4,
-    OutIdWidth: 4};
+    OutIdWidth: 2};
 `FLOO_TYPEDEF_AXI_CHAN_ALL(axi, req, rsp, axi_data_slv, AxiCfg, hdr_t)
 
 `FLOO_TYPEDEF_AXI_LINK_ALL(req, rsp, req, rsp)

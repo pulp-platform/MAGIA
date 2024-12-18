@@ -232,17 +232,31 @@ module redmule_mesh_vip
 /**           Tiles - L2 (FlooNoC) Beginning          **/
 /*******************************************************/
 
-  floo_axi_mesh_2x2_noc i_mesh_noc (
-    .clk_i                        ( clk             ),
-    .rst_ni                       ( rst_n           ),
-    .test_enable_i                ( 1'b0            ),
-    .redmule_tile_data_slv_req_i  ( data_out_req    ),
-    .redmule_tile_data_slv_rsp_o  ( data_out_rsp    ),
-    .redmule_tile_data_mst_req_o  ( data_mst_req    ),
-    .redmule_tile_data_mst_rsp_i  ( data_mst_rsp    ),
-    .L2_data_mst_req_o            ( l2_data_mst_req ),
-    .L2_data_mst_rsp_i            ( l2_data_mst_rsp )
-  );
+  if ((redmule_mesh_tb_pkg::N_TILES_X == 2) && (redmule_mesh_tb_pkg::N_TILES_Y == 2)) begin: gen_2x2_noc
+    floo_axi_mesh_2x2_noc i_mesh_noc (
+      .clk_i                        ( clk             ),
+      .rst_ni                       ( rst_n           ),
+      .test_enable_i                ( 1'b0            ),
+      .redmule_tile_data_slv_req_i  ( data_out_req    ),
+      .redmule_tile_data_slv_rsp_o  ( data_out_rsp    ),
+      .redmule_tile_data_mst_req_o  ( data_mst_req    ),
+      .redmule_tile_data_mst_rsp_i  ( data_mst_rsp    ),
+      .L2_data_mst_req_o            ( l2_data_mst_req ),
+      .L2_data_mst_rsp_i            ( l2_data_mst_rsp )
+    );
+  end else if ((redmule_mesh_tb_pkg::N_TILES_X == 4) && (redmule_mesh_tb_pkg::N_TILES_Y == 4)) begin: gen_4x4_noc
+    floo_axi_mesh_4x4_noc i_mesh_noc (
+      .clk_i                        ( clk             ),
+      .rst_ni                       ( rst_n           ),
+      .test_enable_i                ( 1'b0            ),
+      .redmule_tile_data_slv_req_i  ( data_out_req    ),
+      .redmule_tile_data_slv_rsp_o  ( data_out_rsp    ),
+      .redmule_tile_data_mst_req_o  ( data_mst_req    ),
+      .redmule_tile_data_mst_rsp_i  ( data_mst_rsp    ),
+      .L2_data_mst_req_o            ( l2_data_mst_req ),
+      .L2_data_mst_rsp_i            ( l2_data_mst_rsp )
+    );
+  end else $fatal("Unsupported Mesh configuration");
 
 /*******************************************************/
 /**              Tiles - L2 (FlooNoC) End              */
