@@ -17,8 +17,6 @@
 
 #define MHARTID_OFFSET (0x00010000)
 
-#define NUM_HARTS (4)
-
 #define M_SIZE (96)
 #define N_SIZE (64)
 #define K_SIZE (64)

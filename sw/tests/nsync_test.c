@@ -3,10 +3,6 @@
 
 #define VERBOSE (10)
 
-#define MESH_X_TILES (2)
-#define MESH_Y_TILES (2)
-#define NUM_HARTS    (MESH_X_TILES*MESH_Y_TILES)
-
 #define SINGLE
 #define NAIVE
 #define XY
