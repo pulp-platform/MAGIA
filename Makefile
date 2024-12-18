@@ -58,18 +58,14 @@ data_hex_name ?= stim_data.txt
 inst_entry    ?= 0xCC000000
 data_entry    ?= 0xCC010000
 boot_addr     ?= 0xCC000080
-# Add here a path to the core traces of each tile you want to monitor
-log_path_0    ?= ./core_0_traces.log
-log_path_1    ?= ./core_1_traces.log
-log_path_2    ?= ./core_2_traces.log
-log_path_3    ?= ./core_3_traces.log
-log_path_4    ?= ./core_4_traces.log
-log_path_5    ?= ./core_5_traces.log
-log_path_6    ?= ./core_6_traces.log
-log_path_7    ?= ./core_7_traces.log
-itb_file      ?= $(ITB)
 test          ?= hello_world
 mesh_dv       ?= 1
+# Add here a path to the core traces of each tile you want to monitor
+num_cores     ?= 4
+$(foreach i, $(shell seq 0 $(shell echo $$(($(num_cores)-1)))), \
+	$(eval log_path_$(i) := ./core_$(i)_traces.log)               \
+)
+itb_file      ?= $(ITB)
 
 ifeq ($(verbose),1)
 	FLAGS += -DVERBOSE
@@ -140,40 +136,30 @@ all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb
 # Run the simulation
 run: $(CRT)
 ifeq ($(gui), 0)
-	cd $(BUILD_DIR)/$(TEST_SRCS);                             \
-	$(QUESTA) vsim -c vopt_tb $(questa_run_flag) -do "run -a" \
-	+INST_HEX=$(inst_hex_name)                                \
-	+DATA_HEX=$(data_hex_name)                                \
-	+INST_ENTRY=$(inst_entry)                                 \
-	+DATA_ENTRY=$(data_entry)                                 \
-	+BOOT_ADDR=$(boot_addr)                                   \
-	+log_file_0=$(log_path_0)                                 \
-	+log_file_1=$(log_path_1)                                 \
-	+log_file_2=$(log_path_2)                                 \
-	+log_file_3=$(log_path_3)                                 \
-	+log_file_4=$(log_path_4)                                 \
-	+log_file_5=$(log_path_5)                                 \
-	+log_file_6=$(log_path_6)                                 \
-	+log_file_7=$(log_path_7)                                 \
+	cd $(BUILD_DIR)/$(TEST_SRCS);                                                                \
+	$(QUESTA) vsim -c vopt_tb $(questa_run_flag) -do "run -a"                                    \
+	+INST_HEX=$(inst_hex_name)                                                                   \
+	+DATA_HEX=$(data_hex_name)                                                                   \
+	+INST_ENTRY=$(inst_entry)                                                                    \
+	+DATA_ENTRY=$(data_entry)                                                                    \
+	+BOOT_ADDR=$(boot_addr)                                                                      \
+	$(foreach i, $(shell seq 0 $(shell echo $$(($(num_cores)-1)))),                              \
+		+log_file_$(i)=$(log_path_$(i))                                                            \
+	)                                                                                            \
 	+itb_file=$(itb_file)
 else
-	cd $(BUILD_DIR)/$(TEST_SRCS);             \
-	$(QUESTA) vsim vopt_tb $(questa_run_flag) \
-	-do "add log -r sim:/$(tb)/*"             \
-	-do "source $(WAVES)"                     \
-	+INST_HEX=$(inst_hex_name)                \
-	+DATA_HEX=$(data_hex_name)                \
-	+INST_ENTRY=$(inst_entry)                 \
-	+DATA_ENTRY=$(data_entry)                 \
-	+BOOT_ADDR=$(boot_addr)                   \
-	+log_file_0=$(log_path_0)                 \
-	+log_file_1=$(log_path_1)                 \
-	+log_file_2=$(log_path_2)                 \
-	+log_file_3=$(log_path_3)                 \
-	+log_file_4=$(log_path_4)                 \
-	+log_file_5=$(log_path_5)                 \
-	+log_file_6=$(log_path_6)                 \
-	+log_file_7=$(log_path_7)                 \
+	cd $(BUILD_DIR)/$(TEST_SRCS);                                                                \
+	$(QUESTA) vsim vopt_tb $(questa_run_flag)                                                    \
+	-do "add log -r sim:/$(tb)/*"                                                                \
+	-do "source $(WAVES)"                                                                        \
+	+INST_HEX=$(inst_hex_name)                                                                   \
+	+DATA_HEX=$(data_hex_name)                                                                   \
+	+INST_ENTRY=$(inst_entry)                                                                    \
+	+DATA_ENTRY=$(data_entry)                                                                    \
+	+BOOT_ADDR=$(boot_addr)                                                                      \
+	$(foreach i, $(shell seq 0 $(shell echo $$(($(num_cores)-1)))),                              \
+		+log_file_$(i)=$(log_path_$(i))                                                            \
+	)                                                                                            \
 	+itb_file=$(itb_file)
 endif
 

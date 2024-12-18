@@ -4,8 +4,6 @@
 
 #define VERBOSE (1000)
 
-#define NUM_HARTS (4)
-
 #define NUM_LEVELS (2)
 #define STALLING
 #define SYNC_SETTLE (NUM_HARTS*500)

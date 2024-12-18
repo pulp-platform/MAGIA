@@ -1,7 +1,5 @@
 #include "redmule_mesh_utils.h"
 
-#define NUM_HARTS (4)
-
 #define MEM_OFFSET (0x1000)
 
 #define SETTLE_CYCLE (NUM_HARTS*500)
