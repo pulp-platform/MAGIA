@@ -41,3 +41,5 @@ make run test=mesh_test gui=1 mesh_dv=1
 **Tests**  : `MESH_X_TILES` and `MESH_Y_TILES` parameters in `redmule_mesh_utils.h`
 
 **RTL/TB** : `N_TILES_X` and `N_TILES_Y` parameters in `redmule_mesh_pkg.sv`
+
+**Supported Mesh Configurations**: `2x2`, `4x4`, `8x8`
