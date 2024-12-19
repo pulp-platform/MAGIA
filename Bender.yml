@@ -37,7 +37,7 @@ dependencies:
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
   fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: e045fc2905775362362712b5c0d7ab26886636b0 } # branch: main
-  floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , rev: 507bb0baf1dcd9c68b6547b265248d64c8c771e7 } # branch: main
+  floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , rev: 4100208e063df1e407673a803a94f5174fa65056 } # branch: fix-ep-enum
 
 export_include_dirs:
   - hw/include
