@@ -1,0 +1,63 @@
+name: axi_mesh_16x16
+description: "Configuration file for a 16x16 RedMulE Mesh NoC"
+network_type: "axi"
+
+routing:
+  route_algo: "XY"
+  use_id_table: true
+
+protocols:
+  - name: "data_mst"
+    protocol: "AXI4"
+    data_width: 32
+    addr_width: 32
+    id_width: 2
+    user_width: 1
+  - name: "data_slv"
+    protocol: "AXI4"
+    data_width: 32
+    addr_width: 32
+    id_width: 4
+    user_width: 1
+
+endpoints:
+  - name: "redmule_tile"
+    array: [16, 16]
+    addr_range:
+      base: 0x0000_0000
+      size: 0x0010_0000
+    mgr_port_protocol:
+      - "data_slv"
+    sbr_port_protocol:
+      - "data_mst"
+  - name: "L2"
+    array: [16]
+    addr_range:
+      base: 0xC000_0000
+      size: 0x0400_0000
+    sbr_port_protocol:
+      - "data_mst"
+
+routers:
+  - name: "router"
+    array: [16, 16]
+    degree: 5
+
+connections:
+  - src: "redmule_tile"
+    dst: "router"
+    src_range:
+    - [0, 15]
+    - [0, 15]
+    dst_range:
+    - [0, 15]
+    - [0, 15]
+    dst_dir: "Eject"
+  - src: "L2"
+    dst: "router"
+    src_range:
+    - [0, 15]
+    dst_range:
+    - [0, 0]
+    - [0, 15]
+    dst_dir: "West"
