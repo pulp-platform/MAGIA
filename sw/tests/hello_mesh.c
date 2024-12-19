@@ -4,7 +4,7 @@
 int main(void) {
   h_pprintf("Hello World! it is hartid "); pprintf(ds(get_hartid())); pprintln;
 
-  mmio8(TEST_END_ADDR + get_hartid()) = DEFAULT_EXIT_CODE - get_hartid();
+  mmio16(TEST_END_ADDR + get_hartid()*2) = DEFAULT_EXIT_CODE - get_hartid();
 
   return 0;
 }

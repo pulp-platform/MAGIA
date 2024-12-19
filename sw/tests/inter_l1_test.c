@@ -34,8 +34,8 @@ int main() {
     else              { h_pprintf("TEST PASSED!!"); pprintln; }
   } else wait_nop(SETTLE_CYCLE);
 
-  if (total_errors) mmio8(TEST_END_ADDR + get_hartid()) = FAIL_EXIT_CODE;
-  else              mmio8(TEST_END_ADDR + get_hartid()) = PASS_EXIT_CODE;         
+  if (total_errors) mmio16(TEST_END_ADDR + get_hartid()*2) = FAIL_EXIT_CODE;
+  else              mmio16(TEST_END_ADDR + get_hartid()*2) = PASS_EXIT_CODE;         
 
   return 0;
 }

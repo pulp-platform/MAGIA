@@ -45,7 +45,7 @@ int main(void) {
     pprintf(" - Expected: ");       pprintf(ds(EXPECTED_VAL)); pprintln;
 #endif
   
-  mmio8(TEST_END_ADDR + get_hartid()) = exit_code[get_hartid()] - get_hartid();
+  mmio16(TEST_END_ADDR + get_hartid()*2) = exit_code[get_hartid()] - get_hartid();
 
   return 0;
 }

@@ -173,18 +173,18 @@ module redmule_mesh_vip
     #1000;
   endtask: elf_run
 
-  task automatic wait_for_eoc(output bit[redmule_mesh_tb_pkg::N_TILES*8-1:0] exit_code);
+  task automatic wait_for_eoc(output bit[redmule_mesh_tb_pkg::N_TILES*16-1:0] exit_code);
     bit eoc = 1'b0;
     while (!eoc) begin
       eoc = 1'b1;
       for (int i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++)
-        if (i_l2_mem.mem[32'hCC03_0000 + i]  == 0)
+        if ({i_l2_mem.mem[32'hCC03_0001 + i], i_l2_mem.mem[32'hCC03_0000 + i]} == 0)
           eoc = 1'b0;
       #10000;
     end
     
     for (int i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++)
-      exit_code |= i_l2_mem.mem[32'hCC03_0000 + i] << i*8;
+      exit_code |= {i_l2_mem.mem[32'hCC03_0001 + i], i_l2_mem.mem[32'hCC03_0000 + i]} << i*16;
   endtask: wait_for_eoc
 
 /*******************************************************/

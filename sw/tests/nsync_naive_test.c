@@ -105,7 +105,7 @@ int main(void) {
 
   h_pprintf("NoC Synch test finished...\n");
 
-  mmio8(TEST_END_ADDR + get_hartid()) = DEFAULT_EXIT_CODE - get_hartid();
+  mmio16(TEST_END_ADDR + get_hartid()*2) = DEFAULT_EXIT_CODE - get_hartid();
 
   return 0;
 }

@@ -268,7 +268,7 @@ int main(void) {
   else
     exit_code[get_hartid()] = PASS_EXIT_CODE;
 
-  mmio8(TEST_END_ADDR + get_hartid()) = exit_code[get_hartid()] - get_hartid();
+  mmio16(TEST_END_ADDR + get_hartid()*2) = exit_code[get_hartid()] - get_hartid();
 
   return 0;
 }

@@ -5,7 +5,7 @@
 int main(void) {
   printf("Hello World! it is test %0x\n", TEST_ID*16);
 
-  mmio8(TEST_END_ADDR) = DEFAULT_EXIT_CODE;
+  mmio16(TEST_END_ADDR) = DEFAULT_EXIT_CODE;
 
   return 0;
 }

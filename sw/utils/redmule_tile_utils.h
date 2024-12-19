@@ -18,9 +18,9 @@
 #define L2_BASE        (0xCC000000)
 #define TEST_END_ADDR  (0xCC030000)
 
-#define DEFAULT_EXIT_CODE (0xAF)
-#define PASS_EXIT_CODE    (0xA)
-#define FAIL_EXIT_CODE    (0xF)
+#define DEFAULT_EXIT_CODE (0xDEFC)
+#define PASS_EXIT_CODE    (0xAAAA)
+#define FAIL_EXIT_CODE    (0xFFFF)
 
 #define IRQ_REDMULE_EVT_0 (31)
 #define IRQ_REDMULE_EVT_1 (30)

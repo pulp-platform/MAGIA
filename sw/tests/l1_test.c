@@ -103,7 +103,7 @@ int main(void) {
     printf("FAIL: expected %0d, detected %0d...\n", expected_result, mmio32(L2_BASE));
   }
 
-  mmio8(TEST_END_ADDR) = exit_code;
+  mmio16(TEST_END_ADDR) = exit_code;
 
   return 0;
 }
