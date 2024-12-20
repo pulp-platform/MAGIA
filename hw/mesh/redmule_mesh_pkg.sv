@@ -47,7 +47,10 @@ package redmule_mesh_pkg;
   parameter int unsigned AXI_NOC_U_W  = USR_W;
 
   // Parameter used for the Fractal Sync network
-  parameter int unsigned TILE_FSYNC_W = 2;                                // Level width of the Fractal Sync interface
+  parameter int unsigned FSYNC_LVL    = (N_TILES_X == N_TILES_Y) ? 
+                                         $clog2(N_TILES) : 
+                                         -1;                              // Number of levels of the Fractal Sync tree
+  parameter int unsigned TILE_FSYNC_W = FSYNC_LVL + 1;                    // Level width of the Fractal Sync interface (CU-FSync interface)
 
   `AXI_TYPEDEF_ALL_CT(noc_axi_data, noc_axi_data_req_t, noc_axi_data_rsp_t, logic[ADDR_W-1:0], logic[AXI_NOC_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[AXI_NOC_U_W-1:0])
   `AXI_ALIAS(noc_axi_data, axi_xbar_mst, noc_axi_data_req_t, axi_xbar_mst_req_t, noc_axi_data_rsp_t, axi_xbar_mst_rsp_t)

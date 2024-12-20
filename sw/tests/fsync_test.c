@@ -2,9 +2,9 @@
 #include "redmule_mesh_utils.h"
 #include "fsync_isa_utils.h"
 
-#define VERBOSE (1000)
+#define VERBOSE (100)
 
-#define NUM_LEVELS (2)
+#define NUM_LEVELS (6)
 #define STALLING
 
 /// Only measure via 1 method (cycles xor time) otherwise the 2 methods interfere with each other

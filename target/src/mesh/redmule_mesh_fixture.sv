@@ -41,7 +41,7 @@ module redmule_mesh_fixture;
   redmule_mesh_tb_pkg::axi_l2_vip_req_t[redmule_mesh_tb_pkg::N_TILES_X-1:0][redmule_mesh_tb_pkg::N_TILES_Y-1:0] data_in_req;
   redmule_mesh_tb_pkg::axi_l2_vip_rsp_t[redmule_mesh_tb_pkg::N_TILES_X-1:0][redmule_mesh_tb_pkg::N_TILES_Y-1:0] data_in_rsp;
 
-  fractal_if #(.LVL_WIDTH($clog2(redmule_mesh_tb_pkg::N_TILES)+1)) sync_if[redmule_mesh_tb_pkg::N_TILES]();
+  fractal_if #(.LVL_WIDTH(redmule_mesh_tb_pkg::TILE_FSYNC_W))      sync_if[redmule_mesh_tb_pkg::N_TILES]();
   
   logic                                                            scan_cg_en;
 

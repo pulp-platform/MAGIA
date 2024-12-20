@@ -300,51 +300,59 @@ module redmule_mesh_vip
 /**         Synchronization Network Beginning         **/
 /*******************************************************/
 
-  localparam int unsigned LEVELS = 2;
-  localparam int unsigned CU_LVL_WIDTH = LEVELS + 1;
-  localparam int unsigned TOP_LVL_WIDTH = 2;
-  localparam int unsigned SYNC_PORTS = $clog2(redmule_mesh_tb_pkg::N_TILES);
-
-  fractal_if #(.LVL_WIDTH(CU_LVL_WIDTH-1)) if_sync_net[SYNC_PORTS-1:0]();
-  fractal_if #(.LVL_WIDTH(1)) if_top[1]();
-
-  // LEVEL 0 - tiles
-  for (genvar i = 0; i < 2**(LEVELS-1); i++) begin: gen_cu_sync
+  logic monitor_error;
+  localparam int unsigned FSYNC_MON_W = 1 ;
+  fractal_if #(.LVL_WIDTH(FSYNC_MON_W)) if_fmon[1]();
+  
+  // LEVEL 1 - Tiles
+  for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES/2; i++) begin: gen_cu_fsync
     fractal_sync #(
-      .SLV_WIDTH  ( CU_LVL_WIDTH )
+      .SLV_WIDTH  ( redmule_mesh_tb_pkg::TILE_FSYNC_W )
     ) i_cu_fractal_sync (
-      .clk_i    ( clk                             ),
-      .rstn_i   ( rst_n                           ),
-      .slaves   ( '{sync_if[2*i], sync_if[2*i+1]} ),
-      .masters  ( '{if_sync_net[i]}               )
+      .clk_i    ( clk                                  ),
+      .rstn_i   ( rst_n                                ),
+      .slaves   ( '{sync_if[2*i], sync_if[2*i+1]}      ),
+      .masters  ( '{gen_fsync_tree[0].if_sync_tree[i]} )
     );
   end
 
-  // LEVEL 1 - sync tree
-  for (genvar i = 0; i < 2**(LEVELS-2); i++) begin: gen_top_sync
-    fractal_sync #(
-      .SLV_WIDTH ( TOP_LVL_WIDTH )
-    ) i_top_fractal_sync (
-      .clk_i    ( clk                                     ),
-      .rstn_i   ( rst_n                                   ),
-      .slaves   ( '{if_sync_net[2*i], if_sync_net[2*i+1]} ),
-      .masters  ( if_top                                  )
-    );
-  end
-
-  always begin
-    if_top[0].wake  = 1'b0;
-    if_top[0].error = 1'b0;
-    @(negedge clk);
-    if (if_top[0].sync) begin
-      @(negedge clk);
-      if_top[0].wake  = 1'b1;
-      if_top[0].error = 1'b1;
-      do
-        @(negedge clk);
-      while (!if_top[0].ack);
+  // LEVEL 2, 3, ..., N - FSync Tree
+  for (genvar i = 0; i < redmule_mesh_tb_pkg::FSYNC_LVL-1; i++) begin: gen_fsync_tree
+    localparam int unsigned FSYNC_LVL_W     = redmule_mesh_tb_pkg::TILE_FSYNC_W-(i+1);
+    localparam int unsigned FSYNC_LVL_PORTS = redmule_mesh_tb_pkg::N_TILES/(2**(i+1));
+    fractal_if #(.LVL_WIDTH(FSYNC_LVL_W)) if_sync_tree[FSYNC_LVL_PORTS-1:0]();
+    for (genvar j = 0; j < FSYNC_LVL_PORTS; j++) begin: gen_node_fsync
+      if (i == redmule_mesh_tb_pkg::FSYNC_LVL-2) begin
+        fractal_sync #(
+          .SLV_WIDTH  ( FSYNC_LVL_W )
+        ) i_top_fractal_sync (
+          .clk_i    ( clk                                                                     ),
+          .rstn_i   ( rst_n                                                                   ),
+          .slaves   ( '{gen_fsync_tree[i].if_sync_tree[0], gen_fsync_tree[i].if_sync_tree[1]} ),
+          .masters  ( if_fmon                                                                 )
+        );
+      end else begin
+        fractal_sync #(
+          .SLV_WIDTH  ( FSYNC_LVL_W )
+        ) i_node_fractal_sync (
+          .clk_i    ( clk                                                                           ),
+          .rstn_i   ( rst_n                                                                         ),
+          .slaves   ( '{gen_fsync_tree[i].if_sync_tree[2*j], gen_fsync_tree[i].if_sync_tree[2*j+1]} ),
+          .masters  ( '{gen_fsync_tree[i+1].if_sync_tree[j]}                                        )
+        );
+      end
     end
   end
+
+  // LEVEL N+1 - FMonitor
+  fractal_monitor #(
+    .PORT_WIDTH( FSYNC_MON_W )
+  ) i_top_fractal_sync_monitor (
+    .clk_i   ( clk           ),
+    .rstn_i  ( rstn          ),
+    .ports   ( if_fmon       ),
+    .error_o ( monitor_error )
+  );
 
 /*******************************************************/
 /**            Synchronization Network End            **/
