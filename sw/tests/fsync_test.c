@@ -7,6 +7,8 @@
 #define NUM_LEVELS (6)
 #define STALLING
 
+#define CACHE_HEAT_CYCLES (3)
+
 /// Only measure via 1 method (cycles xor time) otherwise the 2 methods interfere with each other
 /// Note SW performance measures add overhead
 // #define PERF_MEASURE
@@ -28,14 +30,14 @@ int main(void) {
 #endif
 #endif
 
-  for (int i = 0; i < NUM_LEVELS; i++){
-    h_pprintf("Fractal Sync at level "); pprintf(ds(i)); n_pprintf("...");
+  for (int i = NUM_LEVELS-1; i < NUM_LEVELS; i++){
+    h_pprintf("Fractal Sync at level "); pprintf(ds(i+1)); n_pprintf("...");
 
 #ifndef STALLING
     irq_en(1<<IRQ_FSYNC_DONE);
 #endif
     
-    levels[get_hartid()] = (uint32_t)(i+1);
+    levels[get_hartid()] = 1 << i; 
 #if VERBOSE > 10
     h_pprintf("levels: 0x"); n_pprintf(hs(levels[get_hartid()]));
 #endif
@@ -49,13 +51,15 @@ int main(void) {
 #endif
 #endif
 
-    fsync(levels[get_hartid()]);
-    sentinel_instr();   // Indicate occurred synchronization
-
+    // Execute synchronization multiple times to pre-heat the cache
+    for (int i = 0; i < CACHE_HEAT_CYCLES; i++) {
+      fsync(levels[get_hartid()]);
 #ifndef STALLING
-    asm volatile("wfi" ::: "memory");
-    h_pprintf("Detected IRQ...\n");
+      asm volatile("wfi" ::: "memory");
+      h_pprintf("Detected IRQ...\n");
 #endif
+      sentinel_instr_id();   // Indicate occurred synchronization
+    }
 
 #ifdef PERF_MEASURE
 #ifdef P_CYCLES

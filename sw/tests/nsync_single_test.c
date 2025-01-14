@@ -3,6 +3,8 @@
 
 #define VERBOSE (10)
 
+#define CACHE_HEAT_CYCLES (3)
+
 /// Only measure via 1 method (cycles xor time) otherwise the 2 methods interfere with each other
 /// Note SW performance measures add overhead
 // #define PERF_MEASURE
@@ -10,7 +12,8 @@
 // #define P_TIME
 
 int main(void) {
-  uint32_t sync_count[NUM_HARTS];
+  volatile uint32_t sync_count[NUM_HARTS];
+  volatile uint32_t sync_en[NUM_HARTS];
   mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) = 0;
   h_pprintf("Starting NoC Synch test...\n");
 
@@ -37,24 +40,56 @@ int main(void) {
 #endif
 #endif
 
-  if (get_hartid() % 2) {
-    amo_increment(SYNC_BASE + (get_hartid()-1)*L1_TILE_OFFSET);
-    do {
-#if VERBOSE > 10
-      sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
-      h_pprintf("current sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+  // Execute synchronization multiple times to pre-heat the cache
+  for (int i = 0; i < CACHE_HEAT_CYCLES; i++) {
+    if (get_hartid() % 2) { // SRC
+      // Wait for DST to be ready for synchronization
+      do {
+        sync_en[get_hartid()] = mmio32(SYNC_EN + (get_hartid()-1)*L1_TILE_OFFSET);
+#if VERBOSE > 100
+        h_pprintf("current sync_en: "); pprintf(ds(sync_en[get_hartid()])); pprintln;
 #endif
-    } while (mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) != 1);
-  } else {
-    do {
-#if VERBOSE > 10
-      sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
-      h_pprintf("current sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+      } while (sync_en[get_hartid()] != 1);
+
+      // Send synchronization request to DST
+      amo_increment(SYNC_BASE + (get_hartid()-1)*L1_TILE_OFFSET);
+
+      // Wait for DST synchronization response
+      do {
+        sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
+#if VERBOSE > 100
+        h_pprintf("current sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
 #endif
-    } while (mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) != 1);
-    amo_increment(SYNC_BASE + (get_hartid()+1)*L1_TILE_OFFSET);
+      } while (sync_count[get_hartid()] != 1);
+    } else { // DST
+      // Enable synchronization requests
+      mmio32(SYNC_EN + get_hartid()*L1_TILE_OFFSET) = 1;
+
+      // Wait for all SRCs to request synchronization
+      do {
+        sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
+#if VERBOSE > 10
+        h_pprintf("current sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+#endif
+      } while (sync_count[get_hartid()] != 1);
+
+      // Disable further synchronization requests: handling current synchronization cycle
+      mmio32(SYNC_EN + get_hartid()*L1_TILE_OFFSET) = 0;
+
+      // Send synchronization response to SRC
+      amo_increment(SYNC_BASE + (get_hartid()+1)*L1_TILE_OFFSET);
+    }
+    sentinel_instr_ex(); // Indicate occurred synchronization
+#if VERBOSE > 1
+    sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
+    h_pprintf("sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+#endif
+    mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) = 0; // Reset synchronization register
+#if VERBOSE > 10
+    sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
+    h_pprintf("reset sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+#endif
   }
-  sentinel_instr(); // Indicate occurred synchronization
 
 #ifdef PERF_MEASURE
 #ifdef P_CYCLES
@@ -64,9 +99,6 @@ int main(void) {
     end_time[get_hartid()]  = get_time();
 #endif
 #endif
-
-  sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
-  h_pprintf("sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
 
 #ifdef PERF_MEASURE
 #ifdef P_CYCLES

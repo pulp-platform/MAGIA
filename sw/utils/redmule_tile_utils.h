@@ -74,7 +74,11 @@ inline void wait_nop(uint32_t nops){
     for (int i = 0; i < nops; i++) asm volatile("addi x0, x0, 0" ::);
 }
 
-inline void sentinel_instr(){
+inline void sentinel_instr_id(){
+    asm volatile("addi x0, x0, 0x404" ::);
+}
+
+inline void sentinel_instr_ex(){
     asm volatile("addi x0, x0, 0x505" ::);
 }
 

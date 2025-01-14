@@ -7,6 +7,7 @@
 #define STR_BASE    (RESERVED_START + STR_OFFSET)
 #define SYNC_OFFSET (0x0000F000)
 #define SYNC_BASE   (RESERVED_START + SYNC_OFFSET)
+#define SYNC_EN     (SYNC_BASE + 0x4)
 
 #define MESH_X_TILES (8)
 #define MESH_Y_TILES (8)

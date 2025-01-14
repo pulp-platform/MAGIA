@@ -300,6 +300,166 @@ module redmule_mesh_vip
 /**         Synchronization Network Beginning         **/
 /*******************************************************/
 
+  // FSync Tree interfaces
+  // Manually defining:
+  // localparam int unsigned FSYNC_LVL_W    [redmule_mesh_tb_pkg::FSYNC_LVL-1] = '{redmule_mesh_tb_pkg::TILE_FSYNC_W-1, redmule_mesh_tb_pkg::TILE_FSYNC_W-2, ...};
+  // localparam int unsigned FSYNC_LVL_PORTS[redmule_mesh_tb_pkg::FSYNC_LVL-1] = '{redmule_mesh_tb_pkg::N_TILES/(2**1), redmule_mesh_tb_pkg::N_TILES/(2**2), ...};
+  // for (genvar i = 0; i < redmule_mesh_tb_pkg::FSYNC_LVL-1; i++) fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[i])) if_sync_tree_{i}[FSYNC_LVL_PORTS[i]]();
+  localparam int unsigned FSYNC_LVL_W    [5] = '{/*10,  9,   8,   7, */ 6,  5,  4, 3, 2};
+  localparam int unsigned FSYNC_LVL_PORTS[5] = '{/*512, 256, 128, 64,*/ 32, 16, 8, 4, 2};
+  fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[0])) if_sync_tree_0[FSYNC_LVL_PORTS[0]]();
+  fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[1])) if_sync_tree_1[FSYNC_LVL_PORTS[1]]();
+  fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[2])) if_sync_tree_2[FSYNC_LVL_PORTS[2]]();
+  fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[3])) if_sync_tree_3[FSYNC_LVL_PORTS[3]]();
+  fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[4])) if_sync_tree_4[FSYNC_LVL_PORTS[4]]();
+  // fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[5])) if_sync_tree_5[FSYNC_LVL_PORTS[5]]();
+  // fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[6])) if_sync_tree_6[FSYNC_LVL_PORTS[6]]();
+  // fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[7])) if_sync_tree_7[FSYNC_LVL_PORTS[7]]();
+  // fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[8])) if_sync_tree_8[FSYNC_LVL_PORTS[8]]();
+  
+  logic monitor_error[1];
+  localparam int unsigned FSYNC_MON_W = 1 ;
+  fractal_if #(.LVL_WIDTH(FSYNC_MON_W)) if_fmon[1]();
+  
+  // LEVEL 1 - FSync Tree Tiles
+  for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES/2; i++) begin: gen_cu_fsync
+    fractal_sync #(
+      .SLV_WIDTH  ( redmule_mesh_tb_pkg::TILE_FSYNC_W )
+    ) i_cu_fractal_sync (
+      .clk_i    ( clk                             ),
+      .rstn_i   ( rst_n                           ),
+      .slaves   ( '{sync_if[2*i], sync_if[2*i+1]} ),
+      .masters  ( '{if_sync_tree_0[i]}            )
+    );
+  end
+
+  // LEVEL 2 - FSync Tree
+  for (genvar i = 0; i < FSYNC_LVL_PORTS[0]/2; i++) begin: gen_node_0_fsync
+    fractal_sync #(
+      .SLV_WIDTH  ( FSYNC_LVL_W[0] )
+    ) i_node_0_fractal_sync (
+      .clk_i    ( clk                                           ),
+      .rstn_i   ( rst_n                                         ),
+      .slaves   ( '{if_sync_tree_0[2*i], if_sync_tree_0[2*i+1]} ),
+      .masters  ( '{if_sync_tree_1[i]}                          )
+    );
+  end
+
+  // LEVEL 3 - FSync Tree
+  for (genvar i = 0; i < FSYNC_LVL_PORTS[1]/2; i++) begin: gen_node_1_fsync
+    fractal_sync #(
+      .SLV_WIDTH  ( FSYNC_LVL_W[1] )
+    ) i_node_1_fractal_sync (
+      .clk_i    ( clk                                           ),
+      .rstn_i   ( rst_n                                         ),
+      .slaves   ( '{if_sync_tree_1[2*i], if_sync_tree_1[2*i+1]} ),
+      .masters  ( '{if_sync_tree_2[i]}                          )
+    );
+  end
+
+  // LEVEL 4 - FSync Tree
+  for (genvar i = 0; i < FSYNC_LVL_PORTS[2]/2; i++) begin: gen_node_2_fsync
+    fractal_sync #(
+      .SLV_WIDTH  ( FSYNC_LVL_W[2] )
+    ) i_node_2_fractal_sync (
+      .clk_i    ( clk                                           ),
+      .rstn_i   ( rst_n                                         ),
+      .slaves   ( '{if_sync_tree_2[2*i], if_sync_tree_2[2*i+1]} ),
+      .masters  ( '{if_sync_tree_3[i]}                          )
+    );
+  end
+
+  // LEVEL 5 - FSync Tree
+  for (genvar i = 0; i < FSYNC_LVL_PORTS[3]/2; i++) begin: gen_node_3_fsync
+    fractal_sync #(
+      .SLV_WIDTH  ( FSYNC_LVL_W[3] )
+    ) i_node_3_fractal_sync (
+      .clk_i    ( clk                                           ),
+      .rstn_i   ( rst_n                                         ),
+      .slaves   ( '{if_sync_tree_3[2*i], if_sync_tree_3[2*i+1]} ),
+      .masters  ( '{if_sync_tree_4[i]}                          )
+    );
+  end
+
+  // LEVEL 6 - FSync Tree
+  for (genvar i = 0; i < FSYNC_LVL_PORTS[4]/2; i++) begin: gen_node_4_fsync
+    fractal_sync #(
+      .SLV_WIDTH  ( FSYNC_LVL_W[4] )
+    ) i_node_4_fractal_sync (
+      .clk_i    ( clk                                           ),
+      .rstn_i   ( rst_n                                         ),
+      .slaves   ( '{if_sync_tree_4[2*i], if_sync_tree_4[2*i+1]} ),
+      .masters  ( /*'{if_sync_tree_5[i]}*/if_fmon                          )
+    );
+  end
+
+  // // LEVEL 7 - FSync Tree
+  // for (genvar i = 0; i < FSYNC_LVL_PORTS[5]/2; i++) begin: gen_node_5_fsync
+  //   fractal_sync #(
+  //     .SLV_WIDTH  ( FSYNC_LVL_W[5] )
+  //   ) i_node_5_fractal_sync (
+  //     .clk_i    ( clk                                           ),
+  //     .rstn_i   ( rst_n                                         ),
+  //     .slaves   ( '{if_sync_tree_5[2*i], if_sync_tree_5[2*i+1]} ),
+  //     .masters  ( '{if_sync_tree_6[i]}                          )
+  //   );
+  // end
+
+  // // LEVEL 8 - FSync Tree
+  // for (genvar i = 0; i < FSYNC_LVL_PORTS[6]/2; i++) begin: gen_node_6_fsync
+  //   fractal_sync #(
+  //     .SLV_WIDTH  ( FSYNC_LVL_W[6] )
+  //   ) i_node_6_fractal_sync (
+  //     .clk_i    ( clk                                           ),
+  //     .rstn_i   ( rst_n                                         ),
+  //     .slaves   ( '{if_sync_tree_6[2*i], if_sync_tree_6[2*i+1]} ),
+  //     .masters  ( '{if_sync_tree_7[i]}                          )
+  //   );
+  // end
+
+  // // LEVEL 9 - FSync Tree
+  // for (genvar i = 0; i < FSYNC_LVL_PORTS[7]/2; i++) begin: gen_node_7_fsync
+  //   fractal_sync #(
+  //     .SLV_WIDTH  ( FSYNC_LVL_W[7] )
+  //   ) i_node_7_fractal_sync (
+  //     .clk_i    ( clk                                           ),
+  //     .rstn_i   ( rst_n                                         ),
+  //     .slaves   ( '{if_sync_tree_7[2*i], if_sync_tree_7[2*i+1]} ),
+  //     .masters  ( '{if_sync_tree_8[i]}                          )
+  //   );
+  // end
+
+  // // LEVEL 10 - FSync Tree Top
+  // for (genvar i = 0; i < FSYNC_LVL_PORTS[8]/2; i++) begin: gen_node_8_fsync
+  //   fractal_sync #(
+  //     .SLV_WIDTH  ( FSYNC_LVL_W[8] )
+  //   ) i_node_8_fractal_sync (
+  //     .clk_i    ( clk                                           ),
+  //     .rstn_i   ( rst_n                                         ),
+  //     .slaves   ( '{if_sync_tree_8[2*i], if_sync_tree_8[2*i+1]} ),
+  //     .masters  ( if_fmon                                       )
+  //   );
+  // end
+
+  // LEVEL 11 - FMonitor
+  fractal_monitor #(
+    .PORT_WIDTH( FSYNC_MON_W )
+  ) i_top_fractal_sync_monitor (
+    .clk_i   ( clk           ),
+    .rstn_i  ( rstn          ),
+    .ports   ( if_fmon       ),
+    .error_o ( monitor_error )
+  );
+
+/*/// Elegant but causes QuestaSim crash
+
+  // FSync Tree interfaces
+  for (genvar i = 0; i < redmule_mesh_tb_pkg::FSYNC_LVL-1; i++) begin: gen_fsync_if
+    localparam int unsigned FSYNC_LVL_W     = redmule_mesh_tb_pkg::TILE_FSYNC_W-(i+1);
+    localparam int unsigned FSYNC_LVL_PORTS = redmule_mesh_tb_pkg::N_TILES/(2**(i+1));
+    fractal_if #(.LVL_WIDTH(FSYNC_LVL_W)) if_sync_tree[FSYNC_LVL_PORTS]();
+  end
+  
   logic monitor_error;
   localparam int unsigned FSYNC_MON_W = 1 ;
   fractal_if #(.LVL_WIDTH(FSYNC_MON_W)) if_fmon[1]();
@@ -309,10 +469,10 @@ module redmule_mesh_vip
     fractal_sync #(
       .SLV_WIDTH  ( redmule_mesh_tb_pkg::TILE_FSYNC_W )
     ) i_cu_fractal_sync (
-      .clk_i    ( clk                                  ),
-      .rstn_i   ( rst_n                                ),
-      .slaves   ( '{sync_if[2*i], sync_if[2*i+1]}      ),
-      .masters  ( '{gen_fsync_tree[0].if_sync_tree[i]} )
+      .clk_i    ( clk                                ),
+      .rstn_i   ( rst_n                              ),
+      .slaves   ( '{sync_if[2*i], sync_if[2*i+1]}    ),
+      .masters  ( '{gen_fsync_if[0].if_sync_tree[i]} )
     );
   end
 
@@ -320,25 +480,24 @@ module redmule_mesh_vip
   for (genvar i = 0; i < redmule_mesh_tb_pkg::FSYNC_LVL-1; i++) begin: gen_fsync_tree
     localparam int unsigned FSYNC_LVL_W     = redmule_mesh_tb_pkg::TILE_FSYNC_W-(i+1);
     localparam int unsigned FSYNC_LVL_PORTS = redmule_mesh_tb_pkg::N_TILES/(2**(i+1));
-    fractal_if #(.LVL_WIDTH(FSYNC_LVL_W)) if_sync_tree[FSYNC_LVL_PORTS-1:0]();
-    for (genvar j = 0; j < FSYNC_LVL_PORTS; j++) begin: gen_node_fsync
-      if (i == redmule_mesh_tb_pkg::FSYNC_LVL-2) begin
+    for (genvar j = 0; j < FSYNC_LVL_PORTS/2; j++) begin: gen_node_fsync
+      if (i != redmule_mesh_tb_pkg::FSYNC_LVL-2) begin
         fractal_sync #(
           .SLV_WIDTH  ( FSYNC_LVL_W )
-        ) i_top_fractal_sync (
-          .clk_i    ( clk                                                                     ),
-          .rstn_i   ( rst_n                                                                   ),
-          .slaves   ( '{gen_fsync_tree[i].if_sync_tree[0], gen_fsync_tree[i].if_sync_tree[1]} ),
-          .masters  ( if_fmon                                                                 )
+        ) i_node_fractal_sync (
+          .clk_i    ( clk                                                                       ),
+          .rstn_i   ( rst_n                                                                     ),
+          .slaves   ( '{gen_fsync_if[i].if_sync_tree[2*j], gen_fsync_if[i].if_sync_tree[2*j+1]} ),
+          .masters  ( '{gen_fsync_if[i+1].if_sync_tree[j]}                                      )
         );
       end else begin
         fractal_sync #(
           .SLV_WIDTH  ( FSYNC_LVL_W )
-        ) i_node_fractal_sync (
-          .clk_i    ( clk                                                                           ),
-          .rstn_i   ( rst_n                                                                         ),
-          .slaves   ( '{gen_fsync_tree[i].if_sync_tree[2*j], gen_fsync_tree[i].if_sync_tree[2*j+1]} ),
-          .masters  ( '{gen_fsync_tree[i+1].if_sync_tree[j]}                                        )
+        ) i_top_fractal_sync (
+          .clk_i    ( clk                                                                 ),
+          .rstn_i   ( rst_n                                                               ),
+          .slaves   ( '{gen_fsync_if[i].if_sync_tree[0], gen_fsync_if[i].if_sync_tree[1]} ),
+          .masters  ( if_fmon                                                             )
         );
       end
     end
@@ -353,6 +512,8 @@ module redmule_mesh_vip
     .ports   ( if_fmon       ),
     .error_o ( monitor_error )
   );
+
+*/
 
 /*******************************************************/
 /**            Synchronization Network End            **/
@@ -422,17 +583,23 @@ module redmule_mesh_vip
 /**           Instruction Monitor Beginning           **/
 /*******************************************************/
 
-  bit[31:0] curr_instr[redmule_mesh_tb_pkg::N_TILES];
+  bit[31:0] curr_instr_ex[redmule_mesh_tb_pkg::N_TILES];
+  bit[31:0] curr_instr_id[redmule_mesh_tb_pkg::N_TILES];
   for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES_X; i++) begin: gen_tile_instr_monitor_x
     for (genvar j = 0; j < redmule_mesh_tb_pkg::N_TILES_Y; j++) begin: gen_tile_instr_monitor_y 
-      assign curr_instr[i*redmule_mesh_tb_pkg::N_TILES_Y+j] = gen_x_tile[i].gen_y_tile[j].dut.i_cv32e40x_core.core_i.id_stage_i.id_ex_pipe_o.instr.bus_resp.rdata;
-      always @(curr_instr[i*redmule_mesh_tb_pkg::N_TILES_Y+j]) begin: instr_reporter
-        if (curr_instr[i*redmule_mesh_tb_pkg::N_TILES_Y+j] == 32'h50500013) 
-          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected sentinel instruction at time %0dns",i*redmule_mesh_tb_pkg::N_TILES_Y+j , j, i, time_var);
-        if (curr_instr[i*redmule_mesh_tb_pkg::N_TILES_Y+j] == 32'h0002A05B) 
-          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected fsync instruction at time %0dns",i*redmule_mesh_tb_pkg::N_TILES_Y+j , j, i, time_var);
-        if (curr_instr[i*redmule_mesh_tb_pkg::N_TILES_Y+j] == 32'h0062A3AF) 
+      assign curr_instr_ex[i*redmule_mesh_tb_pkg::N_TILES_Y+j] = gen_x_tile[i].gen_y_tile[j].dut.i_cv32e40x_core.core_i.id_stage_i.id_ex_pipe_o.instr.bus_resp.rdata;
+      always @(curr_instr_ex[i*redmule_mesh_tb_pkg::N_TILES_Y+j]) begin: instr_ex_reporter
+        if (curr_instr_ex[i*redmule_mesh_tb_pkg::N_TILES_Y+j] == 32'h50500013) 
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected sentinel instruction in EX stage at time %0dns",i*redmule_mesh_tb_pkg::N_TILES_Y+j , j, i, time_var);
+        if (curr_instr_ex[i*redmule_mesh_tb_pkg::N_TILES_Y+j] == 32'h0062A3AF) 
           $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected AMO (sync) instruction at time %0dns",i*redmule_mesh_tb_pkg::N_TILES_Y+j , j, i, time_var);
+      end
+      assign curr_instr_id[i*redmule_mesh_tb_pkg::N_TILES_Y+j] = gen_x_tile[i].gen_y_tile[j].dut.i_cv32e40x_core.core_i.id_stage_i.if_id_pipe_i.instr.bus_resp.rdata;
+      always @(curr_instr_id[i*redmule_mesh_tb_pkg::N_TILES_Y+j]) begin: instr_id_reporter
+        if (curr_instr_id[i*redmule_mesh_tb_pkg::N_TILES_Y+j] == 32'h40400013) 
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected sentinel instruction in ID stage at time %0dns",i*redmule_mesh_tb_pkg::N_TILES_Y+j , j, i, time_var);
+        if (curr_instr_id[i*redmule_mesh_tb_pkg::N_TILES_Y+j] == 32'h0002A05B) 
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected fsync instruction at time %0dns",i*redmule_mesh_tb_pkg::N_TILES_Y+j , j, i, time_var);
       end
     end
   end
