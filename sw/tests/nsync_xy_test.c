@@ -1,5 +1,6 @@
 #include "redmule_tile_utils.h"
 #include "redmule_mesh_utils.h"
+#include "cache_fill.h"
 
 #define VERBOSE (10)
 
@@ -47,6 +48,9 @@ int main(void) {
 #endif
 #endif
 
+  // Filling up the cache
+  fill_icache();
+  
   // Execute synchronization multiple times to pre-heat the cache
   for (int i = 0; i < CACHE_HEAT_CYCLES; i++) {
     // Phase I - synchronize along X direction

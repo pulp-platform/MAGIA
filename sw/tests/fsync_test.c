@@ -1,6 +1,7 @@
 #include "redmule_tile_utils.h"
 #include "redmule_mesh_utils.h"
 #include "fsync_isa_utils.h"
+#include "cache_fill.h"
 
 #define VERBOSE (100)
 
@@ -50,6 +51,9 @@ int main(void) {
     start_time[get_hartid()]  = get_time();
 #endif
 #endif
+
+    // Filling up the cache
+    fill_icache();
 
     // Execute synchronization multiple times to pre-heat the cache
     for (int i = 0; i < CACHE_HEAT_CYCLES; i++) {
