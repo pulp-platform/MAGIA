@@ -1008,27 +1008,33 @@ module redmule_tile
 /**             Fractal Sync Out Beginning            **/
 /*******************************************************/
 
-  fractal_sync_xif_inst_decoder #(
-    .INSTR_W    ( redmule_tile_pkg::FSYNC_INSTR_W    ),
-    .DATA_W     ( redmule_tile_pkg::FSYNC_DATA_W     ),
-    .ADDR_W     ( redmule_tile_pkg::FSYNC_ADDR_W     ),
-    .N_RF_PORTS ( redmule_tile_pkg::FSYNC_N_RF_PORTS ),
-    .OPCODE_W   ( redmule_tile_pkg::FSYNC_OPCODE_W   ),
-    .FUNC3_W    ( redmule_tile_pkg::FSYNC_FUNC3_W    ),
-    .OPCODE_OFF ( redmule_tile_pkg::FSYNC_OPCODE_OFF ),
-    .FUNC3_OFF  ( redmule_tile_pkg::FSYNC_FUNC3_OFF  ),
-    .N_CFG_REG  ( redmule_tile_pkg::FSYNC_N_CFG_REG  ),
-    .LVL_W      ( redmule_tile_pkg::FSYNC_LVL_W      ),
-    .STALL      ( redmule_tile_pkg::FSYNC_STALL      )
-  ) i_fsync_dec (
-    .clk_i          ( sys_clk                                                     ),
-    .rst_ni         ( rst_ni                                                      ),
-    .clear_i        ( fsync_clear                                                 ),
-    .xif_issue_if_i ( xif_coproc_if.coproc_issue[redmule_tile_pkg::XIF_FSYNC_IDX] ),
-    .sync_if_o      ( sync_if_o                                                   ),
-    .done_o         ( fsync_done                                                  ),
-    .error_o        ( fsync_error                                                 )
-  );
+  assign sync_if_o.sync  = 1'b0;
+  assign sync_if_o.level = '0;
+  assign sync_if_o.ack   = 1'b0;
+  assign fsync_done  = 1'b0;
+  assign fsync_error = 1'b0;
+  
+  // fractal_sync_xif_inst_decoder #(
+  //   .INSTR_W    ( redmule_tile_pkg::FSYNC_INSTR_W    ),
+  //   .DATA_W     ( redmule_tile_pkg::FSYNC_DATA_W     ),
+  //   .ADDR_W     ( redmule_tile_pkg::FSYNC_ADDR_W     ),
+  //   .N_RF_PORTS ( redmule_tile_pkg::FSYNC_N_RF_PORTS ),
+  //   .OPCODE_W   ( redmule_tile_pkg::FSYNC_OPCODE_W   ),
+  //   .FUNC3_W    ( redmule_tile_pkg::FSYNC_FUNC3_W    ),
+  //   .OPCODE_OFF ( redmule_tile_pkg::FSYNC_OPCODE_OFF ),
+  //   .FUNC3_OFF  ( redmule_tile_pkg::FSYNC_FUNC3_OFF  ),
+  //   .N_CFG_REG  ( redmule_tile_pkg::FSYNC_N_CFG_REG  ),
+  //   .LVL_W      ( redmule_tile_pkg::FSYNC_LVL_W      ),
+  //   .STALL      ( redmule_tile_pkg::FSYNC_STALL      )
+  // ) i_fsync_dec (
+  //   .clk_i          ( sys_clk                                                     ),
+  //   .rst_ni         ( rst_ni                                                      ),
+  //   .clear_i        ( fsync_clear                                                 ),
+  //   .xif_issue_if_i ( xif_coproc_if.coproc_issue[redmule_tile_pkg::XIF_FSYNC_IDX] ),
+  //   .sync_if_o      ( sync_if_o                                                   ),
+  //   .done_o         ( fsync_done                                                  ),
+  //   .error_o        ( fsync_error                                                 )
+  // );
 
 /*******************************************************/
 /**                Fractal Sync Out End               **/
