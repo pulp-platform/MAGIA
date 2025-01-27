@@ -727,26 +727,29 @@ module redmule_tile
 /**      Core Data Demuxing (OBI XBAR) Beginning      **/
 /*******************************************************/
 
-  obi_atop_resolver #(
-    .SbrPortObiCfg             ( redmule_tile_pkg::obi_amo_cfg                ),
-    .MgrPortObiCfg             ( obi_pkg::ObiDefaultConfig                    ),
-    .sbr_port_obi_req_t        ( redmule_tile_pkg::core_obi_data_req_t        ),
-    .sbr_port_obi_rsp_t        ( redmule_tile_pkg::core_obi_data_rsp_t        ),
-    .mgr_port_obi_req_t        (                                              ),
-    .mgr_port_obi_rsp_t        (                                              ),
-    .mgr_port_obi_a_optional_t ( redmule_tile_pkg::core_data_obi_a_optional_t ),
-    .mgr_port_obi_r_optional_t ( redmule_tile_pkg::core_data_obi_r_optional_t ),
-    .LrScEnable                (                                              ),
-    .RegisterAmo               (                                              )
-  ) i_obi_atomics (
-    .clk_i          ( sys_clk                                        ),
-    .rst_ni         ( rst_ni                                         ),
-    .testmode_i     ( test_mode_i                                    ),
-    .sbr_port_req_i ( core_mem_data_req[redmule_tile_pkg::L1SPM_IDX] ),
-    .sbr_port_rsp_o ( core_mem_data_rsp[redmule_tile_pkg::L1SPM_IDX] ),
-    .mgr_port_req_o ( core_l1_data_amo_req                           ),
-    .mgr_port_rsp_i ( core_l1_data_amo_rsp                           )
-  );
+  assign core_l1_data_amo_req = core_mem_data_req[redmule_tile_pkg::L1SPM_IDX];
+  assign core_mem_data_rsp[redmule_tile_pkg::L1SPM_IDX] = core_l1_data_amo_rsp;
+  
+  // obi_atop_resolver #(
+  //   .SbrPortObiCfg             ( redmule_tile_pkg::obi_amo_cfg                ),
+  //   .MgrPortObiCfg             ( obi_pkg::ObiDefaultConfig                    ),
+  //   .sbr_port_obi_req_t        ( redmule_tile_pkg::core_obi_data_req_t        ),
+  //   .sbr_port_obi_rsp_t        ( redmule_tile_pkg::core_obi_data_rsp_t        ),
+  //   .mgr_port_obi_req_t        (                                              ),
+  //   .mgr_port_obi_rsp_t        (                                              ),
+  //   .mgr_port_obi_a_optional_t ( redmule_tile_pkg::core_data_obi_a_optional_t ),
+  //   .mgr_port_obi_r_optional_t ( redmule_tile_pkg::core_data_obi_r_optional_t ),
+  //   .LrScEnable                (                                              ),
+  //   .RegisterAmo               (                                              )
+  // ) i_obi_atomics (
+  //   .clk_i          ( sys_clk                                        ),
+  //   .rst_ni         ( rst_ni                                         ),
+  //   .testmode_i     ( test_mode_i                                    ),
+  //   .sbr_port_req_i ( core_mem_data_req[redmule_tile_pkg::L1SPM_IDX] ),
+  //   .sbr_port_rsp_o ( core_mem_data_rsp[redmule_tile_pkg::L1SPM_IDX] ),
+  //   .mgr_port_req_o ( core_l1_data_amo_req                           ),
+  //   .mgr_port_rsp_i ( core_l1_data_amo_rsp                           )
+  // );
   
   obi_xbar #(
     .SbrPortObiCfg      ( redmule_tile_pkg::obi_amo_cfg            ),
