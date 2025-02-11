@@ -178,13 +178,13 @@ module redmule_mesh_vip
     while (!eoc) begin
       eoc = 1'b1;
       for (int i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++)
-        if ({i_l2_mem.mem[32'hCC03_0001 + i], i_l2_mem.mem[32'hCC03_0000 + i]} == 0)
+        if ({i_l2_mem.mem[32'hCC03_0000 + (2*i + 1)], i_l2_mem.mem[32'hCC03_0000 + 2*i]} == 0)
           eoc = 1'b0;
       #10000;
     end
     
     for (int i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++)
-      exit_code |= {i_l2_mem.mem[32'hCC03_0001 + i], i_l2_mem.mem[32'hCC03_0000 + i]} << i*16;
+      exit_code |= {i_l2_mem.mem[32'hCC03_0000 + (2*i + 1)], i_l2_mem.mem[32'hCC03_0000 + 2*i]} << i*16;
   endtask: wait_for_eoc
 
 /*******************************************************/
