@@ -79,8 +79,9 @@ module redmule_mesh_fixture;
 
   for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES_X; i++) begin: gen_x_tile
     for (genvar j = 0; j < redmule_mesh_tb_pkg::N_TILES_Y; j++) begin: gen_y_tile
+      logic [31:0] tile_id;
+      assign tile_id = i*redmule_mesh_tb_pkg::N_TILES_Y+j;
       redmule_tile #(
-        .TILE_ID      ( i*redmule_mesh_tb_pkg::N_TILES_Y+j  ),
         .N_MEM_BANKS  ( redmule_tile_tb_pkg::N_MEM_BANKS    ),
         .N_WORDS_BANK ( redmule_tile_tb_pkg::N_WORDS_BANK   ),
   
@@ -93,6 +94,8 @@ module redmule_mesh_fixture;
         .rst_ni              ( rst_n                                                ),
         .test_mode_i         ( test_mode                                            ),
         .tile_enable_i       ( tile_enable                                          ),
+
+        .tile_id_i           ( tile_id[9:0]                                         ),
   
         .data_out_req_o      ( data_out_req[i][j]                                   ),
         .data_out_rsp_i      ( data_out_rsp[i][j]                                   ),

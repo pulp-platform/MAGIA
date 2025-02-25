@@ -35,8 +35,6 @@ module redmule_tile
   parameter int unsigned          N_MEM_BANKS              = redmule_mesh_pkg::N_MEM_BANKS,  // Number of memory banks 
   parameter int unsigned          N_WORDS_BANK             = redmule_mesh_pkg::N_WORDS_BANK, // Number of words per memory bank      
 
-  parameter int unsigned          TILE_ID                  = 0,                              // TODO: fetch the ID from a register within the tile
-
   // Parameters used by the core
   parameter cv32e40x_pkg::rv32_e  CORE_ISA                 = cv32e40x_pkg::RV32I,            // RV32I (default) 32 registers in the RF - RV32E 16 registers in the RF
   parameter cv32e40x_pkg::a_ext_e CORE_A                   = cv32e40x_pkg::A,                // Atomic Istruction (A) support (dafault: full support)
@@ -47,18 +45,15 @@ module redmule_tile
   parameter idma_pkg::error_cap_e ERROR_CAP                = idma_pkg::NO_ERROR_HANDLING,    // Error handaling capability of the iDMA
 
   // Parameter used by the Fractal Sync
-  parameter int unsigned          FSYNC_WIDTH              = redmule_mesh_pkg::TILE_FSYNC_W, // Level width of the Fractal Sync interface
-
-  // Dependent parameters
-  localparam int unsigned         TILE_L1_START_ADDR       = redmule_tile_pkg::L1_ADDR_START       + TILE_ID*redmule_tile_pkg::L1_TILE_OFFSET,
-  localparam int unsigned         TILE_L1_END_ADDR         = redmule_tile_pkg::L1_ADDR_END         + TILE_ID*redmule_tile_pkg::L1_TILE_OFFSET,
-  localparam int unsigned         TILE_RESERVED_START_ADDR = redmule_tile_pkg::RESERVED_ADDR_START + TILE_ID*redmule_tile_pkg::L1_TILE_OFFSET,
-  localparam int unsigned         TILE_RESERVED_END_ADDR   = redmule_tile_pkg::RESERVED_ADDR_END   + TILE_ID*redmule_tile_pkg::L1_TILE_OFFSET
+  parameter int unsigned          FSYNC_WIDTH              = redmule_mesh_pkg::TILE_FSYNC_W  // Level width of the Fractal Sync interface
 )(
   input  logic                                    clk_i,
   input  logic                                    rst_ni,
   input  logic                                    test_mode_i,
   input  logic                                    tile_enable_i,
+
+  // Tile ID
+  input  logic [9:0]                              tile_id_i,
 
   output redmule_mesh_pkg::axi_default_req_t      data_out_req_o,
   input  redmule_mesh_pkg::axi_default_rsp_t      data_out_rsp_i,
@@ -221,16 +216,33 @@ module redmule_tile
   logic fsync_done;
   logic fsync_error;
 
+  logic [9:0] tile_id_q;
+  logic [31:0] tile_l1_start_addr, tile_l1_end_addr;
+  logic [31:0] tile_reserved_start_addr, tile_reserved_end_addr;
+
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
 /*******************************************************/
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
 
+  // To avoid long critical paths we store the tile ID into a register
+  always_ff @(posedge clk_i, negedge rst_ni) begin
+    if(~rst_ni)
+      tile_id_q <= '0;
+    else
+      tile_id_q <= tile_id_i;
+  end
+
+  assign tile_l1_start_addr = redmule_tile_pkg::L1_ADDR_START + (tile_id_q * redmule_tile_pkg::L1_TILE_OFFSET);
+  assign tile_l1_end_addr   = redmule_tile_pkg::L1_ADDR_END + (tile_id_q * redmule_tile_pkg::L1_TILE_OFFSET);
+  assign tile_reserved_start_addr = redmule_tile_pkg::RESERVED_ADDR_START + (tile_id_q * redmule_tile_pkg::L1_TILE_OFFSET);
+  assign tile_reserved_end_addr = redmule_tile_pkg::RESERVED_ADDR_END + (tile_id_q * redmule_tile_pkg::L1_TILE_OFFSET);
+
   assign obi_xbar_rule[redmule_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: redmule_tile_pkg::L2_ADDR_START,    end_addr: redmule_tile_pkg::L2_ADDR_END    };
-  assign obi_xbar_rule[redmule_tile_pkg::L1SPM_IDX]    = '{idx: 32'd1, start_addr: TILE_L1_START_ADDR,                 end_addr: TILE_L1_END_ADDR                 };
+  assign obi_xbar_rule[redmule_tile_pkg::L1SPM_IDX]    = '{idx: 32'd1, start_addr: tile_l1_start_addr,                 end_addr: tile_l1_end_addr                 };
   assign obi_xbar_rule[redmule_tile_pkg::STACK_IDX]    = '{idx: 32'd1, start_addr: redmule_tile_pkg::STACK_ADDR_START, end_addr: redmule_tile_pkg::STACK_ADDR_END };
-  assign obi_xbar_rule[redmule_tile_pkg::RESERVED_IDX] = '{idx: 32'd1, start_addr: TILE_RESERVED_START_ADDR,           end_addr: TILE_RESERVED_END_ADDR           };
+  assign obi_xbar_rule[redmule_tile_pkg::RESERVED_IDX] = '{idx: 32'd1, start_addr: tile_reserved_start_addr,           end_addr: tile_reserved_end_addr           };
   
   assign obi_xbar_en_default_idx = '1; // Routing to the AXI Xbar all requests with an address outside the range of the internal L1 and the external L2
   assign obi_xbar_default_idx    = '0;
@@ -965,10 +977,10 @@ module redmule_tile
 /**         Data Out - L2 (AXI XBAR) Beginning        **/
 /*******************************************************/
 
-  localparam axi_pkg::xbar_rule_32_t[redmule_tile_pkg::axi_xbar_cfg.NoAddrRules-1:0] TileAxiAddrMap = '{
+  axi_pkg::xbar_rule_32_t[redmule_tile_pkg::axi_xbar_cfg.NoAddrRules-1:0] TileAxiAddrMap = '{
     '{idx: 32'd0, start_addr: redmule_tile_pkg::L2_ADDR_START, end_addr: redmule_tile_pkg::L2_ADDR_END },
-    '{idx: 32'd1, start_addr: TILE_L1_START_ADDR,              end_addr: TILE_L1_END_ADDR              },
-    '{idx: 32'd1, start_addr: TILE_RESERVED_START_ADDR,        end_addr: TILE_RESERVED_END_ADDR        }
+    '{idx: 32'd1, start_addr: tile_l1_start_addr,              end_addr: tile_l1_end_addr              },
+    '{idx: 32'd1, start_addr: tile_reserved_start_addr,        end_addr: tile_reserved_end_addr        }
   };
 
   axi_xbar #(
