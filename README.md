@@ -8,9 +8,13 @@ MAGIA is developed as part of the [PULP](https://pulp-platform.org/) project, a 
 ## Getting Started
 
 You can specify the following optional parameters:
+
 -`mesh_dv`: {**0**, **1**} (**Default**: 1). 0 simulation of a single Tile; 1 simulation of the entire Mesh.
+
 -`fast_sim`: {**0**, **1**} (**Default**: 0). 0 faster simulation that does not track signals; 1 simulation that tracks signals (for debugging).
+
 -`gui`: {**0**, **1**} (**Default**: 0). 0 simulation without GUI; 1 simulation with GUI.
+
 **1)** Setup the environment (`magia` folder):
 ```bash
 source setup_env.sh
