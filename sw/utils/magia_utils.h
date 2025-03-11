@@ -31,33 +31,30 @@ inline void amo_increment(uint32_t addr){
     asm volatile("amoadd.w t2, t1, (t0)" ::);
 }
 
-/**
- * C++ version 0.4 char* style "itoa":
- * Written by Lukás Chmela
- * Released under GPLv3.
- */
-char* itoa(int value, char* result, int base) {
-    // check that the base if valid
-    if (base < 2 || base > 36) { *result = '\0'; return result; }
+char* utoa(unsigned int value, unsigned int base, char* result) {
+    if (base < 2 || base > 16){
+        *result = '\0'; 
+        return result; 
+    }
 
-    char* ptr = result, *ptr1 = result, tmp_char;
-    int tmp_value;
+    char *ptr0 = result;
+    char *ptr1 = result;
+    char tmp_char;
+    unsigned int tmp_value;
 
     do {
         tmp_value = value;
-        value /= base;
-        *ptr++ = "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz" [35 + (tmp_value - value * base)];
-    } while ( value );
+        value    /= base;
+        *ptr0++   = "0123456789ABCDEF"[tmp_value - value * base];
+    } while (value);
 
-    // Apply negative sign
-    if (tmp_value < 0) *ptr++ = '-';
-    *ptr-- = '\0';
+    *ptr0-- = '\0';
   
     // Reverse the string
-    while(ptr1 < ptr) {
-        tmp_char = *ptr;
-        *ptr--= *ptr1;
-        *ptr1++ = tmp_char;
+    while(ptr1 < ptr0) {
+        tmp_char = *ptr0;
+        *ptr0--  = *ptr1;
+        *ptr1++  = tmp_char;
     }
     return result;
 }
@@ -66,21 +63,21 @@ char* bs(uint32_t x) {
     uint32_t hartid = get_hartid();
     char *address = STR_BASE + L1_TILE_OFFSET*hartid;
 
-    return itoa(x, address, 2);
+    return utoa(x, 2, address);
 }
 
 char* ds(uint32_t x) {
     uint32_t hartid = get_hartid();
     char *address = STR_BASE + L1_TILE_OFFSET*hartid;
 
-    return itoa(x, address, 10);
+    return utoa(x, 10, address);
 }
 
 char* hs(uint32_t x) {
     uint32_t hartid = get_hartid();
     char *address = STR_BASE + L1_TILE_OFFSET*hartid;
 
-    return itoa(x, address, 16);
+    return utoa(x, 16, address);
 }
 
 void h_psprint(uint32_t hartid, const char* string){
