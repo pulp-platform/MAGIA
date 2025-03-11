@@ -22,7 +22,7 @@
 module magia_tile_vip
   import magia_tile_pkg::*;
   import magia_pkg::*;
-  import magia_tb_pkg::*;
+  import magia_tile_tb_pkg::*;
 #(
   // Timing
   parameter time         CLK_PERIOD = 5ns,
