@@ -220,7 +220,7 @@ synth-ips:
 	> ${compile_script_synth}
 
 floonoc-patch:
-	cd .bender/git/checkouts/floo_noc-d566867a3b179444 && \
+	cd .bender/git/checkouts/floo_noc-b7473fec891b1e84 && \
 	git apply ../../../../floonoc.patch &&                \
 	cd ../../../../
 
