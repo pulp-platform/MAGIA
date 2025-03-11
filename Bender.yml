@@ -52,14 +52,14 @@ sources:
       - hw/mesh/magia_pkg.sv
       - hw/tile/magia_tile_pkg.sv
       # MAGIA Tile
-      - hw/tile/data2obi.sv
-      - hw/tile/obi2data.sv
-      - hw/tile/instr2obi.sv
-      - hw/tile/obi2instr.sv
-      - hw/tile/instr2cache.sv
-      - hw/tile/cache2instr.sv
-      - hw/tile/obi2hci.sv
-      - hw/tile/hci2obi.sv
+      - hw/tile/converters/data2obi.sv
+      - hw/tile/converters/obi2data.sv
+      - hw/tile/converters/instr2obi.sv
+      - hw/tile/converters/obi2instr.sv
+      - hw/tile/converters/instr2cache.sv
+      - hw/tile/converters/cache2instr.sv
+      - hw/tile/converters/obi2hci.sv
+      - hw/tile/converters/hci2obi.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
       - hw/tile/idma_xif_inst_decoder.sv
@@ -90,14 +90,14 @@ sources:
       - hw/mesh/magia_pkg.sv
       - hw/tile/magia_tile_pkg.sv
       # MAGIA Tile
-      - hw/tile/data2obi.sv
-      - hw/tile/obi2data.sv
-      - hw/tile/instr2obi.sv
-      - hw/tile/obi2instr.sv
-      - hw/tile/instr2cache.sv
-      - hw/tile/cache2instr.sv
-      - hw/tile/obi2hci.sv
-      - hw/tile/hci2obi.sv
+      - hw/tile/converters/data2obi.sv
+      - hw/tile/converters/obi2data.sv
+      - hw/tile/converters/instr2obi.sv
+      - hw/tile/converters/obi2instr.sv
+      - hw/tile/converters/instr2cache.sv
+      - hw/tile/converters/cache2instr.sv
+      - hw/tile/converters/obi2hci.sv
+      - hw/tile/converters/hci2obi.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
       - hw/tile/idma_xif_inst_decoder.sv
