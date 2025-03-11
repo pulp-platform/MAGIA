@@ -16,10 +16,10 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * RedMulE Tile Package
+ * MAGIA Tile Package
  */
 
-package redmule_tile_pkg;
+package magia_tile_pkg;
 
   `include "hci/typedef.svh"
   `include "hwpe-ctrl/typedef.svh"
@@ -49,19 +49,19 @@ package redmule_tile_pkg;
   localparam int unsigned IRQ_USED              = 13;
 
   // Address map
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] RESERVED_ADDR_START = 32'h0000_0000;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] RESERVED_SIZE       = 32'h0001_0000;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] RESERVED_ADDR_END   = RESERVED_ADDR_START + RESERVED_SIZE;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] STACK_ADDR_START    = RESERVED_ADDR_END;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] STACK_SIZE          = 32'h0001_0000;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] STACK_ADDR_END      = STACK_ADDR_START + STACK_SIZE;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_ADDR_START       = STACK_ADDR_END;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_SIZE             = 32'h000E_0000;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_ADDR_END         = L1_ADDR_START + L1_SIZE;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L1_TILE_OFFSET      = 32'h0010_0000;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_ADDR_START       = 32'hC000_0000;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_SIZE             = 32'h4000_0000;
-  localparam logic[redmule_mesh_pkg::ADDR_W-1:0] L2_ADDR_END         = L2_ADDR_START + L2_SIZE;
+  localparam logic[magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START = 32'h0000_0000;
+  localparam logic[magia_pkg::ADDR_W-1:0] RESERVED_SIZE       = 32'h0001_0000;
+  localparam logic[magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END   = RESERVED_ADDR_START + RESERVED_SIZE;
+  localparam logic[magia_pkg::ADDR_W-1:0] STACK_ADDR_START    = RESERVED_ADDR_END;
+  localparam logic[magia_pkg::ADDR_W-1:0] STACK_SIZE          = 32'h0001_0000;
+  localparam logic[magia_pkg::ADDR_W-1:0] STACK_ADDR_END      = STACK_ADDR_START + STACK_SIZE;
+  localparam logic[magia_pkg::ADDR_W-1:0] L1_ADDR_START       = STACK_ADDR_END;
+  localparam logic[magia_pkg::ADDR_W-1:0] L1_SIZE             = 32'h000E_0000;
+  localparam logic[magia_pkg::ADDR_W-1:0] L1_ADDR_END         = L1_ADDR_START + L1_SIZE;
+  localparam logic[magia_pkg::ADDR_W-1:0] L1_TILE_OFFSET      = 32'h0010_0000;
+  localparam logic[magia_pkg::ADDR_W-1:0] L2_ADDR_START       = 32'hC000_0000;
+  localparam logic[magia_pkg::ADDR_W-1:0] L2_SIZE             = 32'h4000_0000;
+  localparam logic[magia_pkg::ADDR_W-1:0] L2_ADDR_END         = L2_ADDR_START + L2_SIZE;
   
   // Parameters used by the HCI
   parameter int unsigned N_HWPE  = 1;                                                   // Number of HWPEs attached to the port
@@ -72,23 +72,23 @@ package redmule_tile_pkg;
     HCI_DMA_CH_WRITE_IDX = 1'b1
   } hci_idma_ch_idx_e;                                                                  // Index of the HCI DMA read and write channels
   parameter int unsigned N_EXT   = 0;                                                   // Number of External ports - LEAVE TO 0 UNLESS YOU KNOW WHAT YOU ARE DOING
-  parameter int unsigned AWC     = redmule_mesh_pkg::ADDR_W;                            // Address width core   (slave ports)
+  parameter int unsigned AWC     = magia_pkg::ADDR_W;                                   // Address width core   (slave ports)
   localparam int unsigned AWM    = 
-                          $clog2(redmule_mesh_pkg::N_WORDS_BANK*DW_LIC/BW_LIC);         // Address width memory (master ports)
-  parameter int unsigned DW_LIC  = redmule_mesh_pkg::DATA_W;                            // Data Width for Log Interconnect
-  parameter int unsigned BW_LIC  = redmule_mesh_pkg::BYTE_W;                            // Byte Width for Log Interconnect
-  parameter int unsigned UW_LIC  = redmule_mesh_pkg::USR_W;                             // User Width for Log Interconnect
+                          $clog2(magia_pkg::N_WORDS_BANK*DW_LIC/BW_LIC);                // Address width memory (master ports)
+  parameter int unsigned DW_LIC  = magia_pkg::DATA_W;                                   // Data Width for Log Interconnect
+  parameter int unsigned BW_LIC  = magia_pkg::BYTE_W;                                   // Byte Width for Log Interconnect
+  parameter int unsigned UW_LIC  = magia_pkg::USR_W;                                    // User Width for Log Interconnect
   localparam int unsigned SW_LIC = DW_LIC/BW_LIC;                                       // Strobe Width for Log Interconnect
   localparam int unsigned WD_LIC = DW_LIC/DW_LIC;                                       // Number of words per data for Log Interconnect
   parameter int unsigned TS_BIT  = 21;                                                  // TEST_SET_BIT (for Log Interconnect)
   parameter int unsigned IW      = N_HWPE+N_CORE+N_DMA+N_EXT;                           // ID Width HCI
   parameter int unsigned EXPFIFO = 0;                                                   // FIFO Depth for HWPE Interconnect
   parameter int unsigned DWH     = 544;                                                 // Data Width for HWPE Interconnect: RedMulE Hx(P+1)xBits + Bank width = 8x(3+1)x16+32 
-  parameter int unsigned AWH     = redmule_mesh_pkg::ADDR_W;                            // Address Width for HWPE Interconnect
-  parameter int unsigned BWH     = redmule_mesh_pkg::BYTE_W;                            // Byte Width for HWPE Interconnect
+  parameter int unsigned AWH     = magia_pkg::ADDR_W;                                   // Address Width for HWPE Interconnect
+  parameter int unsigned BWH     = magia_pkg::BYTE_W;                                   // Byte Width for HWPE Interconnect
   parameter int unsigned WWH     = DWH;                                                 // Word Width for HWPE Interconnect
   parameter int unsigned OWH     = AWH;                                                 // Offset Width for HWPE Interconnect
-  parameter int unsigned UWH     = redmule_mesh_pkg::USR_W;                             // User Width for HWPE Interconnect
+  parameter int unsigned UWH     = magia_pkg::USR_W;                                    // User Width for HWPE Interconnect
   parameter int unsigned SEL_LIC = 1;                                                   // Log interconnect type selector
   localparam int unsigned SWH    = DWH/BWH;                                             // Strobe Width for HWPE Interconnect
   localparam int unsigned WDH    = DWH/WWH;                                             // Number of words per data for HWPE Interconnect
@@ -96,8 +96,8 @@ package redmule_tile_pkg;
   // Parameters used by the core
   parameter bit          X_EXT_EN        = 1;                                           // Enable eXtension Interface (X) support, see eXtension Interface        
   parameter int unsigned X_NUM_RS        = 3;                                           // Number of register file read ports that can be used by the eXtension interface
-  parameter int unsigned X_ID_W          = redmule_mesh_pkg::ID_W + 
-                                           redmule_mesh_pkg::ID_W_OFFSET;               // Identification width for the eXtension interface
+  parameter int unsigned X_ID_W          = magia_pkg::ID_W + 
+                                           magia_pkg::ID_W_OFFSET;                      // Identification width for the eXtension interface
   parameter int unsigned X_MEM_W         = 32;                                          // Memory access width for loads/stores via the eXtension interface
   parameter int unsigned X_RFR_W         = 32;                                          // Register file read access width for the eXtension interface
   parameter int unsigned X_RFW_W         = 32;                                          // Register file write access width for the eXtension interface
@@ -110,8 +110,8 @@ package redmule_tile_pkg;
 
   // Parameters used by RedMulE
   parameter int unsigned REDMULE_DW   = DWH;                                            // RedMulE Data Width
-  parameter int unsigned REDMULE_ID_W = redmule_mesh_pkg::ID_W + 
-                                        redmule_mesh_pkg::ID_W_OFFSET;                  // RedMulE ID Width
+  parameter int unsigned REDMULE_ID_W = magia_pkg::ID_W + 
+                                        magia_pkg::ID_W_OFFSET;                         // RedMulE ID Width
   parameter int unsigned REDMULE_UW   = UWH;                                            // RedMulE User Width
   
   // Parameters used by OBI
@@ -134,17 +134,17 @@ package redmule_tile_pkg;
   parameter int unsigned AXI_DATA_ID_W  = 2;                                            // Width of the AXI Data ID (2 bits: Core, iDMA, I$, ext)
   parameter int unsigned AXI_INSTR_ID_W = 1;                                            // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
   parameter int unsigned AXI_ID_W       = 2;                                            // Width of the AXI Unified Communication Channel ID
-  parameter int unsigned AXI_DATA_U_W   = redmule_mesh_pkg::USR_W;                      // Width of the AXI Data User
-  parameter int unsigned AXI_INSTR_U_W  = redmule_mesh_pkg::USR_W;                      // Width of the AXI Instruction User
-  parameter int unsigned AXI_U_W        = redmule_mesh_pkg::USR_W;                      // Width of the AXI Unified Communication Channel User
+  parameter int unsigned AXI_DATA_U_W   = magia_pkg::USR_W;                             // Width of the AXI Data User
+  parameter int unsigned AXI_INSTR_U_W  = magia_pkg::USR_W;                             // Width of the AXI Instruction User
+  parameter int unsigned AXI_U_W        = magia_pkg::USR_W;                             // Width of the AXI Unified Communication Channel User
 
   // Parameters used by the iDMA
   localparam int unsigned iDMA_NumDims            = 3;                                  // iDMA Number of dimensions
   localparam int unsigned NumDim                  = iDMA_NumDims;                       // Needed by the iDMA typedef (wtf?)
-  parameter int unsigned iDMA_DataWidth           = redmule_mesh_pkg::DATA_W;           // iDMA Data Width
-  parameter int unsigned iDMA_AddrWidth           = redmule_mesh_pkg::ADDR_W;           // iDMA Address Width
+  parameter int unsigned iDMA_DataWidth           = magia_pkg::DATA_W;                  // iDMA Data Width
+  parameter int unsigned iDMA_AddrWidth           = magia_pkg::ADDR_W;                  // iDMA Address Width
   parameter int unsigned iDMA_UserWidth           = AXI_DATA_U_W;                       // iDMA AXI User Width
-  parameter int unsigned iDMA_StrbWidth           = redmule_mesh_pkg::STRB_W;           // iDMA AXI Strobe Width
+  parameter int unsigned iDMA_StrbWidth           = magia_pkg::STRB_W;                  // iDMA AXI Strobe Width
   parameter int unsigned iDMA_AxiIdWidth          = AXI_DATA_ID_W;                      // iDMA AXI ID Width
   parameter int unsigned iDMA_NumAxInFlight       = 2;                                  // iDMA Number of transaction that can be in-flight concurrently
   parameter int unsigned iDMA_BufferDepth         = 3;                                  // iDMA depth of the internal reorder buffer: '2' - minimal possible configuration; '3' - efficiently handle misaligned transfers (recommended)
@@ -189,9 +189,9 @@ package redmule_tile_pkg;
   parameter bit          PRIORITY         = 0;                                          // Indicates that the dispatcher should rout the instruction to only 1 coprocessor (with highest priority)
 
   // Parameters used by the iDMA instruction decoder
-  parameter int unsigned DMA_INSTR_W              = redmule_mesh_pkg::INSTR_W;          // iDMA Decoder instruction width
-  parameter int unsigned DMA_DATA_W               = redmule_mesh_pkg::DATA_W;           // iDMA Decoder data width
-  parameter int unsigned DMA_ADDR_W               = redmule_mesh_pkg::ADDR_W;           // iDMA Decoder address width
+  parameter int unsigned DMA_INSTR_W              = magia_pkg::INSTR_W;                 // iDMA Decoder instruction width
+  parameter int unsigned DMA_DATA_W               = magia_pkg::DATA_W;                  // iDMA Decoder data width
+  parameter int unsigned DMA_ADDR_W               = magia_pkg::ADDR_W;                  // iDMA Decoder address width
   parameter int unsigned DMA_N_RF_PORTS           = X_NUM_RS;                           // iDMA Decoder number of register file read ports
   parameter int unsigned DMA_OPCODE_W             = OPCODE_W;                           // iDMA Decoder OPCODE field width
   parameter int unsigned DMA_FUNC3_W              = FUNC3_W;                            // iDMA Decoder FUNC3 field width
@@ -233,20 +233,20 @@ package redmule_tile_pkg;
   parameter logic[ DMA_FUNC3_W-1:0] SET_S_FUNC3   = 3'b111;                             // iDMA Decoder START instruction FUNC3
 
   // Parameters used by the Fractal Sync instruction decoder
-  parameter int unsigned FSYNC_INSTR_W              = redmule_mesh_pkg::INSTR_W;        // Fractal Sync Decoder instruction width
-  parameter int unsigned FSYNC_DATA_W               = redmule_mesh_pkg::DATA_W;         // Fractal Sync Decoder data width
-  parameter int unsigned FSYNC_ADDR_W               = redmule_mesh_pkg::ADDR_W;         // Fractal Sync Decoder address width
-  parameter int unsigned FSYNC_N_RF_PORTS           = X_NUM_RS;                         // Fractal Sync Decoder number of register file read ports
-  parameter int unsigned FSYNC_OPCODE_W             = OPCODE_W;                         // Fractal Sync Decoder OPCODE field width
-  parameter int unsigned FSYNC_FUNC3_W              = FUNC3_W;                          // Fractal Sync Decoder FUNC3 field width
-  parameter int unsigned FSYNC_OPCODE_OFF           = OPCODE_OFF;                       // Fractal Sync Decoder OPCODE field offset
-  parameter int unsigned FSYNC_FUNC3_OFF            = FUNC3_OFF;                        // Fractal Sync Decoder FUNC3 field offset
-  parameter int unsigned FSYNC_N_CFG_REG            = 1;                                // Fractal Sync Decoder number of configuration registers: level
-  parameter int unsigned FSYNC_LEVEL_IDX            = 0;                                // Fractal Sync Decoder LEVEL cofiguration register index 
-  parameter logic[FSYNC_OPCODE_W-1:0] FSYNC_OPCODE  = 7'b101_1011;                      // Fractal Sync Decoder instruction OPCODE
-  parameter logic[ FSYNC_FUNC3_W-1:0] FSYNC_FUNC3   = 3'b010;                           // Fractal Sync Decoder instruction FUNC3
-  parameter int unsigned FSYNC_LVL_W                = redmule_mesh_pkg::TILE_FSYNC_W;   // Fractal Sync Level width
-  parameter bit          FSYNC_STALL                = 1;                                // Fractal Sync Stall during synchronization
+  parameter int unsigned FSYNC_INSTR_W             = magia_pkg::INSTR_W;                // Fractal Sync Decoder instruction width
+  parameter int unsigned FSYNC_DATA_W              = magia_pkg::DATA_W;                 // Fractal Sync Decoder data width
+  parameter int unsigned FSYNC_ADDR_W              = magia_pkg::ADDR_W;                 // Fractal Sync Decoder address width
+  parameter int unsigned FSYNC_N_RF_PORTS          = X_NUM_RS;                          // Fractal Sync Decoder number of register file read ports
+  parameter int unsigned FSYNC_OPCODE_W            = OPCODE_W;                          // Fractal Sync Decoder OPCODE field width
+  parameter int unsigned FSYNC_FUNC3_W             = FUNC3_W;                           // Fractal Sync Decoder FUNC3 field width
+  parameter int unsigned FSYNC_OPCODE_OFF          = OPCODE_OFF;                        // Fractal Sync Decoder OPCODE field offset
+  parameter int unsigned FSYNC_FUNC3_OFF           = FUNC3_OFF;                         // Fractal Sync Decoder FUNC3 field offset
+  parameter int unsigned FSYNC_N_CFG_REG           = 1;                                 // Fractal Sync Decoder number of configuration registers: level
+  parameter int unsigned FSYNC_LEVEL_IDX           = 0;                                 // Fractal Sync Decoder LEVEL cofiguration register index 
+  parameter logic[FSYNC_OPCODE_W-1:0] FSYNC_OPCODE = 7'b101_1011;                       // Fractal Sync Decoder instruction OPCODE
+  parameter logic[ FSYNC_FUNC3_W-1:0] FSYNC_FUNC3  = 3'b010;                            // Fractal Sync Decoder instruction FUNC3
+  parameter int unsigned FSYNC_LVL_W               = magia_pkg::TILE_FSYNC_W;           // Fractal Sync Level width
+  parameter bit          FSYNC_STALL               = 1;                                 // Fractal Sync Stall during synchronization
 
   // Parameters of the AXI XBAR
   parameter int unsigned AxiXbarNoSlvPorts     = 4;                                     // Number of Slave Ports (iDMA, Core Data, Core I$ and ext)
@@ -270,15 +270,15 @@ package redmule_tile_pkg;
   parameter int unsigned SET_COUNT      = 32;                                           // i$ The set associativity of the cache. Power of two; >= 1.
   parameter int unsigned L0_PARITY_W    = 0;                                            // i$ Parity of the L0 cache
   parameter int unsigned L1_PARITY_W    = L0_PARITY_W;                                  // i$ Parity of the L1 cache
-  parameter int unsigned FETCH_AW       = redmule_mesh_pkg::ADDR_W;                     // i$ Fetch interface address width. Same as FETCH_AW; >= 1.
-  parameter int unsigned FETCH_DW       = redmule_mesh_pkg::DATA_W;                     // i$ Fetch interface data width. Power of two; >= 8.
-  parameter int unsigned FILL_AW        = redmule_mesh_pkg::ADDR_W;                     // i$ Fill interface address width. Same as FILL_AW; >= 1.
-  parameter int unsigned FILL_DW        = redmule_mesh_pkg::DATA_W;                     // i$ Fill interface data width. Power of two; >= 8.
+  parameter int unsigned FETCH_AW       = magia_pkg::ADDR_W;                            // i$ Fetch interface address width. Same as FETCH_AW; >= 1.
+  parameter int unsigned FETCH_DW       = magia_pkg::DATA_W;                            // i$ Fetch interface data width. Power of two; >= 8.
+  parameter int unsigned FILL_AW        = magia_pkg::ADDR_W;                            // i$ Fill interface address width. Same as FILL_AW; >= 1.
+  parameter int unsigned FILL_DW        = magia_pkg::DATA_W;                            // i$ Fill interface data width. Power of two; >= 8.
   
   typedef struct packed {
-    int unsigned                        idx;
-    logic[redmule_mesh_pkg::ADDR_W-1:0] start_addr;
-    logic[redmule_mesh_pkg::ADDR_W-1:0] end_addr;
+    int unsigned                 idx;
+    logic[magia_pkg::ADDR_W-1:0] start_addr;
+    logic[magia_pkg::ADDR_W-1:0] end_addr;
   } obi_xbar_rule_t;
 
   typedef enum logic{
@@ -287,38 +287,38 @@ package redmule_tile_pkg;
   } obi_xbar_idx_e;
 
   typedef struct packed {
-    logic                                req;
-    logic[redmule_mesh_pkg::INSTR_W-1:0] addr;
-    logic[1                          :0] memtype;
-    logic[2                          :0] prot;
-    logic                                dbg;
+    logic                         req;
+    logic[magia_pkg::INSTR_W-1:0] addr;
+    logic[1                   :0] memtype;
+    logic[2                   :0] prot;
+    logic                         dbg;
   } core_instr_req_t;
 
   typedef struct packed {
-    logic                                gnt;
-    logic                                rvalid;
-    logic[redmule_mesh_pkg::INSTR_W-1:0] rdata;
-    logic                                err;
+    logic                         gnt;
+    logic                         rvalid;
+    logic[magia_pkg::INSTR_W-1:0] rdata;
+    logic                         err;
   } core_instr_rsp_t;
 
   typedef struct packed {
-    logic                               req;
-    logic[redmule_mesh_pkg::ADDR_W-1:0] addr;
-    logic[5                         :0] atop;
-    logic[3                         :0] be;
-    logic[1                         :0] memtype;
-    logic[2                         :0] prot;
-    logic                               dbg;
-    logic[redmule_mesh_pkg::DATA_W-1:0] wdata;
-    logic                               we;
+    logic                        req;
+    logic[magia_pkg::ADDR_W-1:0] addr;
+    logic[5                  :0] atop;
+    logic[3                  :0] be;
+    logic[1                  :0] memtype;
+    logic[2                  :0] prot;
+    logic                        dbg;
+    logic[magia_pkg::DATA_W-1:0] wdata;
+    logic                        we;
   } core_data_req_t;
 
   typedef struct packed {
-    logic                               gnt;
-    logic                               rvalid;
-    logic[redmule_mesh_pkg::DATA_W-1:0] rdata;
-    logic                               err;
-    logic                               exokay;
+    logic                        gnt;
+    logic                        rvalid;
+    logic[magia_pkg::DATA_W-1:0] rdata;
+    logic                        err;
+    logic                        exokay;
   } core_data_rsp_t;
 
   typedef struct packed {
@@ -353,36 +353,36 @@ package redmule_tile_pkg;
 
   typedef logic[iDMA_AddrWidth-1:0] idma_addr_t;
 
-  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic[IW-1:0])
-  `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic[DWH-1:0], logic[IW-1:0])
+  `HWPE_CTRL_TYPEDEF_REQ_T(magia_ctrl_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic[IW-1:0])
+  `HWPE_CTRL_TYPEDEF_RSP_T(magia_ctrl_rsp_t, logic[DWH-1:0], logic[IW-1:0])
   
-  `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic signed[WDH-1:0][AWH:0], logic[UWH-1:0])
-  `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic[DWH-1:0], logic[UWH-1:0])
+  `HCI_TYPEDEF_REQ_T(magia_data_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic signed[WDH-1:0][AWH:0], logic[UWH-1:0])
+  `HCI_TYPEDEF_RSP_T(magia_data_rsp_t, logic[DWH-1:0], logic[UWH-1:0])
 
   localparam obi_pkg::obi_optional_cfg_t obi_amo_optional_cfg = obi_pkg::obi_all_optional_config(AUSER_WIDTH, WUSER_WIDTH, RUSER_WIDTH, MID_WIDTH, ACHK_WIDTH, RCHK_WIDTH);
-  localparam obi_pkg::obi_cfg_t          obi_amo_cfg          = obi_pkg::obi_default_cfg(redmule_mesh_pkg::ADDR_W, redmule_mesh_pkg::DATA_W, OBI_ID_WIDTH, obi_amo_optional_cfg);
+  localparam obi_pkg::obi_cfg_t          obi_amo_cfg          = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, OBI_ID_WIDTH, obi_amo_optional_cfg);
   
   `OBI_TYPEDEF_ALL_A_OPTIONAL(core_data_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
   `OBI_TYPEDEF_ALL_R_OPTIONAL(core_data_obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
-  `OBI_TYPEDEF_A_CHAN_T(core_data_obi_a_chan_t, redmule_mesh_pkg::ADDR_W, redmule_mesh_pkg::DATA_W, AID_WIDTH, core_data_obi_a_optional_t)
-  `OBI_TYPEDEF_R_CHAN_T(core_data_obi_r_chan_t, redmule_mesh_pkg::DATA_W, RID_WIDTH, core_data_obi_r_optional_t)
+  `OBI_TYPEDEF_A_CHAN_T(core_data_obi_a_chan_t, magia_pkg::ADDR_W, magia_pkg::DATA_W, AID_WIDTH, core_data_obi_a_optional_t)
+  `OBI_TYPEDEF_R_CHAN_T(core_data_obi_r_chan_t, magia_pkg::DATA_W, RID_WIDTH, core_data_obi_r_optional_t)
   `OBI_TYPEDEF_DEFAULT_REQ_T(core_obi_data_req_t, core_data_obi_a_chan_t)
   `OBI_TYPEDEF_RSP_T(core_obi_data_rsp_t, core_data_obi_r_chan_t)
 
   `OBI_TYPEDEF_ALL_A_OPTIONAL(core_instr_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
   `OBI_TYPEDEF_ALL_R_OPTIONAL(core_instr_obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
-  `OBI_TYPEDEF_A_CHAN_T(core_instr_obi_a_chan_t, redmule_mesh_pkg::ADDR_W, redmule_mesh_pkg::DATA_W, AID_WIDTH, core_instr_obi_a_optional_t)
-  `OBI_TYPEDEF_R_CHAN_T(core_instr_obi_r_chan_t, redmule_mesh_pkg::DATA_W, RID_WIDTH, core_instr_obi_r_optional_t)
+  `OBI_TYPEDEF_A_CHAN_T(core_instr_obi_a_chan_t, magia_pkg::ADDR_W, magia_pkg::DATA_W, AID_WIDTH, core_instr_obi_a_optional_t)
+  `OBI_TYPEDEF_R_CHAN_T(core_instr_obi_r_chan_t, magia_pkg::DATA_W, RID_WIDTH, core_instr_obi_r_optional_t)
   `OBI_TYPEDEF_DEFAULT_REQ_T(core_obi_instr_req_t, core_instr_obi_a_chan_t)
   `OBI_TYPEDEF_RSP_T(core_obi_instr_rsp_t, core_instr_obi_r_chan_t)
 
   `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic signed[WD_LIC-1:0][AWH:0], logic[UWH-1:0])
   `HCI_TYPEDEF_RSP_T(core_hci_data_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0])
 
-  `AXI_TYPEDEF_ALL_CT(core_axi_data, core_axi_data_req_t, core_axi_data_rsp_t, logic[redmule_mesh_pkg::ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[redmule_mesh_pkg::DATA_W-1:0], logic[redmule_mesh_pkg::STRB_W-1:0], logic[AXI_U_W-1:0])
-  `AXI_TYPEDEF_ALL_CT(core_axi_instr, core_axi_instr_req_t, core_axi_instr_rsp_t, logic[redmule_mesh_pkg::ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[redmule_mesh_pkg::DATA_W-1:0], logic[redmule_mesh_pkg::STRB_W-1:0], logic[AXI_U_W-1:0])
+  `AXI_TYPEDEF_ALL_CT(core_axi_data, core_axi_data_req_t, core_axi_data_rsp_t, logic[magia_pkg::ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[AXI_U_W-1:0])
+  `AXI_TYPEDEF_ALL_CT(core_axi_instr, core_axi_instr_req_t, core_axi_instr_rsp_t, logic[magia_pkg::ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[AXI_U_W-1:0])
 
-  `REG_BUS_TYPEDEF_ALL(idma_fe_reg, logic[redmule_mesh_pkg::ADDR_W-1:0], logic[redmule_mesh_pkg::DATA_W-1:0], logic[redmule_mesh_pkg::STRB_W-1:0])
+  `REG_BUS_TYPEDEF_ALL(idma_fe_reg, logic[magia_pkg::ADDR_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0])
 
   `IDMA_TYPEDEF_FULL_REQ_T(idma_be_req_t, logic[iDMA_AxiIdWidth-1:0], idma_addr_t, logic[iDMA_TFLenWidth-1:0])
   `IDMA_TYPEDEF_FULL_RSP_T(idma_be_rsp_t, idma_addr_t)
@@ -426,11 +426,11 @@ package redmule_tile_pkg;
     LatencyMode         : axi_pkg::CUT_ALL_PORTS,
     PipelineStages      : '0, // TODO: make it parametric
     AxiIdWidthSlvPorts  : AxiXbarSlvAxiIDWidth,
-    AxiIdUsedSlvPorts   : AxiXbarSlvAxiIDWidth, // check me!
+    AxiIdUsedSlvPorts   : AxiXbarSlvAxiIDWidth,
     UniqueIds           : 1'b0,
-    AxiAddrWidth        : redmule_mesh_pkg::ADDR_W,
-    AxiDataWidth        : redmule_mesh_pkg::DATA_W,
+    AxiAddrWidth        : magia_pkg::ADDR_W,
+    AxiDataWidth        : magia_pkg::DATA_W,
     NoAddrRules         : 3
   };
 
-endpackage: redmule_tile_pkg
+endpackage: magia_tile_pkg

@@ -1,5 +1,5 @@
 name: axi_mesh_4x4
-description: "Configuration file for a 4x4 RedMulE Mesh NoC"
+description: "Configuration file for a 4x4 MAGIA Mesh NoC"
 network_type: "axi"
 
 routing:
@@ -21,7 +21,7 @@ protocols:
     user_width: 1
 
 endpoints:
-  - name: "redmule_tile"
+  - name: "magia_tile"
     array: [4, 4]
     addr_range:
       base: 0x0000_0000
@@ -44,7 +44,7 @@ routers:
     degree: 5
 
 connections:
-  - src: "redmule_tile"
+  - src: "magia_tile"
     dst: "router"
     src_range:
     - [0, 3]

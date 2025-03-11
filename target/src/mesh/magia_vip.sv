@@ -16,16 +16,16 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * RedMulE Mesh Verification IP
+ * MAGIA Verification IP
  */
 
  `include "axi/assign.svh"
 
-module redmule_mesh_vip
-  import redmule_tile_pkg::*;
-  import redmule_mesh_pkg::*;
-  import redmule_tile_tb_pkg::*;
-  import redmule_mesh_tb_pkg::*;
+module magia_vip
+  import magia_tile_pkg::*;
+  import magia_pkg::*;
+  import magia_tile_tb_pkg::*;
+  import magia_tb_pkg::*;
 #(
   // Timing
   parameter time         CLK_PERIOD = 5ns,
@@ -33,46 +33,46 @@ module redmule_mesh_vip
   parameter real         T_APPL     = 0.1,
   parameter real         T_TEST     = 0.9
 )(
-  output logic                                 clk,
-  output logic                                 rst_n,
-  output logic                                 test_mode,
-  output logic                                 tile_enable,
+  output logic                                                                                    clk,
+  output logic                                                                                    rst_n,
+  output logic                                                                                    test_mode,
+  output logic                                                                                    tile_enable,
 
-  input  redmule_mesh_pkg::axi_default_req_t[redmule_mesh_tb_pkg::N_TILES_X-1:0][redmule_mesh_tb_pkg::N_TILES_Y-1:0]   data_out_req,
-  output redmule_mesh_pkg::axi_default_rsp_t[redmule_mesh_tb_pkg::N_TILES_X-1:0][redmule_mesh_tb_pkg::N_TILES_Y-1:0]   data_out_rsp,
+  input  magia_pkg::axi_default_req_t[magia_tb_pkg::N_TILES_X-1:0][magia_tb_pkg::N_TILES_Y-1:0]   data_out_req,
+  output magia_pkg::axi_default_rsp_t[magia_tb_pkg::N_TILES_X-1:0][magia_tb_pkg::N_TILES_Y-1:0]   data_out_rsp,
 
-  output redmule_mesh_tb_pkg::axi_l2_vip_req_t[redmule_mesh_tb_pkg::N_TILES_X-1:0][redmule_mesh_tb_pkg::N_TILES_Y-1:0] data_in_req,
-  input  redmule_mesh_tb_pkg::axi_l2_vip_rsp_t[redmule_mesh_tb_pkg::N_TILES_X-1:0][redmule_mesh_tb_pkg::N_TILES_Y-1:0] data_in_rsp,
+  output magia_tb_pkg::axi_l2_vip_req_t[magia_tb_pkg::N_TILES_X-1:0][magia_tb_pkg::N_TILES_Y-1:0] data_in_req,
+  input  magia_tb_pkg::axi_l2_vip_rsp_t[magia_tb_pkg::N_TILES_X-1:0][magia_tb_pkg::N_TILES_Y-1:0] data_in_rsp,
 
-  fractal_if.slv_port                          sync_if[redmule_mesh_tb_pkg::N_TILES],
+  fractal_if.slv_port                                                                             sync_if[magia_tb_pkg::N_TILES],
 
-  output logic                                 scan_cg_en,
+  output logic                                                                                    scan_cg_en,
 
-  output logic[31:0]                           boot_addr, //TODO: manage signal
-  output logic[31:0]                           mtvec_addr,
-  output logic[31:0]                           dm_halt_addr,
-  output logic[31:0]                           dm_exception_addr,
-  output logic[31:0]                           mhartid[redmule_mesh_tb_pkg::N_TILES],
-  output logic[ 3:0]                           mimpid_patch,
+  output logic[31:0]                                                                              boot_addr, //TODO: manage signal
+  output logic[31:0]                                                                              mtvec_addr,
+  output logic[31:0]                                                                              dm_halt_addr,
+  output logic[31:0]                                                                              dm_exception_addr,
+  output logic[31:0]                                                                              mhartid[magia_tb_pkg::N_TILES],
+  output logic[ 3:0]                                                                              mimpid_patch,
 
-  input  logic[63:0]                           mcycle[redmule_mesh_tb_pkg::N_TILES],
-  output logic[63:0]                           time_var,
+  input  logic[63:0]                                                                              mcycle[magia_tb_pkg::N_TILES],
+  output logic[63:0]                                                                              time_var,
 
-  output logic[redmule_mesh_pkg::N_IRQ-1:0]    irq, //TODO: manage signal
+  output logic[magia_pkg::N_IRQ-1:0]                                                              irq, //TODO: manage signal
 
-  input  logic                                 fencei_flush_req[redmule_mesh_tb_pkg::N_TILES],
-  output logic                                 fencei_flush_ack,
+  input  logic                                                                                    fencei_flush_req[magia_tb_pkg::N_TILES],
+  output logic                                                                                    fencei_flush_ack,
 
-  output logic                                 debug_req,
-  input  logic                                 debug_havereset[redmule_mesh_tb_pkg::N_TILES],
-  input  logic                                 debug_running[redmule_mesh_tb_pkg::N_TILES],
-  input  logic                                 debug_halted[redmule_mesh_tb_pkg::N_TILES],
-  input  logic                                 debug_pc_valid[redmule_mesh_tb_pkg::N_TILES],
-  input  logic[31:0]                           debug_pc[redmule_mesh_tb_pkg::N_TILES],
+  output logic                                                                                    debug_req,
+  input  logic                                                                                    debug_havereset[magia_tb_pkg::N_TILES],
+  input  logic                                                                                    debug_running[magia_tb_pkg::N_TILES],
+  input  logic                                                                                    debug_halted[magia_tb_pkg::N_TILES],
+  input  logic                                                                                    debug_pc_valid[magia_tb_pkg::N_TILES],
+  input  logic[31:0]                                                                              debug_pc[magia_tb_pkg::N_TILES],
 
-  output logic                                 fetch_enable,  //TODO: manage signal
-  input  logic                                 core_sleep[redmule_mesh_tb_pkg::N_TILES],
-  output logic                                 wu_wfe
+  output logic                                                                                    fetch_enable,  //TODO: manage signal
+  input  logic                                                                                    core_sleep[magia_tb_pkg::N_TILES],
+  output logic                                                                                    wu_wfe
 );
 
 /*******************************************************/
@@ -87,11 +87,11 @@ module redmule_mesh_vip
 /**       Internal Signal Definitions Beginning       **/
 /*******************************************************/
 
-  redmule_mesh_tb_pkg::axi_l2_vip_req_t[redmule_mesh_tb_pkg::N_TILES_X-1:0][redmule_mesh_tb_pkg::N_TILES_Y-1:0] data_mst_req; // N_TILES + L2
-  redmule_mesh_tb_pkg::axi_l2_vip_rsp_t[redmule_mesh_tb_pkg::N_TILES_X-1:0][redmule_mesh_tb_pkg::N_TILES_Y-1:0] data_mst_rsp; // N_TILES + L2
+  magia_tb_pkg::axi_l2_vip_req_t[magia_tb_pkg::N_TILES_X-1:0][magia_tb_pkg::N_TILES_Y-1:0] data_mst_req; // N_TILES + L2
+  magia_tb_pkg::axi_l2_vip_rsp_t[magia_tb_pkg::N_TILES_X-1:0][magia_tb_pkg::N_TILES_Y-1:0] data_mst_rsp; // N_TILES + L2
 
-  redmule_mesh_tb_pkg::axi_l2_vip_req_t[redmule_mesh_tb_pkg::N_TILES_Y-1:0] l2_data_mst_req;
-  redmule_mesh_tb_pkg::axi_l2_vip_rsp_t[redmule_mesh_tb_pkg::N_TILES_Y-1:0] l2_data_mst_rsp;
+  magia_tb_pkg::axi_l2_vip_req_t[magia_tb_pkg::N_TILES_Y-1:0] l2_data_mst_req;
+  magia_tb_pkg::axi_l2_vip_rsp_t[magia_tb_pkg::N_TILES_Y-1:0] l2_data_mst_rsp;
 
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
@@ -100,8 +100,8 @@ module redmule_mesh_vip
 /*******************************************************/
 
   generate
-    for(genvar i=0; i<redmule_mesh_tb_pkg::N_TILES_X; i++) begin
-      for(genvar j=0; j<redmule_mesh_tb_pkg::N_TILES_Y;j++) begin
+    for(genvar i=0; i<magia_tb_pkg::N_TILES_X; i++) begin
+      for(genvar j=0; j<magia_tb_pkg::N_TILES_Y;j++) begin
         `AXI_ASSIGN_REQ_STRUCT(data_in_req[i][j], data_mst_req[i][j])
         `AXI_ASSIGN_RESP_STRUCT(data_mst_rsp[i][j], data_in_rsp[i][j])
       end
@@ -118,7 +118,7 @@ module redmule_mesh_vip
   assign mtvec_addr        = '0;
   assign dm_halt_addr      = '0;
   assign dm_exception_addr = '0;
-  for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++) begin: gen_mhartid
+  for (genvar i = 0; i < magia_tb_pkg::N_TILES; i++) begin: gen_mhartid
     assign mhartid[i]      = i;
   end
   assign mimpid_patch      = '0;
@@ -173,17 +173,17 @@ module redmule_mesh_vip
     #1000;
   endtask: elf_run
 
-  task automatic wait_for_eoc(output bit[redmule_mesh_tb_pkg::N_TILES*16-1:0] exit_code);
+  task automatic wait_for_eoc(output bit[magia_tb_pkg::N_TILES*16-1:0] exit_code);
     bit eoc = 1'b0;
     while (!eoc) begin
       eoc = 1'b1;
-      for (int i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++)
+      for (int i = 0; i < magia_tb_pkg::N_TILES; i++)
         if ({i_l2_mem.mem[32'hCC03_0000 + (2*i + 1)], i_l2_mem.mem[32'hCC03_0000 + 2*i]} == 0)
           eoc = 1'b0;
       #10000;
     end
     
-    for (int i = 0; i < redmule_mesh_tb_pkg::N_TILES; i++)
+    for (int i = 0; i < magia_tb_pkg::N_TILES; i++)
       exit_code |= {i_l2_mem.mem[32'hCC03_0000 + (2*i + 1)], i_l2_mem.mem[32'hCC03_0000 + 2*i]} << i*16;
   endtask: wait_for_eoc
 
@@ -194,17 +194,17 @@ module redmule_mesh_vip
 /*******************************************************/
 
   axi_sim_mem #(
-    .AddrWidth          ( redmule_mesh_pkg::ADDR_W              ),
-    .DataWidth          ( redmule_mesh_pkg::DATA_W              ),
-    .IdWidth            ( redmule_mesh_tb_pkg::L2_ID_W          ),
-    .UserWidth          ( redmule_mesh_tb_pkg::L2_U_W           ),
-    .NumPorts           ( redmule_mesh_tb_pkg::N_TILES_Y        ),
-    .axi_req_t          ( redmule_mesh_tb_pkg::axi_l2_vip_req_t ),
-    .axi_rsp_t          ( redmule_mesh_tb_pkg::axi_l2_vip_rsp_t ),
-    .WarnUninitialized  ( 1                                     ),
-    .ClearErrOnAccess   ( 1                                     ),
-    .ApplDelay          ( CLK_PERIOD * T_APPL                   ),
-    .AcqDelay           ( CLK_PERIOD * T_TEST                   )
+    .AddrWidth          ( magia_pkg::ADDR_W              ),
+    .DataWidth          ( magia_pkg::DATA_W              ),
+    .IdWidth            ( magia_tb_pkg::L2_ID_W          ),
+    .UserWidth          ( magia_tb_pkg::L2_U_W           ),
+    .NumPorts           ( magia_tb_pkg::N_TILES_Y        ),
+    .axi_req_t          ( magia_tb_pkg::axi_l2_vip_req_t ),
+    .axi_rsp_t          ( magia_tb_pkg::axi_l2_vip_rsp_t ),
+    .WarnUninitialized  ( 1                              ),
+    .ClearErrOnAccess   ( 1                              ),
+    .ApplDelay          ( CLK_PERIOD * T_APPL            ),
+    .AcqDelay           ( CLK_PERIOD * T_TEST            )
   ) i_l2_mem (
     .clk_i              ( clk             ),
     .rst_ni             ( rst_n           ),
@@ -232,65 +232,65 @@ module redmule_mesh_vip
 /**           Tiles - L2 (FlooNoC) Beginning          **/
 /*******************************************************/
 
-  if ((redmule_mesh_tb_pkg::N_TILES_X == 2) && (redmule_mesh_tb_pkg::N_TILES_Y == 2)) begin: gen_2x2_noc
+  if ((magia_tb_pkg::N_TILES_X == 2) && (magia_tb_pkg::N_TILES_Y == 2)) begin: gen_2x2_noc
     floo_axi_mesh_2x2_noc i_mesh_noc (
-      .clk_i                        ( clk             ),
-      .rst_ni                       ( rst_n           ),
-      .test_enable_i                ( 1'b0            ),
-      .redmule_tile_data_slv_req_i  ( data_out_req    ),
-      .redmule_tile_data_slv_rsp_o  ( data_out_rsp    ),
-      .redmule_tile_data_mst_req_o  ( data_mst_req    ),
-      .redmule_tile_data_mst_rsp_i  ( data_mst_rsp    ),
-      .L2_data_mst_req_o            ( l2_data_mst_req ),
-      .L2_data_mst_rsp_i            ( l2_data_mst_rsp )
+      .clk_i                      ( clk             ),
+      .rst_ni                     ( rst_n           ),
+      .test_enable_i              ( 1'b0            ),
+      .magia_tile_data_slv_req_i  ( data_out_req    ),
+      .magia_tile_data_slv_rsp_o  ( data_out_rsp    ),
+      .magia_tile_data_mst_req_o  ( data_mst_req    ),
+      .magia_tile_data_mst_rsp_i  ( data_mst_rsp    ),
+      .L2_data_mst_req_o          ( l2_data_mst_req ),
+      .L2_data_mst_rsp_i          ( l2_data_mst_rsp )
     );
-  end else if ((redmule_mesh_tb_pkg::N_TILES_X == 4) && (redmule_mesh_tb_pkg::N_TILES_Y == 4)) begin: gen_4x4_noc
+  end else if ((magia_tb_pkg::N_TILES_X == 4) && (magia_tb_pkg::N_TILES_Y == 4)) begin: gen_4x4_noc
     floo_axi_mesh_4x4_noc i_mesh_noc (
-      .clk_i                        ( clk             ),
-      .rst_ni                       ( rst_n           ),
-      .test_enable_i                ( 1'b0            ),
-      .redmule_tile_data_slv_req_i  ( data_out_req    ),
-      .redmule_tile_data_slv_rsp_o  ( data_out_rsp    ),
-      .redmule_tile_data_mst_req_o  ( data_mst_req    ),
-      .redmule_tile_data_mst_rsp_i  ( data_mst_rsp    ),
-      .L2_data_mst_req_o            ( l2_data_mst_req ),
-      .L2_data_mst_rsp_i            ( l2_data_mst_rsp )
+      .clk_i                      ( clk             ),
+      .rst_ni                     ( rst_n           ),
+      .test_enable_i              ( 1'b0            ),
+      .magia_tile_data_slv_req_i  ( data_out_req    ),
+      .magia_tile_data_slv_rsp_o  ( data_out_rsp    ),
+      .magia_tile_data_mst_req_o  ( data_mst_req    ),
+      .magia_tile_data_mst_rsp_i  ( data_mst_rsp    ),
+      .L2_data_mst_req_o          ( l2_data_mst_req ),
+      .L2_data_mst_rsp_i          ( l2_data_mst_rsp )
     );
-  end else if ((redmule_mesh_tb_pkg::N_TILES_X == 8) && (redmule_mesh_tb_pkg::N_TILES_Y == 8)) begin: gen_8x8_noc
+  end else if ((magia_tb_pkg::N_TILES_X == 8) && (magia_tb_pkg::N_TILES_Y == 8)) begin: gen_8x8_noc
     floo_axi_mesh_8x8_noc i_mesh_noc (
-      .clk_i                        ( clk             ),
-      .rst_ni                       ( rst_n           ),
-      .test_enable_i                ( 1'b0            ),
-      .redmule_tile_data_slv_req_i  ( data_out_req    ),
-      .redmule_tile_data_slv_rsp_o  ( data_out_rsp    ),
-      .redmule_tile_data_mst_req_o  ( data_mst_req    ),
-      .redmule_tile_data_mst_rsp_i  ( data_mst_rsp    ),
-      .L2_data_mst_req_o            ( l2_data_mst_req ),
-      .L2_data_mst_rsp_i            ( l2_data_mst_rsp )
+      .clk_i                      ( clk             ),
+      .rst_ni                     ( rst_n           ),
+      .test_enable_i              ( 1'b0            ),
+      .magia_tile_data_slv_req_i  ( data_out_req    ),
+      .magia_tile_data_slv_rsp_o  ( data_out_rsp    ),
+      .magia_tile_data_mst_req_o  ( data_mst_req    ),
+      .magia_tile_data_mst_rsp_i  ( data_mst_rsp    ),
+      .L2_data_mst_req_o          ( l2_data_mst_req ),
+      .L2_data_mst_rsp_i          ( l2_data_mst_rsp )
     );
-  end else if ((redmule_mesh_tb_pkg::N_TILES_X == 16) && (redmule_mesh_tb_pkg::N_TILES_Y == 16)) begin: gen_16x16_noc
+  end else if ((magia_tb_pkg::N_TILES_X == 16) && (magia_tb_pkg::N_TILES_Y == 16)) begin: gen_16x16_noc
     floo_axi_mesh_16x16_noc i_mesh_noc (
-      .clk_i                        ( clk             ),
-      .rst_ni                       ( rst_n           ),
-      .test_enable_i                ( 1'b0            ),
-      .redmule_tile_data_slv_req_i  ( data_out_req    ),
-      .redmule_tile_data_slv_rsp_o  ( data_out_rsp    ),
-      .redmule_tile_data_mst_req_o  ( data_mst_req    ),
-      .redmule_tile_data_mst_rsp_i  ( data_mst_rsp    ),
-      .L2_data_mst_req_o            ( l2_data_mst_req ),
-      .L2_data_mst_rsp_i            ( l2_data_mst_rsp )
+      .clk_i                      ( clk             ),
+      .rst_ni                     ( rst_n           ),
+      .test_enable_i              ( 1'b0            ),
+      .magia_tile_data_slv_req_i  ( data_out_req    ),
+      .magia_tile_data_slv_rsp_o  ( data_out_rsp    ),
+      .magia_tile_data_mst_req_o  ( data_mst_req    ),
+      .magia_tile_data_mst_rsp_i  ( data_mst_rsp    ),
+      .L2_data_mst_req_o          ( l2_data_mst_req ),
+      .L2_data_mst_rsp_i          ( l2_data_mst_rsp )
     );
-  end else if ((redmule_mesh_tb_pkg::N_TILES_X == 32) && (redmule_mesh_tb_pkg::N_TILES_Y == 32)) begin: gen_32x32_noc
+  end else if ((magia_tb_pkg::N_TILES_X == 32) && (magia_tb_pkg::N_TILES_Y == 32)) begin: gen_32x32_noc
     floo_axi_mesh_32x32_noc i_mesh_noc (
-      .clk_i                        ( clk             ),
-      .rst_ni                       ( rst_n           ),
-      .test_enable_i                ( 1'b0            ),
-      .redmule_tile_data_slv_req_i  ( data_out_req    ),
-      .redmule_tile_data_slv_rsp_o  ( data_out_rsp    ),
-      .redmule_tile_data_mst_req_o  ( data_mst_req    ),
-      .redmule_tile_data_mst_rsp_i  ( data_mst_rsp    ),
-      .L2_data_mst_req_o            ( l2_data_mst_req ),
-      .L2_data_mst_rsp_i            ( l2_data_mst_rsp )
+      .clk_i                      ( clk             ),
+      .rst_ni                     ( rst_n           ),
+      .test_enable_i              ( 1'b0            ),
+      .magia_tile_data_slv_req_i  ( data_out_req    ),
+      .magia_tile_data_slv_rsp_o  ( data_out_rsp    ),
+      .magia_tile_data_mst_req_o  ( data_mst_req    ),
+      .magia_tile_data_mst_rsp_i  ( data_mst_rsp    ),
+      .L2_data_mst_req_o          ( l2_data_mst_req ),
+      .L2_data_mst_rsp_i          ( l2_data_mst_rsp )
     );
   end else $fatal("Unsupported Mesh configuration");
 
@@ -302,9 +302,9 @@ module redmule_mesh_vip
 
   // FSync Tree interfaces
   // Manually defining:
-  // localparam int unsigned FSYNC_LVL_W    [redmule_mesh_tb_pkg::FSYNC_LVL-1] = '{redmule_mesh_tb_pkg::TILE_FSYNC_W-1, redmule_mesh_tb_pkg::TILE_FSYNC_W-2, ...};
-  // localparam int unsigned FSYNC_LVL_PORTS[redmule_mesh_tb_pkg::FSYNC_LVL-1] = '{redmule_mesh_tb_pkg::N_TILES/(2**1), redmule_mesh_tb_pkg::N_TILES/(2**2), ...};
-  // for (genvar i = 0; i < redmule_mesh_tb_pkg::FSYNC_LVL-1; i++) fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[i])) if_sync_tree_{i}[FSYNC_LVL_PORTS[i]]();
+  // localparam int unsigned FSYNC_LVL_W    [magia_tb_pkg::FSYNC_LVL-1] = '{magia_tb_pkg::TILE_FSYNC_W-1, magia_tb_pkg::TILE_FSYNC_W-2, ...};
+  // localparam int unsigned FSYNC_LVL_PORTS[magia_tb_pkg::FSYNC_LVL-1] = '{magia_tb_pkg::N_TILES/(2**1), magia_tb_pkg::N_TILES/(2**2), ...};
+  // for (genvar i = 0; i < magia_tb_pkg::FSYNC_LVL-1; i++) fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[i])) if_sync_tree_{i}[FSYNC_LVL_PORTS[i]]();
   localparam int unsigned FSYNC_LVL_W    [5] = '{/*10,  9,   8,   7, */ 6,  5,  4, 3, 2};
   localparam int unsigned FSYNC_LVL_PORTS[5] = '{/*512, 256, 128, 64,*/ 32, 16, 8, 4, 2};
   fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[0])) if_sync_tree_0[FSYNC_LVL_PORTS[0]]();
@@ -322,9 +322,9 @@ module redmule_mesh_vip
   fractal_if #(.LVL_WIDTH(FSYNC_MON_W)) if_fmon[1]();
   
   // LEVEL 1 - FSync Tree Tiles
-  for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES/2; i++) begin: gen_cu_fsync
+  for (genvar i = 0; i < magia_tb_pkg::N_TILES/2; i++) begin: gen_cu_fsync
     fractal_sync #(
-      .SLV_WIDTH  ( redmule_mesh_tb_pkg::TILE_FSYNC_W )
+      .SLV_WIDTH  ( magia_tb_pkg::TILE_FSYNC_W )
     ) i_cu_fractal_sync (
       .clk_i    ( clk                             ),
       .rstn_i   ( rst_n                           ),
@@ -454,9 +454,9 @@ module redmule_mesh_vip
 /*/// Elegant but causes QuestaSim crash
 
   // FSync Tree interfaces
-  for (genvar i = 0; i < redmule_mesh_tb_pkg::FSYNC_LVL-1; i++) begin: gen_fsync_if
-    localparam int unsigned FSYNC_LVL_W     = redmule_mesh_tb_pkg::TILE_FSYNC_W-(i+1);
-    localparam int unsigned FSYNC_LVL_PORTS = redmule_mesh_tb_pkg::N_TILES/(2**(i+1));
+  for (genvar i = 0; i < magia_tb_pkg::FSYNC_LVL-1; i++) begin: gen_fsync_if
+    localparam int unsigned FSYNC_LVL_W     = magia_tb_pkg::TILE_FSYNC_W-(i+1);
+    localparam int unsigned FSYNC_LVL_PORTS = magia_tb_pkg::N_TILES/(2**(i+1));
     fractal_if #(.LVL_WIDTH(FSYNC_LVL_W)) if_sync_tree[FSYNC_LVL_PORTS]();
   end
   
@@ -465,9 +465,9 @@ module redmule_mesh_vip
   fractal_if #(.LVL_WIDTH(FSYNC_MON_W)) if_fmon[1]();
   
   // LEVEL 1 - Tiles
-  for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES/2; i++) begin: gen_cu_fsync
+  for (genvar i = 0; i < magia_tb_pkg::N_TILES/2; i++) begin: gen_cu_fsync
     fractal_sync #(
-      .SLV_WIDTH  ( redmule_mesh_tb_pkg::TILE_FSYNC_W )
+      .SLV_WIDTH  ( magia_tb_pkg::TILE_FSYNC_W )
     ) i_cu_fractal_sync (
       .clk_i    ( clk                                ),
       .rstn_i   ( rst_n                              ),
@@ -477,11 +477,11 @@ module redmule_mesh_vip
   end
 
   // LEVEL 2, 3, ..., N - FSync Tree
-  for (genvar i = 0; i < redmule_mesh_tb_pkg::FSYNC_LVL-1; i++) begin: gen_fsync_tree
-    localparam int unsigned FSYNC_LVL_W     = redmule_mesh_tb_pkg::TILE_FSYNC_W-(i+1);
-    localparam int unsigned FSYNC_LVL_PORTS = redmule_mesh_tb_pkg::N_TILES/(2**(i+1));
+  for (genvar i = 0; i < magia_tb_pkg::FSYNC_LVL-1; i++) begin: gen_fsync_tree
+    localparam int unsigned FSYNC_LVL_W     = magia_tb_pkg::TILE_FSYNC_W-(i+1);
+    localparam int unsigned FSYNC_LVL_PORTS = magia_tb_pkg::N_TILES/(2**(i+1));
     for (genvar j = 0; j < FSYNC_LVL_PORTS/2; j++) begin: gen_node_fsync
-      if (i != redmule_mesh_tb_pkg::FSYNC_LVL-2) begin
+      if (i != magia_tb_pkg::FSYNC_LVL-2) begin
         fractal_sync #(
           .SLV_WIDTH  ( FSYNC_LVL_W )
         ) i_node_fractal_sync (
@@ -521,8 +521,8 @@ module redmule_mesh_vip
 /**                 Printing Beginning                **/
 /*******************************************************/
 
-  for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES_X; i++) begin: gen_tile_print_x
-    for (genvar j = 0; j < redmule_mesh_tb_pkg::N_TILES_Y; j++) begin: gen_tile_print_y
+  for (genvar i = 0; i < magia_tb_pkg::N_TILES_X; i++) begin: gen_tile_print_x
+    for (genvar j = 0; j < magia_tb_pkg::N_TILES_Y; j++) begin: gen_tile_print_y
       int errors = -1;
       bit stdio_ready  = 0;
       bit stderr_ready = 0;
@@ -530,13 +530,13 @@ module redmule_mesh_vip
         bit[31:0] data;
         bit[31:0] id;
       } string_char_t;
-      bit print_line[2**redmule_mesh_tb_pkg::L2_ID_W];
+      bit print_line[2**magia_tb_pkg::L2_ID_W];
       string_char_t chars[$];
-      bit[redmule_mesh_tb_pkg::L2_ID_W-1:0] write_id;
+      bit[magia_tb_pkg::L2_ID_W-1:0] write_id;
       always @(posedge clk) begin: print_monitor
         if ((gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0000) && (gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].aw_valid))
           stderr_ready = 1'b1;
-        if ((gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0004+((i*redmule_mesh_tb_pkg::N_TILES_Y+j)*4)) && (gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].aw_valid)) begin
+        if ((gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0004+((i*magia_tb_pkg::N_TILES_Y+j)*4)) && (gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].aw_valid)) begin
           stdio_ready  = 1'b1;
           write_id = gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].aw.id;
         end
@@ -550,7 +550,7 @@ module redmule_mesh_vip
           chars.push_back('{gen_x_tile[i].gen_y_tile[j].dut.i_axi_xbar.mst_ports_req_o[0].w.data[7:0], write_id});
           stdio_ready = 1'b0;
         end
-        for (int k = 0; k < 2**redmule_mesh_tb_pkg::L2_ID_W; k++) begin
+        for (int k = 0; k < 2**magia_tb_pkg::L2_ID_W; k++) begin
           if (print_line[k] == 1'b1) begin
             for (int j = 0; j < chars.size(); j++) begin
               if (chars[j].id == k) begin
@@ -583,23 +583,23 @@ module redmule_mesh_vip
 /**           Instruction Monitor Beginning           **/
 /*******************************************************/
 
-  bit[31:0] curr_instr_ex[redmule_mesh_tb_pkg::N_TILES];
-  bit[31:0] curr_instr_id[redmule_mesh_tb_pkg::N_TILES];
-  for (genvar i = 0; i < redmule_mesh_tb_pkg::N_TILES_X; i++) begin: gen_tile_instr_monitor_x
-    for (genvar j = 0; j < redmule_mesh_tb_pkg::N_TILES_Y; j++) begin: gen_tile_instr_monitor_y 
-      assign curr_instr_ex[i*redmule_mesh_tb_pkg::N_TILES_Y+j] = gen_x_tile[i].gen_y_tile[j].dut.i_cv32e40x_core.core_i.id_stage_i.id_ex_pipe_o.instr.bus_resp.rdata;
-      always @(curr_instr_ex[i*redmule_mesh_tb_pkg::N_TILES_Y+j]) begin: instr_ex_reporter
-        if (curr_instr_ex[i*redmule_mesh_tb_pkg::N_TILES_Y+j] == 32'h50500013) 
-          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected sentinel instruction in EX stage at time %0dns",i*redmule_mesh_tb_pkg::N_TILES_Y+j , j, i, time_var);
-        if (curr_instr_ex[i*redmule_mesh_tb_pkg::N_TILES_Y+j] == 32'h0062A3AF) 
-          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected AMO (sync) instruction at time %0dns",i*redmule_mesh_tb_pkg::N_TILES_Y+j , j, i, time_var);
+  bit[31:0] curr_instr_ex[magia_tb_pkg::N_TILES];
+  bit[31:0] curr_instr_id[magia_tb_pkg::N_TILES];
+  for (genvar i = 0; i < magia_tb_pkg::N_TILES_X; i++) begin: gen_tile_instr_monitor_x
+    for (genvar j = 0; j < magia_tb_pkg::N_TILES_Y; j++) begin: gen_tile_instr_monitor_y 
+      assign curr_instr_ex[i*magia_tb_pkg::N_TILES_Y+j] = gen_x_tile[i].gen_y_tile[j].dut.i_cv32e40x_core.core_i.id_stage_i.id_ex_pipe_o.instr.bus_resp.rdata;
+      always @(curr_instr_ex[i*magia_tb_pkg::N_TILES_Y+j]) begin: instr_ex_reporter
+        if (curr_instr_ex[i*magia_tb_pkg::N_TILES_Y+j] == 32'h50500013) 
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected sentinel instruction in EX stage at time %0dns",i*magia_tb_pkg::N_TILES_Y+j , j, i, time_var);
+        if (curr_instr_ex[i*magia_tb_pkg::N_TILES_Y+j] == 32'h0062A3AF) 
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected AMO (sync) instruction at time %0dns",i*magia_tb_pkg::N_TILES_Y+j , j, i, time_var);
       end
-      assign curr_instr_id[i*redmule_mesh_tb_pkg::N_TILES_Y+j] = gen_x_tile[i].gen_y_tile[j].dut.i_cv32e40x_core.core_i.id_stage_i.if_id_pipe_i.instr.bus_resp.rdata;
-      always @(curr_instr_id[i*redmule_mesh_tb_pkg::N_TILES_Y+j]) begin: instr_id_reporter
-        if (curr_instr_id[i*redmule_mesh_tb_pkg::N_TILES_Y+j] == 32'h40400013) 
-          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected sentinel instruction in ID stage at time %0dns",i*redmule_mesh_tb_pkg::N_TILES_Y+j , j, i, time_var);
-        if (curr_instr_id[i*redmule_mesh_tb_pkg::N_TILES_Y+j] == 32'h0002A05B) 
-          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected fsync instruction at time %0dns",i*redmule_mesh_tb_pkg::N_TILES_Y+j , j, i, time_var);
+      assign curr_instr_id[i*magia_tb_pkg::N_TILES_Y+j] = gen_x_tile[i].gen_y_tile[j].dut.i_cv32e40x_core.core_i.id_stage_i.if_id_pipe_i.instr.bus_resp.rdata;
+      always @(curr_instr_id[i*magia_tb_pkg::N_TILES_Y+j]) begin: instr_id_reporter
+        if (curr_instr_id[i*magia_tb_pkg::N_TILES_Y+j] == 32'h40400013) 
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected sentinel instruction in ID stage at time %0dns",i*magia_tb_pkg::N_TILES_Y+j , j, i, time_var);
+        if (curr_instr_id[i*magia_tb_pkg::N_TILES_Y+j] == 32'h0002A05B) 
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected fsync instruction at time %0dns",i*magia_tb_pkg::N_TILES_Y+j , j, i, time_var);
       end
     end
   end
@@ -608,4 +608,4 @@ module redmule_mesh_vip
 /**              Instruction Monitor End              **/
 /*******************************************************/
 
-endmodule: redmule_mesh_vip
+endmodule: magia_vip

@@ -16,56 +16,56 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * RedMulE Tile Fixture
+ * MAGIA Tile Fixture
  */
 
-module redmule_tile_fixture;
+module magia_tile_fixture;
 
-  import redmule_tile_pkg::*;
-  import redmule_mesh_pkg::*;
-  import redmule_tile_tb_pkg::*;
+  import magia_tile_pkg::*;
+  import magia_pkg::*;
+  import magia_tile_tb_pkg::*;
 
 /*******************************************************/
 /**        Internal Signal Definitions Beginning      **/
 /*******************************************************/
 
-  logic                                    clk;
-  logic                                    rst_n;
-  logic                                    test_mode;
-  logic                                    tile_enable;
+  logic                        clk;
+  logic                        rst_n;
+  logic                        test_mode;
+  logic                        tile_enable;
 
-  redmule_mesh_pkg::axi_default_req_t      data_out_req;
-  redmule_mesh_pkg::axi_default_rsp_t      data_out_rsp;
+  magia_pkg::axi_default_req_t data_out_req;
+  magia_pkg::axi_default_rsp_t data_out_rsp;
 
-  fractal_if #(.LVL_WIDTH(1))              sync_if[1]();
+  fractal_if #(.LVL_WIDTH(1))  sync_if[1]();
   
-  logic                                    scan_cg_en;
+  logic                        scan_cg_en;
 
-  logic[31:0]                              boot_addr;
-  logic[31:0]                              mtvec_addr;
-  logic[31:0]                              dm_halt_addr;
-  logic[31:0]                              dm_exception_addr;
-  logic[31:0]                              mhartid;
-  logic[ 3:0]                              mimpid_patch;
+  logic[31:0]                  boot_addr;
+  logic[31:0]                  mtvec_addr;
+  logic[31:0]                  dm_halt_addr;
+  logic[31:0]                  dm_exception_addr;
+  logic[31:0]                  mhartid;
+  logic[ 3:0]                  mimpid_patch;
 
-  logic[63:0]                              mcycle;
-  logic[63:0]                              time_var;
+  logic[63:0]                  mcycle;
+  logic[63:0]                  time_var;
 
-  logic[redmule_mesh_pkg::N_IRQ-1:0]       irq;
+  logic[magia_pkg::N_IRQ-1:0]  irq;
 
-  logic                                    fencei_flush_req;
-  logic                                    fencei_flush_ack;
+  logic                        fencei_flush_req;
+  logic                        fencei_flush_ack;
 
-  logic                                    debug_req;
-  logic                                    debug_havereset;
-  logic                                    debug_running;
-  logic                                    debug_halted;
-  logic                                    debug_pc_valid;
-  logic[31:0]                              debug_pc;
+  logic                        debug_req;
+  logic                        debug_havereset;
+  logic                        debug_running;
+  logic                        debug_halted;
+  logic                        debug_pc_valid;
+  logic[31:0]                  debug_pc;
 
-  logic                                    fetch_enable;
-  logic                                    core_sleep;
-  logic                                    wu_wfe;
+  logic                        fetch_enable;
+  logic                        core_sleep;
+  logic                        wu_wfe;
 
 /*******************************************************/
 /**           Internal Signal Definitions End         **/
@@ -73,14 +73,14 @@ module redmule_tile_fixture;
 /**                   DUT Beginning                   **/
 /*******************************************************/
 
-  redmule_tile #(
-    .N_MEM_BANKS  ( redmule_tile_tb_pkg::N_MEM_BANKS  ),
-    .N_WORDS_BANK ( redmule_tile_tb_pkg::N_WORDS_BANK ),
+  magia_tile #(
+    .N_MEM_BANKS  ( magia_tile_tb_pkg::N_MEM_BANKS  ),
+    .N_WORDS_BANK ( magia_tile_tb_pkg::N_WORDS_BANK ),
 
-    .CORE_ISA     (                                   ),
-    .CORE_A       (                                   ),
-    .CORE_B       (                                   ),
-    .CORE_M       (                                   )
+    .CORE_ISA     (                                 ),
+    .CORE_A       (                                 ),
+    .CORE_B       (                                 ),
+    .CORE_M       (                                 )
   ) dut (
     .clk_i               ( clk               ),
     .rst_ni              ( rst_n             ),
@@ -127,10 +127,10 @@ module redmule_tile_fixture;
 /**                   VIP Beginning                   **/
 /*******************************************************/
 
-  redmule_tile_vip vip (.*);
+  magia_tile_vip vip (.*);
 
 /*******************************************************/
 /**                      VIP End                      **/
 /*******************************************************/
 
-endmodule: redmule_tile_fixture
+endmodule: magia_tile_fixture

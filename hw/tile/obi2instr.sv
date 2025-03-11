@@ -16,24 +16,19 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * OBI - HCI REQ/RSP Converter
+ * OBI - Core Instruction REQ/RSP Converter
  */
 
-module obi2hci_req #(
-  parameter type obi_req_t = logic,
-  parameter type hic_req_t = logic
-)(
-  input  obi_req_t obi_req_i,
-  output hic_req_t hci_req_o
+module obi2instr_rsp 
+  import magia_tile_pkg::*;
+(
+  input  magia_tile_pkg::core_obi_instr_rsp_t obi_rsp_i,
+  output magia_tile_pkg::core_instr_rsp_t     instr_rsp_o
 );
 
-  assign hci_req_o.req   = obi_req_i.req;
-  assign hci_req_o.add   = obi_req_i.a.addr;
-  assign hci_req_o.wen   = ~obi_req_i.a.we;
-  assign hci_req_o.data  = obi_req_i.a.wdata;
-  assign hci_req_o.be    = obi_req_i.a.be;
-  assign hci_req_o.boffs = '0;
-  assign hci_req_o.lrdy  = 1'b1;
-  assign hci_req_o.user  = '0;
+  assign instr_rsp_o.gnt    = obi_rsp_i.gnt;
+  assign instr_rsp_o.rvalid = obi_rsp_i.rvalid;
+  assign instr_rsp_o.rdata  = obi_rsp_i.r.rdata;
+  assign instr_rsp_o.err    = obi_rsp_i.r.err;
 
-endmodule: obi2hci_req
+endmodule: obi2instr_rsp

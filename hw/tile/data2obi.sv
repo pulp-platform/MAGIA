@@ -20,10 +20,10 @@
  */
 
 module data2obi_req 
-  import redmule_tile_pkg::*;
+  import magia_tile_pkg::*;
 (
-  input  redmule_tile_pkg::core_data_req_t     data_req_i,
-  output redmule_tile_pkg::core_obi_data_req_t obi_req_o
+  input  magia_tile_pkg::core_data_req_t     data_req_i,
+  output magia_tile_pkg::core_obi_data_req_t obi_req_o
 );
 
   assign obi_req_o.req                  = data_req_i.req;
@@ -42,18 +42,3 @@ module data2obi_req
   assign obi_req_o.a.a_optional.achk    = 'b0;
 
 endmodule: data2obi_req
-
-module obi2data_rsp 
-  import redmule_tile_pkg::*;
-(
-  input  redmule_tile_pkg::core_obi_data_rsp_t obi_rsp_i,
-  output redmule_tile_pkg::core_data_rsp_t     data_rsp_o
-);
-
-  assign data_rsp_o.gnt    = obi_rsp_i.gnt;
-  assign data_rsp_o.rvalid = obi_rsp_i.rvalid;
-  assign data_rsp_o.rdata  = obi_rsp_i.r.rdata;
-  assign data_rsp_o.err    = obi_rsp_i.r.err;
-  assign data_rsp_o.exokay = obi_rsp_i.r.r_optional.exokay;
-
-endmodule: obi2data_rsp

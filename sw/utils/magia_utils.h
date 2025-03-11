@@ -1,7 +1,7 @@
-#ifndef REDMULE_MESH_UTILS_H
-#define REDMULE_MESH_UTILS_H
+#ifndef MAGIA_UTILS_H
+#define MAGIA_UTILS_H
 
-#include "redmule_tile_utils.h"
+#include "magia_tile_utils.h"
 
 #define STR_OFFSET  (0x00000000)
 #define STR_BASE    (RESERVED_START + STR_OFFSET)
@@ -9,8 +9,8 @@
 #define SYNC_BASE   (RESERVED_START + SYNC_OFFSET)
 #define SYNC_EN     (SYNC_BASE + 0x4)
 
-#define MESH_X_TILES (8)
-#define MESH_Y_TILES (8)
+#define MESH_X_TILES (2)
+#define MESH_Y_TILES (2)
 #define NUM_HARTS    (MESH_X_TILES*MESH_Y_TILES)
 
 #define h_pprintf(x) (h_psprint(get_hartid(), x))
@@ -118,4 +118,4 @@ void psprint(uint32_t hartid, const char* string){
         mmio8(0xFFFF0004 + (hartid*4)) = string[index++];
 }
 
-#endif /*REDMULE_MESH_UTILS_H*/
+#endif /*MAGIA_UTILS_H*/

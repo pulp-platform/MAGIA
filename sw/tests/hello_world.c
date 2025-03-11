@@ -1,4 +1,4 @@
-#include "redmule_tile_utils.h"
+#include "magia_tile_utils.h"
 
 #define TEST_ID (1)
 

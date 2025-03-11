@@ -15,7 +15,7 @@
 #
 # Authors: Victor Isachi <victor.isachi@unibo.it>
 # 
-# RedMulE Tile Makefile
+# MAGIA Makefile
  
 
 # Paths to folders
@@ -64,7 +64,7 @@ test          ?= hello_world
 mesh_dv       ?= 1
 fast_sim      ?= 0
 # Add here a path to the core traces of each tile you want to monitor
-num_cores     ?= 64
+num_cores     ?= 4
 $(foreach i, $(shell seq 0 $(shell echo $$(($(num_cores)-1)))), \
 	$(eval log_path_$(i) := ./core_$(i)_traces.log)               \
 )
@@ -195,9 +195,9 @@ bender_targs += -t idma_test
 #endif
 
 ifeq ($(mesh_dv),1)
-	tb         := redmule_mesh_tb
+	tb         := magia_tb
 else
-	tb         := redmule_tile_tb
+	tb         := magia_tile_tb
 endif
 WAVES        := $(mkfile_path)/wave.do
 bender_targs += -t redmule_complex

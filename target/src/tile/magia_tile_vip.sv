@@ -16,13 +16,13 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * RedMulE Tile Verification IP
+ * MAGIA Tile Verification IP
  */
 
-module redmule_tile_vip
-  import redmule_tile_pkg::*;
-  import redmule_mesh_pkg::*;
-  import redmule_tile_tb_pkg::*;
+module magia_tile_vip
+  import magia_tile_pkg::*;
+  import magia_pkg::*;
+  import magia_tb_pkg::*;
 #(
   // Timing
   parameter time         CLK_PERIOD = 5ns,
@@ -30,43 +30,43 @@ module redmule_tile_vip
   parameter real         T_APPL     = 0.1,
   parameter real         T_TEST     = 0.9
 )(
-  output logic                                    clk,
-  output logic                                    rst_n,
-  output logic                                    test_mode,
-  output logic                                    tile_enable,
+  output logic                        clk,
+  output logic                        rst_n,
+  output logic                        test_mode,
+  output logic                        tile_enable,
 
-  input  redmule_mesh_pkg::axi_default_req_t      data_out_req,
-  output redmule_mesh_pkg::axi_default_rsp_t      data_out_rsp,
+  input  magia_pkg::axi_default_req_t data_out_req,
+  output magia_pkg::axi_default_rsp_t data_out_rsp,
 
-  fractal_if.slv_port                             sync_if[1],
+  fractal_if.slv_port                 sync_if[1],
   
-  output logic                                    scan_cg_en,
+  output logic                        scan_cg_en,
 
-  output logic[31:0]                              boot_addr, //TODO: manage signal
-  output logic[31:0]                              mtvec_addr,
-  output logic[31:0]                              dm_halt_addr,
-  output logic[31:0]                              dm_exception_addr,
-  output logic[31:0]                              mhartid,
-  output logic[ 3:0]                              mimpid_patch,
+  output logic[31:0]                  boot_addr, //TODO: manage signal
+  output logic[31:0]                  mtvec_addr,
+  output logic[31:0]                  dm_halt_addr,
+  output logic[31:0]                  dm_exception_addr,
+  output logic[31:0]                  mhartid,
+  output logic[ 3:0]                  mimpid_patch,
 
-  input  logic[63:0]                              mcycle,
-  output logic[63:0]                              time_var,
+  input  logic[63:0]                  mcycle,
+  output logic[63:0]                  time_var,
 
-  output logic[redmule_mesh_pkg::N_IRQ-1:0]       irq, //TODO: manage signal
+  output logic[magia_pkg::N_IRQ-1:0]  irq, //TODO: manage signal
 
-  input  logic                                    fencei_flush_req,
-  output logic                                    fencei_flush_ack,
+  input  logic                        fencei_flush_req,
+  output logic                        fencei_flush_ack,
 
-  output logic                                    debug_req,
-  input  logic                                    debug_havereset,
-  input  logic                                    debug_running,
-  input  logic                                    debug_halted,
-  input  logic                                    debug_pc_valid,
-  input  logic[31:0]                              debug_pc,
+  output logic                        debug_req,
+  input  logic                        debug_havereset,
+  input  logic                        debug_running,
+  input  logic                        debug_halted,
+  input  logic                        debug_pc_valid,
+  input  logic[31:0]                  debug_pc,
 
-  output logic                                    fetch_enable,  //TODO: manage signal
-  input  logic                                    core_sleep,
-  output logic                                    wu_wfe
+  output logic                        fetch_enable,  //TODO: manage signal
+  input  logic                        core_sleep,
+  output logic                        wu_wfe
 );
 
 /*******************************************************/
@@ -155,16 +155,16 @@ module redmule_tile_vip
 /*******************************************************/
 
   axi_sim_mem #(
-    .AddrWidth          ( redmule_mesh_pkg::ADDR_W            ),
-    .DataWidth          ( redmule_mesh_pkg::DATA_W            ),
-    .IdWidth            ( redmule_mesh_pkg::AXI_NOC_ID_W      ),
-    .UserWidth          ( redmule_mesh_pkg::AXI_NOC_U_W       ),
-    .axi_req_t          ( redmule_mesh_pkg::axi_default_req_t ),
-    .axi_rsp_t          ( redmule_mesh_pkg::axi_default_rsp_t ),
-    .WarnUninitialized  ( 1                                   ),
-    .ClearErrOnAccess   ( 1                                   ),
-    .ApplDelay          ( CLK_PERIOD * T_APPL                 ),
-    .AcqDelay           ( CLK_PERIOD * T_TEST                 )
+    .AddrWidth          ( magia_pkg::ADDR_W            ),
+    .DataWidth          ( magia_pkg::DATA_W            ),
+    .IdWidth            ( magia_pkg::AXI_NOC_ID_W      ),
+    .UserWidth          ( magia_pkg::AXI_NOC_U_W       ),
+    .axi_req_t          ( magia_pkg::axi_default_req_t ),
+    .axi_rsp_t          ( magia_pkg::axi_default_rsp_t ),
+    .WarnUninitialized  ( 1                            ),
+    .ClearErrOnAccess   ( 1                            ),
+    .ApplDelay          ( CLK_PERIOD * T_APPL          ),
+    .AcqDelay           ( CLK_PERIOD * T_TEST          )
   ) i_l2_mem (
     .clk_i              ( clk          ),
     .rst_ni             ( rst_n        ),
@@ -244,4 +244,4 @@ end
 /**              Instruction Monitor End              **/
 /*******************************************************/
 
-endmodule: redmule_tile_vip
+endmodule: magia_tile_vip

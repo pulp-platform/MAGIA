@@ -20,20 +20,20 @@
  */
 
 module fractal_sync_xif_inst_decoder 
-  import redmule_tile_pkg::*;
+  import magia_tile_pkg::*;
   import cv32e40x_pkg::*;
 #(
-  parameter int unsigned INSTR_W    = redmule_tile_pkg::FSYNC_INSTR_W,
-  parameter int unsigned DATA_W     = redmule_tile_pkg::FSYNC_DATA_W,
-  parameter int unsigned ADDR_W     = redmule_tile_pkg::FSYNC_ADDR_W,
-  parameter int unsigned N_RF_PORTS = redmule_tile_pkg::FSYNC_N_RF_PORTS,
-  parameter int unsigned OPCODE_W   = redmule_tile_pkg::FSYNC_OPCODE_W,
-  parameter int unsigned FUNC3_W    = redmule_tile_pkg::FSYNC_FUNC3_W,
-  parameter int unsigned OPCODE_OFF = redmule_tile_pkg::FSYNC_OPCODE_OFF,
-  parameter int unsigned FUNC3_OFF  = redmule_tile_pkg::FSYNC_FUNC3_OFF,
-  parameter int unsigned N_CFG_REG  = redmule_tile_pkg::FSYNC_N_CFG_REG,
-  parameter int unsigned LVL_W      = redmule_tile_pkg::FSYNC_LVL_W,
-  parameter bit          STALL      = redmule_tile_pkg::FSYNC_STALL
+  parameter int unsigned INSTR_W    = magia_tile_pkg::FSYNC_INSTR_W,
+  parameter int unsigned DATA_W     = magia_tile_pkg::FSYNC_DATA_W,
+  parameter int unsigned ADDR_W     = magia_tile_pkg::FSYNC_ADDR_W,
+  parameter int unsigned N_RF_PORTS = magia_tile_pkg::FSYNC_N_RF_PORTS,
+  parameter int unsigned OPCODE_W   = magia_tile_pkg::FSYNC_OPCODE_W,
+  parameter int unsigned FUNC3_W    = magia_tile_pkg::FSYNC_FUNC3_W,
+  parameter int unsigned OPCODE_OFF = magia_tile_pkg::FSYNC_OPCODE_OFF,
+  parameter int unsigned FUNC3_OFF  = magia_tile_pkg::FSYNC_FUNC3_OFF,
+  parameter int unsigned N_CFG_REG  = magia_tile_pkg::FSYNC_N_CFG_REG,
+  parameter int unsigned LVL_W      = magia_tile_pkg::FSYNC_LVL_W,
+  parameter bit          STALL      = magia_tile_pkg::FSYNC_STALL
 )(
   input  logic                 clk_i,
   input  logic                 rst_ni,
@@ -119,8 +119,8 @@ module fractal_sync_xif_inst_decoder
           FSYNC_OPCODE: begin
             clk_dec_en = 1'b1;
             if ((func3 == FSYNC_FUNC3) && (xif_issue_if_i.issue_req.rs_valid)) begin
-              cfg_reg_d[redmule_tile_pkg::FSYNC_LEVEL_IDX] = xif_issue_if_i.issue_req.rs[0];
-              sync                                         = 1'b1;
+              cfg_reg_d[magia_tile_pkg::FSYNC_LEVEL_IDX] = xif_issue_if_i.issue_req.rs[0];
+              sync                                       = 1'b1;
             end
           end
         endcase
@@ -141,8 +141,8 @@ module fractal_sync_xif_inst_decoder
             xif_issue_if_i.issue_resp.accept = 1'b1;
             clk_dec_en                       = 1'b1;
             if ((func3 == FSYNC_FUNC3) && (xif_issue_if_i.issue_req.rs_valid)) begin
-              cfg_reg_d[redmule_tile_pkg::FSYNC_LEVEL_IDX] = xif_issue_if_i.issue_req.rs[0];
-              sync                                         = 1'b1;
+              cfg_reg_d[magia_tile_pkg::FSYNC_LEVEL_IDX] = xif_issue_if_i.issue_req.rs[0];
+              sync                                       = 1'b1;
             end
           end
         endcase
@@ -179,7 +179,7 @@ module fractal_sync_xif_inst_decoder
         IDLE: if (sync) n_sync_state = SYNC; else clk_sync_en = 1'b0;
         SYNC: begin
           sync_if_o.sync                   = 1'b1;
-          sync_if_o.level                  = cfg_reg_q[redmule_tile_pkg::FSYNC_LEVEL_IDX][FSYNC_LVL_W-1:0];
+          sync_if_o.level                  = cfg_reg_q[magia_tile_pkg::FSYNC_LEVEL_IDX][FSYNC_LVL_W-1:0];
           n_sync_state                     = WAIT;
         end
         WAIT: begin
@@ -207,7 +207,7 @@ module fractal_sync_xif_inst_decoder
         IDLE: if (sync) n_sync_state = SYNC; else clk_sync_en = 1'b0;
         SYNC: begin
           sync_if_o.sync  = 1'b1;
-          sync_if_o.level = cfg_reg_q[redmule_tile_pkg::FSYNC_LEVEL_IDX][FSYNC_LVL_W-1:0];
+          sync_if_o.level = cfg_reg_q[magia_tile_pkg::FSYNC_LEVEL_IDX][FSYNC_LVL_W-1:0];
           n_sync_state    = WAIT;
         end
         WAIT: begin

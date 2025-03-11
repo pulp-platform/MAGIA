@@ -16,17 +16,17 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * RedMulE Tile Testbench
+ * MAGIA Tile Testbench
  */
 
-module redmule_tile_tb;
+module magia_tile_tb;
 
   string    inst_hex;
   string    data_hex;
   bit[31:0] boot_addr;
   bit[31:0] exit_code;
 
-  redmule_tile_fixture fixture();
+  magia_tile_fixture fixture();
 
   initial begin
     // Fetch plusargs or use safe (fail-fast) defaults
@@ -51,4 +51,4 @@ module redmule_tile_tb;
     $finish;
   end
 
-endmodule: redmule_tile_tb
+endmodule: magia_tile_tb

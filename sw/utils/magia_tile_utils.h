@@ -1,5 +1,5 @@
-#ifndef REDMULE_TILE_UTILS_H
-#define REDMULE_TILE_UTILS_H
+#ifndef MAGIA_TILE_UTILS_H
+#define MAGIA_TILE_UTILS_H
 
 #include "tinyprintf.h"
 
@@ -132,4 +132,4 @@ uint32_t get_time(){
     return timel;
 }
 
-#endif /*REDMULE_TILE_UTILS_H*/
+#endif /*MAGIA_TILE_UTILS_H*/

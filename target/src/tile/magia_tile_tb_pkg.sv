@@ -16,24 +16,12 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * OBI - HCI REQ/RSP Converter
+ * MAGIA Tile Testbench Package
  */
 
-module obi2hci_req #(
-  parameter type obi_req_t = logic,
-  parameter type hic_req_t = logic
-)(
-  input  obi_req_t obi_req_i,
-  output hic_req_t hci_req_o
-);
+package magia_tile_tb_pkg;
 
-  assign hci_req_o.req   = obi_req_i.req;
-  assign hci_req_o.add   = obi_req_i.a.addr;
-  assign hci_req_o.wen   = ~obi_req_i.a.we;
-  assign hci_req_o.data  = obi_req_i.a.wdata;
-  assign hci_req_o.be    = obi_req_i.a.be;
-  assign hci_req_o.boffs = '0;
-  assign hci_req_o.lrdy  = 1'b1;
-  assign hci_req_o.user  = '0;
+  parameter int unsigned N_MEM_BANKS  = magia_pkg::N_MEM_BANKS;  // Number of TCDM banks (1 extra bank for missaligned accesses)
+  parameter int unsigned N_WORDS_BANK = magia_pkg::N_WORDS_BANK; // Number of words per TCDM bank
 
-endmodule: obi2hci_req
+endpackage: magia_tile_tb_pkg

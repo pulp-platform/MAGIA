@@ -16,12 +16,19 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * RedMulE Tile Testbench Package
+ * I$ - Core Instruction REQ/RSP Converter
  */
 
-package redmule_tile_tb_pkg;
+module cache2instr_rsp 
+  import magia_tile_pkg::*;
+(
+  input  magia_tile_pkg::core_cache_instr_rsp_t cache_rsp_i,
+  output magia_tile_pkg::core_instr_rsp_t       instr_rsp_o
+);
 
-  parameter int unsigned N_MEM_BANKS  = redmule_mesh_pkg::N_MEM_BANKS;  // Number of TCDM banks (1 extra bank for missaligned accesses)
-  parameter int unsigned N_WORDS_BANK = redmule_mesh_pkg::N_WORDS_BANK; // Number of words per TCDM bank
+  assign instr_rsp_o.gnt    = cache_rsp_i.gnt;
+  assign instr_rsp_o.rvalid = cache_rsp_i.rvalid;
+  assign instr_rsp_o.rdata  = cache_rsp_i.rdata;
+  assign instr_rsp_o.err    = cache_rsp_i.rerror;
 
-endpackage: redmule_tile_tb_pkg
+endmodule: cache2instr_rsp

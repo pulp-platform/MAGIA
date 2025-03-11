@@ -20,24 +20,28 @@
  */
 
 module xif_inst_demux 
-  import redmule_tile_pkg::*;
+  import magia_tile_pkg::*;
   import cv32e40x_pkg::*;
 #(
-  parameter int unsigned N_COPROC    = redmule_tile_pkg::N_COPROC,
-  parameter int unsigned N_SIGN      = redmule_tile_pkg::N_SIGN,
-  parameter int unsigned DEFAULT_IDX = redmule_tile_pkg::DEFAULT_IDX,
-  parameter int unsigned OPCODE_OFF  = redmule_tile_pkg::OPCODE_OFF,
-  parameter int unsigned FUNC3_OFF   = redmule_tile_pkg::FUNC3_OFF,
-  parameter int unsigned OPCODE_W    = redmule_tile_pkg::OPCODE_W,
-  parameter int unsigned FUNC3_W     = redmule_tile_pkg::FUNC3_W,
-  parameter int unsigned SIGN_W      = redmule_tile_pkg::SIGN_W,
-  parameter type xif_inst_rule_t     = redmule_tile_pkg::xif_inst_rule_t
+  parameter int unsigned N_COPROC    = magia_tile_pkg::N_COPROC,
+  parameter int unsigned N_SIGN      = magia_tile_pkg::N_SIGN,
+  parameter int unsigned DEFAULT_IDX = magia_tile_pkg::DEFAULT_IDX,
+  parameter int unsigned OPCODE_OFF  = magia_tile_pkg::OPCODE_OFF,
+  parameter int unsigned FUNC3_OFF   = magia_tile_pkg::FUNC3_OFF,
+  parameter int unsigned OPCODE_W    = magia_tile_pkg::OPCODE_W,
+  parameter int unsigned FUNC3_W     = magia_tile_pkg::FUNC3_W,
+  parameter int unsigned SIGN_W      = magia_tile_pkg::SIGN_W,
+  parameter type xif_inst_rule_t     = magia_tile_pkg::xif_inst_rule_t
 )(
-  cv32e40x_if_xif.coproc_issue                          xif_issue_if_i,
-  cv32e40x_if_xif.cpu_issue                             xif_issue_if_o[N_COPROC],
+  cv32e40x_if_xif.coproc_issue                        xif_issue_if_i,
+  cv32e40x_if_xif.cpu_issue                           xif_issue_if_o[N_COPROC],
 
-  input redmule_tile_pkg::xif_inst_rule_t[N_COPROC-1:0] rules_i
+  input magia_tile_pkg::xif_inst_rule_t[N_COPROC-1:0] rules_i
 );
+
+/*******************************************************/
+/**        Parameters and Definitions Beginning       **/
+/*******************************************************/
 
   // IMPORTANT NOTE: must mirror what is found in cv32e40x_if_xif.sv
   typedef struct packed {
@@ -49,6 +53,12 @@ module xif_inst_demux
     logic      ecswrite ;
     logic      exc;      
   } x_issue_resp_t;
+
+/*******************************************************/
+/**           Parameters and Definitions End          **/
+/*******************************************************/
+/**             Internal Signals Beginning            **/
+/*******************************************************/
   
   logic[OPCODE_W-1:0] opcode;
   logic[ FUNC3_W-1:0] func3;
@@ -60,12 +70,24 @@ module xif_inst_demux
 
   logic         [N_COPROC-1:0] issue_ready;
   x_issue_resp_t[N_COPROC-1:0] issue_resp;
+
+/*******************************************************/
+/**                Internal Signals End               **/
+/*******************************************************/
+/**            Hardwired Signals Beginning            **/
+/*******************************************************/
   
   assign opcode        = xif_issue_if_i.issue_req.instr[OPCODE_OFF+OPCODE_W-1:OPCODE_OFF];
   assign func3         = xif_issue_if_i.issue_req.instr[  FUNC3_OFF+FUNC3_W-1:FUNC3_OFF];
   assign sign          = {opcode, func3};
   assign default_issue = ~(|coproc_sign);
   assign coproc_issue  = default_issue ? (1 << DEFAULT_IDX) : coproc_sign;
+
+/*******************************************************/
+/**               Hardwired Signals End               **/
+/*******************************************************/
+/**               IF to Struct Beginning              **/
+/*******************************************************/
 
   for (genvar i = 0; i < N_COPROC; i++) begin: gen_if2signal
     assign issue_ready[i]          = xif_issue_if_o[i].issue_ready;
@@ -77,6 +99,12 @@ module xif_inst_demux
     assign issue_resp[i].ecswrite  = xif_issue_if_o[i].issue_resp.ecswrite;
     assign issue_resp[i].exc       = xif_issue_if_o[i].issue_resp.exc;
   end
+
+/*******************************************************/
+/**                  IF to Struct End                 **/
+/*******************************************************/
+/**          Instruction Dispatcher Beginning         **/
+/*******************************************************/
 
   always_comb begin: sign_detector
     for (int i = 0; i < N_COPROC; i++) begin
@@ -126,5 +154,9 @@ module xif_inst_demux
       end
     end
   end
+
+/*******************************************************/
+/**             Instruction Dispatcher End            **/
+/*******************************************************/
 
 endmodule: xif_inst_demux

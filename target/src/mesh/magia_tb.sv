@@ -16,17 +16,17 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * RedMulE Mesh Testbench
+ * MAGIA Testbench
  */
 
-module redmule_mesh_tb;
+module magia_tb;
 
-  string                                   inst_hex;
-  string                                   data_hex;
-  bit[31:0]                                boot_addr;
-  bit[redmule_mesh_tb_pkg::N_TILES*16-1:0] exit_code;
+  string                            inst_hex;
+  string                            data_hex;
+  bit[31:0]                         boot_addr;
+  bit[magia_tb_pkg::N_TILES*16-1:0] exit_code;
 
-  redmule_mesh_fixture fixture();
+  magia_fixture fixture();
 
   initial begin
     // Fetch plusargs or use safe (fail-fast) defaults
@@ -51,4 +51,4 @@ module redmule_mesh_tb;
     $finish;
   end
 
-endmodule: redmule_mesh_tb
+endmodule: magia_tb

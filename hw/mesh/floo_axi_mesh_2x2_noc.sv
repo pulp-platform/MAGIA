@@ -1,4 +1,4 @@
-// Copyright 2024 ETH Zurich and University of Bologna.
+// Copyright 2025 ETH Zurich and University of Bologna.
 // Solderpad Hardware License, Version 0.51, see LICENSE for details.
 // SPDX-License-Identifier: SHL-0.51
 
@@ -16,12 +16,12 @@ package floo_axi_mesh_2x2_noc_pkg;
   /////////////////////
 
   typedef enum logic[2:0] {
-    L2Ni0 = 0,
-    L2Ni1 = 1,
-    RedmuleTileNi00 = 2,
-    RedmuleTileNi01 = 3,
-    RedmuleTileNi10 = 4,
-    RedmuleTileNi11 = 5,
+    MagiaTileX0Y0 = 0,
+    MagiaTileX0Y1 = 1,
+    MagiaTileX1Y0 = 2,
+    MagiaTileX1Y1 = 3,
+    L20 = 4,
+    L21 = 5,
     NumEndpoints = 6} ep_id_e;
 
 
@@ -50,10 +50,10 @@ typedef struct packed {
 localparam sam_rule_t[SamNumRules-1:0] Sam = '{
 '{idx: '{x: 0, y: 1, port_id: 0}, start_addr: 32'he0000000, end_addr: 32'h100000000},// L2_ni_1
 '{idx: '{x: 0, y: 0, port_id: 0}, start_addr: 32'hc0000000, end_addr: 32'he0000000},// L2_ni_0
-'{idx: '{x: 2, y: 1, port_id: 0}, start_addr: 32'h00300000, end_addr: 32'h00400000},// redmule_tile_ni_1_1
-'{idx: '{x: 2, y: 0, port_id: 0}, start_addr: 32'h00200000, end_addr: 32'h00300000},// redmule_tile_ni_1_0
-'{idx: '{x: 1, y: 1, port_id: 0}, start_addr: 32'h00100000, end_addr: 32'h00200000},// redmule_tile_ni_0_1
-'{idx: '{x: 1, y: 0, port_id: 0}, start_addr: 32'h00000000, end_addr: 32'h00100000} // redmule_tile_ni_0_0
+'{idx: '{x: 2, y: 1, port_id: 0}, start_addr: 32'h00300000, end_addr: 32'h00400000},// magia_tile_ni_1_1
+'{idx: '{x: 2, y: 0, port_id: 0}, start_addr: 32'h00200000, end_addr: 32'h00300000},// magia_tile_ni_1_0
+'{idx: '{x: 1, y: 1, port_id: 0}, start_addr: 32'h00100000, end_addr: 32'h00200000},// magia_tile_ni_0_1
+'{idx: '{x: 1, y: 0, port_id: 0}, start_addr: 32'h00000000, end_addr: 32'h00100000} // magia_tile_ni_0_0
 
 };
 
@@ -105,10 +105,10 @@ module floo_axi_mesh_2x2_noc
   input logic clk_i,
   input logic rst_ni,
   input logic test_enable_i,
-  input axi_data_slv_req_t             [1:0][1:0] redmule_tile_data_slv_req_i,
-  output axi_data_slv_rsp_t             [1:0][1:0] redmule_tile_data_slv_rsp_o,
-  output axi_data_mst_req_t             [1:0][1:0] redmule_tile_data_mst_req_o,
-  input axi_data_mst_rsp_t             [1:0][1:0] redmule_tile_data_mst_rsp_i,
+  input axi_data_slv_req_t             [1:0][1:0] magia_tile_data_slv_req_i,
+  output axi_data_slv_rsp_t             [1:0][1:0] magia_tile_data_slv_rsp_o,
+  output axi_data_mst_req_t             [1:0][1:0] magia_tile_data_mst_req_o,
+  input axi_data_mst_rsp_t             [1:0][1:0] magia_tile_data_mst_rsp_i,
   output axi_data_mst_req_t             [1:0] L2_data_mst_req_o,
   input axi_data_mst_rsp_t             [1:0] L2_data_mst_rsp_i
 
@@ -120,8 +120,8 @@ floo_rsp_t router_0_1_to_router_0_0_rsp;
 floo_req_t router_0_0_to_router_1_0_req;
 floo_rsp_t router_1_0_to_router_0_0_rsp;
 
-floo_req_t router_0_0_to_redmule_tile_ni_0_0_req;
-floo_rsp_t redmule_tile_ni_0_0_to_router_0_0_rsp;
+floo_req_t router_0_0_to_magia_tile_ni_0_0_req;
+floo_rsp_t magia_tile_ni_0_0_to_router_0_0_rsp;
 
 floo_req_t router_0_0_to_L2_ni_0_req;
 floo_rsp_t L2_ni_0_to_router_0_0_rsp;
@@ -132,8 +132,8 @@ floo_rsp_t router_0_0_to_router_0_1_rsp;
 floo_req_t router_0_1_to_router_1_1_req;
 floo_rsp_t router_1_1_to_router_0_1_rsp;
 
-floo_req_t router_0_1_to_redmule_tile_ni_0_1_req;
-floo_rsp_t redmule_tile_ni_0_1_to_router_0_1_rsp;
+floo_req_t router_0_1_to_magia_tile_ni_0_1_req;
+floo_rsp_t magia_tile_ni_0_1_to_router_0_1_rsp;
 
 floo_req_t router_0_1_to_L2_ni_1_req;
 floo_rsp_t L2_ni_1_to_router_0_1_rsp;
@@ -144,8 +144,8 @@ floo_rsp_t router_0_0_to_router_1_0_rsp;
 floo_req_t router_1_0_to_router_1_1_req;
 floo_rsp_t router_1_1_to_router_1_0_rsp;
 
-floo_req_t router_1_0_to_redmule_tile_ni_1_0_req;
-floo_rsp_t redmule_tile_ni_1_0_to_router_1_0_rsp;
+floo_req_t router_1_0_to_magia_tile_ni_1_0_req;
+floo_rsp_t magia_tile_ni_1_0_to_router_1_0_rsp;
 
 floo_req_t router_1_1_to_router_0_1_req;
 floo_rsp_t router_0_1_to_router_1_1_rsp;
@@ -153,20 +153,20 @@ floo_rsp_t router_0_1_to_router_1_1_rsp;
 floo_req_t router_1_1_to_router_1_0_req;
 floo_rsp_t router_1_0_to_router_1_1_rsp;
 
-floo_req_t router_1_1_to_redmule_tile_ni_1_1_req;
-floo_rsp_t redmule_tile_ni_1_1_to_router_1_1_rsp;
+floo_req_t router_1_1_to_magia_tile_ni_1_1_req;
+floo_rsp_t magia_tile_ni_1_1_to_router_1_1_rsp;
 
-floo_req_t redmule_tile_ni_0_0_to_router_0_0_req;
-floo_rsp_t router_0_0_to_redmule_tile_ni_0_0_rsp;
+floo_req_t magia_tile_ni_0_0_to_router_0_0_req;
+floo_rsp_t router_0_0_to_magia_tile_ni_0_0_rsp;
 
-floo_req_t redmule_tile_ni_0_1_to_router_0_1_req;
-floo_rsp_t router_0_1_to_redmule_tile_ni_0_1_rsp;
+floo_req_t magia_tile_ni_0_1_to_router_0_1_req;
+floo_rsp_t router_0_1_to_magia_tile_ni_0_1_rsp;
 
-floo_req_t redmule_tile_ni_1_0_to_router_1_0_req;
-floo_rsp_t router_1_0_to_redmule_tile_ni_1_0_rsp;
+floo_req_t magia_tile_ni_1_0_to_router_1_0_req;
+floo_rsp_t router_1_0_to_magia_tile_ni_1_0_rsp;
 
-floo_req_t redmule_tile_ni_1_1_to_router_1_1_req;
-floo_rsp_t router_1_1_to_redmule_tile_ni_1_1_rsp;
+floo_req_t magia_tile_ni_1_1_to_router_1_1_req;
+floo_rsp_t router_1_1_to_magia_tile_ni_1_1_rsp;
 
 floo_req_t L2_ni_0_to_router_0_0_req;
 floo_rsp_t router_0_0_to_L2_ni_0_rsp;
@@ -191,21 +191,21 @@ floo_axi_chimney  #(
   .axi_out_rsp_t(axi_data_mst_rsp_t),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t)
-) redmule_tile_ni_0_0 (
+) magia_tile_ni_0_0 (
   .clk_i,
   .rst_ni,
   .test_enable_i,
   .sram_cfg_i ( '0 ),
-  .axi_in_req_i  ( redmule_tile_data_slv_req_i[0][0] ),
-  .axi_in_rsp_o  ( redmule_tile_data_slv_rsp_o[0][0] ),
-  .axi_out_req_o ( redmule_tile_data_mst_req_o[0][0] ),
-  .axi_out_rsp_i ( redmule_tile_data_mst_rsp_i[0][0] ),
+  .axi_in_req_i  ( magia_tile_data_slv_req_i[0][0] ),
+  .axi_in_rsp_o  ( magia_tile_data_slv_rsp_o[0][0] ),
+  .axi_out_req_o ( magia_tile_data_mst_req_o[0][0] ),
+  .axi_out_rsp_i ( magia_tile_data_mst_rsp_i[0][0] ),
   .id_i             ( '{x: 1, y: 0, port_id: 0}    ),
   .route_table_i    ( '0                          ),
-  .floo_req_o       ( redmule_tile_ni_0_0_to_router_0_0_req   ),
-  .floo_rsp_i       ( router_0_0_to_redmule_tile_ni_0_0_rsp   ),
-  .floo_req_i       ( router_0_0_to_redmule_tile_ni_0_0_req   ),
-  .floo_rsp_o       ( redmule_tile_ni_0_0_to_router_0_0_rsp   )
+  .floo_req_o       ( magia_tile_ni_0_0_to_router_0_0_req   ),
+  .floo_rsp_i       ( router_0_0_to_magia_tile_ni_0_0_rsp   ),
+  .floo_req_i       ( router_0_0_to_magia_tile_ni_0_0_req   ),
+  .floo_rsp_o       ( magia_tile_ni_0_0_to_router_0_0_rsp   )
 );
 
 floo_axi_chimney  #(
@@ -223,21 +223,21 @@ floo_axi_chimney  #(
   .axi_out_rsp_t(axi_data_mst_rsp_t),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t)
-) redmule_tile_ni_0_1 (
+) magia_tile_ni_0_1 (
   .clk_i,
   .rst_ni,
   .test_enable_i,
   .sram_cfg_i ( '0 ),
-  .axi_in_req_i  ( redmule_tile_data_slv_req_i[0][1] ),
-  .axi_in_rsp_o  ( redmule_tile_data_slv_rsp_o[0][1] ),
-  .axi_out_req_o ( redmule_tile_data_mst_req_o[0][1] ),
-  .axi_out_rsp_i ( redmule_tile_data_mst_rsp_i[0][1] ),
+  .axi_in_req_i  ( magia_tile_data_slv_req_i[0][1] ),
+  .axi_in_rsp_o  ( magia_tile_data_slv_rsp_o[0][1] ),
+  .axi_out_req_o ( magia_tile_data_mst_req_o[0][1] ),
+  .axi_out_rsp_i ( magia_tile_data_mst_rsp_i[0][1] ),
   .id_i             ( '{x: 1, y: 1, port_id: 0}    ),
   .route_table_i    ( '0                          ),
-  .floo_req_o       ( redmule_tile_ni_0_1_to_router_0_1_req   ),
-  .floo_rsp_i       ( router_0_1_to_redmule_tile_ni_0_1_rsp   ),
-  .floo_req_i       ( router_0_1_to_redmule_tile_ni_0_1_req   ),
-  .floo_rsp_o       ( redmule_tile_ni_0_1_to_router_0_1_rsp   )
+  .floo_req_o       ( magia_tile_ni_0_1_to_router_0_1_req   ),
+  .floo_rsp_i       ( router_0_1_to_magia_tile_ni_0_1_rsp   ),
+  .floo_req_i       ( router_0_1_to_magia_tile_ni_0_1_req   ),
+  .floo_rsp_o       ( magia_tile_ni_0_1_to_router_0_1_rsp   )
 );
 
 floo_axi_chimney  #(
@@ -255,21 +255,21 @@ floo_axi_chimney  #(
   .axi_out_rsp_t(axi_data_mst_rsp_t),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t)
-) redmule_tile_ni_1_0 (
+) magia_tile_ni_1_0 (
   .clk_i,
   .rst_ni,
   .test_enable_i,
   .sram_cfg_i ( '0 ),
-  .axi_in_req_i  ( redmule_tile_data_slv_req_i[1][0] ),
-  .axi_in_rsp_o  ( redmule_tile_data_slv_rsp_o[1][0] ),
-  .axi_out_req_o ( redmule_tile_data_mst_req_o[1][0] ),
-  .axi_out_rsp_i ( redmule_tile_data_mst_rsp_i[1][0] ),
+  .axi_in_req_i  ( magia_tile_data_slv_req_i[1][0] ),
+  .axi_in_rsp_o  ( magia_tile_data_slv_rsp_o[1][0] ),
+  .axi_out_req_o ( magia_tile_data_mst_req_o[1][0] ),
+  .axi_out_rsp_i ( magia_tile_data_mst_rsp_i[1][0] ),
   .id_i             ( '{x: 2, y: 0, port_id: 0}    ),
   .route_table_i    ( '0                          ),
-  .floo_req_o       ( redmule_tile_ni_1_0_to_router_1_0_req   ),
-  .floo_rsp_i       ( router_1_0_to_redmule_tile_ni_1_0_rsp   ),
-  .floo_req_i       ( router_1_0_to_redmule_tile_ni_1_0_req   ),
-  .floo_rsp_o       ( redmule_tile_ni_1_0_to_router_1_0_rsp   )
+  .floo_req_o       ( magia_tile_ni_1_0_to_router_1_0_req   ),
+  .floo_rsp_i       ( router_1_0_to_magia_tile_ni_1_0_rsp   ),
+  .floo_req_i       ( router_1_0_to_magia_tile_ni_1_0_req   ),
+  .floo_rsp_o       ( magia_tile_ni_1_0_to_router_1_0_rsp   )
 );
 
 floo_axi_chimney  #(
@@ -287,21 +287,21 @@ floo_axi_chimney  #(
   .axi_out_rsp_t(axi_data_mst_rsp_t),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t)
-) redmule_tile_ni_1_1 (
+) magia_tile_ni_1_1 (
   .clk_i,
   .rst_ni,
   .test_enable_i,
   .sram_cfg_i ( '0 ),
-  .axi_in_req_i  ( redmule_tile_data_slv_req_i[1][1] ),
-  .axi_in_rsp_o  ( redmule_tile_data_slv_rsp_o[1][1] ),
-  .axi_out_req_o ( redmule_tile_data_mst_req_o[1][1] ),
-  .axi_out_rsp_i ( redmule_tile_data_mst_rsp_i[1][1] ),
+  .axi_in_req_i  ( magia_tile_data_slv_req_i[1][1] ),
+  .axi_in_rsp_o  ( magia_tile_data_slv_rsp_o[1][1] ),
+  .axi_out_req_o ( magia_tile_data_mst_req_o[1][1] ),
+  .axi_out_rsp_i ( magia_tile_data_mst_rsp_i[1][1] ),
   .id_i             ( '{x: 2, y: 1, port_id: 0}    ),
   .route_table_i    ( '0                          ),
-  .floo_req_o       ( redmule_tile_ni_1_1_to_router_1_1_req   ),
-  .floo_rsp_i       ( router_1_1_to_redmule_tile_ni_1_1_rsp   ),
-  .floo_req_i       ( router_1_1_to_redmule_tile_ni_1_1_req   ),
-  .floo_rsp_o       ( redmule_tile_ni_1_1_to_router_1_1_rsp   )
+  .floo_req_o       ( magia_tile_ni_1_1_to_router_1_1_req   ),
+  .floo_rsp_i       ( router_1_1_to_magia_tile_ni_1_1_rsp   ),
+  .floo_req_i       ( router_1_1_to_magia_tile_ni_1_1_req   ),
+  .floo_rsp_o       ( magia_tile_ni_1_1_to_router_1_1_rsp   )
 );
 
 floo_axi_chimney  #(
@@ -378,23 +378,23 @@ floo_rsp_t [4:0] router_0_0_rsp_in;
     assign router_0_0_req_in[1] = router_1_0_to_router_0_0_req;
     assign router_0_0_req_in[2] = '0;
     assign router_0_0_req_in[3] = L2_ni_0_to_router_0_0_req;
-    assign router_0_0_req_in[4] = redmule_tile_ni_0_0_to_router_0_0_req;
+    assign router_0_0_req_in[4] = magia_tile_ni_0_0_to_router_0_0_req;
 
     assign router_0_0_to_router_0_1_rsp = router_0_0_rsp_out[0];
     assign router_0_0_to_router_1_0_rsp = router_0_0_rsp_out[1];
     assign router_0_0_to_L2_ni_0_rsp = router_0_0_rsp_out[3];
-    assign router_0_0_to_redmule_tile_ni_0_0_rsp = router_0_0_rsp_out[4];
+    assign router_0_0_to_magia_tile_ni_0_0_rsp = router_0_0_rsp_out[4];
 
     assign router_0_0_to_router_0_1_req = router_0_0_req_out[0];
     assign router_0_0_to_router_1_0_req = router_0_0_req_out[1];
     assign router_0_0_to_L2_ni_0_req = router_0_0_req_out[3];
-    assign router_0_0_to_redmule_tile_ni_0_0_req = router_0_0_req_out[4];
+    assign router_0_0_to_magia_tile_ni_0_0_req = router_0_0_req_out[4];
 
     assign router_0_0_rsp_in[0] = router_0_1_to_router_0_0_rsp;
     assign router_0_0_rsp_in[1] = router_1_0_to_router_0_0_rsp;
     assign router_0_0_rsp_in[2] = '0;
     assign router_0_0_rsp_in[3] = L2_ni_0_to_router_0_0_rsp;
-    assign router_0_0_rsp_in[4] = redmule_tile_ni_0_0_to_router_0_0_rsp;
+    assign router_0_0_rsp_in[4] = magia_tile_ni_0_0_to_router_0_0_rsp;
 
 floo_axi_router #(
   .AxiCfg(AxiCfg),
@@ -430,23 +430,23 @@ floo_rsp_t [4:0] router_0_1_rsp_in;
     assign router_0_1_req_in[1] = router_1_1_to_router_0_1_req;
     assign router_0_1_req_in[2] = router_0_0_to_router_0_1_req;
     assign router_0_1_req_in[3] = L2_ni_1_to_router_0_1_req;
-    assign router_0_1_req_in[4] = redmule_tile_ni_0_1_to_router_0_1_req;
+    assign router_0_1_req_in[4] = magia_tile_ni_0_1_to_router_0_1_req;
 
     assign router_0_1_to_router_1_1_rsp = router_0_1_rsp_out[1];
     assign router_0_1_to_router_0_0_rsp = router_0_1_rsp_out[2];
     assign router_0_1_to_L2_ni_1_rsp = router_0_1_rsp_out[3];
-    assign router_0_1_to_redmule_tile_ni_0_1_rsp = router_0_1_rsp_out[4];
+    assign router_0_1_to_magia_tile_ni_0_1_rsp = router_0_1_rsp_out[4];
 
     assign router_0_1_to_router_1_1_req = router_0_1_req_out[1];
     assign router_0_1_to_router_0_0_req = router_0_1_req_out[2];
     assign router_0_1_to_L2_ni_1_req = router_0_1_req_out[3];
-    assign router_0_1_to_redmule_tile_ni_0_1_req = router_0_1_req_out[4];
+    assign router_0_1_to_magia_tile_ni_0_1_req = router_0_1_req_out[4];
 
     assign router_0_1_rsp_in[0] = '0;
     assign router_0_1_rsp_in[1] = router_1_1_to_router_0_1_rsp;
     assign router_0_1_rsp_in[2] = router_0_0_to_router_0_1_rsp;
     assign router_0_1_rsp_in[3] = L2_ni_1_to_router_0_1_rsp;
-    assign router_0_1_rsp_in[4] = redmule_tile_ni_0_1_to_router_0_1_rsp;
+    assign router_0_1_rsp_in[4] = magia_tile_ni_0_1_to_router_0_1_rsp;
 
 floo_axi_router #(
   .AxiCfg(AxiCfg),
@@ -482,21 +482,21 @@ floo_rsp_t [4:0] router_1_0_rsp_in;
     assign router_1_0_req_in[1] = '0;
     assign router_1_0_req_in[2] = '0;
     assign router_1_0_req_in[3] = router_0_0_to_router_1_0_req;
-    assign router_1_0_req_in[4] = redmule_tile_ni_1_0_to_router_1_0_req;
+    assign router_1_0_req_in[4] = magia_tile_ni_1_0_to_router_1_0_req;
 
     assign router_1_0_to_router_1_1_rsp = router_1_0_rsp_out[0];
     assign router_1_0_to_router_0_0_rsp = router_1_0_rsp_out[3];
-    assign router_1_0_to_redmule_tile_ni_1_0_rsp = router_1_0_rsp_out[4];
+    assign router_1_0_to_magia_tile_ni_1_0_rsp = router_1_0_rsp_out[4];
 
     assign router_1_0_to_router_1_1_req = router_1_0_req_out[0];
     assign router_1_0_to_router_0_0_req = router_1_0_req_out[3];
-    assign router_1_0_to_redmule_tile_ni_1_0_req = router_1_0_req_out[4];
+    assign router_1_0_to_magia_tile_ni_1_0_req = router_1_0_req_out[4];
 
     assign router_1_0_rsp_in[0] = router_1_1_to_router_1_0_rsp;
     assign router_1_0_rsp_in[1] = '0;
     assign router_1_0_rsp_in[2] = '0;
     assign router_1_0_rsp_in[3] = router_0_0_to_router_1_0_rsp;
-    assign router_1_0_rsp_in[4] = redmule_tile_ni_1_0_to_router_1_0_rsp;
+    assign router_1_0_rsp_in[4] = magia_tile_ni_1_0_to_router_1_0_rsp;
 
 floo_axi_router #(
   .AxiCfg(AxiCfg),
@@ -532,21 +532,21 @@ floo_rsp_t [4:0] router_1_1_rsp_in;
     assign router_1_1_req_in[1] = '0;
     assign router_1_1_req_in[2] = router_1_0_to_router_1_1_req;
     assign router_1_1_req_in[3] = router_0_1_to_router_1_1_req;
-    assign router_1_1_req_in[4] = redmule_tile_ni_1_1_to_router_1_1_req;
+    assign router_1_1_req_in[4] = magia_tile_ni_1_1_to_router_1_1_req;
 
     assign router_1_1_to_router_1_0_rsp = router_1_1_rsp_out[2];
     assign router_1_1_to_router_0_1_rsp = router_1_1_rsp_out[3];
-    assign router_1_1_to_redmule_tile_ni_1_1_rsp = router_1_1_rsp_out[4];
+    assign router_1_1_to_magia_tile_ni_1_1_rsp = router_1_1_rsp_out[4];
 
     assign router_1_1_to_router_1_0_req = router_1_1_req_out[2];
     assign router_1_1_to_router_0_1_req = router_1_1_req_out[3];
-    assign router_1_1_to_redmule_tile_ni_1_1_req = router_1_1_req_out[4];
+    assign router_1_1_to_magia_tile_ni_1_1_req = router_1_1_req_out[4];
 
     assign router_1_1_rsp_in[0] = '0;
     assign router_1_1_rsp_in[1] = '0;
     assign router_1_1_rsp_in[2] = router_1_0_to_router_1_1_rsp;
     assign router_1_1_rsp_in[3] = router_0_1_to_router_1_1_rsp;
-    assign router_1_1_rsp_in[4] = redmule_tile_ni_1_1_to_router_1_1_rsp;
+    assign router_1_1_rsp_in[4] = magia_tile_ni_1_1_to_router_1_1_rsp;
 
 floo_axi_router #(
   .AxiCfg(AxiCfg),

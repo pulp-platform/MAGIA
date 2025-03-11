@@ -1,5 +1,5 @@
-#include "redmule_tile_utils.h"
-#include "redmule_mesh_utils.h"
+#include "magia_tile_utils.h"
+#include "magia_utils.h"
 
 int main(void) {
   h_pprintf("Hello World! it is hartid "); pprintf(ds(get_hartid())); pprintln;

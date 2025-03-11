@@ -20,27 +20,13 @@
  */
 
 module instr2cache_req 
-  import redmule_tile_pkg::*;
+  import magia_tile_pkg::*;
 (
-  input  redmule_tile_pkg::core_instr_req_t       instr_req_i,
-  output redmule_tile_pkg::core_cache_instr_req_t cache_req_o
+  input  magia_tile_pkg::core_instr_req_t       instr_req_i,
+  output magia_tile_pkg::core_cache_instr_req_t cache_req_o
 );
   
   assign cache_req_o.req  = instr_req_i.req;
   assign cache_req_o.addr = instr_req_i.addr;
   
 endmodule: instr2cache_req
-
-module cache2instr_rsp 
-  import redmule_tile_pkg::*;
-(
-  input  redmule_tile_pkg::core_cache_instr_rsp_t cache_rsp_i,
-  output redmule_tile_pkg::core_instr_rsp_t       instr_rsp_o
-);
-
-  assign instr_rsp_o.gnt    = cache_rsp_i.gnt;
-  assign instr_rsp_o.rvalid = cache_rsp_i.rvalid;
-  assign instr_rsp_o.rdata  = cache_rsp_i.rdata;
-  assign instr_rsp_o.err    = cache_rsp_i.rerror;
-
-endmodule: cache2instr_rsp
