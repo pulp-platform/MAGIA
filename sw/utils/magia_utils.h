@@ -9,8 +9,8 @@
 #define SYNC_BASE   (RESERVED_START + SYNC_OFFSET)
 #define SYNC_EN     (SYNC_BASE + 0x4)
 
-#define MESH_X_TILES (2)
-#define MESH_Y_TILES (2)
+#define MESH_X_TILES (8)
+#define MESH_Y_TILES (8)
 #define NUM_HARTS    (MESH_X_TILES*MESH_Y_TILES)
 
 #define h_pprintf(x) (h_psprint(get_hartid(), x))
