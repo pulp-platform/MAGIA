@@ -133,6 +133,9 @@ SHELL := /bin/bash
 IDMA_ROOT    ?= $(shell $(BENDER) path idma)
 IDMA_ADD_IDS ?= rw_axi_rw_obi
 
+# Parameters used for FlooNoC
+FLOONOC_ROOT ?= $(shell $(BENDER) path floo_noc)
+
 # Generate instructions and data stimuli
 all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb
 
@@ -220,8 +223,8 @@ synth-ips:
 	> ${compile_script_synth}
 
 floonoc-patch:
-	cd .bender/git/checkouts/floo_noc-b7473fec891b1e84 && \
-	git apply ../../../../floonoc.patch &&                \
+	cd $(FLOONOC_ROOT) &&                  \
+	git apply ../../../../floonoc.patch && \
 	cd ../../../../
 
 build-hw: hw-all
