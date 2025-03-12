@@ -1,10 +1,10 @@
 # MAGIA
-[![SHL-0.51 license](https://img.shields.io/badge/license-SHL--0.51-green)](LICENSE)
-[![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE-APACHE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE.APACHE)
+[![SHL-0.51 license](https://img.shields.io/badge/license-SHL--0.51-green)](LICENSE.SHL)
 
 This repo contains MAGIA (**M**esh **A**rchitecture for **G**enerative **I**ntelligence **A**cceleration), an open-source large-scale accelerator designed for Generative Artificial Intelligence (GenAI). MAGIA is a network of tiles that have at their heart [RedMulE](https://github.com/pulp-platform/redmule) for General Matrix Multiply (GeMM) acceleration, [iDMA](https://github.com/pulp-platform/iDMA) for fast and efficient data movement and an L1 scratchpad memory (SPM). Tiles are connected to a mesh Network-on-Chip (NoC) - [FlooNoC](https://github.com/pulp-platform/FlooNoC) - used for communication, and a dedicated network for synchronization - [FractalSync](https://github.com/VictorIsachi/fractal_sync). MAGIA is designed to support matrices of sizes that vary by orders of magnitude, and also sparse matrix multiplication. 
 
-MAGIA is developed as part of the [PULP](https://pulp-platform.org/) project, a joint effort between ETH Zurich and the University of Bologna.
+MAGIA is developed as part of the [PULP (Parallel Ultra-Low Power)](https://pulp-platform.org/) project, a joint effort between ETH Zurich and the University of Bologna.
 
 ## ⭐ Getting Started
 
@@ -70,7 +70,7 @@ make run test=fsync_test
 ![](doc/MAGIA.png)
 
 ### Tile
-At the heart of the architecture lies the MAGIA tile containing a GeMM accelerator, a DMA engine, a multi-banked L1 SPM and a lightweight control core. The L1 features interleaved memory banks that compose the Tightly-Coupled Data Memory (TCDM). Each tile has access to the global L2 and to a subset of other tiles’ L1, accessing the latter via remote direct memory access (RDMA). Inter-tile and global communication is carried out through a 2-channel 32-bit [AXI4](https://github.com/pulp-platform/axi) crossbar (XBAR). External tiles and the core access the L1 through an OpenBus Interface ([OBI](https://github.com/pulp-platform/obi)) XBAR and an atomic memory operation (AMO) hardware module.
+The central piece of the architecture is the MAGIA tile containing a GeMM accelerator, a DMA engine, a multi-banked L1 SPM and a lightweight control core. The L1 features interleaved memory banks that compose the Tightly-Coupled Data Memory (TCDM). Each tile has access to the global L2 and to a subset of other tiles’ L1, accessing the latter via remote direct memory access (RDMA). Inter-tile and global communication is carried out through a 2-channel 32-bit [AXI4](https://github.com/pulp-platform/axi) crossbar (XBAR). External tiles and the core access the L1 through an OpenBus Interface ([OBI](https://github.com/pulp-platform/obi)) XBAR and an atomic memory operation (AMO) hardware module.
 
 Each tile is controlled by a [CV32E40X](https://github.com/pulp-platform/cv32e40x). The system has been extended with custom instructions to program and control the iDMA, RedMulE, and FractalSync. These instructions are implemented using eXtension Interface (Xif). A dedicated module dispatches instructions not meant for the core to the appropriate module.
 
@@ -100,20 +100,22 @@ L2 size: 1 GB.
 | *Synch.*         | 0x0000_F000+*ID*\*0x0010_0000                 |                                                                            |
 
 ## 🖥️ Programming model
-The systems provies a set of **C functions** to program RedMulE, the iDMA and FractalSync.
+The systems supports the RV32IMA ISA and provies a set of **C functions** to program RedMulE, the iDMA and FractalSync.
 
 ### RedMulE instructions
 
 Performing *Y = (X x W) + Y*, where Y, X and W are *M x K*, *M x N* and *N x K* matrices respectively, can be done with the following functions:
 
 ```c
-/* k_size [uint16_t]: Number of columns of Y and W.
+/* Configure sizes of matrices.
+ * k_size [uint16_t]: Number of columns of Y and W.
  * m_size [uint16_t]: Number of rows of Y and X.
  * n_size [uint16_t]: Number of columns of X and rows of W. 
  */  
 redmule_mcnfig(k_size, m_size, n_size);
 
-/* x_base [uint32_t]: Source address of X.
+/* Provide locations of matrices and start matrix multiplication.
+ * x_base [uint32_t]: Source address of X.
  * w_base [uint32_t]: Source address of W.
  * y_base [uint32_t]: Source address of W.
  */
@@ -122,48 +124,54 @@ redmule_marith(x_base, w_base, y_base);
 
 ### iDMA instructions
 
-Data transfers can occur concurently with GeMM operations. Furthermore, trasfters from and to the L1 can overlap. To start a transfer you must first configurre the iDMA transfer channel, setup the transfer parameters (e.g. source address, destination address, length, stride 2, etc.) and then indicate transfer request.
+Data transfers can occur concurently with GeMM operations. Furthermore, trasfters from and to the L1 can overlap. To start a transfer you must first configurre the iDMA transfer channel, setup transfer parameters (e.g. source address, destination address, length, stride 2, etc.) and then indicate transfer request.
 
 ```c
-/* Configures the iDMA for input (i.e. external to L1) data transfers.
+/* Configure the iDMA for input (i.e. external to L1) data transfers.
  */  
 idma_conf_in();
 
-/* Configures the iDMA for output (i.e. L1 to external) data transfers.
+/* Configure the iDMA for output (i.e. L1 to external) data transfers.
  */
 idma_conf_out();
 
-/* dst_addr [uint32_t]: Destination address of the input data transfer.
+/* Setup for input data transfers.
+ * dst_addr [uint32_t]: Destination address of the input data transfer.
  * src_addr [uint32_t]: Source address of the input data trasfer.
  * len      [uint32_t]: Length of the input data transfer.
  */
 idma_set_addr_len_in(dst_addr, src_addr, len);
 
-/* dst_addr [uint32_t]: Destination address of the output data transfer.
+/* Setup for output data transfers.
+ * dst_addr [uint32_t]: Destination address of the output data transfer.
  * src_addr [uint32_t]: Source address of the output data trasfer.
  * len      [uint32_t]: Length of the output data transfer.
  */
 idma_set_addr_len_out(dst_addr, src_addr, len);
 
-/* dst_std_2 [uint32_t]: Destination stride 2 of the input data transfer.
+/* Setup for input data transfers.
+ * dst_std_2 [uint32_t]: Destination stride 2 of the input data transfer.
  * src_std_2 [uint32_t]: Source stride 2 of the input data trasfer.
  * reps_2    [uint32_t]: Repetitions 2 of the input data transfer.
  */
 idma_set_std2_rep2_in(dst_std_2, src_std_2, reps_2);
 
-/* dst_std_2 [uint32_t]: Destination stride 2 of the output data transfer.
+/* Setup for output data transfers.
+ * dst_std_2 [uint32_t]: Destination stride 2 of the output data transfer.
  * src_std_2 [uint32_t]: Source stride 2 of the output data trasfer.
  * reps_2    [uint32_t]: Repetitions 2 of the output data transfer.
  */
 idma_set_std2_rep2_out(dst_std_2, src_std_2, reps_2);
 
-/* dst_std_3 [uint32_t]: Destination stride 3 of the input data transfer.
+/* Setup for input data transfers.
+ * dst_std_3 [uint32_t]: Destination stride 3 of the input data transfer.
  * src_std_3 [uint32_t]: Source stride 3 of the input data trasfer.
  * reps_3    [uint32_t]: Repetitions 3 of the input data transfer.
  */
 idma_set_std3_rep3_in(dst_std_3, src_std_3, reps_3);
 
-/* dst_std_3 [uint32_t]: Destination stride 3 of the output data transfer.
+/* Setup for output data transfers.
+ * dst_std_3 [uint32_t]: Destination stride 3 of the output data transfer.
  * src_std_3 [uint32_t]: Source stride 3 of the output data trasfer.
  * reps_3    [uint32_t]: Repetitions 3 of the output data transfer.
  */
@@ -180,10 +188,11 @@ idma_start_out();
 
 ### FractalSync instructions
 
-Synchronizing a syncrhonization domain (i.e. a set of tiles that have a common FractalSync node) can be done with the function below. Note that all synchronization nodes in a synchronization domain must request synchronization for it to occur.
+Synchronizing a synchronization domain (i.e. a set of tiles that have a common FractalSync node) can be done with the function below. Note that all synchronization nodes in a synchronization domain must request synchronization for it to occur.
 
 ```c
-/* level [uint32_t]: Level of the synchronization tree where syncrhonization ought to occur.
+/* Request barrier synchronization.
+ * level [uint32_t]: Level of the synchronization tree where synchronization ought to occur.
  */  
 fsync(level);
 ```
@@ -197,4 +206,6 @@ fsync(level);
 
 **RTL/TB** : The `N_TILES_X` and `N_TILES_Y` parameters in `hw/mesh/magia_pkg.sv` specifie the number of tiles and allows the derivation of the appropriate data and syncrhonization networks.
 
+## 🔏 License
+MAGIA is an open-source project with a permissive license. All `software` sources are licensed under the Apache License 2.0 ([`LICENSE.APACHE`](LICENSE.APACHE)). All `hardware` sources are licensed under the Solderpad Hardware License 0.51 ([`LICENSE.SHL`](LICENSE.SHL)).
 
