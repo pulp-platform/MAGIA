@@ -4,3 +4,5 @@ bender
 modelsim.ini
 scripts/compile.tcl
 work/
+update-ips.log
+build-hw.log

@@ -1,5 +1,5 @@
-#include "redmule_tile_utils.h"
-#include "redmule_mesh_utils.h"
+#include "magia_tile_utils.h"
+#include "magia_utils.h"
 #include "redmule_isa_utils.h"
 #include "idma_isa_utils.h"
 
@@ -268,7 +268,7 @@ int main(void) {
   else
     exit_code[get_hartid()] = PASS_EXIT_CODE;
 
-  mmio8(TEST_END_ADDR + get_hartid()) = exit_code[get_hartid()] - get_hartid();
+  mmio16(TEST_END_ADDR + get_hartid()*2) = exit_code[get_hartid()] - get_hartid();
 
   return 0;
 }

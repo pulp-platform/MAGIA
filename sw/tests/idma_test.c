@@ -1,4 +1,4 @@
-#include "redmule_tile_utils.h"
+#include "magia_tile_utils.h"
 #include "idma_isa_utils.h"
 
 #include "x_input.h"
@@ -201,7 +201,7 @@ int main(void) {
   else
     exit_code = PASS_EXIT_CODE;
 
-  mmio8(TEST_END_ADDR) = exit_code;
+  mmio16(TEST_END_ADDR) = exit_code;
 
   return 0;
 }

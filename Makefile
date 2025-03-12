@@ -15,7 +15,7 @@
 #
 # Authors: Victor Isachi <victor.isachi@unibo.it>
 # 
-# RedMulE Tile Makefile
+# MAGIA Makefile
  
 
 # Paths to folders
@@ -44,8 +44,10 @@ compile_script_synth ?= scripts/synth_compile.tcl
 compile_flag         ?= -suppress 2583 -suppress 13314 -suppress 3009
 
 questa_compile_flag  += -t 1ns -suppress 3009
-questa_opt_flag      += -suppress 3009 -debugdb
+questa_opt_flag      += -suppress 3009 -debugdb +acc=npr
+questa_opt_fast_flag += -suppress 3009
 questa_run_flag      += -t 1ns -debugDB -suppress 3009
+questa_run_fast_flag += -t 1ns -suppress 3009
 
 INI_PATH  = $(mkfile_path)/modelsim.ini
 WORK_PATH = $(BUILD_DIR)
@@ -60,6 +62,7 @@ data_entry    ?= 0xCC010000
 boot_addr     ?= 0xCC000080
 test          ?= hello_world
 mesh_dv       ?= 1
+fast_sim      ?= 0
 # Add here a path to the core traces of each tile you want to monitor
 num_cores     ?= 4
 $(foreach i, $(shell seq 0 $(shell echo $$(($(num_cores)-1)))), \
@@ -130,6 +133,9 @@ SHELL := /bin/bash
 IDMA_ROOT    ?= $(shell $(BENDER) path idma)
 IDMA_ADD_IDS ?= rw_axi_rw_obi
 
+# Parameters used for FlooNoC
+FLOONOC_ROOT ?= $(shell $(BENDER) path floo_noc)
+
 # Generate instructions and data stimuli
 all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb
 
@@ -137,7 +143,7 @@ all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb
 run: $(CRT)
 ifeq ($(gui), 0)
 	cd $(BUILD_DIR)/$(TEST_SRCS);                                                                \
-	$(QUESTA) vsim -c vopt_tb $(questa_run_flag) -do "run -a"                                    \
+	$(QUESTA) vsim -c vopt_tb $(questa_run_fast_flag) -do "run -a"                               \
 	+INST_HEX=$(inst_hex_name)                                                                   \
 	+DATA_HEX=$(data_hex_name)                                                                   \
 	+INST_ENTRY=$(inst_entry)                                                                    \
@@ -192,9 +198,9 @@ bender_targs += -t idma_test
 #endif
 
 ifeq ($(mesh_dv),1)
-	tb         := redmule_mesh_tb
+	tb         := magia_tb
 else
-	tb         := redmule_tile_tb
+	tb         := magia_tile_tb
 endif
 WAVES        := $(mkfile_path)/wave.do
 bender_targs += -t redmule_complex
@@ -217,8 +223,8 @@ synth-ips:
 	> ${compile_script_synth}
 
 floonoc-patch:
-	cd .bender/git/checkouts/floo_noc-d566867a3b179444 && \
-	git apply ../../../../floonoc.patch &&                \
+	cd $(FLOONOC_ROOT) &&                  \
+	git apply ../../../../floonoc.patch && \
 	cd ../../../../
 
 build-hw: hw-all
@@ -266,7 +272,11 @@ hw-clean-all:
 	rm -rf .cached_ipdb.json
 
 hw-opt:
-	$(QUESTA) vopt $(questa_opt_flag) +acc=npr -o vopt_tb $(tb) -floatparameters+$(tb) -work $(BUILD_DIR)
+ifeq ($(fast_sim), 0)
+	$(QUESTA) vopt $(questa_opt_flag) -o vopt_tb $(tb) -floatparameters+$(tb) -work $(BUILD_DIR)
+else
+	$(QUESTA) vopt $(questa_opt_fast_flag) -o vopt_tb $(tb) -floatparameters+$(tb) -work $(BUILD_DIR)
+endif
 
 hw-compile:
 	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_ADD_IDS=$(IDMA_ADD_IDS)

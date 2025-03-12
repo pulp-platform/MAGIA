@@ -1,18 +1,20 @@
-#include "redmule_tile_utils.h"
-#include "redmule_mesh_utils.h"
+#include "magia_tile_utils.h"
+#include "magia_utils.h"
 #include "fsync_isa_utils.h"
+#include "cache_fill.h"
 
-#define VERBOSE (1000)
+#define VERBOSE (100)
 
-#define NUM_LEVELS (2)
+#define NUM_LEVELS (6)
 #define STALLING
-#define SYNC_SETTLE (NUM_HARTS*500)
+
+#define CACHE_HEAT_CYCLES (3)
 
 /// Only measure via 1 method (cycles xor time) otherwise the 2 methods interfere with each other
 /// Note SW performance measures add overhead
-#define PERF_MEASURE
+// #define PERF_MEASURE
 // #define P_CYCLES
-#define P_TIME
+// #define P_TIME
 
 int main(void) {
   uint32_t levels[NUM_HARTS];
@@ -29,14 +31,14 @@ int main(void) {
 #endif
 #endif
 
-  for (int i = 0; i < NUM_LEVELS; i++){
-    h_pprintf("Fractal Sync at level "); pprintf(ds(i)); n_pprintf("...");
+  for (int i = NUM_LEVELS-1; i < NUM_LEVELS; i++){
+    h_pprintf("Fractal Sync at level "); pprintf(ds(i+1)); n_pprintf("...");
 
 #ifndef STALLING
     irq_en(1<<IRQ_FSYNC_DONE);
 #endif
     
-    levels[get_hartid()] = (uint32_t)(i+1);
+    levels[get_hartid()] = 1 << i; 
 #if VERBOSE > 10
     h_pprintf("levels: 0x"); n_pprintf(hs(levels[get_hartid()]));
 #endif
@@ -50,13 +52,18 @@ int main(void) {
 #endif
 #endif
 
-    fsync(levels[get_hartid()]);
-    sentinel_instr();   // Indicate occurred synchronization
+    // Filling up the cache
+    fill_icache();
 
+    // Execute synchronization multiple times to pre-heat the cache
+    for (int i = 0; i < CACHE_HEAT_CYCLES; i++) {
+      fsync(levels[get_hartid()]);
 #ifndef STALLING
-    asm volatile("wfi" ::: "memory");
-    h_pprintf("Detected IRQ...\n");
+      asm volatile("wfi" ::: "memory");
+      h_pprintf("Detected IRQ...\n");
 #endif
+      sentinel_instr_id();   // Indicate occurred synchronization
+    }
 
 #ifdef PERF_MEASURE
 #ifdef P_CYCLES
@@ -97,7 +104,7 @@ int main(void) {
 
   h_pprintf("Fractal Sync test finished...\n");
 
-  mmio8(TEST_END_ADDR + get_hartid()) = DEFAULT_EXIT_CODE - get_hartid();
+  mmio16(TEST_END_ADDR + get_hartid()*2) = DEFAULT_EXIT_CODE - get_hartid();
 
   return 0;
 }

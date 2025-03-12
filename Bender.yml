@@ -17,7 +17,7 @@
 # Bender manifest
 
 package:
-  name: redmule-mesh
+  name: magia
   authors:
     - "Victor Isachi (victor.isachi@unibo.it)"
 
@@ -36,26 +36,30 @@ dependencies:
   safety_island     : { git: "https://github.com/pulp-platform/safety_island.git"     , rev: 1cc316a6874cd2e08355fa17f0ede06406ba0407 } # branch: vi/redmule_scaleup
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
-  fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: e045fc2905775362362712b5c0d7ab26886636b0 } # branch: main
-  floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , rev: 507bb0baf1dcd9c68b6547b265248d64c8c771e7 } # branch: main
+  fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: e8ca3adc7974397bdf8d77a8906ccc897d7e19af } # branch: main
+  floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , rev: f4a36265cda8b56faee45692afb20ddfffba6dee } # branch: main
 
 export_include_dirs:
   - hw/include
 
 sources:
-  # RedMulE Mesh
-  - target: all(redmule_mesh_dv)
+  # MAGIA
+  - target: all(magia_dv)
     defines:
       CORE_TRACES: ~
     files:
-      # RedMulE Packages
-      - hw/mesh/redmule_mesh_pkg.sv
-      - hw/tile/redmule_tile_pkg.sv
-      # RedMulE Tile
-      - hw/tile/data2obi.sv
-      - hw/tile/instr2obi.sv
-      - hw/tile/instr2cache.sv
-      - hw/tile/obi2hci.sv
+      # MAGIA Packages
+      - hw/mesh/magia_pkg.sv
+      - hw/tile/magia_tile_pkg.sv
+      # MAGIA Tile
+      - hw/tile/converters/data2obi.sv
+      - hw/tile/converters/obi2data.sv
+      - hw/tile/converters/instr2obi.sv
+      - hw/tile/converters/obi2instr.sv
+      - hw/tile/converters/instr2cache.sv
+      - hw/tile/converters/cache2instr.sv
+      - hw/tile/converters/obi2hci.sv
+      - hw/tile/converters/hci2obi.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
       - hw/tile/idma_xif_inst_decoder.sv
@@ -63,29 +67,38 @@ sources:
       - hw/tile/idma_axi_obi_transfer_ch.sv
       - hw/tile/idma_ctrl.sv
       - hw/tile/fractal_sync_xif_inst_decoder.sv
-      - hw/tile/redmule_tile.sv
-      # RedMulE Mesh
-      - hw/mesh/floo_axi_mesh_2x2_noc.sv
-      # RedMulE DV
-      - target/src/tile/redmule_tile_tb_pkg.sv
-      - target/src/tile/redmule_tile_vip.sv
-      - target/src/tile/redmule_tile_fixture.sv
-      - target/src/tile/redmule_tile_tb.sv
-      - target/src/mesh/redmule_mesh_tb_pkg.sv
-      - target/src/mesh/redmule_mesh_vip.sv
-      - target/src/mesh/redmule_mesh_fixture.sv
-      - target/src/mesh/redmule_mesh_tb.sv
+      - hw/tile/magia_tile.sv
+      # MAGIA
+      - hw/mesh/noc/floo_axi_mesh_2x2_noc.sv
+      - hw/mesh/noc/floo_axi_mesh_4x4_noc.sv
+      - hw/mesh/noc/floo_axi_mesh_8x8_noc.sv
+      - hw/mesh/noc/floo_axi_mesh_16x16_noc.sv
+      - hw/mesh/noc/floo_axi_mesh_32x32_noc.sv
+      - hw/mesh/magia.sv
+      # MAGIA DV
+      - target/src/tile/magia_tile_tb_pkg.sv
+      - target/src/tile/magia_tile_vip.sv
+      - target/src/tile/magia_tile_fixture.sv
+      - target/src/tile/magia_tile_tb.sv
+      - target/src/mesh/magia_tb_pkg.sv
+      - target/src/mesh/magia_vip.sv
+      - target/src/mesh/magia_fixture.sv
+      - target/src/mesh/magia_tb.sv
 
-  - target: all(not(redmule_mesh_dv))
+  - target: all(not(magia_dv))
     files:
-      # RedMulE Packages
-      - hw/mesh/redmule_mesh_pkg.sv
-      - hw/tile/redmule_tile_pkg.sv
-      # RedMulE Tile
-      - hw/tile/data2obi.sv
-      - hw/tile/instr2obi.sv
-      - hw/tile/instr2cache.sv
-      - hw/tile/obi2hci.sv
+      # MAGIA Packages
+      - hw/mesh/magia_pkg.sv
+      - hw/tile/magia_tile_pkg.sv
+      # MAGIA Tile
+      - hw/tile/converters/data2obi.sv
+      - hw/tile/converters/obi2data.sv
+      - hw/tile/converters/instr2obi.sv
+      - hw/tile/converters/obi2instr.sv
+      - hw/tile/converters/instr2cache.sv
+      - hw/tile/converters/cache2instr.sv
+      - hw/tile/converters/obi2hci.sv
+      - hw/tile/converters/hci2obi.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
       - hw/tile/idma_xif_inst_decoder.sv
@@ -93,6 +106,11 @@ sources:
       - hw/tile/idma_axi_obi_transfer_ch.sv
       - hw/tile/idma_ctrl.sv
       - hw/tile/fractal_sync_xif_inst_decoder.sv
-      - hw/tile/redmule_tile.sv
-      # RedMulE Mesh
-      - hw/mesh/floo_axi_mesh_2x2_noc.sv
+      - hw/tile/magia_tile.sv
+      # MAGIA
+      - hw/mesh/noc/floo_axi_mesh_2x2_noc.sv
+      - hw/mesh/noc/floo_axi_mesh_4x4_noc.sv
+      - hw/mesh/noc/floo_axi_mesh_8x8_noc.sv
+      - hw/mesh/noc/floo_axi_mesh_16x16_noc.sv
+      - hw/mesh/noc/floo_axi_mesh_32x32_noc.sv
+      - hw/mesh/magia.sv

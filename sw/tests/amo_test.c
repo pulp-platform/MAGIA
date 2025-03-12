@@ -1,9 +1,9 @@
-#include "redmule_tile_utils.h"
-#include "redmule_mesh_utils.h"
+#include "magia_tile_utils.h"
+#include "magia_utils.h"
 
 #define VERBOSE (100)
 
-#define SYNC_SETTLE (NUM_HARTS*1000)
+#define SYNC_SETTLE (MESH_X_TILES*500)
 
 #define NUM_ITER     (1000)
 #define INITIAL_VAL  (1234)
@@ -45,7 +45,7 @@ int main(void) {
     pprintf(" - Expected: ");       pprintf(ds(EXPECTED_VAL)); pprintln;
 #endif
   
-  mmio8(TEST_END_ADDR + get_hartid()) = exit_code[get_hartid()] - get_hartid();
+  mmio16(TEST_END_ADDR + get_hartid()*2) = exit_code[get_hartid()] - get_hartid();
 
   return 0;
 }

@@ -22,6 +22,6 @@ common_targs += -t cv32e40p_exclude_tracer
 #	common_targs += -t redmule_hwpe
 #endif
 
-common_targs += -t redmule_tile
+common_targs += -t magia_tile
 
 common_defs  += -D COREV_ASSERT_OFF

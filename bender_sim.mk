@@ -23,6 +23,6 @@ sim_targs += -t idma_test
 #	sim_targs += -t redmule_test_hwpe
 #endif
 
-sim_targs += -t redmule_tile_test
+sim_targs += -t magia_tile_test
 
-sim_targs += -t redmule_mesh_dv
+sim_targs += -t magia_dv

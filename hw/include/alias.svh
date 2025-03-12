@@ -16,11 +16,11 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * Aliases for interfaces used by RedMulE Mesh
+ * Aliases for interfaces used by MAGIA
  */
 
-`ifndef REDMULE_MESH_ALIAS_
-`define REDMULE_MESH_ALIAS_
+`ifndef MAGIA_MESH_ALIAS_
+`define MAGIA_MESH_ALIAS_
 
 `define AXI_ALIAS(__src_name, __dst_name, __src_req, __dst_req, __src_rsp, __dst_rsp) \
   typedef __src_req              __dst_req;                                           \
@@ -31,4 +31,4 @@
   typedef __src_name``_ar_chan_t __dst_name``_ar_chan_t;                              \
   typedef __src_name``_r_chan_t  __dst_name``_r_chan_t;
 
-`endif /*REDMULE_MESH_ALIAS_*/
+`endif /*MAGIA_MESH_ALIAS_*/

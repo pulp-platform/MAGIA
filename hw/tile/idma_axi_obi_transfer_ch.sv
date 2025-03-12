@@ -20,18 +20,18 @@
  */
 
 module idma_axi_obi_transfer_ch 
-  import redmule_tile_pkg::*;
+  import magia_tile_pkg::*;
   import cv32e40x_pkg::*;
   import idma_pkg::*;
 #(
-  parameter redmule_tile_pkg::idma_transfer_ch_e CHANNEL_T         = redmule_tile_pkg::AXI2OBI,
-  parameter idma_pkg::error_cap_e                ERROR_CAP         = idma_pkg::NO_ERROR_HANDLING,
-  parameter type                                 idma_fe_reg_req_t = redmule_tile_pkg::idma_fe_reg_req_t,
-  parameter type                                 idma_fe_reg_rsp_t = redmule_tile_pkg::idma_fe_reg_rsp_t,
-  parameter type                                 axi_req_t         = redmule_tile_pkg::idma_axi_req_t,
-  parameter type                                 axi_rsp_t         = redmule_tile_pkg::idma_axi_rsp_t,
-  parameter type                                 obi_req_t         = redmule_tile_pkg::idma_obi_req_t,
-  parameter type                                 obi_rsp_t         = redmule_tile_pkg::idma_obi_rsp_t
+  parameter magia_tile_pkg::idma_transfer_ch_e CHANNEL_T         = magia_tile_pkg::AXI2OBI,
+  parameter idma_pkg::error_cap_e              ERROR_CAP         = idma_pkg::NO_ERROR_HANDLING,
+  parameter type                               idma_fe_reg_req_t = magia_tile_pkg::idma_fe_reg_req_t,
+  parameter type                               idma_fe_reg_rsp_t = magia_tile_pkg::idma_fe_reg_rsp_t,
+  parameter type                               axi_req_t         = magia_tile_pkg::idma_axi_req_t,
+  parameter type                               axi_rsp_t         = magia_tile_pkg::idma_axi_rsp_t,
+  parameter type                               obi_req_t         = magia_tile_pkg::idma_obi_req_t,
+  parameter type                               obi_rsp_t         = magia_tile_pkg::idma_obi_rsp_t
 )(
   input  logic             clk_i,
   input  logic             rst_ni,
@@ -52,11 +52,11 @@ module idma_axi_obi_transfer_ch
 /**       Internal Signal Definitions Beginning       **/
 /*******************************************************/
 
-  redmule_tile_pkg::idma_nd_req_t idma_fe_req_d;
-  redmule_tile_pkg::idma_nd_req_t idma_fe_req;
+  magia_tile_pkg::idma_nd_req_t idma_fe_req_d;
+  magia_tile_pkg::idma_nd_req_t idma_fe_req;
 
-  redmule_tile_pkg::idma_be_req_t idma_be_req;
-  redmule_tile_pkg::idma_be_rsp_t idma_be_rsp;
+  magia_tile_pkg::idma_be_req_t idma_be_req;
+  magia_tile_pkg::idma_be_rsp_t idma_be_rsp;
 
   logic fe_req_valid_d, fe_req_ready_d;
   logic fe_req_valid,   fe_req_ready;
@@ -64,8 +64,8 @@ module idma_axi_obi_transfer_ch
   logic be_req_valid,   be_req_ready;
   logic be_rsp_valid,   be_rsp_ready;
 
-  logic                                            issue_id, retire_id;
-  logic[redmule_tile_pkg::iDMA_IdCounterWidth-1:0] next_id,  done_id;
+  logic                                          issue_id, retire_id;
+  logic[magia_tile_pkg::iDMA_IdCounterWidth-1:0] next_id,  done_id;
 
   logic stream_fifo_flush;
 
@@ -98,15 +98,15 @@ module idma_axi_obi_transfer_ch
 /*******************************************************/
 
   idma_reg32_3d #(
-    .NumRegs        ( redmule_tile_pkg::iDMA_NumRegs        ),
-    .NumStreams     ( redmule_tile_pkg::iDMA_NumStreams     ),
-    .IdCounterWidth ( redmule_tile_pkg::iDMA_IdCounterWidth ),
-    .StreamWidth    ( /*DO NOT OVERRIDE*/                   ),
-    .reg_req_t      ( idma_fe_reg_req_t                     ),
-    .reg_rsp_t      ( idma_fe_reg_rsp_t                     ),
-    .dma_req_t      ( redmule_tile_pkg::idma_nd_req_t       ),
-    .cnt_width_t    ( /*DO NOT OVERRIDE*/                   ),
-    .stream_t       ( /*DO NOT OVERRIDE*/                   )
+    .NumRegs        ( magia_tile_pkg::iDMA_NumRegs        ),
+    .NumStreams     ( magia_tile_pkg::iDMA_NumStreams     ),
+    .IdCounterWidth ( magia_tile_pkg::iDMA_IdCounterWidth ),
+    .StreamWidth    ( /*DO NOT OVERRIDE*/                 ),
+    .reg_req_t      ( idma_fe_reg_req_t                   ),
+    .reg_rsp_t      ( idma_fe_reg_rsp_t                   ),
+    .dma_req_t      ( magia_tile_pkg::idma_nd_req_t       ),
+    .cnt_width_t    ( /*DO NOT OVERRIDE*/                 ),
+    .stream_t       ( /*DO NOT OVERRIDE*/                 )
   ) i_idma_frontend (
     .clk_i                             ,
     .rst_ni                            ,
@@ -132,7 +132,7 @@ module idma_axi_obi_transfer_ch
 /*******************************************************/
 
   idma_transfer_id_gen #(
-    .IdWidth ( redmule_tile_pkg::iDMA_IdCounterWidth )
+    .IdWidth ( magia_tile_pkg::iDMA_IdCounterWidth )
   ) i_transfer_id_gen (
     .clk_i                    ,
     .rst_ni                   ,
@@ -149,9 +149,9 @@ module idma_axi_obi_transfer_ch
 /*******************************************************/
 
   stream_fifo_optimal_wrap #(
-    .Depth     ( redmule_tile_pkg::iDMA_JobFifoDepth  ),
-    .type_t    ( redmule_tile_pkg::idma_nd_req_t      ),
-    .PrintInfo ( redmule_tile_pkg::iDMA_PrintFifoInfo )
+    .Depth     ( magia_tile_pkg::iDMA_JobFifoDepth  ),
+    .type_t    ( magia_tile_pkg::idma_nd_req_t      ),
+    .PrintInfo ( magia_tile_pkg::iDMA_PrintFifoInfo )
   ) i_stream_fifo_jobs_2d (
     .clk_i                           ,
     .rst_ni                          ,
@@ -173,12 +173,12 @@ module idma_axi_obi_transfer_ch
 /*******************************************************/
 
   idma_nd_midend #(
-    .NumDim        ( redmule_tile_pkg::iDMA_NumDims   ),
-    .addr_t        ( redmule_tile_pkg::idma_addr_t    ),
-    .idma_req_t    ( redmule_tile_pkg::idma_be_req_t  ),
-    .idma_rsp_t    ( redmule_tile_pkg::idma_be_rsp_t  ),
-    .idma_nd_req_t ( redmule_tile_pkg::idma_nd_req_t  ),
-    .RepWidths     ( redmule_tile_pkg::iDMA_RepWidths )
+    .NumDim        ( magia_tile_pkg::iDMA_NumDims   ),
+    .addr_t        ( magia_tile_pkg::idma_addr_t    ),
+    .idma_req_t    ( magia_tile_pkg::idma_be_req_t  ),
+    .idma_rsp_t    ( magia_tile_pkg::idma_be_rsp_t  ),
+    .idma_nd_req_t ( magia_tile_pkg::idma_nd_req_t  ),
+    .RepWidths     ( magia_tile_pkg::iDMA_RepWidths )
   ) i_idma_midend (
     .clk_i                             ,
     .rst_ni                            ,
@@ -208,35 +208,35 @@ module idma_axi_obi_transfer_ch
 /**                 Back-end Beginning                **/
 /*******************************************************/
 
-  generate if (CHANNEL_T == redmule_tile_pkg::AXI2OBI) begin: gen_axi2obi_ch
+  generate if (CHANNEL_T == magia_tile_pkg::AXI2OBI) begin: gen_axi2obi_ch
     idma_backend_r_axi_w_obi #(
-      .DataWidth            ( redmule_tile_pkg::iDMA_DataWidth            ),
-      .AddrWidth            ( redmule_tile_pkg::iDMA_AddrWidth            ),
-      .UserWidth            ( redmule_tile_pkg::iDMA_UserWidth            ),
-      .AxiIdWidth           ( redmule_tile_pkg::iDMA_AxiIdWidth           ),
-      .NumAxInFlight        ( redmule_tile_pkg::iDMA_NumAxInFlight        ),
-      .BufferDepth          ( redmule_tile_pkg::iDMA_BufferDepth          ),
-      .TFLenWidth           ( redmule_tile_pkg::iDMA_TFLenWidth           ),
-      .MemSysDepth          ( redmule_tile_pkg::iDMA_MemSysDepth          ),
-      .CombinedShifter      ( redmule_tile_pkg::iDMA_CombinedShifter      ),
-      .RAWCouplingAvail     ( redmule_tile_pkg::iDMA_RAWCouplingAvail     ),
-      .MaskInvalidData      ( redmule_tile_pkg::iDMA_MaskInvalidData      ),
-      .HardwareLegalizer    ( redmule_tile_pkg::iDMA_HardwareLegalizer    ),
-      .RejectZeroTransfers  ( redmule_tile_pkg::iDMA_RejectZeroTransfers  ),
-      .ErrorCap             ( ERROR_CAP                                   ),
-      .PrintFifoInfo        ( redmule_tile_pkg::iDMA_PrintFifoInfo        ),
-      .idma_req_t           ( redmule_tile_pkg::idma_be_req_t             ),
-      .idma_rsp_t           ( redmule_tile_pkg::idma_be_rsp_t             ),
-      .idma_eh_req_t        ( idma_pkg::idma_eh_req_t                     ),
-      .idma_busy_t          ( idma_pkg::idma_busy_t                       ),
-      .axi_req_t            ( redmule_tile_pkg::idma_axi_req_t            ),
-      .axi_rsp_t            ( redmule_tile_pkg::idma_axi_rsp_t            ),
-      .obi_req_t            ( redmule_tile_pkg::idma_obi_req_t            ),
-      .obi_rsp_t            ( redmule_tile_pkg::idma_obi_rsp_t            ),
-      .read_meta_channel_t  ( redmule_tile_pkg::idma_read_meta_channel_t  ),
-      .write_meta_channel_t ( redmule_tile_pkg::idma_write_meta_channel_t ),
-      .StrbWidth            ( /*DO NOT OVERRIDE*/                         ),
-      .OffsetWidth          ( /*DO NOT OVERRIDE*/                         )
+      .DataWidth            ( magia_tile_pkg::iDMA_DataWidth            ),
+      .AddrWidth            ( magia_tile_pkg::iDMA_AddrWidth            ),
+      .UserWidth            ( magia_tile_pkg::iDMA_UserWidth            ),
+      .AxiIdWidth           ( magia_tile_pkg::iDMA_AxiIdWidth           ),
+      .NumAxInFlight        ( magia_tile_pkg::iDMA_NumAxInFlight        ),
+      .BufferDepth          ( magia_tile_pkg::iDMA_BufferDepth          ),
+      .TFLenWidth           ( magia_tile_pkg::iDMA_TFLenWidth           ),
+      .MemSysDepth          ( magia_tile_pkg::iDMA_MemSysDepth          ),
+      .CombinedShifter      ( magia_tile_pkg::iDMA_CombinedShifter      ),
+      .RAWCouplingAvail     ( magia_tile_pkg::iDMA_RAWCouplingAvail     ),
+      .MaskInvalidData      ( magia_tile_pkg::iDMA_MaskInvalidData      ),
+      .HardwareLegalizer    ( magia_tile_pkg::iDMA_HardwareLegalizer    ),
+      .RejectZeroTransfers  ( magia_tile_pkg::iDMA_RejectZeroTransfers  ),
+      .ErrorCap             ( ERROR_CAP                                 ),
+      .PrintFifoInfo        ( magia_tile_pkg::iDMA_PrintFifoInfo        ),
+      .idma_req_t           ( magia_tile_pkg::idma_be_req_t             ),
+      .idma_rsp_t           ( magia_tile_pkg::idma_be_rsp_t             ),
+      .idma_eh_req_t        ( idma_pkg::idma_eh_req_t                   ),
+      .idma_busy_t          ( idma_pkg::idma_busy_t                     ),
+      .axi_req_t            ( magia_tile_pkg::idma_axi_req_t            ),
+      .axi_rsp_t            ( magia_tile_pkg::idma_axi_rsp_t            ),
+      .obi_req_t            ( magia_tile_pkg::idma_obi_req_t            ),
+      .obi_rsp_t            ( magia_tile_pkg::idma_obi_rsp_t            ),
+      .read_meta_channel_t  ( magia_tile_pkg::idma_read_meta_channel_t  ),
+      .write_meta_channel_t ( magia_tile_pkg::idma_write_meta_channel_t ),
+      .StrbWidth            ( /*DO NOT OVERRIDE*/                       ),
+      .OffsetWidth          ( /*DO NOT OVERRIDE*/                       )
     ) i_idma_backend (
       .clk_i                           ,
       .rst_ni                          ,
@@ -262,35 +262,35 @@ module idma_axi_obi_transfer_ch
       
       .busy_o          ( busy         )
     );
-  end else if (CHANNEL_T == redmule_tile_pkg::OBI2AXI) begin: gen_obi2axi_ch
+  end else if (CHANNEL_T == magia_tile_pkg::OBI2AXI) begin: gen_obi2axi_ch
     idma_backend_r_obi_w_axi #(
-      .DataWidth            ( redmule_tile_pkg::iDMA_DataWidth            ),
-      .AddrWidth            ( redmule_tile_pkg::iDMA_AddrWidth            ),
-      .UserWidth            ( redmule_tile_pkg::iDMA_UserWidth            ),
-      .AxiIdWidth           ( redmule_tile_pkg::iDMA_AxiIdWidth           ),
-      .NumAxInFlight        ( redmule_tile_pkg::iDMA_NumAxInFlight        ),
-      .BufferDepth          ( redmule_tile_pkg::iDMA_BufferDepth          ),
-      .TFLenWidth           ( redmule_tile_pkg::iDMA_TFLenWidth           ),
-      .MemSysDepth          ( redmule_tile_pkg::iDMA_MemSysDepth          ),
-      .CombinedShifter      ( redmule_tile_pkg::iDMA_CombinedShifter      ),
-      .RAWCouplingAvail     ( redmule_tile_pkg::iDMA_RAWCouplingAvail     ),
-      .MaskInvalidData      ( redmule_tile_pkg::iDMA_MaskInvalidData      ),
-      .HardwareLegalizer    ( redmule_tile_pkg::iDMA_HardwareLegalizer    ),
-      .RejectZeroTransfers  ( redmule_tile_pkg::iDMA_RejectZeroTransfers  ),
-      .ErrorCap             ( ERROR_CAP                                   ),
-      .PrintFifoInfo        ( redmule_tile_pkg::iDMA_PrintFifoInfo        ),
-      .idma_req_t           ( redmule_tile_pkg::idma_be_req_t             ),
-      .idma_rsp_t           ( redmule_tile_pkg::idma_be_rsp_t             ),
-      .idma_eh_req_t        ( idma_pkg::idma_eh_req_t                     ),
-      .idma_busy_t          ( idma_pkg::idma_busy_t                       ),
-      .axi_req_t            ( redmule_tile_pkg::idma_axi_req_t            ),
-      .axi_rsp_t            ( redmule_tile_pkg::idma_axi_rsp_t            ),
-      .obi_req_t            ( redmule_tile_pkg::idma_obi_req_t            ),
-      .obi_rsp_t            ( redmule_tile_pkg::idma_obi_rsp_t            ),
-      .read_meta_channel_t  ( redmule_tile_pkg::idma_read_meta_channel_t  ),
-      .write_meta_channel_t ( redmule_tile_pkg::idma_write_meta_channel_t ),
-      .StrbWidth            ( /*DO NOT OVERRIDE*/                         ),
-      .OffsetWidth          ( /*DO NOT OVERRIDE*/                         )
+      .DataWidth            ( magia_tile_pkg::iDMA_DataWidth            ),
+      .AddrWidth            ( magia_tile_pkg::iDMA_AddrWidth            ),
+      .UserWidth            ( magia_tile_pkg::iDMA_UserWidth            ),
+      .AxiIdWidth           ( magia_tile_pkg::iDMA_AxiIdWidth           ),
+      .NumAxInFlight        ( magia_tile_pkg::iDMA_NumAxInFlight        ),
+      .BufferDepth          ( magia_tile_pkg::iDMA_BufferDepth          ),
+      .TFLenWidth           ( magia_tile_pkg::iDMA_TFLenWidth           ),
+      .MemSysDepth          ( magia_tile_pkg::iDMA_MemSysDepth          ),
+      .CombinedShifter      ( magia_tile_pkg::iDMA_CombinedShifter      ),
+      .RAWCouplingAvail     ( magia_tile_pkg::iDMA_RAWCouplingAvail     ),
+      .MaskInvalidData      ( magia_tile_pkg::iDMA_MaskInvalidData      ),
+      .HardwareLegalizer    ( magia_tile_pkg::iDMA_HardwareLegalizer    ),
+      .RejectZeroTransfers  ( magia_tile_pkg::iDMA_RejectZeroTransfers  ),
+      .ErrorCap             ( ERROR_CAP                                 ),
+      .PrintFifoInfo        ( magia_tile_pkg::iDMA_PrintFifoInfo        ),
+      .idma_req_t           ( magia_tile_pkg::idma_be_req_t             ),
+      .idma_rsp_t           ( magia_tile_pkg::idma_be_rsp_t             ),
+      .idma_eh_req_t        ( idma_pkg::idma_eh_req_t                   ),
+      .idma_busy_t          ( idma_pkg::idma_busy_t                     ),
+      .axi_req_t            ( magia_tile_pkg::idma_axi_req_t            ),
+      .axi_rsp_t            ( magia_tile_pkg::idma_axi_rsp_t            ),
+      .obi_req_t            ( magia_tile_pkg::idma_obi_req_t            ),
+      .obi_rsp_t            ( magia_tile_pkg::idma_obi_rsp_t            ),
+      .read_meta_channel_t  ( magia_tile_pkg::idma_read_meta_channel_t  ),
+      .write_meta_channel_t ( magia_tile_pkg::idma_write_meta_channel_t ),
+      .StrbWidth            ( /*DO NOT OVERRIDE*/                       ),
+      .OffsetWidth          ( /*DO NOT OVERRIDE*/                       )
     ) i_idma_backend (
       .clk_i                           ,
       .rst_ni                          ,

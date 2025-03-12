@@ -1,0 +1,63 @@
+name: axi_mesh_4x4
+description: "Configuration file for a 4x4 MAGIA Mesh NoC"
+network_type: "axi"
+
+routing:
+  route_algo: "XY"
+  use_id_table: true
+
+protocols:
+  - name: "data_mst"
+    protocol: "AXI4"
+    data_width: 32
+    addr_width: 32
+    id_width: 2
+    user_width: 1
+  - name: "data_slv"
+    protocol: "AXI4"
+    data_width: 32
+    addr_width: 32
+    id_width: 4
+    user_width: 1
+
+endpoints:
+  - name: "magia_tile"
+    array: [4, 4]
+    addr_range:
+      base: 0x0000_0000
+      size: 0x0010_0000
+    mgr_port_protocol:
+      - "data_slv"
+    sbr_port_protocol:
+      - "data_mst"
+  - name: "L2"
+    array: [4]
+    addr_range:
+      base: 0xC000_0000
+      size: 0x1000_0000
+    sbr_port_protocol:
+      - "data_mst"
+
+routers:
+  - name: "router"
+    array: [4, 4]
+    degree: 5
+
+connections:
+  - src: "magia_tile"
+    dst: "router"
+    src_range:
+    - [0, 3]
+    - [0, 3]
+    dst_range:
+    - [0, 3]
+    - [0, 3]
+    dst_dir: "Eject"
+  - src: "L2"
+    dst: "router"
+    src_range:
+    - [0, 3]
+    dst_range:
+    - [0, 0]
+    - [0, 3]
+    dst_dir: "West"

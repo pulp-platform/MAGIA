@@ -1,0 +1,302 @@
+cd /scratch/visachi/redmule_perf/redmule-mesh//work/sw/tests/nsync_naive_test.c;                                                                \
+questa-2023.4 vsim -c vopt_tb -t 1ns -suppress 3009 -do "run -a"                               \
++INST_HEX=stim_instr.txt                                                                    \
++DATA_HEX=stim_data.txt                                                                    \
++INST_ENTRY=0xCC000000                                                                    \
++DATA_ENTRY=0xCC010000                                                                    \
++BOOT_ADDR=0xCC000080                                                                      \
+ +log_file_0=./core_0_traces.log   +log_file_1=./core_1_traces.log   +log_file_2=./core_2_traces.log   +log_file_3=./core_3_traces.log                                                                                             \
++itb_file=/scratch/visachi/redmule_perf/redmule-mesh//work/sw/tests/nsync_naive_test.c/verif.itb
+Reading pref.tcl
+
+# 2023.4
+
+# vsim -c vopt_tb -t 1ns -suppress 3009 -do "run -a" "+INST_HEX=stim_instr.txt" "+DATA_HEX=stim_data.txt" "+INST_ENTRY=0xCC000000" "+DATA_ENTRY=0xCC010000" "+BOOT_ADDR=0xCC000080" "+log_file_0=./core_0_traces.log" "+log_file_1=./core_1_traces.log" "+log_file_2=./core_2_traces.log" "+log_file_3=./core_3_traces.log" "+itb_file=/scratch/visachi/redmule_perf/redmule-mesh//work/sw/tests/nsync_naive_test.c/verif.itb" 
+# Start time: 10:38:09 on Jan 16,2025
+# //  Questa Sim-64
+# //  Version 2023.4 linux_x86_64 Oct  9 2023
+# //
+# //  Copyright 1991-2023 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.axi_pkg(fast)
+# Loading work.redmule_mesh_pkg(fast)
+# Loading work.redmule_tile_tb_pkg(fast)
+# Loading work.idma_pkg(fast)
+# Loading work.cf_math_pkg(fast)
+# Loading work.obi_pkg(fast)
+# Loading work.redmule_tile_pkg(fast)
+# Loading work.redmule_mesh_tb_pkg(fast)
+# Loading work.redmule_mesh_tb(fast)
+# Loading work.cv32e40x_pkg(fast)
+# Loading work.fpnew_pkg(fast)
+# Loading work.hwpe_stream_package(fast)
+# Loading work.hci_package(fast)
+# Loading work.redmule_pkg(fast)
+# Loading work.redmule_tile(fast)
+# Loading work.rr_arb_tree(fast)
+# Loading work.rr_arb_tree(fast__1)
+# Loading work.redmule_ctrl_sv_unit(fast)
+# Loading work.redmule_castin_sv_unit(fast)
+# Loading work.hci_core_fifo_sv_unit(fast)
+# Loading work.redmule_castout_sv_unit(fast)
+# Loading work.hci_core_assign_sv_unit(fast)
+# Loading work.hwpe_stream_fifo_sv_unit(fast)
+# Loading work.hwpe_stream_addressgen_v3_sv_unit(fast)
+# Loading work.hci_core_sink_sv_unit(fast)
+# Loading work.hwpe_ctrl_package(fast)
+# Loading work.redmule_top(fast)
+# Loading work.hci_core_assign(fast)
+# Loading work.hci_core_mux_dynamic_sv_unit(fast)
+# Loading work.hci_core_mux_dynamic(fast)
+# Loading work.fpnew_cast_multi(fast)
+# Loading work.hci_core_assign(fast__2)
+# Loading work.hci_core_mux_dynamic(fast__1)
+# Loading work.hci_core_fifo(fast)
+# Loading work.hci_core_source_sv_unit(fast)
+# Loading work.hci_core_source(fast)
+# Loading work.hwpe_stream_assign_sv_unit(fast)
+# Loading work.hwpe_stream_assign(fast)
+# Loading work.redmule_row(fast)
+# Loading work.cv32e40x_wrapper(fast)
+# Loading work.cv32e40x_rvfi_pkg(fast)
+# Loading work.cv32e40x_rvfi(fast)
+# Loading work.cv32e40x_rvfi_sim_trace(fast)
+# Loading work.obi_demux(fast)
+# Loading work.hci_interconnect_sv_unit(fast)
+# Loading work.hci_interconnect(fast)
+# Loading work.hci_log_interconnect_l2_sv_unit(fast)
+# Loading work.hci_log_interconnect_l2(fast)
+# Loading work.hci_hwpe_interconnect(fast)
+# Loading work.hci_hwpe_reorder_sv_unit(fast)
+# Loading work.hci_hwpe_reorder(fast)
+# Loading work.hci_shallow_interconnect_sv_unit(fast)
+# Loading work.hci_shallow_interconnect(fast)
+# Loading work.hci_core_assign(fast__4)
+# Loading work.l1_spm(fast)
+# Loading work.tc_sram(fast)
+# Loading work.xif_inst_demux(fast)
+# Loading work.idma_reg32_3d_reg_pkg(fast)
+# Loading work.idma_ctrl(fast)
+# Loading work.rr_arb_tree(fast__2)
+# Loading work.idma_legalizer_page_splitter(fast)
+# Loading work.riscv_instr_branch(fast)
+# Loading work.snitch_icache_pkg(fast)
+# Loading work.pulp_icache_wrap(fast)
+# Loading work.rr_arb_tree(fast__3)
+# Loading work.rr_arb_tree(fast__4)
+# Loading work.tc_sram_impl(fast)
+# Loading work.rr_arb_tree(fast__5)
+# Loading work.axi_xbar(fast)
+# Loading work.spill_register(fast__2)
+# Loading work.spill_register(fast__4)
+# Loading work.spill_register(fast__5)
+# Loading work.spill_register(fast__6)
+# Loading work.spill_register(fast__7)
+# Loading work.rr_arb_tree(fast__6)
+# Loading work.axi_id_prepend(fast)
+# Loading work.rr_arb_tree(fast__7)
+# Loading work.rr_arb_tree(fast__8)
+# Loading work.fractal_sync_xif_inst_decoder(fast)
+# Loading work.redmule_tile(fast__1)
+# Loading work.redmule_tile(fast__2)
+# Loading work.redmule_tile(fast__3)
+# Loading work.floo_pkg(fast)
+# Loading work.floo_axi_mesh_2x2_noc_pkg(fast)
+# Loading work.redmule_mesh_vip(fast)
+# Loading work.floo_axi_chimney(fast)
+# Loading work.addr_decode(fast__2)
+# Loading work.rr_arb_tree(fast__9)
+# Loading work.floo_axi_chimney(fast__1)
+# Loading work.floo_axi_router(fast)
+# Loading work.rr_arb_tree(fast__10)
+# Loading work.fractal_sync(fast)
+# Loading work.fractal_sync(fast__1)
+# Loading work.fractal_monitor(fast)
+# Loading work.hci_core_intf(fast__10)
+# Loading work.hci_mem_intf(fast__2)
+# Loading work.hci_core_intf(fast__5)
+# Loading work.hci_core_intf(fast__6)
+# Loading work.hwpe_stream_intf_tcdm(fast__1)
+# Loading work.hwpe_stream_intf_tcdm(fast__2)
+# ** Warning: (vsim-3015) [PCDPC] - Port size (2) does not match connection size (3) for port 'rf_re_id_i'. The port definition is at: /scratch/visachi/redmule_perf/redmule-mesh/.bender/git/checkouts/cv32e40x-52e515a0b3c13a0b/bhv/cv32e40x_rvfi.sv(58).
+#    Time: 0 ns  Iteration: 0  Instance: /redmule_mesh_tb/fixture/gen_x_tile[0]/gen_y_tile[0]/dut/i_cv32e40x_core/rvfi_i File: /scratch/visachi/redmule_perf/redmule-mesh/.bender/git/checkouts/cv32e40x-52e515a0b3c13a0b/bhv/cv32e40x_wrapper.sv Line: 565
+# ** Warning: (vsim-3015) [PCDPC] - Port size (2) does not match connection size (3) for port 'rf_re_id_i'. The port definition is at: /scratch/visachi/redmule_perf/redmule-mesh/.bender/git/checkouts/cv32e40x-52e515a0b3c13a0b/bhv/cv32e40x_rvfi.sv(58).
+#    Time: 0 ns  Iteration: 0  Instance: /redmule_mesh_tb/fixture/gen_x_tile[0]/gen_y_tile[1]/dut/i_cv32e40x_core/rvfi_i File: /scratch/visachi/redmule_perf/redmule-mesh/.bender/git/checkouts/cv32e40x-52e515a0b3c13a0b/bhv/cv32e40x_wrapper.sv Line: 565
+# ** Warning: (vsim-3015) [PCDPC] - Port size (2) does not match connection size (3) for port 'rf_re_id_i'. The port definition is at: /scratch/visachi/redmule_perf/redmule-mesh/.bender/git/checkouts/cv32e40x-52e515a0b3c13a0b/bhv/cv32e40x_rvfi.sv(58).
+#    Time: 0 ns  Iteration: 0  Instance: /redmule_mesh_tb/fixture/gen_x_tile[1]/gen_y_tile[0]/dut/i_cv32e40x_core/rvfi_i File: /scratch/visachi/redmule_perf/redmule-mesh/.bender/git/checkouts/cv32e40x-52e515a0b3c13a0b/bhv/cv32e40x_wrapper.sv Line: 565
+# ** Warning: (vsim-3015) [PCDPC] - Port size (2) does not match connection size (3) for port 'rf_re_id_i'. The port definition is at: /scratch/visachi/redmule_perf/redmule-mesh/.bender/git/checkouts/cv32e40x-52e515a0b3c13a0b/bhv/cv32e40x_rvfi.sv(58).
+#    Time: 0 ns  Iteration: 0  Instance: /redmule_mesh_tb/fixture/gen_x_tile[1]/gen_y_tile[1]/dut/i_cv32e40x_core/rvfi_i File: /scratch/visachi/redmule_perf/redmule-mesh/.bender/git/checkouts/cv32e40x-52e515a0b3c13a0b/bhv/cv32e40x_wrapper.sv Line: 565
+# run -a
+# [cv32e40x_core]: RV32                       = RV32I
+# [cv32e40x_core]: A_EXT                      = A
+# [cv32e40x_core]: B_EXT                      = B_NONE
+# [cv32e40x_core]: M_EXT                      = M
+# [cv32e40x_core]: DEBUG                      = 1
+# [cv32e40x_core]: DM_REGION_START            = 0xf0000000
+# [cv32e40x_core]: DM_REGION_END              = 0xf0003fff
+# [cv32e40x_core]: DBG_NUM_TRIGGERS           = 1
+# [cv32e40x_core]: PMA_NUM_REGIONS            = 0 
+# [cv32e40x_core]: CLIC                       = 0
+# [cv32e40x_core]: CLIC_ID_WIDTH              = 1 
+# [cv32e40x_core]: X_EXT                      = 1
+# [cv32e40x_core]: X_NUM_RS                   = 3
+# [cv32e40x_core]: X_ID_WIDTH                 = 2 
+# [cv32e40x_core]: X_MEM_WIDTH                = 32 
+# [cv32e40x_core]: X_RFR_WIDTH                = 32
+# [cv32e40x_core]: X_RFW_WIDTH                = 32
+# [cv32e40x_core]: X_MISA                     = 0x00000000
+# [cv32e40x_core]: X_ECS_XS                   = 0
+# [cv32e40x_core]: NUM_MHPMCOUNTERS           = 1 
+# RISC-V Trace: Using log file path defined by plusarg: log_file_0
+# RISC-V Trace: Writing log to: ./core_0_traces.log
+# RISC-V Trace: Using itb path defined by plusarg: itb_file
+# RISC-V Trace: Loading instruction table file /scratch/visachi/redmule_perf/redmule-mesh//work/sw/tests/nsync_naive_test.c/verif.itb
+# RISC-V Trace: Loaded        8488 instructions.
+# [cv32e40x_core]: RV32                       = RV32I
+# [cv32e40x_core]: A_EXT                      = A
+# [cv32e40x_core]: B_EXT                      = B_NONE
+# [cv32e40x_core]: M_EXT                      = M
+# [cv32e40x_core]: DEBUG                      = 1
+# [cv32e40x_core]: DM_REGION_START            = 0xf0000000
+# [cv32e40x_core]: DM_REGION_END              = 0xf0003fff
+# [cv32e40x_core]: DBG_NUM_TRIGGERS           = 1
+# [cv32e40x_core]: PMA_NUM_REGIONS            = 0 
+# [cv32e40x_core]: CLIC                       = 0
+# [cv32e40x_core]: CLIC_ID_WIDTH              = 1 
+# [cv32e40x_core]: X_EXT                      = 1
+# [cv32e40x_core]: X_NUM_RS                   = 3
+# [cv32e40x_core]: X_ID_WIDTH                 = 2 
+# [cv32e40x_core]: X_MEM_WIDTH                = 32 
+# [cv32e40x_core]: X_RFR_WIDTH                = 32
+# [cv32e40x_core]: X_RFW_WIDTH                = 32
+# [cv32e40x_core]: X_MISA                     = 0x00000000
+# [cv32e40x_core]: X_ECS_XS                   = 0
+# [cv32e40x_core]: NUM_MHPMCOUNTERS           = 1 
+# RISC-V Trace: Using log file path defined by plusarg: log_file_1
+# RISC-V Trace: Writing log to: ./core_1_traces.log
+# RISC-V Trace: Using itb path defined by plusarg: itb_file
+# RISC-V Trace: Loading instruction table file /scratch/visachi/redmule_perf/redmule-mesh//work/sw/tests/nsync_naive_test.c/verif.itb
+# RISC-V Trace: Loaded        8488 instructions.
+# [cv32e40x_core]: RV32                       = RV32I
+# [cv32e40x_core]: A_EXT                      = A
+# [cv32e40x_core]: B_EXT                      = B_NONE
+# [cv32e40x_core]: M_EXT                      = M
+# [cv32e40x_core]: DEBUG                      = 1
+# [cv32e40x_core]: DM_REGION_START            = 0xf0000000
+# [cv32e40x_core]: DM_REGION_END              = 0xf0003fff
+# [cv32e40x_core]: DBG_NUM_TRIGGERS           = 1
+# [cv32e40x_core]: PMA_NUM_REGIONS            = 0 
+# [cv32e40x_core]: CLIC                       = 0
+# [cv32e40x_core]: CLIC_ID_WIDTH              = 1 
+# [cv32e40x_core]: X_EXT                      = 1
+# [cv32e40x_core]: X_NUM_RS                   = 3
+# [cv32e40x_core]: X_ID_WIDTH                 = 2 
+# [cv32e40x_core]: X_MEM_WIDTH                = 32 
+# [cv32e40x_core]: X_RFR_WIDTH                = 32
+# [cv32e40x_core]: X_RFW_WIDTH                = 32
+# [cv32e40x_core]: X_MISA                     = 0x00000000
+# [cv32e40x_core]: X_ECS_XS                   = 0
+# [cv32e40x_core]: NUM_MHPMCOUNTERS           = 1 
+# RISC-V Trace: Using log file path defined by plusarg: log_file_2
+# RISC-V Trace: Writing log to: ./core_2_traces.log
+# RISC-V Trace: Using itb path defined by plusarg: itb_file
+# RISC-V Trace: Loading instruction table file /scratch/visachi/redmule_perf/redmule-mesh//work/sw/tests/nsync_naive_test.c/verif.itb
+# RISC-V Trace: Loaded        8488 instructions.
+# [cv32e40x_core]: RV32                       = RV32I
+# [cv32e40x_core]: A_EXT                      = A
+# [cv32e40x_core]: B_EXT                      = B_NONE
+# [cv32e40x_core]: M_EXT                      = M
+# [cv32e40x_core]: DEBUG                      = 1
+# [cv32e40x_core]: DM_REGION_START            = 0xf0000000
+# [cv32e40x_core]: DM_REGION_END              = 0xf0003fff
+# [cv32e40x_core]: DBG_NUM_TRIGGERS           = 1
+# [cv32e40x_core]: PMA_NUM_REGIONS            = 0 
+# [cv32e40x_core]: CLIC                       = 0
+# [cv32e40x_core]: CLIC_ID_WIDTH              = 1 
+# [cv32e40x_core]: X_EXT                      = 1
+# [cv32e40x_core]: X_NUM_RS                   = 3
+# [cv32e40x_core]: X_ID_WIDTH                 = 2 
+# [cv32e40x_core]: X_MEM_WIDTH                = 32 
+# [cv32e40x_core]: X_RFR_WIDTH                = 32
+# [cv32e40x_core]: X_RFW_WIDTH                = 32
+# [cv32e40x_core]: X_MISA                     = 0x00000000
+# [cv32e40x_core]: X_ECS_XS                   = 0
+# [cv32e40x_core]: NUM_MHPMCOUNTERS           = 1 
+# RISC-V Trace: Using log file path defined by plusarg: log_file_3
+# RISC-V Trace: Writing log to: ./core_3_traces.log
+# RISC-V Trace: Using itb path defined by plusarg: itb_file
+# RISC-V Trace: Loading instruction table file /scratch/visachi/redmule_perf/redmule-mesh//work/sw/tests/nsync_naive_test.c/verif.itb
+# RISC-V Trace: Loaded        8488 instructions.
+# [mhartid 0] Starting NoC Synch test...
+# [mhartid 1] Starting NoC Synch test...
+# [mhartid 2] Starting NoC Synch test...
+# [mhartid 3] Starting NoC Synch test...
+# [mhartid 0] Running naive algorithm...
+# [mhartid 1] Running naive algorithm...
+# [mhartid 2] Running naive algorithm...
+# [mhartid 3] Running naive algorithm...
+# [TB][mhartid 1 - Tile (1, 0)] detected AMO (sync) instruction at time 112525ns
+# [TB][mhartid 3 - Tile (1, 1)] detected AMO (sync) instruction at time 116105ns
+# [TB][mhartid 2 - Tile (0, 1)] detected AMO (sync) instruction at time 116115ns
+# [TB][mhartid 0 - Tile (0, 0)] detected AMO (sync) instruction at time 116410ns
+# [TB][mhartid 0 - Tile (0, 0)] detected AMO (sync) instruction at time 116425ns
+# [TB][mhartid 0 - Tile (0, 0)] detected AMO (sync) instruction at time 116545ns
+# [TB][mhartid 0 - Tile (0, 0)] detected AMO (sync) instruction at time 116660ns
+# [TB][mhartid 0 - Tile (0, 0)] detected sentinel instruction in EX stage at time 116665ns
+# [TB][mhartid 1 - Tile (1, 0)] detected sentinel instruction in EX stage at time 116735ns
+# [TB][mhartid 2 - Tile (0, 1)] detected sentinel instruction in EX stage at time 116830ns
+# [TB][mhartid 3 - Tile (1, 1)] detected sentinel instruction in EX stage at time 116970ns
+# [mhartid 1] sync_count: 1
+# [mhartid 0] sync_count: 4
+# [TB][mhartid 1 - Tile (1, 0)] detected AMO (sync) instruction at time 121285ns
+# [mhartid 2] sync_count: 1
+# [mhartid 3] sync_count: 1
+# [TB][mhartid 2 - Tile (0, 1)] detected AMO (sync) instruction at time 122115ns
+# [TB][mhartid 3 - Tile (1, 1)] detected AMO (sync) instruction at time 122300ns
+# [TB][mhartid 0 - Tile (0, 0)] detected AMO (sync) instruction at time 122515ns
+# [TB][mhartid 0 - Tile (0, 0)] detected AMO (sync) instruction at time 122530ns
+# [TB][mhartid 0 - Tile (0, 0)] detected AMO (sync) instruction at time 122645ns
+# [TB][mhartid 1 - Tile (1, 0)] detected sentinel instruction in EX stage at time 122725ns
+# [TB][mhartid 0 - Tile (0, 0)] detected AMO (sync) instruction at time 122750ns
+# [TB][mhartid 0 - Tile (0, 0)] detected sentinel instruction in EX stage at time 122755ns
+# [TB][mhartid 2 - Tile (0, 1)] detected sentinel instruction in EX stage at time 122795ns
+# [TB][mhartid 3 - Tile (1, 1)] detected sentinel instruction in EX stage at time 122895ns
+# [mhartid 1] sync_count: 1
+# [mhartid 0] sync_count: 4
+# [TB][mhartid 1 - Tile (1, 0)] detected AMO (sync) instruction at time 126870ns
+# [mhartid 2] sync_count: 1
+# [mhartid 3] sync_count: 1
+# [TB][mhartid 2 - Tile (0, 1)] detected AMO (sync) instruction at time 127615ns
+# [TB][mhartid 3 - Tile (1, 1)] detected AMO (sync) instruction at time 127730ns
+# [TB][mhartid 0 - Tile (0, 0)] detected AMO (sync) instruction at time 127945ns
+# [TB][mhartid 0 - Tile (0, 0)] detected AMO (sync) instruction at time 127960ns
+# [TB][mhartid 0 - Tile (0, 0)] detected AMO (sync) instruction at time 128065ns
+# [TB][mhartid 1 - Tile (1, 0)] detected sentinel instruction in EX stage at time 128110ns
+# [TB][mhartid 0 - Tile (0, 0)] detected AMO (sync) instruction at time 128170ns
+# [TB][mhartid 0 - Tile (0, 0)] detected sentinel instruction in EX stage at time 128175ns
+# [TB][mhartid 2 - Tile (0, 1)] detected sentinel instruction in EX stage at time 128195ns
+# [TB][mhartid 3 - Tile (1, 1)] detected sentinel instruction in EX stage at time 128325ns
+# [mhartid 1] sync_count: 1
+# [mhartid 0] sync_count: 4
+# [mhartid 2] sync_count: 1
+# [mhartid 3] sync_count: 1
+# [mhartid 1] NoC Synch test finished...
+# [mhartid 0] NoC Synch test finished...
+# [mhartid 2] NoC Synch test finished...
+# [mhartid 3] NoC Synch test finished...
+# SIMULATION FINISHED WITH EXIT CODE: fadedefbfbdedefc
+# 
+# ** Note: $finish    : /scratch/visachi/redmule_perf/redmule-mesh/target/src/mesh/redmule_mesh_tb.sv(51)
+#    Time: 152030 ns  Iteration: 0  Instance: /redmule_mesh_tb
+# End time: 10:38:18 on Jan 16,2025, Elapsed time: 0:00:09
+# Errors: 0, Warnings: 4
