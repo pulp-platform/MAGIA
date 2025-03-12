@@ -205,27 +205,16 @@ int main(void) {
 
   uint32_t cfg_reg0[NUM_HARTS];
   uint32_t cfg_reg1[NUM_HARTS];
-  
-  cfg_reg0[get_hartid()] = ((((uint16_t)K_SIZE) << 16) | (((uint16_t)M_SIZE) << 0));
-  cfg_reg1[get_hartid()] = (((uint16_t)N_SIZE) << 0);
 
 #if VERBOSE > 10
   h_pprintf("K_SIZE: 0x");   n_pprintf(hs(K_SIZE));
   h_pprintf("M_SIZE: 0x");   n_pprintf(hs(M_SIZE));
   h_pprintf("N_SIZE: 0x");   n_pprintf(hs(N_SIZE));
-  h_pprintf("cfg_reg0: 0x"); n_pprintf(hs(cfg_reg0[get_hartid()]));
-  h_pprintf("cfg_reg1: 0x"); n_pprintf(hs(cfg_reg1[get_hartid()]));
 #endif
 
-  asm volatile("addi t0, %0, 0" ::"r"((uint32_t)(X_BASE + get_hartid()*L1_TILE_OFFSET)));
-  asm volatile("addi t1, %0, 0" ::"r"((uint32_t)(W_BASE + get_hartid()*L1_TILE_OFFSET)));
-  asm volatile("addi t2, %0, 0" ::"r"((uint32_t)(Y_BASE + get_hartid()*L1_TILE_OFFSET)));
-  asm volatile("addi t3, %0, 0" ::"r"(cfg_reg0[get_hartid()]));
-  asm volatile("addi t4, %0, 0" ::"r"(cfg_reg1[get_hartid()]));
+  redmule_mcnfig(K_SIZE, M_SIZE, N_SIZE);
 
-  redmule_mcnfig();
-
-  redmule_marith();
+  redmule_marith(X_BASE + get_hartid()*L1_TILE_OFFSET, W_BASE + get_hartid()*L1_TILE_OFFSET, Y_BASE + get_hartid()*L1_TILE_OFFSET);
 
 #ifdef IRQ_EN
   irq_en(1<<IRQ_REDMULE_EVT_0);

@@ -205,26 +205,15 @@ int main(void) {
     printf("Z[%8x]: 0x%4x\n", Z_BASE + 2*i, mmio16(Z_BASE + 2*i));
 #endif
 
-  uint32_t cfg_reg0 = ((((uint16_t)K_SIZE) << 16) | (((uint16_t)M_SIZE) << 0));
-  uint32_t cfg_reg1 = (((uint16_t)N_SIZE) << 0);
-
 #if VERBOSE > 10
   printf("K_SIZE: %4x\n", K_SIZE);
   printf("M_SIZE: %4x\n", M_SIZE);
   printf("N_SIZE: %4x\n", N_SIZE);  
-  printf("cfg_reg0: %8x\n", cfg_reg0);
-  printf("cfg_reg1: %8x\n", cfg_reg1);
 #endif
 
-  asm volatile("addi t0, %0, 0" ::"r"((uint32_t)X_BASE));
-  asm volatile("addi t1, %0, 0" ::"r"((uint32_t)W_BASE));
-  asm volatile("addi t2, %0, 0" ::"r"((uint32_t)Y_BASE));
-  asm volatile("addi t3, %0, 0" ::"r"(cfg_reg0));
-  asm volatile("addi t4, %0, 0" ::"r"(cfg_reg1));
+  redmule_mcnfig(K_SIZE, M_SIZE, N_SIZE);
 
-  redmule_mcnfig();
-
-  redmule_marith();
+  redmule_marith(X_BASE, W_BASE, Y_BASE);
 
 #ifdef IRQ_EN
   irq_en(1<<IRQ_REDMULE_EVT_0);
