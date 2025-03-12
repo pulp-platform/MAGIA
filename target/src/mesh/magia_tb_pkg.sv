@@ -29,12 +29,10 @@ package magia_tb_pkg;
   parameter int unsigned N_TILES_Y    = magia_pkg::N_TILES_Y;    // Number of Tile rowns
   parameter int unsigned N_TILES      = magia_pkg::N_TILES;      // Number of Tiles in the Mesh
 
-  parameter int unsigned L2_ID_W      = magia_tile_pkg::AXI_ID_W;
-  parameter int unsigned L2_U_W       = magia_tile_pkg::AXI_U_W;
+  parameter int unsigned L2_ID_W      = magia_pkg::L2_ID_W;
+  parameter int unsigned L2_U_W       = magia_pkg::L2_U_W;
 
   parameter int unsigned FSYNC_LVL    = magia_pkg::FSYNC_LVL;
-  parameter int unsigned TILE_FSYNC_W = magia_pkg::TILE_FSYNC_W;
-
-  `AXI_TYPEDEF_ALL_CT(axi_l2_vip, axi_l2_vip_req_t, axi_l2_vip_rsp_t, logic[magia_pkg::ADDR_W-1:0], logic[L2_ID_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[L2_U_W-1:0])
+  parameter int unsigned TILE_FSYNC_W = magia_pkg::TILE_FSYNC_W; // Width of the FractalSync level of the Tile - FS network link
 
 endpackage: magia_tb_pkg
