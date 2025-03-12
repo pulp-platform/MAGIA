@@ -81,7 +81,7 @@ module magia_tile_fixture;
     .CORE_A       (                                 ),
     .CORE_B       (                                 ),
     .CORE_M       (                                 )
-  ) dut (
+  ) i_magia_tile (
     .clk_i               ( clk               ),
     .rst_ni              ( rst_n             ),
     .test_mode_i         ( test_mode         ),

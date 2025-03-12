@@ -76,14 +76,14 @@ sources:
       - hw/mesh/noc/floo_axi_mesh_32x32_noc.sv
       - hw/mesh/magia.sv
       # MAGIA DV
-      - target/src/tile/magia_tile_tb_pkg.sv
-      - target/src/tile/magia_tile_vip.sv
-      - target/src/tile/magia_tile_fixture.sv
-      - target/src/tile/magia_tile_tb.sv
-      - target/src/mesh/magia_tb_pkg.sv
-      - target/src/mesh/magia_vip.sv
-      - target/src/mesh/magia_fixture.sv
-      - target/src/mesh/magia_tb.sv
+      - target/sim/src/tile/magia_tile_tb_pkg.sv
+      - target/sim/src/tile/magia_tile_vip.sv
+      - target/sim/src/tile/magia_tile_fixture.sv
+      - target/sim/src/tile/magia_tile_tb.sv
+      - target/sim/src/mesh/magia_tb_pkg.sv
+      - target/sim/src/mesh/magia_vip.sv
+      - target/sim/src/mesh/magia_fixture.sv
+      - target/sim/src/mesh/magia_tb.sv
 
   - target: all(not(magia_dv))
     files:

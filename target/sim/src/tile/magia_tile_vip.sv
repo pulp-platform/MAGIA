@@ -235,7 +235,7 @@ end
 /*******************************************************/
 
   bit[31:0] curr_instr; 
-  assign curr_instr = dut.i_cv32e40x_core.core_i.if_stage_i.if_id_pipe_o.instr.bus_resp.rdata;
+  assign curr_instr = i_magia_tile.i_cv32e40x_core.core_i.if_stage_i.if_id_pipe_o.instr.bus_resp.rdata;
   always @(curr_instr) begin: instr_reporter
     if (curr_instr == 32'h50500013) $display("[TB] detected sentinel instruction at time %0dns", time_var);
   end
