@@ -47,13 +47,9 @@ module magia
   output logic[63:0]                            mcycle_o[N_TILES],
   input  logic[63:0]                            time_i,
 
-  output logic                                  fencei_flush_req_o[N_TILES],
-  input  logic                                  fencei_flush_ack_i[N_TILES],
-
-  input  logic                                  debug_req_i,
-
   input  logic[magia_pkg::N_IRQ-1:0]            irq_i[N_TILES],
 
+  input  logic                                  debug_req_i,
   output logic                                  debug_havereset_o[N_TILES],
   output logic                                  debug_running_o[N_TILES],
   output logic                                  debug_halted_o[N_TILES],
@@ -145,10 +141,7 @@ module magia
   
         .irq_i               ( irq_i[i*N_TILES_Y+j]              ),
   
-        .fencei_flush_req_o  ( fencei_flush_req_o[i*N_TILES_Y+j] ),
-        .fencei_flush_ack_i  ( fencei_flush_ack_i[i*N_TILES_Y+j] ),
-  
-        .debug_req_i         ( debug_req_i                       ),
+        .debug_req_i                                              ,
         .debug_havereset_o   ( debug_havereset_o[i*N_TILES_Y+j]  ),
         .debug_running_o     ( debug_running_o[i*N_TILES_Y+j]    ),
         .debug_halted_o      ( debug_halted_o[i*N_TILES_Y+j]     ),

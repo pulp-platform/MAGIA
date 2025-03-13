@@ -54,9 +54,6 @@ module magia_tile_vip
 
   output logic[magia_pkg::N_IRQ-1:0]  irq,
 
-  input  logic                        fencei_flush_req,
-  output logic                        fencei_flush_ack,
-
   output logic                        debug_req,
   input  logic                        debug_havereset,
   input  logic                        debug_running,

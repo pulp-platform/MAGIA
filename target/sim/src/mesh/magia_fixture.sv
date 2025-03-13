@@ -46,13 +46,9 @@ module magia_fixture;
   logic[63:0]                                          mcycle[magia_tb_pkg::N_TILES];
   logic[63:0]                                          time_var;
 
-  logic                                                fencei_flush_req[magia_tb_pkg::N_TILES];
-  logic                                                fencei_flush_ack[magia_tb_pkg::N_TILES];
-
-  logic                                                debug_req;
-
   logic[magia_pkg::N_IRQ-1:0]                          irq[magia_tb_pkg::N_TILES];
 
+  logic                                                debug_req;
   logic                                                debug_havereset[magia_tb_pkg::N_TILES];
   logic                                                debug_running[magia_tb_pkg::N_TILES];
   logic                                                debug_halted[magia_tb_pkg::N_TILES];
@@ -97,13 +93,9 @@ module magia_fixture;
     .mcycle_o            ( mcycle            ),
     .time_i              ( time_var          ),
 
-    .fencei_flush_req_o  ( fencei_flush_req  ),
-    .fencei_flush_ack_i  ( fencei_flush_ack  ),
-
-    .debug_req_i         ( debug_req         ),
-
     .irq_i               ( irq               ),
 
+    .debug_req_i         ( debug_req         ),
     .debug_havereset_o   ( debug_havereset   ),
     .debug_running_o     ( debug_running     ),
     .debug_halted_o      ( debug_halted      ),

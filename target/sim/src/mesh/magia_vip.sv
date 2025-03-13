@@ -49,13 +49,9 @@ module magia_vip
   input  logic[63:0]                                          mcycle[magia_tb_pkg::N_TILES],
   output logic[63:0]                                          time_var,
 
-  input  logic                                                fencei_flush_req[magia_tb_pkg::N_TILES],
-  output logic                                                fencei_flush_ack[magia_tb_pkg::N_TILES],
-
-  output logic                                                debug_req,
-
   output logic[magia_pkg::N_IRQ-1:0]                          irq[magia_tb_pkg::N_TILES],
 
+  output logic                                                debug_req,
   input  logic                                                debug_havereset[magia_tb_pkg::N_TILES],
   input  logic                                                debug_running[magia_tb_pkg::N_TILES],
   input  logic                                                debug_halted[magia_tb_pkg::N_TILES],

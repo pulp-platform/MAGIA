@@ -28,6 +28,7 @@ module magia_tile
   import redmule_pkg::*;
   import hci_package::*;
   import cv32e40x_pkg::*;
+  import snitch_icache_pkg::*;
   import idma_pkg::*;
   import obi_pkg::*;
   import axi_pkg::*;
@@ -73,9 +74,6 @@ module magia_tile
   input  logic[63:0]                        time_i,
 
   input  logic[magia_pkg::N_IRQ-1:0]        irq_i,
-  
-  output logic                              fencei_flush_req_o,
-  input  logic                              fencei_flush_ack_i,
 
   input  logic                              debug_req_i,
   output logic                              debug_havereset_o,
@@ -101,8 +99,8 @@ module magia_tile
   magia_tile_pkg::redmule_data_req_t redmule_data_req;
   magia_tile_pkg::redmule_data_rsp_t redmule_data_rsp;
 
-  magia_tile_pkg::redmule_ctrl_req_t redmule_ctrl_req;  //TODO: figure out what to do with RedMulE control
-  magia_tile_pkg::redmule_ctrl_rsp_t redmule_ctrl_rsp;  //TODO: figure out what to do with RedMulE control
+  magia_tile_pkg::redmule_ctrl_req_t redmule_ctrl_req;  // Can be used to manage RedMulE control at top-level
+  magia_tile_pkg::redmule_ctrl_rsp_t redmule_ctrl_rsp;  // Can be used to manage RedMulE control at top-level
 
   magia_tile_pkg::core_data_req_t core_data_req;
   magia_tile_pkg::core_data_rsp_t core_data_rsp;
@@ -169,8 +167,8 @@ module magia_tile
 
   logic[magia_tile_pkg::axi_xbar_cfg.NoSlvPorts-1:0] en_default_mst_port;
   
-  logic                                hci_clear; //TODO: figure out who should clear the hci
-  hci_package::hci_interconnect_ctrl_t hci_ctrl;  //TODO: figure out who should control the hci
+  logic                                hci_clear; // Can be used to manage HCI clear at top-level
+  hci_package::hci_interconnect_ctrl_t hci_ctrl;  // Can be used to manage HCI control at top-level
 
   magia_tile_pkg::obi_xbar_rule_t[magia_tile_pkg::N_ADDR_RULE-1:0] obi_xbar_rule;
 
@@ -195,7 +193,7 @@ module magia_tile
   logic                              axi2obi_rsp_b_user;
   logic                              axi2obi_rsp_r_user;
 
-  logic idma_clear;         //TODO: figure out who should clear the iDMA
+  logic idma_clear;         // Can be used to manage iDMA clear at top-level
   logic idma_axi2obi_start;
   logic idma_axi2obi_busy;
   logic idma_axi2obi_done;
@@ -214,7 +212,22 @@ module magia_tile
   logic                                  redmule_busy;
   logic[magia_tile_pkg::N_CORE-1:0][1:0] redmule_evt;
 
-  logic fsync_clear;   //TODO: figure out who should clear the Fractal Sync
+  logic                                clic_irq;
+  logic[magia_tile_pkg::CLIC_ID_W-1:0] clic_irq_id;
+  logic[7:0]                           clic_irq_level;
+  logic[1:0]                           clic_irq_priv;
+  logic                                clic_irq_shv;
+
+  logic fencei_flush_req;
+  logic fencei_flush_ack;
+
+  logic                                                                     enable_prefetching;
+  snitch_icache_pkg::icache_l0_events_t[magia_tile_pkg::NR_FETCH_PORTS-1:0] icache_l0_events; // Can be used to implement i$ IRQs
+  snitch_icache_pkg::icache_l1_events_t                                     icache_l1_events; // Can be used to implement i$ IRQs
+  logic[magia_tile_pkg::NR_FETCH_PORTS-1:0]                                 flush_valid;
+  logic[magia_tile_pkg::NR_FETCH_PORTS-1:0]                                 flush_ready;
+
+  logic fsync_clear;   // Can be used to manage iDMA clear at top-level
   logic fsync_done;
   logic fsync_error;
 
@@ -276,14 +289,14 @@ module magia_tile
 
   assign en_default_mst_port = '1;
 
-  assign hci_clear = 1'b0;  //TODO: Figure out how to manage these signals
-  assign hci_ctrl  = '0;    //TODO: Figure out how to manage these signals
+  assign hci_clear = 1'b0;
+  assign hci_ctrl  = '0;
 
-  assign redmule_ctrl_req = '0; //TODO: Figure out how to manage control
+  assign redmule_ctrl_req = '0;
 
-  assign idma_clear = 1'b0;  //TODO: Figure out how to manage the iDMA clear
+  assign idma_clear = 1'b0;
 
-  assign fsync_clear = 1'b0;  //TODO: Figure out how to manage the Fractal Sync clear
+  assign fsync_clear = 1'b0;
 
   assign xif_coproc_rules[magia_tile_pkg::XIF_REDMULE_IDX] = '{sign_list: '{ {{redmule_pkg::MCNFIG, 3'h0}}, 
                                                                              {{redmule_pkg::MARITH, 3'h0}}, {{redmule_pkg::MARITH, 3'h1}}, 
@@ -323,6 +336,17 @@ module magia_tile
   assign irq[6:4]                                   = '0;
   assign irq[3]                                     = irq_i[3];
   assign irq[2:0]                                   = '0;
+
+  // CLIC unused
+  assign clic_irq       = 1'b0;
+  assign clic_irq_id    = '0;
+  assign clic_irq_level = '0;
+  assign clic_irq_priv  = '0;
+  assign clic_irq_shv   = 1'b0;
+
+  assign enable_prefetching = 1'b0;
+  assign flush_valid[0]     = fencei_flush_req; // Single port i$
+  assign fencei_flush_ack   = flush_ready[0];   // Signle port i$
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -654,12 +678,12 @@ module magia_tile
     .scan_cg_en_i                                  ,
 
     // Configuration
-    .boot_addr_i                                   ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .mtvec_addr_i                                  ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .dm_halt_addr_i                                ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .dm_exception_addr_i                           ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .mhartid_i                                     ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
-    .mimpid_patch_i                                ,  //TODO: instead of exposing these outside the tile, manage them with a configuration ROM/RAM?
+    .boot_addr_i                                   ,  // instead of exposing these outside the tile, they could be managed with a configuration ROM/RAM
+    .mtvec_addr_i                                  ,  // instead of exposing these outside the tile, they could be managed with a configuration ROM/RAM
+    .dm_halt_addr_i                                ,  // instead of exposing these outside the tile, they could be managed with a configuration ROM/RAM
+    .dm_exception_addr_i                           ,  // instead of exposing these outside the tile, they could be managed with a configuration ROM/RAM
+    .mhartid_i                                     ,  // instead of exposing these outside the tile, they could be managed with a configuration ROM/RAM
+    .mimpid_patch_i                                ,  // instead of exposing these outside the tile, they could be managed with a configuration ROM/RAM
 
     // Instruction memory interface
     .instr_req_o         ( core_instr_req.req     ),
@@ -689,8 +713,8 @@ module magia_tile
     .data_exokay_i       ( core_data_rsp.exokay   ),
 
     // Cycle, Time
-    .mcycle_o                                      ,  //TODO: do we need these or can we hardwire them?
-    .time_i                                        ,  //TODO: do we need these or can we hardwire them?
+    .mcycle_o                                      ,
+    .time_i                                        ,
 
     // eXtension interface
     .xif_compressed_if   ( xif_if.cpu_compressed  ),
@@ -703,23 +727,23 @@ module magia_tile
      // Interrupt interface
     .irq_i               ( irq                    ),
 
-    .clic_irq_i          ( '0                     ),
-    .clic_irq_id_i       ( '0                     ),
-    .clic_irq_level_i    ( '0                     ),
-    .clic_irq_priv_i     ( '0                     ),
-    .clic_irq_shv_i      ( '0                     ),
+    .clic_irq_i          ( clic_irq               ),
+    .clic_irq_id_i       ( clic_irq_id            ),
+    .clic_irq_level_i    ( clic_irq_level         ),
+    .clic_irq_priv_i     ( clic_irq_priv          ),
+    .clic_irq_shv_i      ( clic_irq_shv           ),
 
-    // Fencei flush handshake
-    .fencei_flush_req_o                            ,  //TODO: manage Fence.i flushing in the future or hardwire?  
-    .fencei_flush_ack_i                            ,  //TODO: manage Fence.i flushing in the future or hardwire?
+    // Fence.i flush handshake
+    .fencei_flush_req_o  ( fencei_flush_req       ), 
+    .fencei_flush_ack_i  ( fencei_flush_ack       ),
 
     // Debug interface
-    .debug_req_i                                   ,  //TODO: do we need these or can we hardwire them?
-    .debug_havereset_o                             ,  //TODO: do we need these or can we hardwire them?
-    .debug_running_o                               ,  //TODO: do we need these or can we hardwire them?
-    .debug_halted_o                                ,  //TODO: do we need these or can we hardwire them?
-    .debug_pc_valid_o                              ,  //TODO: do we need these or can we hardwire them?
-    .debug_pc_o                                    ,  //TODO: do we need these or can we hardwire them?
+    .debug_req_i                                   ,
+    .debug_havereset_o                             ,
+    .debug_running_o                               ,
+    .debug_halted_o                                ,
+    .debug_pc_valid_o                              ,
+    .debug_pc_o                                    ,
 
     // Special control signals
     .fetch_enable_i                                ,
@@ -952,11 +976,11 @@ module magia_tile
   .fetch_rdata_o        ( core_cache_instr_rsp.rdata  ),
   .fetch_rerror_o       ( core_cache_instr_rsp.rerror ),
 
-  .enable_prefetching_i ( 1'b0                        ), //TODO: manage
-  .icache_l0_events_o   (                             ), //TODO: manage
-  .icache_l1_events_o   (                             ), //TODO: manage
-  .flush_valid_i        ( 1'b0                        ), //TODO: manage
-  .flush_ready_o        (                             ), //TODO: manage
+  .enable_prefetching_i ( enable_prefetching          ),
+  .icache_l0_events_o   ( icache_l0_events            ),
+  .icache_l1_events_o   ( icache_l1_events            ),
+  .flush_valid_i        ( flush_valid                 ),
+  .flush_ready_o        ( flush_ready                 ),
 
   .sram_cfg_data_i      ( '0                          ),
   .sram_cfg_tag_i       ( '0                          ),

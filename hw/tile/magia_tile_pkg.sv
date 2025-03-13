@@ -422,7 +422,7 @@ package magia_tile_pkg;
     MaxSlvTrans         : AxiXbarMaxSlvTrans,
     FallThrough         : AxiXbarFallThrough,
     LatencyMode         : axi_pkg::CUT_ALL_PORTS,
-    PipelineStages      : '0, // TODO: make it parametric
+    PipelineStages      : '0,
     AxiIdWidthSlvPorts  : AxiXbarSlvAxiIDWidth,
     AxiIdUsedSlvPorts   : AxiXbarSlvAxiIDWidth,
     UniqueIds           : 1'b0,
