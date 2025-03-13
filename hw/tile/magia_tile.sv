@@ -30,12 +30,11 @@ module magia_tile
   import cv32e40x_pkg::*;
   import idma_pkg::*;
   import obi_pkg::*;
+  import axi_pkg::*;
 #(
   // Parameters used by hci_interconnect and l1_spm
   parameter int unsigned          N_MEM_BANKS              = magia_pkg::N_MEM_BANKS,         // Number of memory banks 
   parameter int unsigned          N_WORDS_BANK             = magia_pkg::N_WORDS_BANK,        // Number of words per memory bank      
-
-  parameter int unsigned          TILE_ID                  = 0,                              // TODO: fetch the ID from a register within the tile
 
   // Parameters used by the core
   parameter cv32e40x_pkg::rv32_e  CORE_ISA                 = cv32e40x_pkg::RV32I,            // RV32I (default) 32 registers in the RF - RV32E 16 registers in the RF
@@ -44,16 +43,7 @@ module magia_tile
   parameter cv32e40x_pkg::m_ext_e CORE_M                   = cv32e40x_pkg::M,                // Multiply and Divide support (dafault: full support)
 
   // Parameters used by the iDMA
-  parameter idma_pkg::error_cap_e ERROR_CAP                = idma_pkg::NO_ERROR_HANDLING,    // Error handaling capability of the iDMA
-
-  // Parameter used by the Fractal Sync
-  parameter int unsigned          FSYNC_WIDTH              = magia_pkg::TILE_FSYNC_W,        // Level width of the Fractal Sync interface
-
-  // Dependent parameters
-  localparam int unsigned         TILE_L1_START_ADDR       = magia_tile_pkg::L1_ADDR_START       + TILE_ID*magia_tile_pkg::L1_TILE_OFFSET,
-  localparam int unsigned         TILE_L1_END_ADDR         = magia_tile_pkg::L1_ADDR_END         + TILE_ID*magia_tile_pkg::L1_TILE_OFFSET,
-  localparam int unsigned         TILE_RESERVED_START_ADDR = magia_tile_pkg::RESERVED_ADDR_START + TILE_ID*magia_tile_pkg::L1_TILE_OFFSET,
-  localparam int unsigned         TILE_RESERVED_END_ADDR   = magia_tile_pkg::RESERVED_ADDR_END   + TILE_ID*magia_tile_pkg::L1_TILE_OFFSET
+  parameter idma_pkg::error_cap_e ERROR_CAP                = idma_pkg::NO_ERROR_HANDLING     // Error handaling capability of the iDMA
 )(
   input  logic                              clk_i,
   input  logic                              rst_ni,
@@ -103,6 +93,11 @@ module magia_tile
 /**       Internal Signal Definitions Beginning       **/
 /*******************************************************/
 
+  logic[magia_pkg::ADDR_W-1:0] tile_l1_start_addr;
+  logic[magia_pkg::ADDR_W-1:0] tile_l1_end_addr;
+  logic[magia_pkg::ADDR_W-1:0] tile_reserved_start_addr;
+  logic[magia_pkg::ADDR_W-1:0] tile_reserved_end_addr;
+  
   magia_tile_pkg::redmule_data_req_t redmule_data_req;
   magia_tile_pkg::redmule_data_rsp_t redmule_data_rsp;
 
@@ -178,6 +173,8 @@ module magia_tile
   hci_package::hci_interconnect_ctrl_t hci_ctrl;  //TODO: figure out who should control the hci
 
   magia_tile_pkg::obi_xbar_rule_t[magia_tile_pkg::N_ADDR_RULE-1:0] obi_xbar_rule;
+
+  axi_pkg::xbar_rule_32_t[magia_tile_pkg::axi_xbar_cfg.NoAddrRules-1:0] axi_xbar_rule;
   
   logic[magia_tile_pkg::N_MGR-1:0]                                obi_xbar_en_default_idx;
   logic[magia_tile_pkg::N_MGR-1:0][magia_tile_pkg::N_BIT_SBR-1:0] obi_xbar_default_idx;
@@ -227,10 +224,19 @@ module magia_tile
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
 
+  assign tile_l1_start_addr       = magia_tile_pkg::L1_ADDR_START       + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
+  assign tile_l1_end_addr         = magia_tile_pkg::L1_ADDR_END         + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
+  assign tile_reserved_start_addr = magia_tile_pkg::RESERVED_ADDR_START + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
+  assign tile_reserved_end_addr   = magia_tile_pkg::RESERVED_ADDR_END   + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
+  
   assign obi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START,    end_addr: magia_tile_pkg::L2_ADDR_END    };
-  assign obi_xbar_rule[magia_tile_pkg::L1SPM_IDX]    = '{idx: 32'd1, start_addr: TILE_L1_START_ADDR,               end_addr: TILE_L1_END_ADDR               };
+  assign obi_xbar_rule[magia_tile_pkg::L1SPM_IDX]    = '{idx: 32'd1, start_addr: tile_l1_start_addr,               end_addr: tile_l1_end_addr               };
+  assign obi_xbar_rule[magia_tile_pkg::RESERVED_IDX] = '{idx: 32'd1, start_addr: tile_reserved_start_addr,         end_addr: tile_reserved_end_addr         };
   assign obi_xbar_rule[magia_tile_pkg::STACK_IDX]    = '{idx: 32'd1, start_addr: magia_tile_pkg::STACK_ADDR_START, end_addr: magia_tile_pkg::STACK_ADDR_END };
-  assign obi_xbar_rule[magia_tile_pkg::RESERVED_IDX] = '{idx: 32'd1, start_addr: TILE_RESERVED_START_ADDR,         end_addr: TILE_RESERVED_END_ADDR         };
+
+  assign axi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START, end_addr: magia_tile_pkg::L2_ADDR_END };
+  assign axi_xbar_rule[magia_tile_pkg::L1SPM_IDX]    = '{idx: 32'd1, start_addr: tile_l1_start_addr,            end_addr: tile_l1_end_addr            };
+  assign axi_xbar_rule[magia_tile_pkg::RESERVED_IDX] = '{idx: 32'd1, start_addr: tile_reserved_start_addr,      end_addr: tile_reserved_end_addr      };
   
   assign obi_xbar_en_default_idx = '1; // Routing to the AXI Xbar all requests with an address outside the range of the internal L1 and the external L2
   assign obi_xbar_default_idx    = '0;
@@ -965,12 +971,6 @@ module magia_tile
 /**         Data Out - L2 (AXI XBAR) Beginning        **/
 /*******************************************************/
 
-  localparam axi_pkg::xbar_rule_32_t[magia_tile_pkg::axi_xbar_cfg.NoAddrRules-1:0] TileAxiAddrMap = '{
-    '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START, end_addr: magia_tile_pkg::L2_ADDR_END },
-    '{idx: 32'd1, start_addr: TILE_L1_START_ADDR,            end_addr: TILE_L1_END_ADDR            },
-    '{idx: 32'd1, start_addr: TILE_RESERVED_START_ADDR,      end_addr: TILE_RESERVED_END_ADDR      }
-  };
-
   axi_xbar #(
     .Cfg            ( magia_tile_pkg::axi_xbar_cfg           ),
     .ATOPs          (                                        ),
@@ -988,7 +988,7 @@ module magia_tile
     .mst_req_t      ( magia_pkg::axi_xbar_mst_req_t          ),
     .slv_resp_t     ( magia_tile_pkg::axi_xbar_slv_rsp_t     ),
     .mst_resp_t     ( magia_pkg::axi_xbar_mst_rsp_t          ),
-    .rule_t         ( magia_tile_pkg::tile_xbar_rule_t       )
+    .rule_t         ( axi_pkg::xbar_rule_32_t                )
   ) i_axi_xbar (
     .clk_i                  ( sys_clk               ),
     .rst_ni                 ( rst_ni                ),
@@ -997,7 +997,7 @@ module magia_tile
     .slv_ports_resp_o       ( axi_xbar_data_in_rsp  ),
     .mst_ports_req_o        ( axi_xbar_mst_req      ),
     .mst_ports_resp_i       ( axi_xbar_mst_rsp      ),
-    .addr_map_i             ( TileAxiAddrMap        ),
+    .addr_map_i             ( axi_xbar_rule         ),
     .en_default_mst_port_i  ( en_default_mst_port   ),
     .default_mst_port_i     ( '0                    )
   );

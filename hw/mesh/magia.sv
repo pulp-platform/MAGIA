@@ -109,14 +109,14 @@ module magia
   for (genvar i = 0; i < N_TILES_X; i++) begin: gen_x_tile
     for (genvar j = 0; j < N_TILES_Y; j++) begin: gen_y_tile
       magia_tile #(
-        .TILE_ID      ( i*N_TILES_Y+j ),
         .N_MEM_BANKS  ( N_MEM_BANKS   ),
         .N_WORDS_BANK ( N_WORDS_BANK  ),
   
         .CORE_ISA     (               ),
         .CORE_A       (               ),
         .CORE_B       (               ),
-        .CORE_M       (               )
+        .CORE_M       (               ),
+        .ERROR_CAP    (               )
       ) i_magia_tile (
         .clk_i                                                    ,
         .rst_ni                                                   ,
@@ -260,8 +260,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( TILE_FSYNC_W )
       ) i_cu_fractal_sync (
-        .clk_i    ( clk                             ),
-        .rstn_i   ( rst_n                           ),
+        .clk_i                                       ,
+        .rstn_i   ( rst_ni                          ),
         .slaves   ( '{sync_if[2*i], sync_if[2*i+1]} ),
         .masters  ( '{if_sync_tree_0[i]}            )
       );
@@ -272,8 +272,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[0] )
       ) i_node_0_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_0[2*i], if_sync_tree_0[2*i+1]} ),
         .masters  ( if_fmon                                       )
       );
@@ -283,8 +283,8 @@ module magia
     fractal_monitor #(
       .PORT_WIDTH( FSYNC_MON_W )
     ) i_top_fractal_sync_monitor (
-      .clk_i   ( clk           ),
-      .rstn_i  ( rstn          ),
+      .clk_i                    ,
+      .rstn_i  ( rst_ni        ),
       .ports   ( if_fmon       ),
       .error_o ( monitor_error )
     );
@@ -304,8 +304,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( TILE_FSYNC_W )
       ) i_cu_fractal_sync (
-        .clk_i    ( clk                             ),
-        .rstn_i   ( rst_n                           ),
+        .clk_i                                       ,
+        .rstn_i   ( rst_ni                          ),
         .slaves   ( '{sync_if[2*i], sync_if[2*i+1]} ),
         .masters  ( '{if_sync_tree_0[i]}            )
       );
@@ -316,8 +316,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[0] )
       ) i_node_0_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_0[2*i], if_sync_tree_0[2*i+1]} ),
         .masters  ( '{if_sync_tree_1[i]}                          )
       );
@@ -328,8 +328,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[1] )
       ) i_node_1_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_1[2*i], if_sync_tree_1[2*i+1]} ),
         .masters  ( '{if_sync_tree_2[i]}                          )
       );
@@ -340,8 +340,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[2] )
       ) i_node_2_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_2[2*i], if_sync_tree_2[2*i+1]} ),
         .masters  ( if_fmon                                       )
       );
@@ -351,8 +351,8 @@ module magia
     fractal_monitor #(
       .PORT_WIDTH( FSYNC_MON_W )
     ) i_top_fractal_sync_monitor (
-      .clk_i   ( clk           ),
-      .rstn_i  ( rstn          ),
+      .clk_i                    ,
+      .rstn_i  ( rst_ni        ),
       .ports   ( if_fmon       ),
       .error_o ( monitor_error )
     );
@@ -374,8 +374,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( TILE_FSYNC_W )
       ) i_cu_fractal_sync (
-        .clk_i    ( clk                             ),
-        .rstn_i   ( rst_n                           ),
+        .clk_i                                       ,
+        .rstn_i   ( rst_ni                          ),
         .slaves   ( '{sync_if[2*i], sync_if[2*i+1]} ),
         .masters  ( '{if_sync_tree_0[i]}            )
       );
@@ -386,8 +386,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[0] )
       ) i_node_0_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_0[2*i], if_sync_tree_0[2*i+1]} ),
         .masters  ( '{if_sync_tree_1[i]}                          )
       );
@@ -398,8 +398,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[1] )
       ) i_node_1_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_1[2*i], if_sync_tree_1[2*i+1]} ),
         .masters  ( '{if_sync_tree_2[i]}                          )
       );
@@ -410,8 +410,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[2] )
       ) i_node_2_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_2[2*i], if_sync_tree_2[2*i+1]} ),
         .masters  ( '{if_sync_tree_3[i]}                          )
       );
@@ -422,8 +422,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[3] )
       ) i_node_3_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_3[2*i], if_sync_tree_3[2*i+1]} ),
         .masters  ( '{if_sync_tree_4[i]}                          )
       );
@@ -434,8 +434,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[4] )
       ) i_node_4_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_4[2*i], if_sync_tree_4[2*i+1]} ),
         .masters  ( if_fmon                                       )
       );
@@ -445,8 +445,8 @@ module magia
     fractal_monitor #(
       .PORT_WIDTH( FSYNC_MON_W )
     ) i_top_fractal_sync_monitor (
-      .clk_i   ( clk           ),
-      .rstn_i  ( rstn          ),
+      .clk_i                    ,
+      .rstn_i  ( rst_ni        ),
       .ports   ( if_fmon       ),
       .error_o ( monitor_error )
     );
@@ -470,8 +470,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( TILE_FSYNC_W )
       ) i_cu_fractal_sync (
-        .clk_i    ( clk                             ),
-        .rstn_i   ( rst_n                           ),
+        .clk_i                                       ,
+        .rstn_i   ( rst_ni                          ),
         .slaves   ( '{sync_if[2*i], sync_if[2*i+1]} ),
         .masters  ( '{if_sync_tree_0[i]}            )
       );
@@ -482,8 +482,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[0] )
       ) i_node_0_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_0[2*i], if_sync_tree_0[2*i+1]} ),
         .masters  ( '{if_sync_tree_1[i]}                          )
       );
@@ -494,8 +494,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[1] )
       ) i_node_1_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_1[2*i], if_sync_tree_1[2*i+1]} ),
         .masters  ( '{if_sync_tree_2[i]}                          )
       );
@@ -506,8 +506,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[2] )
       ) i_node_2_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_2[2*i], if_sync_tree_2[2*i+1]} ),
         .masters  ( '{if_sync_tree_3[i]}                          )
       );
@@ -518,8 +518,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[3] )
       ) i_node_3_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_3[2*i], if_sync_tree_3[2*i+1]} ),
         .masters  ( '{if_sync_tree_4[i]}                          )
       );
@@ -530,8 +530,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[4] )
       ) i_node_4_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_4[2*i], if_sync_tree_4[2*i+1]} ),
         .masters  ( '{if_sync_tree_5[i]}                          )
       );
@@ -542,8 +542,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[5] )
       ) i_node_5_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_5[2*i], if_sync_tree_5[2*i+1]} ),
         .masters  ( '{if_sync_tree_6[i]}                          )
       );
@@ -554,8 +554,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[6] )
       ) i_node_6_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_6[2*i], if_sync_tree_6[2*i+1]} ),
         .masters  ( if_fmon                                       )
       );
@@ -565,8 +565,8 @@ module magia
     fractal_monitor #(
       .PORT_WIDTH( FSYNC_MON_W )
     ) i_top_fractal_sync_monitor (
-      .clk_i   ( clk           ),
-      .rstn_i  ( rstn          ),
+      .clk_i                    ,
+      .rstn_i  ( rst_ni        ),
       .ports   ( if_fmon       ),
       .error_o ( monitor_error )
     );
@@ -592,8 +592,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( TILE_FSYNC_W )
       ) i_cu_fractal_sync (
-        .clk_i    ( clk                             ),
-        .rstn_i   ( rst_n                           ),
+        .clk_i                                       ,
+        .rstn_i   ( rst_ni                          ),
         .slaves   ( '{sync_if[2*i], sync_if[2*i+1]} ),
         .masters  ( '{if_sync_tree_0[i]}            )
       );
@@ -604,8 +604,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[0] )
       ) i_node_0_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_0[2*i], if_sync_tree_0[2*i+1]} ),
         .masters  ( '{if_sync_tree_1[i]}                          )
       );
@@ -616,8 +616,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[1] )
       ) i_node_1_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_1[2*i], if_sync_tree_1[2*i+1]} ),
         .masters  ( '{if_sync_tree_2[i]}                          )
       );
@@ -628,8 +628,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[2] )
       ) i_node_2_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_2[2*i], if_sync_tree_2[2*i+1]} ),
         .masters  ( '{if_sync_tree_3[i]}                          )
       );
@@ -640,8 +640,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[3] )
       ) i_node_3_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_3[2*i], if_sync_tree_3[2*i+1]} ),
         .masters  ( '{if_sync_tree_4[i]}                          )
       );
@@ -652,8 +652,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[4] )
       ) i_node_4_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_4[2*i], if_sync_tree_4[2*i+1]} ),
         .masters  ( '{if_sync_tree_5[i]}                          )
       );
@@ -664,8 +664,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[5] )
       ) i_node_5_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_5[2*i], if_sync_tree_5[2*i+1]} ),
         .masters  ( '{if_sync_tree_6[i]}                          )
       );
@@ -676,8 +676,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[6] )
       ) i_node_6_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_6[2*i], if_sync_tree_6[2*i+1]} ),
         .masters  ( '{if_sync_tree_7[i]}                          )
       );
@@ -688,8 +688,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[7] )
       ) i_node_7_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_7[2*i], if_sync_tree_7[2*i+1]} ),
         .masters  ( '{if_sync_tree_8[i]}                          )
       );
@@ -700,8 +700,8 @@ module magia
       fractal_sync #(
         .SLV_WIDTH  ( FSYNC_LVL_W[8] )
       ) i_node_8_fractal_sync (
-        .clk_i    ( clk                                           ),
-        .rstn_i   ( rst_n                                         ),
+        .clk_i                                                     ,
+        .rstn_i   ( rst_ni                                        ),
         .slaves   ( '{if_sync_tree_8[2*i], if_sync_tree_8[2*i+1]} ),
         .masters  ( if_fmon                                       )
       );
@@ -711,8 +711,8 @@ module magia
     fractal_monitor #(
       .PORT_WIDTH( FSYNC_MON_W )
     ) i_top_fractal_sync_monitor (
-      .clk_i   ( clk           ),
-      .rstn_i  ( rstn          ),
+      .clk_i                    ,
+      .rstn_i  ( rst_ni        ),
       .ports   ( if_fmon       ),
       .error_o ( monitor_error )
     );
@@ -736,8 +736,8 @@ module magia
     fractal_sync #(
       .SLV_WIDTH  ( TILE_FSYNC_W )
     ) i_cu_fractal_sync (
-      .clk_i    ( clk                                ),
-      .rstn_i   ( rst_n                              ),
+      .clk_i                                          ,
+      .rstn_i   ( rst_ni                             ),
       .slaves   ( '{sync_if[2*i], sync_if[2*i+1]}    ),
       .masters  ( '{gen_fsync_if[0].if_sync_tree[i]} )
     );
@@ -752,8 +752,8 @@ module magia
         fractal_sync #(
           .SLV_WIDTH  ( FSYNC_LVL_W )
         ) i_node_fractal_sync (
-          .clk_i    ( clk                                                                       ),
-          .rstn_i   ( rst_n                                                                     ),
+          .clk_i                                                                                 ,
+          .rstn_i   ( rst_ni                                                                    ),
           .slaves   ( '{gen_fsync_if[i].if_sync_tree[2*j], gen_fsync_if[i].if_sync_tree[2*j+1]} ),
           .masters  ( '{gen_fsync_if[i+1].if_sync_tree[j]}                                      )
         );
@@ -761,8 +761,8 @@ module magia
         fractal_sync #(
           .SLV_WIDTH  ( FSYNC_LVL_W )
         ) i_top_fractal_sync (
-          .clk_i    ( clk                                                                 ),
-          .rstn_i   ( rst_n                                                               ),
+          .clk_i                                                                           ,
+          .rstn_i   ( rst_ni                                                              ),
           .slaves   ( '{gen_fsync_if[i].if_sync_tree[0], gen_fsync_if[i].if_sync_tree[1]} ),
           .masters  ( if_fmon                                                             )
         );
@@ -774,8 +774,8 @@ module magia
   fractal_monitor #(
     .PORT_WIDTH( FSYNC_MON_W )
   ) i_top_fractal_sync_monitor (
-    .clk_i   ( clk           ),
-    .rstn_i  ( rstn          ),
+    .clk_i                    ,
+    .rstn_i  ( rst_ni        ),
     .ports   ( if_fmon       ),
     .error_o ( monitor_error )
   );

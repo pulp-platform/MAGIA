@@ -80,7 +80,8 @@ module magia_tile_fixture;
     .CORE_ISA     (                                 ),
     .CORE_A       (                                 ),
     .CORE_B       (                                 ),
-    .CORE_M       (                                 )
+    .CORE_M       (                                 ),
+    .ERROR_CAP    (                                 )
   ) i_magia_tile (
     .clk_i               ( clk               ),
     .rst_ni              ( rst_n             ),

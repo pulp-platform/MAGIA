@@ -334,8 +334,8 @@ package magia_tile_pkg;
   } core_cache_instr_rsp_t;
 
   typedef enum logic[1:0]{
-    RESERVED_IDX = 3,
-    STACK_IDX    = 2,
+    STACK_IDX    = 3,
+    RESERVED_IDX = 2,
     L1SPM_IDX    = 1,
     L2_IDX       = 0
   } mem_array_idx_e;
@@ -414,8 +414,6 @@ package magia_tile_pkg;
 
   `HCI_TYPEDEF_REQ_T(idma_hci_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic signed[WD_LIC-1:0][AWH:0], logic[UWH-1:0])
   `HCI_TYPEDEF_RSP_T(idma_hci_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0])
-
-  typedef axi_pkg::xbar_rule_32_t tile_xbar_rule_t;
   
   localparam axi_pkg::xbar_cfg_t axi_xbar_cfg = '{
     NoSlvPorts          : AxiXbarNoSlvPorts,
