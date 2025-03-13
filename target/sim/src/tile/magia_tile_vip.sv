@@ -30,40 +30,43 @@ module magia_tile_vip
   parameter real         T_APPL     = 0.1,
   parameter real         T_TEST     = 0.9
 )(
-  output logic                        clk,
-  output logic                        rst_n,
-  output logic                        test_mode,
-  output logic                        tile_enable,
+  output logic                              clk,
+  output logic                              rst_n,
+  output logic                              test_mode,
+  output logic                              tile_enable,
 
-  input  magia_pkg::axi_default_req_t data_out_req,
-  output magia_pkg::axi_default_rsp_t data_out_rsp,
+  input  magia_pkg::axi_default_req_t       data_out_req,
+  output magia_pkg::axi_default_rsp_t       data_out_rsp,
 
-  fractal_if.slv_port                 sync_if[1],
+  output magia_tile_pkg::axi_xbar_slv_req_t data_in_req,
+  input  magia_tile_pkg::axi_xbar_slv_rsp_t data_in_rsp,
+
+  fractal_if.slv_port                       sync_if[1],
   
-  output logic                        scan_cg_en,
+  output logic                              scan_cg_en,
 
-  output logic[31:0]                  boot_addr,
-  output logic[31:0]                  mtvec_addr,
-  output logic[31:0]                  dm_halt_addr,
-  output logic[31:0]                  dm_exception_addr,
-  output logic[31:0]                  mhartid,
-  output logic[ 3:0]                  mimpid_patch,
+  output logic[31:0]                        boot_addr,
+  output logic[31:0]                        mtvec_addr,
+  output logic[31:0]                        dm_halt_addr,
+  output logic[31:0]                        dm_exception_addr,
+  output logic[31:0]                        mhartid,
+  output logic[ 3:0]                        mimpid_patch,
 
-  input  logic[63:0]                  mcycle,
-  output logic[63:0]                  time_var,
+  input  logic[63:0]                        mcycle,
+  output logic[63:0]                        time_var,
 
-  output logic[magia_pkg::N_IRQ-1:0]  irq,
+  output logic[magia_pkg::N_IRQ-1:0]        irq,
 
-  output logic                        debug_req,
-  input  logic                        debug_havereset,
-  input  logic                        debug_running,
-  input  logic                        debug_halted,
-  input  logic                        debug_pc_valid,
-  input  logic[31:0]                  debug_pc,
+  output logic                              debug_req,
+  input  logic                              debug_havereset,
+  input  logic                              debug_running,
+  input  logic                              debug_halted,
+  input  logic                              debug_pc_valid,
+  input  logic[31:0]                        debug_pc,
 
-  output logic                        fetch_enable,
-  input  logic                        core_sleep,
-  output logic                        wu_wfe
+  output logic                              fetch_enable,
+  input  logic                              core_sleep,
+  output logic                              wu_wfe
 );
 
 /*******************************************************/
@@ -72,13 +75,13 @@ module magia_tile_vip
 
   assign test_mode         = 1'b0;
   assign tile_enable       = 1'b1;
+  assign data_in_req       = '0;
   assign scan_cg_en        = 1'b0;
   assign mtvec_addr        = '0;
   assign dm_halt_addr      = '0;
   assign dm_exception_addr = '0;
   assign mhartid           = '0;
   assign mimpid_patch      = '0;
-  assign fencei_flush_ack  = 1'b0;
   assign debug_req         = 1'b0;
   assign wu_wfe            = 1'b0;
   assign sync_if[0].wake   = 1'b0;

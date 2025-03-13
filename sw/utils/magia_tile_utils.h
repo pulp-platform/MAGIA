@@ -57,7 +57,7 @@ void wait_print(unsigned int cycles){
     }
 }
 
-inline void irq_en(uint32_t index_oh){
+inline void irq_en(volatile uint32_t index_oh){
     asm volatile("addi t0, %0, 0\n\t"
                  "csrrs zero, mie, t0"
                  ::"r"(index_oh));

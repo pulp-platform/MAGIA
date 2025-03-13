@@ -13,6 +13,10 @@
 #define MESH_Y_TILES (2)
 #define NUM_HARTS    (MESH_X_TILES*MESH_Y_TILES)
 
+#define GET_X_ID(mhartid)  (mhartid/MESH_Y_TILES)
+#define GET_Y_ID(mhartid)  (mhartid%MESH_Y_TILES)
+#define GET_ID(y_id, x_id) ((x_id*MESH_Y_TILES)+y_id)
+
 #define h_pprintf(x) (h_psprint(get_hartid(), x))
 #define n_pprintf(x) (n_psprint(get_hartid(), x))
 #define   pprintf(x) (  psprint(get_hartid(), x))
@@ -25,7 +29,7 @@ inline uint32_t get_hartid(){
     return hartid;
 }
 
-inline void amo_increment(uint32_t addr){
+inline void amo_increment(volatile uint32_t addr){
     asm volatile("addi t0, %0, 0" ::"r"(addr));
     asm volatile("li t1, 1" ::);
     asm volatile("amoadd.w t2, t1, (t0)" ::);

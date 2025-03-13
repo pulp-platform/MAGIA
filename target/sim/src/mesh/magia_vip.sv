@@ -78,8 +78,6 @@ module magia_vip
   assign dm_halt_addr      = '0;
   assign dm_exception_addr = '0;
   assign mimpid_patch      = '0;
-  for (genvar i = 0; i < magia_tb_pkg::N_TILES; i++)
-    assign fencei_flush_ack[i]  = 1'b0;
   assign debug_req         = 1'b0;
   assign wu_wfe            = 1'b0;
 

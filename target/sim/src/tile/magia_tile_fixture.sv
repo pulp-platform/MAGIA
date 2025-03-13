@@ -29,40 +29,43 @@ module magia_tile_fixture;
 /**        Internal Signal Definitions Beginning      **/
 /*******************************************************/
 
-  logic                        clk;
-  logic                        rst_n;
-  logic                        test_mode;
-  logic                        tile_enable;
+  logic                              clk;
+  logic                              rst_n;
+  logic                              test_mode;
+  logic                              tile_enable;
 
-  magia_pkg::axi_default_req_t data_out_req;
-  magia_pkg::axi_default_rsp_t data_out_rsp;
+  magia_pkg::axi_default_req_t       data_out_req;
+  magia_pkg::axi_default_rsp_t       data_out_rsp;
 
-  fractal_if #(.LVL_WIDTH(1))  sync_if[1]();
+  magia_tile_pkg::axi_xbar_slv_req_t data_in_req;
+  magia_tile_pkg::axi_xbar_slv_rsp_t data_in_rsp;
+
+  fractal_if #(.LVL_WIDTH(1))        sync_if[1]();
   
-  logic                        scan_cg_en;
+  logic                              scan_cg_en;
 
-  logic[31:0]                  boot_addr;
-  logic[31:0]                  mtvec_addr;
-  logic[31:0]                  dm_halt_addr;
-  logic[31:0]                  dm_exception_addr;
-  logic[31:0]                  mhartid;
-  logic[ 3:0]                  mimpid_patch;
+  logic[31:0]                        boot_addr;
+  logic[31:0]                        mtvec_addr;
+  logic[31:0]                        dm_halt_addr;
+  logic[31:0]                        dm_exception_addr;
+  logic[31:0]                        mhartid;
+  logic[ 3:0]                        mimpid_patch;
 
-  logic[63:0]                  mcycle;
-  logic[63:0]                  time_var;
+  logic[63:0]                        mcycle;
+  logic[63:0]                        time_var;
 
-  logic[magia_pkg::N_IRQ-1:0]  irq;
+  logic[magia_pkg::N_IRQ-1:0]        irq;
 
-  logic                        debug_req;
-  logic                        debug_havereset;
-  logic                        debug_running;
-  logic                        debug_halted;
-  logic                        debug_pc_valid;
-  logic[31:0]                  debug_pc;
+  logic                              debug_req;
+  logic                              debug_havereset;
+  logic                              debug_running;
+  logic                              debug_halted;
+  logic                              debug_pc_valid;
+  logic[31:0]                        debug_pc;
 
-  logic                        fetch_enable;
-  logic                        core_sleep;
-  logic                        wu_wfe;
+  logic                              fetch_enable;
+  logic                              core_sleep;
+  logic                              wu_wfe;
 
 /*******************************************************/
 /**           Internal Signal Definitions End         **/
@@ -87,6 +90,9 @@ module magia_tile_fixture;
 
     .data_out_req_o      ( data_out_req      ),
     .data_out_rsp_i      ( data_out_rsp      ), 
+
+    .data_in_req_i       ( data_in_req       ),
+    .data_in_rsp_o       ( data_in_rsp       ),
 
     .sync_if_o           ( sync_if[0]        ),
     

@@ -18,7 +18,7 @@
 #define N_SIZE (64)
 #define K_SIZE (64)
 
-#define VERBOSE (100)
+#define VERBOSE (0)
 
 #define WAIT_CYCLES (10)
 

@@ -13,7 +13,7 @@
 #define ACTIVE_WORDS ((L1_SIZE/(BITS_WORD/BITS_BYTE))/NUM_L1_BANKS)
 
 int main(void) {
-  uint8_t exit_code;
+  uint32_t exit_code;
 
 #ifdef FULL_L1
   uint32_t expected_result = (NUM_L1_BANKS*ACTIVE_WORDS/STEP)*(NUM_L1_BANKS*ACTIVE_WORDS/STEP + 1)/2;

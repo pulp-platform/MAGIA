@@ -1,7 +1,7 @@
 #include "magia_tile_utils.h"
 #include "magia_utils.h"
 
-#define VERBOSE (100)
+#define VERBOSE (0)
 
 #define SYNC_SETTLE (MESH_X_TILES*500)
 

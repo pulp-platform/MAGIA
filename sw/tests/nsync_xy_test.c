@@ -2,11 +2,8 @@
 #include "magia_utils.h"
 #include "cache_fill.h"
 
-#define VERBOSE (10)
+#define VERBOSE (0)
 
-#define GET_X_ID(mhartid)  (mhartid/MESH_Y_TILES)
-#define GET_Y_ID(mhartid)  (mhartid%MESH_Y_TILES)
-#define GET_ID(y_id, x_id) ((x_id*MESH_Y_TILES)+y_id)
 #define SYNC_NODE_X_ID     ((MESH_X_TILES-1)/2)
 #define SYNC_NODE_Y_ID     ((MESH_Y_TILES-1)/2)
 #define SYNC_NODE_ID       (GET_ID(SYNC_NODE_Y_ID, SYNC_NODE_X_ID))

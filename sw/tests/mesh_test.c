@@ -21,7 +21,7 @@
 #define N_SIZE (64)
 #define K_SIZE (64)
 
-#define VERBOSE (100)
+#define VERBOSE (0)
 
 #define WAIT_CYCLES (10)
 
@@ -202,9 +202,6 @@ int main(void) {
   // Y
   h_pprintf("Initializing Y through iDMA...\n");
   idma_mv_in(M_SIZE, K_SIZE, y_inp, (Y_BASE + get_hartid()*L1_TILE_OFFSET));
-
-  uint32_t cfg_reg0[NUM_HARTS];
-  uint32_t cfg_reg1[NUM_HARTS];
 
 #if VERBOSE > 10
   h_pprintf("K_SIZE: 0x");   n_pprintf(hs(K_SIZE));

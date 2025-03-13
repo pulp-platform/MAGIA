@@ -3,9 +3,9 @@
 #include "fsync_isa_utils.h"
 #include "cache_fill.h"
 
-#define VERBOSE (100)
+#define VERBOSE (0)
 
-#define NUM_LEVELS (6)
+#define NUM_LEVELS (2)
 #define STALLING
 
 #define CACHE_HEAT_CYCLES (3)
