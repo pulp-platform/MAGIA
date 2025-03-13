@@ -115,11 +115,11 @@ Performing *Y = (X x W) + Y*, where Y, X and W are *M x K*, *M x N* and *N x K* 
 redmule_mcnfig(k_size, m_size, n_size);
 
 /* Provide locations of matrices and start matrix multiplication.
- * x_base [uint32_t]: Source address of X.
- * w_base [uint32_t]: Source address of W.
  * y_base [uint32_t]: Source address of W.
+ * w_base [uint32_t]: Source address of W.
+ * x_base [uint32_t]: Source address of X.
  */
-redmule_marith(x_base, w_base, y_base);
+redmule_marith(y_base, w_base, x_base);
 ```
 
 ### iDMA instructions

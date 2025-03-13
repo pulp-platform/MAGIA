@@ -213,7 +213,7 @@ int main(void) {
 
   redmule_mcnfig(K_SIZE, M_SIZE, N_SIZE);
 
-  redmule_marith(X_BASE, W_BASE, Y_BASE);
+  redmule_marith(Y_BASE, W_BASE, X_BASE);
 
 #ifdef IRQ_EN
   irq_en(1<<IRQ_REDMULE_EVT_0);

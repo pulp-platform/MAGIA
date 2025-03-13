@@ -214,7 +214,7 @@ int main(void) {
 
   redmule_mcnfig(K_SIZE, M_SIZE, N_SIZE);
 
-  redmule_marith(X_BASE + get_hartid()*L1_TILE_OFFSET, W_BASE + get_hartid()*L1_TILE_OFFSET, Y_BASE + get_hartid()*L1_TILE_OFFSET);
+  redmule_marith(Y_BASE + get_hartid()*L1_TILE_OFFSET, W_BASE + get_hartid()*L1_TILE_OFFSET, X_BASE + get_hartid()*L1_TILE_OFFSET);
 
 #ifdef IRQ_EN
   irq_en(1<<IRQ_REDMULE_EVT_0);
