@@ -34,7 +34,7 @@ module magia_tb;
     if (!$value$plusargs("DATA_HEX=%s" ,   data_hex))  data_hex  = "";
     if (!$value$plusargs("BOOT_ADDR=%h",   boot_addr)) boot_addr = 0;
 
-    // Preload data (dummy L2 MEM) and instructions (dummy I$)
+    // Preload data (dummy L2 MEM) and instructions (I$)
     fixture.vip.inst_preload(inst_hex);
     fixture.vip.data_preload(data_hex);
 

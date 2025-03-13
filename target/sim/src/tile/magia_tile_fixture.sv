@@ -120,6 +120,10 @@ module magia_tile_fixture;
     .core_sleep_o        ( core_sleep        ),
     .wu_wfe_i            ( wu_wfe            )
   );
+  `ifdef CORE_TRACES
+    localparam string core_trace_file_name = "log_file";
+    defparam i_magia_tile.i_cv32e40x_core.rvfi_i.tracer_i.LOGFILE_PATH_PLUSARG = core_trace_file_name;
+  `endif
 
 /*******************************************************/
 /**                      DUT End                      **/

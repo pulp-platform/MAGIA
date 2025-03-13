@@ -42,7 +42,7 @@ module magia_tile_vip
   
   output logic                        scan_cg_en,
 
-  output logic[31:0]                  boot_addr, //TODO: manage signal
+  output logic[31:0]                  boot_addr,
   output logic[31:0]                  mtvec_addr,
   output logic[31:0]                  dm_halt_addr,
   output logic[31:0]                  dm_exception_addr,
@@ -52,7 +52,7 @@ module magia_tile_vip
   input  logic[63:0]                  mcycle,
   output logic[63:0]                  time_var,
 
-  output logic[magia_pkg::N_IRQ-1:0]  irq, //TODO: manage signal
+  output logic[magia_pkg::N_IRQ-1:0]  irq,
 
   input  logic                        fencei_flush_req,
   output logic                        fencei_flush_ack,
@@ -64,19 +64,11 @@ module magia_tile_vip
   input  logic                        debug_pc_valid,
   input  logic[31:0]                  debug_pc,
 
-  output logic                        fetch_enable,  //TODO: manage signal
+  output logic                        fetch_enable,
   input  logic                        core_sleep,
   output logic                        wu_wfe
 );
 
-/*******************************************************/
-/**                   DPI Beginning                   **/
-/*******************************************************/
-
-//TODO
-
-/*******************************************************/
-/**                      DPI End                      **/
 /*******************************************************/
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
