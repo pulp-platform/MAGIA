@@ -5,7 +5,7 @@
 
 #define VERBOSE (0)
 
-#define NUM_LEVELS (2)
+#define NUM_LEVELS (6)
 #define STALLING
 
 #define CACHE_HEAT_CYCLES (3)

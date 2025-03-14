@@ -2,7 +2,7 @@
 #include "magia_utils.h"
 #include "cache_fill.h"
 
-#define VERBOSE (0)
+#define VERBOSE (10)
 
 #define CACHE_HEAT_CYCLES (3)
 

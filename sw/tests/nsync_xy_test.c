@@ -2,7 +2,7 @@
 #include "magia_utils.h"
 #include "cache_fill.h"
 
-#define VERBOSE (0)
+#define VERBOSE (10)
 
 #define SYNC_NODE_X_ID     ((MESH_X_TILES-1)/2)
 #define SYNC_NODE_Y_ID     ((MESH_Y_TILES-1)/2)
