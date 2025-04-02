@@ -73,10 +73,10 @@ package magia_tile_pkg;
   } hci_idma_ch_idx_e;                                                                  // Index of the HCI DMA read and write channels
   parameter int unsigned N_EXT   = 0;                                                   // Number of External ports - LEAVE TO 0 UNLESS YOU KNOW WHAT YOU ARE DOING
   parameter int unsigned AWC     = magia_pkg::ADDR_W;                                   // Address width core   (slave ports)
-  localparam int unsigned AWM    = 
-                          $clog2(magia_pkg::N_WORDS_BANK*DW_LIC/BW_LIC);                // Address width memory (master ports)
   parameter int unsigned DW_LIC  = magia_pkg::DATA_W;                                   // Data Width for Log Interconnect
   parameter int unsigned BW_LIC  = magia_pkg::BYTE_W;                                   // Byte Width for Log Interconnect
+  localparam int unsigned AWM    = 
+                          $clog2(magia_pkg::N_WORDS_BANK*DW_LIC/BW_LIC);                // Address width memory (master ports)
   parameter int unsigned UW_LIC  = magia_pkg::USR_W;                                    // User Width for Log Interconnect
   localparam int unsigned SW_LIC = DW_LIC/BW_LIC;                                       // Strobe Width for Log Interconnect
   localparam int unsigned WD_LIC = DW_LIC/DW_LIC;                                       // Number of words per data for Log Interconnect

@@ -217,6 +217,7 @@ update-ips:
 
 synth-ips:
 	$(BENDER) update
+	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_ADD_IDS=$(IDMA_ADD_IDS)
 	$(BENDER) script synopsys      \
 	$(common_targs) $(common_defs) \
 	$(synth_targs)  $(synth_defs)  \
