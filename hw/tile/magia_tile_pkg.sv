@@ -389,7 +389,20 @@ package magia_tile_pkg;
   `IDMA_TYPEDEF_FULL_ND_REQ_T(idma_nd_req_t, idma_be_req_t, logic[iDMA_RepWidth-1:0], logic[iDMA_StrideWidth-1:0])
 
   `AXI_TYPEDEF_ALL_CT(idma_axi, idma_axi_req_t, idma_axi_rsp_t, logic[iDMA_AddrWidth-1:0], logic[iDMA_AxiIdWidth-1:0], logic[iDMA_DataWidth-1:0], logic[iDMA_StrbWidth-1:0], logic[iDMA_UserWidth-1:0])
-  `OBI_TYPEDEF_ALL(idma_obi, obi_pkg::obi_default_cfg(.AddrWidth(iDMA_AddrWidth), .DataWidth(iDMA_DataWidth), .IdWidth(iDMA_AxiIdWidth), .OptionalCfg(obi_pkg::ObiMinimalOptionalConfig)))
+  
+  parameter obi_pkg::obi_optional_cfg_t OptionalCfg = obi_pkg::ObiMinimalOptionalConfig;
+  parameter obi_pkg::obi_cfg_t obi_cfg = '{
+       OptionalCfg : OptionalCfg,
+       AddrWidth   : iDMA_AddrWidth, 
+       DataWidth   : iDMA_DataWidth,
+       IdWidth     : iDMA_AxiIdWidth,
+       UseRReady   : 1'b0,
+       CombGnt     : 1'b0,
+       Integrity   : 1'b0,
+       BeFull      : 1'b1
+  };
+
+  `OBI_TYPEDEF_ALL(idma_obi, obi_cfg)
 
   typedef struct packed {
     struct packed {
