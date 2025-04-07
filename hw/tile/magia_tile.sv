@@ -156,8 +156,8 @@ module magia_tile
   magia_tile_pkg::idma_hci_req_t idma_hci_write_req;
   magia_tile_pkg::idma_hci_rsp_t idma_hci_write_rsp;
 
-  magia_tile_pkg::axi_xbar_slv_req_t[magia_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_data_in_req; // Index 3 -> ext, Index 2 -> iDMA, Index 1 -> Core Data, Index 0 -> Core Instruction
-  magia_tile_pkg::axi_xbar_slv_rsp_t[magia_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_data_in_rsp; // Index 3 -> ext, Index 2 -> iDMA, Index 1 -> Core Data, Index 0 -> Core Instruction
+  magia_tile_pkg::axi_xbar_slv_req_t[magia_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_data_in_req; // Index 2 -> iDMA, Index 1 -> Core Data, Index 0 -> Core Instruction
+  magia_tile_pkg::axi_xbar_slv_rsp_t[magia_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_data_in_rsp; // Index 2 -> iDMA, Index 1 -> Core Data, Index 0 -> Core Instruction
 
   magia_pkg::axi_xbar_mst_req_t[magia_tile_pkg::AxiXbarNoMstPorts-1:0] axi_xbar_mst_req;
   magia_pkg::axi_xbar_mst_rsp_t[magia_tile_pkg::AxiXbarNoMstPorts-1:0] axi_xbar_mst_rsp;
@@ -248,8 +248,6 @@ module magia_tile
   assign obi_xbar_rule[magia_tile_pkg::STACK_IDX]    = '{idx: 32'd1, start_addr: magia_tile_pkg::STACK_ADDR_START, end_addr: magia_tile_pkg::STACK_ADDR_END };
 
   assign axi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START, end_addr: magia_tile_pkg::L2_ADDR_END };
-  assign axi_xbar_rule[magia_tile_pkg::L1SPM_IDX]    = '{idx: 32'd1, start_addr: tile_l1_start_addr,            end_addr: tile_l1_end_addr            };
-  assign axi_xbar_rule[magia_tile_pkg::RESERVED_IDX] = '{idx: 32'd1, start_addr: tile_reserved_start_addr,      end_addr: tile_reserved_end_addr      };
   
   assign obi_xbar_en_default_idx = '1; // Routing to the AXI Xbar all requests with an address outside the range of the internal L1 and the external L2
   assign obi_xbar_default_idx    = '0;
@@ -263,8 +261,6 @@ module magia_tile
   assign core_l2_data_rsp                                         = axi_xbar_data_in_rsp[magia_tile_pkg::AXI_CORE_DATA_IDX];
   assign axi_xbar_data_in_req[magia_tile_pkg::AXI_CORE_INSTR_IDX] = core_l2_instr_req;
   assign core_l2_instr_rsp                                        = axi_xbar_data_in_rsp[magia_tile_pkg::AXI_CORE_INSTR_IDX];
-  assign axi_xbar_data_in_req[magia_tile_pkg::AXI_EXT_IDX]        = data_in_req_i;
-  assign data_in_rsp_o                                            = axi_xbar_data_in_rsp[magia_tile_pkg::AXI_EXT_IDX];
 
   assign obi_xbar_slv_req[magia_tile_pkg::OBI_CORE_IDX] = core_obi_data_req;
   assign core_obi_data_rsp                              = obi_xbar_slv_rsp[magia_tile_pkg::OBI_CORE_IDX];
@@ -459,39 +455,39 @@ module magia_tile
     .AxiIdWidth   ( magia_pkg::AXI_NOC_ID_W                 ),
     .AxiUserWidth ( magia_pkg::AXI_NOC_U_W                  ),
     .MaxTrans     ( 1                                       ),
-    .axi_req_t    ( magia_pkg::axi_xbar_mst_req_t           ),
-    .axi_rsp_t    ( magia_pkg::axi_xbar_mst_rsp_t           )
+    .axi_req_t    ( magia_tile_pkg::axi_xbar_slv_req_t      ),
+    .axi_rsp_t    ( magia_tile_pkg::axi_xbar_slv_rsp_t      )
   ) i_ext_data_axi2obi (
-    .clk_i                  ( sys_clk                                       ),
-    .rst_ni                 ( rst_ni                                        ),
-    .testmode_i             ( test_mode_i                                   ),
-    .axi_req_i              ( axi_xbar_mst_req[magia_tile_pkg::OBI_EXT_IDX] ),
-    .axi_rsp_o              ( axi_xbar_mst_rsp[magia_tile_pkg::OBI_EXT_IDX] ),
-    .obi_req_o              ( ext_obi_data_req                              ),
-    .obi_rsp_i              ( ext_obi_data_rsp                              ),
-    .req_aw_id_o            (                                               ),
-    .req_aw_user_o          (                                               ),
-    .req_w_user_o           (                                               ),
-    .req_write_aid_i        ( axi2obi_req_write_aid                         ),
-    .req_write_auser_i      ( axi2obi_req_write_auser                       ),
-    .req_write_wuser_i      ( axi2obi_req_write_wuser                       ),
-    .req_ar_id_o            (                                               ),
-    .req_ar_user_o          (                                               ),
-    .req_read_aid_i         ( axi2obi_req_read_aid                          ),
-    .req_read_auser_i       ( axi2obi_req_read_auser                        ),
-    .rsp_write_aw_user_o    (                                               ),
-    .rsp_write_w_user_o     (                                               ),
-    .rsp_write_bank_strb_o  (                                               ),
-    .rsp_write_rid_o        (                                               ),
-    .rsp_write_ruser_o      (                                               ),
-    .rsp_write_last_o       (                                               ),
-    .rsp_write_hs_o         (                                               ),
-    .rsp_b_user_i           ( axi2obi_rsp_b_user                            ),
-    .rsp_read_ar_user_o     (                                               ),
-    .rsp_read_size_enable_o (                                               ),
-    .rsp_read_rid_o         (                                               ),
-    .rsp_read_ruser_o       (                                               ),
-    .rsp_r_user_i           ( axi2obi_rsp_r_user                            )
+    .clk_i                  ( sys_clk                 ),
+    .rst_ni                 ( rst_ni                  ),
+    .testmode_i             ( test_mode_i             ),
+    .axi_req_i              ( data_in_req_i           ),
+    .axi_rsp_o              ( data_in_rsp_o           ),
+    .obi_req_o              ( ext_obi_data_req        ),
+    .obi_rsp_i              ( ext_obi_data_rsp        ),
+    .req_aw_id_o            (                         ),
+    .req_aw_user_o          (                         ),
+    .req_w_user_o           (                         ),
+    .req_write_aid_i        ( axi2obi_req_write_aid   ),
+    .req_write_auser_i      ( axi2obi_req_write_auser ),
+    .req_write_wuser_i      ( axi2obi_req_write_wuser ),
+    .req_ar_id_o            (                         ),
+    .req_ar_user_o          (                         ),
+    .req_read_aid_i         ( axi2obi_req_read_aid    ),
+    .req_read_auser_i       ( axi2obi_req_read_auser  ),
+    .rsp_write_aw_user_o    (                         ),
+    .rsp_write_w_user_o     (                         ),
+    .rsp_write_bank_strb_o  (                         ),
+    .rsp_write_rid_o        (                         ),
+    .rsp_write_ruser_o      (                         ),
+    .rsp_write_last_o       (                         ),
+    .rsp_write_hs_o         (                         ),
+    .rsp_b_user_i           ( axi2obi_rsp_b_user      ),
+    .rsp_read_ar_user_o     (                         ),
+    .rsp_read_size_enable_o (                         ),
+    .rsp_read_rid_o         (                         ),
+    .rsp_read_ruser_o       (                         ),
+    .rsp_r_user_i           ( axi2obi_rsp_r_user      )
   );
 
 /*******************************************************/
@@ -798,10 +794,10 @@ module magia_tile
     .clk_i            ( sys_clk                 ),
     .rst_ni           ( rst_ni                  ),
     .testmode_i       ( test_mode_i             ),
-    .sbr_ports_req_i  ( obi_xbar_slv_req    ),
-    .sbr_ports_rsp_o  ( obi_xbar_slv_rsp    ),
-    .mgr_ports_req_o  ( core_mem_data_req   ),
-    .mgr_ports_rsp_i  ( core_mem_data_rsp   ),
+    .sbr_ports_req_i  ( obi_xbar_slv_req        ),
+    .sbr_ports_rsp_o  ( obi_xbar_slv_rsp        ),
+    .mgr_ports_req_o  ( core_mem_data_req       ),
+    .mgr_ports_rsp_i  ( core_mem_data_rsp       ),
     .addr_map_i       ( obi_xbar_rule           ),
     .en_default_idx_i ( obi_xbar_en_default_idx ),
     .default_idx_i    ( obi_xbar_default_idx    )

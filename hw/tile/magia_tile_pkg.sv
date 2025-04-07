@@ -131,7 +131,7 @@ package magia_tile_pkg;
   localparam int unsigned N_BIT_SBR   = $clog2(N_SBR);                                  // Number of bits required to identify each slave
 
   // Parameters used by AXI
-  parameter int unsigned AXI_DATA_ID_W  = 2;                                            // Width of the AXI Data ID (2 bits: Core, iDMA, I$, ext)
+  parameter int unsigned AXI_DATA_ID_W  = 2;                                            // Width of the AXI Data ID (2 bits: Core, iDMA, I$)
   parameter int unsigned AXI_INSTR_ID_W = 1;                                            // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
   parameter int unsigned AXI_ID_W       = 2;                                            // Width of the AXI Unified Communication Channel ID
   parameter int unsigned AXI_DATA_U_W   = magia_pkg::USR_W;                             // Width of the AXI Data User
@@ -249,8 +249,8 @@ package magia_tile_pkg;
   parameter bit          FSYNC_STALL               = 1;                                 // Fractal Sync Stall during synchronization
 
   // Parameters of the AXI XBAR
-  parameter int unsigned AxiXbarNoSlvPorts     = 4;                                     // Number of Slave Ports (iDMA, Core Data, Core I$ and ext)
-  parameter int unsigned AxiXbarNoMstPorts     = 2;                                     // Number of Master Ports (to ext and to internal L1 from ext)
+  parameter int unsigned AxiXbarNoSlvPorts     = 3;                                     // Number of Slave Ports (iDMA, Core Data and Core I$)
+  parameter int unsigned AxiXbarNoMstPorts     = 1;                                     // Number of Master Ports (to ext)
   localparam int unsigned AxiXbarSlvAxiIDWidth = AXI_DATA_ID_W;                         // Number of bits to indentify each Slave Port
   parameter int unsigned AxiXbarMaxWTrans      = 16;                                    // Maximum number of outstanding transactions per write
   parameter int unsigned AxiXbarMaxMstTrans    = AxiXbarMaxWTrans;                      // Maximum number of outstanding transactions per master
@@ -341,7 +341,6 @@ package magia_tile_pkg;
   } mem_array_idx_e;
 
   typedef enum logic[1:0]{
-    AXI_EXT_IDX        = 3,
     AXI_IDMA_IDX       = 2,
     AXI_CORE_DATA_IDX  = 1,
     AXI_CORE_INSTR_IDX = 0
@@ -441,7 +440,7 @@ package magia_tile_pkg;
     UniqueIds           : 1'b0,
     AxiAddrWidth        : magia_pkg::ADDR_W,
     AxiDataWidth        : magia_pkg::DATA_W,
-    NoAddrRules         : 3
+    NoAddrRules         : 1
   };
 
 endpackage: magia_tile_pkg
