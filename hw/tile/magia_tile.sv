@@ -183,15 +183,15 @@ module magia_tile
   logic[magia_tile_pkg::AXI_INSTR_U_W-1:0] axi_instr_user;
   logic[magia_tile_pkg::RUSER_WIDTH-1:0]   obi_rsp_instr_user;
 
-  logic[magia_tile_pkg::AID_WIDTH]   axi2obi_req_write_aid;
-  logic[magia_tile_pkg::AUSER_WIDTH] axi2obi_req_write_auser;
-  logic[magia_tile_pkg::WUSER_WIDTH] axi2obi_req_write_wuser;
+  logic[magia_tile_pkg::AID_WIDTH-1:0]   axi2obi_req_write_aid;
+  logic[magia_tile_pkg::AUSER_WIDTH-1:0] axi2obi_req_write_auser;
+  logic[magia_tile_pkg::WUSER_WIDTH-1:0] axi2obi_req_write_wuser;
 
-  logic[magia_tile_pkg::AID_WIDTH]   axi2obi_req_read_aid;
-  logic[magia_tile_pkg::AUSER_WIDTH] axi2obi_req_read_auser;
+  logic[magia_tile_pkg::AID_WIDTH-1:0]   axi2obi_req_read_aid;
+  logic[magia_tile_pkg::AUSER_WIDTH-1:0] axi2obi_req_read_auser;
 
-  logic                              axi2obi_rsp_b_user;
-  logic                              axi2obi_rsp_r_user;
+  logic                                  axi2obi_rsp_b_user;
+  logic                                  axi2obi_rsp_r_user;
 
   logic idma_clear;         // Can be used to manage iDMA clear at top-level
   logic idma_axi2obi_start;
@@ -798,10 +798,10 @@ module magia_tile
     .clk_i            ( sys_clk                 ),
     .rst_ni           ( rst_ni                  ),
     .testmode_i       ( test_mode_i             ),
-    .sbr_ports_req_i  ( obi_xbar_slv_req        ),
-    .sbr_ports_rsp_o  ( obi_xbar_slv_rsp        ),
-    .mgr_ports_req_o  ( core_mem_data_req       ),
-    .mgr_ports_rsp_i  ( core_mem_data_rsp       ),
+    .sbr_ports_req_i  ( obi_xbar_slv_req    ),
+    .sbr_ports_rsp_o  ( obi_xbar_slv_rsp    ),
+    .mgr_ports_req_o  ( core_mem_data_req   ),
+    .mgr_ports_rsp_i  ( core_mem_data_rsp   ),
     .addr_map_i       ( obi_xbar_rule           ),
     .en_default_idx_i ( obi_xbar_en_default_idx ),
     .default_idx_i    ( obi_xbar_default_idx    )

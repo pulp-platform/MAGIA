@@ -13,10 +13,15 @@
 # limitations under the License.
 # SPDX-License-Identifier: Apache-2.0
 
-synth_targs +=
+synth_targs += -t rtl
+synth_targs += -t redmule_complex
+synth_targs += -t asic
+synth_targs += -t synopsys
 
-ifeq ($(REDMULE_COMPLEX),1)
-	synth_defs += -D REDMULE_COMPLEX_SYNTH
-else
-	synth_defs += -D REDMULE_HWPE_SYNTH
-endif
+#ifeq ($(REDMULE_COMPLEX),1)
+#	synth_defs += -D REDMULE_COMPLEX_SYNTH
+#else
+#	synth_defs += -D REDMULE_HWPE_SYNTH
+#endif
+
+synth_defs += -D REDMULE_COMPLEX_SYNTH
