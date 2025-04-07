@@ -111,17 +111,11 @@ module magia_tile
   magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_req; // Index 0 -> L2, Index 1 -> L1SPM
   magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_rsp; // Index 0 -> L2, Index 1 -> L1SPM
 
-  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_cut_req; // Index 0 -> L2, Index 1 -> L1SPM
-  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_cut_rsp; // Index 0 -> L2, Index 1 -> L1SPM
-
   magia_tile_pkg::core_obi_data_req_t core_l1_data_amo_req;
   magia_tile_pkg::core_obi_data_rsp_t core_l1_data_amo_rsp;
 
   magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_MGR-1:0] obi_xbar_slv_req; // Index 0 -> core request, Index 1 -> ext request
   magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_MGR-1:0] obi_xbar_slv_rsp; // Index 0 -> core request, Index 1 -> ext request
-
-  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_MGR-1:0] obi_xbar_slv_cut_req; // Index 0 -> core request, Index 1 -> ext request
-  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_MGR-1:0] obi_xbar_slv_cut_rsp; // Index 0 -> core request, Index 1 -> ext request
 
   magia_tile_pkg::core_obi_data_req_t ext_obi_data_req;
   magia_tile_pkg::core_obi_data_rsp_t ext_obi_data_rsp;
@@ -783,25 +777,6 @@ module magia_tile
     .mgr_port_req_o ( core_l1_data_amo_req                         ),
     .mgr_port_rsp_i ( core_l1_data_amo_rsp                         )
   );
-
-  for (genvar i = 0; i < magia_tile_pkg::N_MGR; i++) begin: gen_obi_xbar_sbr_cut
-
-    obi_cut #(
-      .ObiCfg       ( magia_tile_pkg::obi_amo_cfg            ),
-      .obi_a_chan_t ( magia_tile_pkg::core_data_obi_a_chan_t ),
-      .obi_r_chan_t ( magia_tile_pkg::core_data_obi_r_chan_t ),
-      .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t    ),
-      .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t    )
-    ) i_obi_cut_sbr (
-      .clk_i          ( sys_clk                 ),
-      .rst_ni         ( rst_ni                  ),
-      .sbr_port_req_i ( obi_xbar_slv_req[i]     ),
-      .sbr_port_rsp_o ( obi_xbar_slv_rsp[i]     ),
-      .mgr_port_req_o ( obi_xbar_slv_cut_req[i] ),
-      .mgr_port_rsp_i ( obi_xbar_slv_cut_rsp[i] )
-    );
-
-  end
   
   obi_xbar #(
     .SbrPortObiCfg      ( magia_tile_pkg::obi_amo_cfg            ),
@@ -823,33 +798,14 @@ module magia_tile
     .clk_i            ( sys_clk                 ),
     .rst_ni           ( rst_ni                  ),
     .testmode_i       ( test_mode_i             ),
-    .sbr_ports_req_i  ( obi_xbar_slv_cut_req    ),
-    .sbr_ports_rsp_o  ( obi_xbar_slv_cut_rsp    ),
-    .mgr_ports_req_o  ( core_mem_data_cut_req   ),
-    .mgr_ports_rsp_i  ( core_mem_data_cut_rsp   ),
+    .sbr_ports_req_i  ( obi_xbar_slv_req    ),
+    .sbr_ports_rsp_o  ( obi_xbar_slv_rsp    ),
+    .mgr_ports_req_o  ( core_mem_data_req   ),
+    .mgr_ports_rsp_i  ( core_mem_data_rsp   ),
     .addr_map_i       ( obi_xbar_rule           ),
     .en_default_idx_i ( obi_xbar_en_default_idx ),
     .default_idx_i    ( obi_xbar_default_idx    )
   );
-
-  for (genvar i = 0; i < magia_tile_pkg::N_SBR; i++) begin: gen_obi_xbar_mgr_cut
-
-    obi_cut #(
-      .ObiCfg       ( magia_tile_pkg::obi_amo_cfg            ),
-      .obi_a_chan_t ( magia_tile_pkg::core_data_obi_a_chan_t ),
-      .obi_r_chan_t ( magia_tile_pkg::core_data_obi_r_chan_t ),
-      .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t    ),
-      .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t    )
-    ) i_obi_xbar_mgr_cut (
-      .clk_i          ( sys_clk                  ),
-      .rst_ni         ( rst_ni                   ),
-      .sbr_port_req_i ( core_mem_data_cut_req[i] ),
-      .sbr_port_rsp_o ( core_mem_data_cut_rsp[i] ),
-      .mgr_port_req_o ( core_mem_data_req[i]     ),
-      .mgr_port_rsp_i ( core_mem_data_rsp[i]     )
-    );
-
-  end
 
 /*******************************************************/
 /**         Core Data Demuxing (OBI XBAR) End         **/
