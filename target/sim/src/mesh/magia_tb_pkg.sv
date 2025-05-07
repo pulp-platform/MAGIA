@@ -25,8 +25,8 @@ package magia_tb_pkg;
 
   parameter int unsigned N_MEM_BANKS  = magia_pkg::N_MEM_BANKS;  // Number of TCDM banks (1 extra bank for missaligned accesses)
   parameter int unsigned N_WORDS_BANK = magia_pkg::N_WORDS_BANK; // Number of words per TCDM bank
-  parameter int unsigned N_TILES_X    = magia_pkg::N_TILES_X;    // Number of Tile columns
   parameter int unsigned N_TILES_Y    = magia_pkg::N_TILES_Y;    // Number of Tile rowns
+  parameter int unsigned N_TILES_X    = magia_pkg::N_TILES_X;    // Number of Tile columns
   parameter int unsigned N_TILES      = magia_pkg::N_TILES;      // Number of Tiles in the Mesh
 
   parameter int unsigned L2_ID_W      = magia_pkg::L2_ID_W;

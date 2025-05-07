@@ -70,8 +70,8 @@ module magia_fixture;
 /*******************************************************/
 
   magia #(
-    .N_TILES_X    ( magia_tb_pkg::N_TILES_X    ),
     .N_TILES_Y    ( magia_tb_pkg::N_TILES_Y    ),
+    .N_TILES_X    ( magia_tb_pkg::N_TILES_X    ),
     .N_TILES      ( magia_tb_pkg::N_TILES      ),
     .N_MEM_BANKS  ( magia_tb_pkg::N_MEM_BANKS  ),
     .N_WORDS_BANK ( magia_tb_pkg::N_WORDS_BANK ),

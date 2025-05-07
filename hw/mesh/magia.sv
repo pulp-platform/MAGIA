@@ -23,8 +23,8 @@ module magia
   import magia_pkg::*;
   import magia_tile_pkg::*;
 #(
-  parameter int unsigned N_TILES_X     = magia_pkg::N_TILES_X,    // Number of Tile columns
   parameter int unsigned N_TILES_Y     = magia_pkg::N_TILES_Y,    // Number of Tile rowns
+  parameter int unsigned N_TILES_X     = magia_pkg::N_TILES_X,    // Number of Tile columns
   parameter int unsigned N_TILES       = magia_pkg::N_TILES,      // Number of Tiles in the Mesh
   parameter int unsigned N_MEM_BANKS   = magia_pkg::N_MEM_BANKS,  // Number of TCDM banks (1 extra bank for missaligned accesses) per Tile
   parameter int unsigned N_WORDS_BANK  = magia_pkg::N_WORDS_BANK, // Number of words per TCDM bank
@@ -72,11 +72,11 @@ module magia
 
   logic[31:0] mhartid[N_TILES];
   
-  magia_pkg::axi_default_req_t[N_TILES_X-1:0][N_TILES_Y-1:0] data_out_req;
-  magia_pkg::axi_default_rsp_t[N_TILES_X-1:0][N_TILES_Y-1:0] data_out_rsp;
+  magia_pkg::axi_default_req_t[N_TILES_Y-1:0][N_TILES_X-1:0] data_out_req;
+  magia_pkg::axi_default_rsp_t[N_TILES_Y-1:0][N_TILES_X-1:0] data_out_rsp;
 
-  magia_tile_pkg::axi_xbar_slv_req_t[N_TILES_X-1:0][N_TILES_Y-1:0] data_in_req;
-  magia_tile_pkg::axi_xbar_slv_rsp_t[N_TILES_X-1:0][N_TILES_Y-1:0] data_in_rsp;
+  magia_tile_pkg::axi_xbar_slv_req_t[N_TILES_Y-1:0][N_TILES_X-1:0] data_in_req;
+  magia_tile_pkg::axi_xbar_slv_rsp_t[N_TILES_Y-1:0][N_TILES_X-1:0] data_in_rsp;
 
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
@@ -102,8 +102,8 @@ module magia
 /**               MAGIA Tiles Beginning               **/
 /*******************************************************/
 
-  for (genvar i = 0; i < N_TILES_X; i++) begin: gen_x_tile
-    for (genvar j = 0; j < N_TILES_Y; j++) begin: gen_y_tile
+  for (genvar i = 0; i < N_TILES_Y; i++) begin: gen_y_tile
+    for (genvar j = 0; j < N_TILES_X; j++) begin: gen_x_tile
       magia_tile #(
         .N_MEM_BANKS  ( N_MEM_BANKS   ),
         .N_WORDS_BANK ( N_WORDS_BANK  ),
@@ -114,46 +114,46 @@ module magia
         .CORE_M       (               ),
         .ERROR_CAP    (               )
       ) i_magia_tile (
-        .clk_i                                                    ,
-        .rst_ni                                                   ,
-        .test_mode_i                                              ,
-        .tile_enable_i                                            ,
+        .clk_i                                                   ,
+        .rst_ni                                                  ,
+        .test_mode_i                                             ,
+        .tile_enable_i                                           ,
   
-        .data_out_req_o      ( data_out_req[i][j]                ),
-        .data_out_rsp_i      ( data_out_rsp[i][j]                ),
+        .data_out_req_o      ( data_out_req[i][j]               ),
+        .data_out_rsp_i      ( data_out_rsp[i][j]               ),
   
-        .data_in_req_i       ( data_in_req[i][j]                 ),
-        .data_in_rsp_o       ( data_in_rsp[i][j]                 ),
+        .data_in_req_i       ( data_in_req[i][j]                ),
+        .data_in_rsp_o       ( data_in_rsp[i][j]                ),
   
-        .sync_if_o           ( sync_if[i*N_TILES_Y+j]            ),
+        .sync_if_o           ( sync_if[i*N_TILES_X+j]           ),
         
-        .scan_cg_en_i                                             ,
+        .scan_cg_en_i                                            ,
   
-        .boot_addr_i                                              ,
-        .mtvec_addr_i                                             ,
-        .dm_halt_addr_i                                           ,
-        .dm_exception_addr_i                                      ,
-        .mhartid_i           ( mhartid[i*N_TILES_Y+j]            ),
-        .mimpid_patch_i                                           ,
+        .boot_addr_i                                             ,
+        .mtvec_addr_i                                            ,
+        .dm_halt_addr_i                                          ,
+        .dm_exception_addr_i                                     ,
+        .mhartid_i           ( mhartid[i*N_TILES_X+j]           ),
+        .mimpid_patch_i                                          ,
   
-        .mcycle_o            ( mcycle_o[i*N_TILES_Y+j]           ),
-        .time_i                                                   ,
+        .mcycle_o            ( mcycle_o[i*N_TILES_X+j]          ),
+        .time_i                                                  ,
   
-        .irq_i               ( irq_i[i*N_TILES_Y+j]              ),
+        .irq_i               ( irq_i[i*N_TILES_X+j]             ),
   
-        .debug_req_i                                              ,
-        .debug_havereset_o   ( debug_havereset_o[i*N_TILES_Y+j]  ),
-        .debug_running_o     ( debug_running_o[i*N_TILES_Y+j]    ),
-        .debug_halted_o      ( debug_halted_o[i*N_TILES_Y+j]     ),
-        .debug_pc_valid_o    ( debug_pc_valid_o[i*N_TILES_Y+j]   ),
-        .debug_pc_o          ( debug_pc_o[i*N_TILES_Y+j]         ),
+        .debug_req_i                                             ,
+        .debug_havereset_o   ( debug_havereset_o[i*N_TILES_X+j] ),
+        .debug_running_o     ( debug_running_o[i*N_TILES_X+j]   ),
+        .debug_halted_o      ( debug_halted_o[i*N_TILES_X+j]    ),
+        .debug_pc_valid_o    ( debug_pc_valid_o[i*N_TILES_X+j]  ),
+        .debug_pc_o          ( debug_pc_o[i*N_TILES_X+j]        ),
   
-        .fetch_enable_i                                           ,
-        .core_sleep_o        ( core_sleep_o[i*N_TILES_Y+j]       ),
+        .fetch_enable_i                                          ,
+        .core_sleep_o        ( core_sleep_o[i*N_TILES_X+j]      ),
         .wu_wfe_i
       );
   `ifdef CORE_TRACES
-      localparam string core_trace_file_name = $sformatf("%s%0d", "log_file_", i*N_TILES_Y+j);
+      localparam string core_trace_file_name = $sformatf("%s%0d", "log_file_", i*N_TILES_X+j);
       defparam i_magia_tile.i_cv32e40x_core.rvfi_i.tracer_i.LOGFILE_PATH_PLUSARG = core_trace_file_name;
   `endif
     end
@@ -165,7 +165,7 @@ module magia
 /**                 Mesh NoC Beginning                **/
 /*******************************************************/
 
-  if ((N_TILES_X == 2) && (N_TILES_Y == 2)) begin: gen_2x2_noc
+  if ((N_TILES_Y == 2) && (N_TILES_X == 2)) begin: gen_2x2_noc
     floo_axi_mesh_2x2_noc i_mesh_noc (
       .clk_i                                       ,
       .rst_ni                                      ,
@@ -177,7 +177,7 @@ module magia
       .L2_data_mst_req_o          ( l2_data_req_o ),
       .L2_data_mst_rsp_i          ( l2_data_rsp_i )
     );
-  end else if ((N_TILES_X == 4) && (N_TILES_Y == 4)) begin: gen_4x4_noc
+  end else if ((N_TILES_Y == 4) && (N_TILES_X == 4)) begin: gen_4x4_noc
     floo_axi_mesh_4x4_noc i_mesh_noc (
       .clk_i                                       ,
       .rst_ni                                      ,
@@ -189,7 +189,7 @@ module magia
       .L2_data_mst_req_o          ( l2_data_req_o ),
       .L2_data_mst_rsp_i          ( l2_data_rsp_i )
     );
-  end else if ((N_TILES_X == 8) && (N_TILES_Y == 8)) begin: gen_8x8_noc
+  end else if ((N_TILES_Y == 8) && (N_TILES_X == 8)) begin: gen_8x8_noc
     floo_axi_mesh_8x8_noc i_mesh_noc (
       .clk_i                                       ,
       .rst_ni                                      ,
@@ -201,7 +201,7 @@ module magia
       .L2_data_mst_req_o          ( l2_data_req_o ),
       .L2_data_mst_rsp_i          ( l2_data_rsp_i )
     );
-  end else if ((N_TILES_X == 16) && (N_TILES_Y == 16)) begin: gen_16x16_noc
+  end else if ((N_TILES_Y == 16) && (N_TILES_X == 16)) begin: gen_16x16_noc
     floo_axi_mesh_16x16_noc i_mesh_noc (
       .clk_i                                       ,
       .rst_ni                                      ,
@@ -213,7 +213,7 @@ module magia
       .L2_data_mst_req_o          ( l2_data_req_o ),
       .L2_data_mst_rsp_i          ( l2_data_rsp_i )
     );
-  end else if ((N_TILES_X == 32) && (N_TILES_Y == 32)) begin: gen_32x32_noc
+  end else if ((N_TILES_Y == 32) && (N_TILES_X == 32)) begin: gen_32x32_noc
     floo_axi_mesh_32x32_noc i_mesh_noc (
       .clk_i                                       ,
       .rst_ni                                      ,
@@ -239,7 +239,7 @@ module magia
   // localparam int unsigned FSYNC_LVL_PORTS[FSYNC_LVL-1] = '{N_TILES/(2**1), N_TILES/(2**2), ...};
   // for (genvar i = 0; i < FSYNC_LVL-1; i++) fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[i])) if_sync_tree_{i}[FSYNC_LVL_PORTS[i]]();
 
-  if ((N_TILES_X == 2) && (N_TILES_Y == 2)) begin: gen_2x2_fsync
+  if ((N_TILES_Y == 2) && (N_TILES_X == 2)) begin: gen_2x2_fsync
     localparam int unsigned FSYNC_LVL_W    [1] = '{2};
     localparam int unsigned FSYNC_LVL_PORTS[1] = '{2};
     fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[0])) if_sync_tree_0[FSYNC_LVL_PORTS[0]]();
@@ -281,7 +281,7 @@ module magia
       .ports   ( if_fmon       ),
       .error_o ( monitor_error )
     );
-  end else if ((N_TILES_X == 4) && (N_TILES_Y == 4)) begin: gen_4x4_fsync
+  end else if ((N_TILES_Y == 4) && (N_TILES_X == 4)) begin: gen_4x4_fsync
     localparam int unsigned FSYNC_LVL_W    [3] = '{4, 3, 2};
     localparam int unsigned FSYNC_LVL_PORTS[3] = '{8, 4, 2};
     fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[0])) if_sync_tree_0[FSYNC_LVL_PORTS[0]]();
@@ -349,7 +349,7 @@ module magia
       .ports   ( if_fmon       ),
       .error_o ( monitor_error )
     );
-  end else if ((N_TILES_X == 8) && (N_TILES_Y == 8)) begin: gen_8x8_fsync
+  end else if ((N_TILES_Y == 8) && (N_TILES_X == 8)) begin: gen_8x8_fsync
     localparam int unsigned FSYNC_LVL_W    [5] = '{6,  5,  4, 3, 2};
     localparam int unsigned FSYNC_LVL_PORTS[5] = '{32, 16, 8, 4, 2};
     fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[0])) if_sync_tree_0[FSYNC_LVL_PORTS[0]]();
@@ -443,7 +443,7 @@ module magia
       .ports   ( if_fmon       ),
       .error_o ( monitor_error )
     );
-  end else if ((N_TILES_X == 16) && (N_TILES_Y == 16)) begin: gen_16x16_fsync
+  end else if ((N_TILES_Y == 16) && (N_TILES_X == 16)) begin: gen_16x16_fsync
     localparam int unsigned FSYNC_LVL_W    [7] = '{8,   7,  6,  5,  4, 3, 2};
     localparam int unsigned FSYNC_LVL_PORTS[7] = '{128, 64, 32, 16, 8, 4, 2};
     fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[0])) if_sync_tree_0[FSYNC_LVL_PORTS[0]]();
@@ -563,7 +563,7 @@ module magia
       .ports   ( if_fmon       ),
       .error_o ( monitor_error )
     );
-  end else if ((N_TILES_X == 32) && (N_TILES_Y == 32)) begin: gen_32x32_fsync
+  end else if ((N_TILES_Y == 32) && (N_TILES_X == 32)) begin: gen_32x32_fsync
     localparam int unsigned FSYNC_LVL_W    [9] = '{10,  9,   8,   7,  6,  5,  4, 3, 2};
     localparam int unsigned FSYNC_LVL_PORTS[9] = '{512, 256, 128, 64, 32, 16, 8, 4, 2};
     fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[0])) if_sync_tree_0[FSYNC_LVL_PORTS[0]]();

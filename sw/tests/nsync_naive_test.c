@@ -25,8 +25,8 @@
 
 #define VERBOSE (10)
 
-#define SYNC_NODE_X_ID     ((MESH_X_TILES-1)/2)
 #define SYNC_NODE_Y_ID     ((MESH_Y_TILES-1)/2)
+#define SYNC_NODE_X_ID     ((MESH_X_TILES-1)/2)
 #define SYNC_NODE_ID       (GET_ID(SYNC_NODE_Y_ID, SYNC_NODE_X_ID))
 
 #define CACHE_HEAT_CYCLES (3)
