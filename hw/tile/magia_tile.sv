@@ -1045,7 +1045,10 @@ module magia_tile
     .OPCODE_OFF ( magia_tile_pkg::FSYNC_OPCODE_OFF ),
     .FUNC3_OFF  ( magia_tile_pkg::FSYNC_FUNC3_OFF  ),
     .N_CFG_REG  ( magia_tile_pkg::FSYNC_N_CFG_REG  ),
-    .LVL_W      ( magia_tile_pkg::FSYNC_LVL_W      ),
+    .AGGR_W     ( magia_tile_pkg::FSYNC_AGGR_W     ),
+    .ID_W       ( magia_tile_pkg::FSYNC_ID_W       ),
+    .NBR_AGGR_W ( magia_tile_pkg::FSYNC_NBR_AGGR_W ),
+    .NBR_ID_W   ( magia_tile_pkg::FSYNC_NBR_ID_W   ),
     .STALL      ( magia_tile_pkg::FSYNC_STALL      )
   ) i_fsync_dec (
     .clk_i          ( sys_clk                                                   ),
