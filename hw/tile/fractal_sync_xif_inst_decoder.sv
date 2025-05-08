@@ -32,7 +32,10 @@ module fractal_sync_xif_inst_decoder
   parameter int unsigned OPCODE_OFF = magia_tile_pkg::FSYNC_OPCODE_OFF,
   parameter int unsigned FUNC3_OFF  = magia_tile_pkg::FSYNC_FUNC3_OFF,
   parameter int unsigned N_CFG_REG  = magia_tile_pkg::FSYNC_N_CFG_REG,
-  parameter int unsigned LVL_W      = magia_tile_pkg::FSYNC_LVL_W,
+  parameter int unsigned AGGR_W     = magia_tile_pkg::FSYNC_AGGR_W,
+  parameter int unsigned ID_W       = magia_tile_pkg::FSYNC_ID_W,
+  parameter int unsigned NBR_AGGR_W = magia_tile_pkg::FSYNC_NBR_AGGR_W,
+  parameter int unsigned NBR_ID_W   = magia_tile_pkg::FSYNC_NBR_ID_W,
   parameter bit          STALL      = magia_tile_pkg::FSYNC_STALL
 )(
   input  logic                 clk_i,
@@ -40,7 +43,11 @@ module fractal_sync_xif_inst_decoder
   input  logic                 clear_i,
 
   cv32e40x_if_xif.coproc_issue xif_issue_if_i,
-  fractal_if.mst_port          sync_if_o,
+
+  fractal_sync_if.mst_port     ht_fsync_if_o,
+  fractal_sync_if.mst_port     hn_fsync_if_o,
+  fractal_sync_if.mst_port     vt_fsync_if_o,
+  fractal_sync_if.mst_port     vn_fsync_if_o,
 
   output logic                 done_o,
   output logic                 error_o
@@ -65,7 +72,7 @@ module fractal_sync_xif_inst_decoder
     IDLE,
     SYNC,
     WAIT,
-    ACK
+    DONE
   } sync_state_e;
 
   sync_state_e c_sync_state, n_sync_state;
@@ -80,7 +87,7 @@ module fractal_sync_xif_inst_decoder
   assign func3  = xif_issue_if_i.issue_req.instr[ FUNC3_OFF+: FUNC3_W];
 
   assign done_o  = done;
-  assign error_o = sync_if_o.error;
+  assign error_o = ht_fsync_if_o.error | hn_fsync_if_o.error | vt_fsync_if_o.error | vn_fsync_if_o.error;
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -119,8 +126,9 @@ module fractal_sync_xif_inst_decoder
           FSYNC_OPCODE: begin
             clk_dec_en = 1'b1;
             if ((func3 == FSYNC_FUNC3) && (xif_issue_if_i.issue_req.rs_valid)) begin
-              cfg_reg_d[magia_tile_pkg::FSYNC_LEVEL_IDX] = xif_issue_if_i.issue_req.rs[0];
-              sync                                       = 1'b1;
+              cfg_reg_d[magia_tile_pkg::FSYNC_AGGR_IDX] = xif_issue_if_i.issue_req.rs[0];
+              cfg_reg_d[magia_tile_pkg::FSYNC_ID_IDX]   = xif_issue_if_i.issue_req.rs[1];
+              sync                                      = 1'b1;
             end
           end
         endcase
@@ -141,8 +149,9 @@ module fractal_sync_xif_inst_decoder
             xif_issue_if_i.issue_resp.accept = 1'b1;
             clk_dec_en                       = 1'b1;
             if ((func3 == FSYNC_FUNC3) && (xif_issue_if_i.issue_req.rs_valid)) begin
-              cfg_reg_d[magia_tile_pkg::FSYNC_LEVEL_IDX] = xif_issue_if_i.issue_req.rs[0];
-              sync                                       = 1'b1;
+              cfg_reg_d[magia_tile_pkg::FSYNC_AGGR_IDX] = xif_issue_if_i.issue_req.rs[0];
+              cfg_reg_d[magia_tile_pkg::FSYNC_ID_IDX]   = xif_issue_if_i.issue_req.rs[1];
+              sync                                      = 1'b1;
             end
           end
         endcase
@@ -169,26 +178,73 @@ module fractal_sync_xif_inst_decoder
       n_sync_state               = c_sync_state;
       clk_sync_en                = 1'b1;
       done                       = 1'b0;
-      sync_if_o.sync             = 1'b0;
-      sync_if_o.level            = '0;
-      sync_if_o.ack              = 1'b0;
+      ht_fsync_if_o.sync         = 1'b0;
+      ht_fsync_if_o.aggr         = '0;
+      ht_fsync_if_o.id           = '0;
+      ht_fsync_if_o.src          = '0;
+      hn_fsync_if_o.sync         = 1'b0;
+      hn_fsync_if_o.aggr         = '0;
+      hn_fsync_if_o.id           = '0;
+      hn_fsync_if_o.src          = '0;
+      vt_fsync_if_o.sync         = 1'b0;
+      vt_fsync_if_o.aggr         = '0;
+      vt_fsync_if_o.id           = '0;
+      vt_fsync_if_o.src          = '0;
+      vn_fsync_if_o.sync         = 1'b0;
+      vn_fsync_if_o.aggr         = '0;
+      vn_fsync_if_o.id           = '0;
+      vn_fsync_if_o.src          = '0;
       xif_issue_if_i.issue_ready = 1'b0;
       xif_issue_if_i.issue_resp  = '0;
 
       case (c_sync_state)
         IDLE: if (sync) n_sync_state = SYNC; else clk_sync_en = 1'b0;
         SYNC: begin
-          sync_if_o.sync                   = 1'b1;
-          sync_if_o.level                  = cfg_reg_q[magia_tile_pkg::FSYNC_LEVEL_IDX][FSYNC_LVL_W-1:0];
-          n_sync_state                     = WAIT;
+          n_sync_state = WAIT;
+          if (cfg_reg_q[magia_tile_pkg::FSYNC_AGGR_IDX] != 1) begin // Tree (level > 1) request
+            case (cfg_reg_q[magia_tile_pkg::FSYNC_ID_IDX][0])
+              1'b0: begin                                           // Horizontal tree node request
+                ht_fsync_if_o.sync = 1'b1; 
+                ht_fsync_if_o.aggr = cfg_reg_q[magia_tile_pkg::FSYNC_AGGR_IDX][AGGR_W-1:0];
+                ht_fsync_if_o.id   = cfg_reg_q[magia_tile_pkg::FSYNC_ID_IDX][    ID_W-1:0];
+              end  
+              1'b1: begin                                           // Vertical tree node request
+                vt_fsync_if_o.sync = 1'b1; 
+                vt_fsync_if_o.aggr = cfg_reg_q[magia_tile_pkg::FSYNC_AGGR_IDX][AGGR_W-1:0];
+                vt_fsync_if_o.id   = cfg_reg_q[magia_tile_pkg::FSYNC_ID_IDX][    ID_W-1:0];
+              end
+            endcase
+          end else begin                                            // Neighbor (level = 1) request
+            case (cfg_reg_q[magia_tile_pkg::FSYNC_ID_IDX][1:0])
+              2'b00: begin                                          // Horizontal tree node request
+                ht_fsync_if_o.sync = 1'b1; 
+                ht_fsync_if_o.aggr = cfg_reg_q[magia_tile_pkg::FSYNC_AGGR_IDX][AGGR_W-1:0];
+                ht_fsync_if_o.id   = cfg_reg_q[magia_tile_pkg::FSYNC_ID_IDX][    ID_W-1:0];
+              end  
+              2'b01: begin                                          // Vertical tree node request
+                vt_fsync_if_o.sync = 1'b1; 
+                vt_fsync_if_o.aggr = cfg_reg_q[magia_tile_pkg::FSYNC_AGGR_IDX][AGGR_W-1:0];
+                vt_fsync_if_o.id   = cfg_reg_q[magia_tile_pkg::FSYNC_ID_IDX][    ID_W-1:0];
+              end
+              2'b10: begin                                          // Horizontal neighbor node request
+                hn_fsync_if_o.sync = 1'b1; 
+                hn_fsync_if_o.aggr = cfg_reg_q[magia_tile_pkg::FSYNC_AGGR_IDX][NBR_AGGR_W-1:0];
+                hn_fsync_if_o.id   = cfg_reg_q[magia_tile_pkg::FSYNC_ID_IDX][    NBR_ID_W-1:0];
+              end  
+              2'b11: begin                                          // Vertical neighbor node request
+                vn_fsync_if_o.sync = 1'b1; 
+                vn_fsync_if_o.aggr = cfg_reg_q[magia_tile_pkg::FSYNC_AGGR_IDX][NBR_AGGR_W-1:0];
+                vn_fsync_if_o.id   = cfg_reg_q[magia_tile_pkg::FSYNC_ID_IDX][    NBR_ID_W-1:0];
+              end
+            endcase
+          end
         end
         WAIT: begin
-          n_sync_state                     = sync_if_o.wake ? ACK : WAIT;
+          n_sync_state = (ht_fsync_if_o.wake | hn_fsync_if_o.wake | vt_fsync_if_o.wake | vn_fsync_if_o.errowaker) ? DONE : WAIT;
         end
-        ACK: begin
-          sync_if_o.ack                    = 1'b1;
-          done                             = 1'b1;
+        DONE: begin
           n_sync_state                     = IDLE;
+          done                             = 1'b1;
           xif_issue_if_i.issue_ready       = 1'b1;
           xif_issue_if_i.issue_resp.accept = 1'b1;
         end
@@ -196,27 +252,74 @@ module fractal_sync_xif_inst_decoder
     end
   end else begin: gen_non_stalling_sync
     always_comb begin: sync_logic
-      n_sync_state    = c_sync_state;
-      clk_sync_en     = 1'b1;
-      done            = 1'b0;
-      sync_if_o.sync  = 1'b0;
-      sync_if_o.level = '0;
-      sync_if_o.ack   = 1'b0;
+      n_sync_state       = c_sync_state;
+      clk_sync_en        = 1'b1;
+      done               = 1'b0;
+      ht_fsync_if_o.sync = 1'b0;
+      ht_fsync_if_o.aggr = '0;
+      ht_fsync_if_o.id   = '0;
+      ht_fsync_if_o.src  = '0;
+      hn_fsync_if_o.sync = 1'b0;
+      hn_fsync_if_o.aggr = '0;
+      hn_fsync_if_o.id   = '0;
+      hn_fsync_if_o.src  = '0;
+      vt_fsync_if_o.sync = 1'b0;
+      vt_fsync_if_o.aggr = '0;
+      vt_fsync_if_o.id   = '0;
+      vt_fsync_if_o.src  = '0;
+      vn_fsync_if_o.sync = 1'b0;
+      vn_fsync_if_o.aggr = '0;
+      vn_fsync_if_o.id   = '0;
+      vn_fsync_if_o.src  = '0;
 
       case (c_sync_state)
         IDLE: if (sync) n_sync_state = SYNC; else clk_sync_en = 1'b0;
         SYNC: begin
-          sync_if_o.sync  = 1'b1;
-          sync_if_o.level = cfg_reg_q[magia_tile_pkg::FSYNC_LEVEL_IDX][FSYNC_LVL_W-1:0];
-          n_sync_state    = WAIT;
+          n_sync_state = WAIT;
+          if (cfg_reg_q[magia_tile_pkg::FSYNC_AGGR_IDX] != 1) begin // Tree (level > 1) request
+            case (cfg_reg_q[magia_tile_pkg::FSYNC_ID_IDX][0])
+              1'b0: begin                                           // Horizontal tree node request
+                ht_fsync_if_o.sync = 1'b1; 
+                ht_fsync_if_o.aggr = cfg_reg_q[magia_tile_pkg::FSYNC_AGGR_IDX][AGGR_W-1:0];
+                ht_fsync_if_o.id   = cfg_reg_q[magia_tile_pkg::FSYNC_ID_IDX][    ID_W-1:0];
+              end  
+              1'b1: begin                                           // Vertical tree node request
+                vt_fsync_if_o.sync = 1'b1; 
+                vt_fsync_if_o.aggr = cfg_reg_q[magia_tile_pkg::FSYNC_AGGR_IDX][AGGR_W-1:0];
+                vt_fsync_if_o.id   = cfg_reg_q[magia_tile_pkg::FSYNC_ID_IDX][    ID_W-1:0];
+              end
+            endcase
+          end else begin                                            // Neighbor (level = 1) request
+            case (cfg_reg_q[magia_tile_pkg::FSYNC_ID_IDX][1:0])
+              2'b00: begin                                          // Horizontal tree node request
+                ht_fsync_if_o.sync = 1'b1; 
+                ht_fsync_if_o.aggr = cfg_reg_q[magia_tile_pkg::FSYNC_AGGR_IDX][AGGR_W-1:0];
+                ht_fsync_if_o.id   = cfg_reg_q[magia_tile_pkg::FSYNC_ID_IDX][    ID_W-1:0];
+              end  
+              2'b01: begin                                          // Vertical tree node request
+                vt_fsync_if_o.sync = 1'b1; 
+                vt_fsync_if_o.aggr = cfg_reg_q[magia_tile_pkg::FSYNC_AGGR_IDX][AGGR_W-1:0];
+                vt_fsync_if_o.id   = cfg_reg_q[magia_tile_pkg::FSYNC_ID_IDX][    ID_W-1:0];
+              end
+              2'b10: begin                                          // Horizontal neighbor node request
+                hn_fsync_if_o.sync = 1'b1; 
+                hn_fsync_if_o.aggr = cfg_reg_q[magia_tile_pkg::FSYNC_AGGR_IDX][NBR_AGGR_W-1:0];
+                hn_fsync_if_o.id   = cfg_reg_q[magia_tile_pkg::FSYNC_ID_IDX][    NBR_ID_W-1:0];
+              end  
+              2'b11: begin                                          // Vertical neighbor node request
+                vn_fsync_if_o.sync = 1'b1; 
+                vn_fsync_if_o.aggr = cfg_reg_q[magia_tile_pkg::FSYNC_AGGR_IDX][NBR_AGGR_W-1:0];
+                vn_fsync_if_o.id   = cfg_reg_q[magia_tile_pkg::FSYNC_ID_IDX][    NBR_ID_W-1:0];
+              end
+            endcase
+          end
         end
         WAIT: begin
-          n_sync_state    = sync_if_o.wake ? ACK : WAIT;
+          n_sync_state = (ht_fsync_if_o.wake | hn_fsync_if_o.wake | vt_fsync_if_o.wake | vn_fsync_if_o.errowaker) ? DONE : WAIT;
         end
-        ACK: begin
-          sync_if_o.ack   = 1'b1;
-          done            = 1'b1;
-          n_sync_state    = IDLE;
+        DONE: begin
+          n_sync_state = IDLE;
+          done         = 1'b1;
         end
       endcase
     end
