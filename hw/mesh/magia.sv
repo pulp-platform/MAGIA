@@ -19,17 +19,21 @@
  * MAGIA
  */
 
+`include "fractal_sync/assign.svh"
+
 module magia 
   import magia_pkg::*;
   import magia_tile_pkg::*;
 #(
-  parameter int unsigned N_TILES_Y     = magia_pkg::N_TILES_Y,    // Number of Tile rowns
-  parameter int unsigned N_TILES_X     = magia_pkg::N_TILES_X,    // Number of Tile columns
-  parameter int unsigned N_TILES       = magia_pkg::N_TILES,      // Number of Tiles in the Mesh
-  parameter int unsigned N_MEM_BANKS   = magia_pkg::N_MEM_BANKS,  // Number of TCDM banks (1 extra bank for missaligned accesses) per Tile
-  parameter int unsigned N_WORDS_BANK  = magia_pkg::N_WORDS_BANK, // Number of words per TCDM bank
+  parameter int unsigned N_TILES_Y         = magia_pkg::N_TILES_Y,          // Number of Tile rowns
+  parameter int unsigned N_TILES_X         = magia_pkg::N_TILES_X,          // Number of Tile columns
+  parameter int unsigned N_TILES           = magia_pkg::N_TILES,            // Number of Tiles in the Mesh
+  parameter int unsigned N_MEM_BANKS       = magia_pkg::N_MEM_BANKS,        // Number of TCDM banks (1 extra bank for missaligned accesses) per Tile
+  parameter int unsigned N_WORDS_BANK      = magia_pkg::N_WORDS_BANK,       // Number of words per TCDM bank
 
-  parameter int unsigned TILE_FSYNC_W  = magia_pkg::TILE_FSYNC_W  // Width of the FractalSync level of the Tile - FS network link
+  parameter int unsigned TILE_FSYNC_AGGR_W = magia_pkg::TILE_FSYNC_AGGR_W,  // Width of the FractalSync aggregate of the Tile - FS network link
+  parameter int unsigned TILE_FSYNC_ID_W   = magia_pkg::TILE_FSYNC_ID_W,    // Width of the FractalSync id of the Tile - FS network link
+  parameter int unsigned TILE_FSYNC_SD_W   = magia_pkg::TILE_FSYNC_SD_W     // Width of the FractalSync src/dst of the Tile - FS network link
 )(
   input  logic                                  clk_i,
   input  logic                                  rst_ni,
@@ -78,16 +82,50 @@ module magia
   magia_tile_pkg::axi_xbar_slv_req_t[N_TILES_Y-1:0][N_TILES_X-1:0] data_in_req;
   magia_tile_pkg::axi_xbar_slv_rsp_t[N_TILES_Y-1:0][N_TILES_X-1:0] data_in_rsp;
 
+  magia_tile_pkg::ht_tile_fsync_req_t ht_tile_fsync_req[N_TILES][1]; // Single link CU-FSync interface
+  magia_tile_pkg::ht_tile_fsync_rsp_t ht_tile_fsync_rsp[N_TILES][1]; // Single link CU-FSync interface
+  magia_tile_pkg::hn_tile_fsync_req_t hn_tile_fsync_req[N_TILES][1]; // Single link CU-FSync interface
+  magia_tile_pkg::hn_tile_fsync_rsp_t hn_tile_fsync_rsp[N_TILES][1]; // Single link CU-FSync interface
+  magia_tile_pkg::vt_tile_fsync_req_t vt_tile_fsync_req[N_TILES][1]; // Single link CU-FSync interface
+  magia_tile_pkg::vt_tile_fsync_rsp_t vt_tile_fsync_rsp[N_TILES][1]; // Single link CU-FSync interface
+  magia_tile_pkg::vn_tile_fsync_req_t vn_tile_fsync_req[N_TILES][1]; // Single link CU-FSync interface
+  magia_tile_pkg::vn_tile_fsync_rsp_t vn_tile_fsync_rsp[N_TILES][1]; // Single link CU-FSync interface
+
+  magia_pkg::h_root_fsync_req_t h_root_fsync_req[1][1]; // Single node, single link root node out interface
+  magia_pkg::h_root_fsync_rsp_t h_root_fsync_rsp[1][1]; // Single node, single link root node out interface
+  magia_pkg::v_root_fsync_req_t v_root_fsync_req[1][1]; // Single node, single link root node out interface
+  magia_pkg::v_root_fsync_rsp_t v_root_fsync_rsp[1][1]; // Single node, single link root node out interface
+
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
 /*******************************************************/
 /**           Interface Definitions Beginning         **/
 /*******************************************************/
 
-  fractal_if #(.LVL_WIDTH(TILE_FSYNC_W)) sync_if[N_TILES]();
+  fractal_sync_if #(.AGGR_WIDTH(TILE_FSYNC_AGGR_W),                .ID_WIDTH(TILE_FSYNC_ID_W),                .SD_WIDTH(TILE_FSYNC_SD_W))                ht_fsync_if[N_TILES]();
+  fractal_sync_if #(.AGGR_WIDTH(magia_tile_pkg::FSYNC_NBR_AGGR_W), .ID_WIDTH(magia_tile_pkg::FSYNC_NBR_ID_W), .SD_WIDTH(magia_tile_pkg::FSYNC_NBR_SD_W)) hn_fsync_if[N_TILES]();
+  fractal_sync_if #(.AGGR_WIDTH(TILE_FSYNC_AGGR_W),                .ID_WIDTH(TILE_FSYNC_ID_W),                .SD_WIDTH(TILE_FSYNC_SD_W))                vt_fsync_if[N_TILES]();
+  fractal_sync_if #(.AGGR_WIDTH(magia_tile_pkg::FSYNC_NBR_AGGR_W), .ID_WIDTH(magia_tile_pkg::FSYNC_NBR_ID_W), .SD_WIDTH(magia_tile_pkg::FSYNC_NBR_SD_W)) vn_fsync_if[N_TILES]();
 
 /*******************************************************/
 /**             Interface Definitions End             **/
+/*******************************************************/
+/**          Interface Assignments Beginning          **/
+/*******************************************************/
+
+  for (genvar i = 0; i < N_TILES; i++) begin: gen_fsync_if_assign
+    `FSYNC_ASSIGN_I2S_REQ(ht_fsync_if[i],          ht_tile_fsync_req[i][0])
+    `FSYNC_ASSIGN_S2I_RSP(ht_tile_fsync_rsp[i][0], ht_fsync_if[i])
+    `FSYNC_ASSIGN_I2S_REQ(hn_fsync_if[i],          hn_tile_fsync_req[i][0])
+    `FSYNC_ASSIGN_S2I_RSP(hn_tile_fsync_rsp[i][0], hn_fsync_if[i])
+    `FSYNC_ASSIGN_I2S_REQ(vt_fsync_if[i],          vt_tile_fsync_req[i][0])
+    `FSYNC_ASSIGN_S2I_RSP(vt_tile_fsync_rsp[i][0], vt_fsync_if[i])
+    `FSYNC_ASSIGN_I2S_REQ(vn_fsync_if[i],          vn_tile_fsync_req[i][0])
+    `FSYNC_ASSIGN_S2I_RSP(vn_tile_fsync_rsp[i][0], vn_fsync_if[i])
+  end
+
+/*******************************************************/
+/**             Interface Assignments End             **/
 /*******************************************************/
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
@@ -95,6 +133,13 @@ module magia
   for (genvar i = 0; i < N_TILES; i++) begin: gen_mhartid
     assign mhartid[i] = i;
   end
+
+  assign h_root_fsync_rsp[0][0].wake  = 1'b0;
+  assign h_root_fsync_rsp[0][0].dst   = '0;
+  assign h_root_fsync_rsp[0][0].error = 1'b0;
+  assign v_root_fsync_rsp[0][0].wake  = 1'b0;
+  assign v_root_fsync_rsp[0][0].dst   = '0;
+  assign v_root_fsync_rsp[0][0].error = 1'b0;
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -125,7 +170,10 @@ module magia
         .data_in_req_i       ( data_in_req[i][j]                ),
         .data_in_rsp_o       ( data_in_rsp[i][j]                ),
   
-        .sync_if_o           ( sync_if[i*N_TILES_X+j]           ),
+        .ht_fsync_if_o       ( ht_fsync_if[i*N_TILES_X+j]       ),
+        .hn_fsync_if_o       ( hn_fsync_if[i*N_TILES_X+j]       ),
+        .vt_fsync_if_o       ( vt_fsync_if[i*N_TILES_X+j]       ),
+        .vn_fsync_if_o       ( vn_fsync_if[i*N_TILES_X+j]       ),
         
         .scan_cg_en_i                                            ,
   
@@ -167,63 +215,63 @@ module magia
 
   if ((N_TILES_Y == 2) && (N_TILES_X == 2)) begin: gen_2x2_noc
     floo_axi_mesh_2x2_noc i_mesh_noc (
-      .clk_i                                       ,
-      .rst_ni                                      ,
-      .test_enable_i              ( test_mode_i   ),
-      .magia_tile_data_slv_req_i  ( data_out_req  ),
-      .magia_tile_data_slv_rsp_o  ( data_out_rsp  ),
-      .magia_tile_data_mst_req_o  ( data_in_req   ),
-      .magia_tile_data_mst_rsp_i  ( data_in_rsp   ),
-      .L2_data_mst_req_o          ( l2_data_req_o ),
-      .L2_data_mst_rsp_i          ( l2_data_rsp_i )
+      .clk_i                                      ,
+      .rst_ni                                     ,
+      .test_enable_i             ( test_mode_i   ),
+      .magia_tile_data_slv_req_i ( data_out_req  ),
+      .magia_tile_data_slv_rsp_o ( data_out_rsp  ),
+      .magia_tile_data_mst_req_o ( data_in_req   ),
+      .magia_tile_data_mst_rsp_i ( data_in_rsp   ),
+      .L2_data_mst_req_o         ( l2_data_req_o ),
+      .L2_data_mst_rsp_i         ( l2_data_rsp_i )
     );
   end else if ((N_TILES_Y == 4) && (N_TILES_X == 4)) begin: gen_4x4_noc
     floo_axi_mesh_4x4_noc i_mesh_noc (
-      .clk_i                                       ,
-      .rst_ni                                      ,
-      .test_enable_i              ( test_mode_i   ),
-      .magia_tile_data_slv_req_i  ( data_out_req  ),
-      .magia_tile_data_slv_rsp_o  ( data_out_rsp  ),
-      .magia_tile_data_mst_req_o  ( data_in_req   ),
-      .magia_tile_data_mst_rsp_i  ( data_in_rsp   ),
-      .L2_data_mst_req_o          ( l2_data_req_o ),
-      .L2_data_mst_rsp_i          ( l2_data_rsp_i )
+      .clk_i                                      ,
+      .rst_ni                                     ,
+      .test_enable_i             ( test_mode_i   ),
+      .magia_tile_data_slv_req_i ( data_out_req  ),
+      .magia_tile_data_slv_rsp_o ( data_out_rsp  ),
+      .magia_tile_data_mst_req_o ( data_in_req   ),
+      .magia_tile_data_mst_rsp_i ( data_in_rsp   ),
+      .L2_data_mst_req_o         ( l2_data_req_o ),
+      .L2_data_mst_rsp_i         ( l2_data_rsp_i )
     );
   end else if ((N_TILES_Y == 8) && (N_TILES_X == 8)) begin: gen_8x8_noc
     floo_axi_mesh_8x8_noc i_mesh_noc (
-      .clk_i                                       ,
-      .rst_ni                                      ,
-      .test_enable_i              ( test_mode_i   ),
-      .magia_tile_data_slv_req_i  ( data_out_req  ),
-      .magia_tile_data_slv_rsp_o  ( data_out_rsp  ),
-      .magia_tile_data_mst_req_o  ( data_in_req   ),
-      .magia_tile_data_mst_rsp_i  ( data_in_rsp   ),
-      .L2_data_mst_req_o          ( l2_data_req_o ),
-      .L2_data_mst_rsp_i          ( l2_data_rsp_i )
+      .clk_i                                      ,
+      .rst_ni                                     ,
+      .test_enable_i             ( test_mode_i   ),
+      .magia_tile_data_slv_req_i ( data_out_req  ),
+      .magia_tile_data_slv_rsp_o ( data_out_rsp  ),
+      .magia_tile_data_mst_req_o ( data_in_req   ),
+      .magia_tile_data_mst_rsp_i ( data_in_rsp   ),
+      .L2_data_mst_req_o         ( l2_data_req_o ),
+      .L2_data_mst_rsp_i         ( l2_data_rsp_i )
     );
   end else if ((N_TILES_Y == 16) && (N_TILES_X == 16)) begin: gen_16x16_noc
     floo_axi_mesh_16x16_noc i_mesh_noc (
-      .clk_i                                       ,
-      .rst_ni                                      ,
-      .test_enable_i              ( test_mode_i   ),
-      .magia_tile_data_slv_req_i  ( data_out_req  ),
-      .magia_tile_data_slv_rsp_o  ( data_out_rsp  ),
-      .magia_tile_data_mst_req_o  ( data_in_req   ),
-      .magia_tile_data_mst_rsp_i  ( data_in_rsp   ),
-      .L2_data_mst_req_o          ( l2_data_req_o ),
-      .L2_data_mst_rsp_i          ( l2_data_rsp_i )
+      .clk_i                                      ,
+      .rst_ni                                     ,
+      .test_enable_i             ( test_mode_i   ),
+      .magia_tile_data_slv_req_i ( data_out_req  ),
+      .magia_tile_data_slv_rsp_o ( data_out_rsp  ),
+      .magia_tile_data_mst_req_o ( data_in_req   ),
+      .magia_tile_data_mst_rsp_i ( data_in_rsp   ),
+      .L2_data_mst_req_o         ( l2_data_req_o ),
+      .L2_data_mst_rsp_i         ( l2_data_rsp_i )
     );
   end else if ((N_TILES_Y == 32) && (N_TILES_X == 32)) begin: gen_32x32_noc
     floo_axi_mesh_32x32_noc i_mesh_noc (
-      .clk_i                                       ,
-      .rst_ni                                      ,
-      .test_enable_i              ( test_mode_i   ),
-      .magia_tile_data_slv_req_i  ( data_out_req  ),
-      .magia_tile_data_slv_rsp_o  ( data_out_rsp  ),
-      .magia_tile_data_mst_req_o  ( data_in_req   ),
-      .magia_tile_data_mst_rsp_i  ( data_in_rsp   ),
-      .L2_data_mst_req_o          ( l2_data_req_o ),
-      .L2_data_mst_rsp_i          ( l2_data_rsp_i )
+      .clk_i                                      ,
+      .rst_ni                                     ,
+      .test_enable_i             ( test_mode_i   ),
+      .magia_tile_data_slv_req_i ( data_out_req  ),
+      .magia_tile_data_slv_rsp_o ( data_out_rsp  ),
+      .magia_tile_data_mst_req_o ( data_in_req   ),
+      .magia_tile_data_mst_rsp_i ( data_in_rsp   ),
+      .L2_data_mst_req_o         ( l2_data_req_o ),
+      .L2_data_mst_rsp_i         ( l2_data_rsp_i )
     );
   end else $fatal("Unsupported Mesh configuration");
 
@@ -240,46 +288,21 @@ module magia
   // for (genvar i = 0; i < FSYNC_LVL-1; i++) fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[i])) if_sync_tree_{i}[FSYNC_LVL_PORTS[i]]();
 
   if ((N_TILES_Y == 2) && (N_TILES_X == 2)) begin: gen_2x2_fsync
-    localparam int unsigned FSYNC_LVL_W    [1] = '{2};
-    localparam int unsigned FSYNC_LVL_PORTS[1] = '{2};
-    fractal_if #(.LVL_WIDTH(FSYNC_LVL_W[0])) if_sync_tree_0[FSYNC_LVL_PORTS[0]]();
-    
-    logic monitor_error[1];
-    localparam int unsigned FSYNC_MON_W = 1 ;
-    fractal_if #(.LVL_WIDTH(FSYNC_MON_W)) if_fmon[1]();
-    
-    // LEVEL 1 - FSync Tree Tiles
-    for (genvar i = 0; i < N_TILES/2; i++) begin: gen_cu_fsync
-      fractal_sync #(
-        .SLV_WIDTH  ( TILE_FSYNC_W )
-      ) i_cu_fractal_sync (
-        .clk_i                                       ,
-        .rstn_i   ( rst_ni                          ),
-        .slaves   ( '{sync_if[2*i], sync_if[2*i+1]} ),
-        .masters  ( '{if_sync_tree_0[i]}            )
-      );
-    end
-
-    // LEVEL 2 - FSync Tree
-    for (genvar i = 0; i < FSYNC_LVL_PORTS[0]/2; i++) begin: gen_node_0_fsync
-      fractal_sync #(
-        .SLV_WIDTH  ( FSYNC_LVL_W[0] )
-      ) i_node_0_fractal_sync (
-        .clk_i                                                     ,
-        .rstn_i   ( rst_ni                                        ),
-        .slaves   ( '{if_sync_tree_0[2*i], if_sync_tree_0[2*i+1]} ),
-        .masters  ( if_fmon                                       )
-      );
-    end
-
-    // LEVEL 3 - FMonitor
-    fractal_monitor #(
-      .PORT_WIDTH( FSYNC_MON_W )
-    ) i_top_fractal_sync_monitor (
-      .clk_i                    ,
-      .rstn_i  ( rst_ni        ),
-      .ports   ( if_fmon       ),
-      .error_o ( monitor_error )
+    fractal_sync_2x2 i_mesh_fsync (
+      .clk_i                                  ,
+      .rst_ni                                 ,
+      .h_1d_fsync_req_i  ( ht_tile_fsync_req ),
+      .h_1d_fsync_rsp_o  ( ht_tile_fsync_rsp ),
+      .v_1d_fsync_req_i  ( vt_tile_fsync_req ),
+      .v_1d_fsync_rsp_o  ( vt_tile_fsync_rsp ),
+      .h_nbr_fsycn_req_i ( hn_tile_fsync_req ),
+      .h_nbr_fsycn_rsp_o ( hn_tile_fsync_rsp ),
+      .v_nbr_fsycn_req_i ( vn_tile_fsync_req ),
+      .v_nbr_fsycn_rsp_o ( vn_tile_fsync_rsp ),
+      .h_2d_fsync_req_o  ( h_root_fsync_req  ),
+      .h_2d_fsync_rsp_i  ( h_root_fsync_rsp  ),
+      .v_2d_fsync_req_o  ( v_root_fsync_req  ),
+      .v_2d_fsync_rsp_i  ( v_root_fsync_rsp  )
     );
   end else if ((N_TILES_Y == 4) && (N_TILES_X == 4)) begin: gen_4x4_fsync
     localparam int unsigned FSYNC_LVL_W    [3] = '{4, 3, 2};

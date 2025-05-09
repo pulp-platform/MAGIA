@@ -57,7 +57,7 @@ module magia_tile
   input  magia_tile_pkg::axi_xbar_slv_req_t data_in_req_i,
   output magia_tile_pkg::axi_xbar_slv_rsp_t data_in_rsp_o,
 
-  // Fractal Sync interface
+  // FractalSync interface
   fractal_sync_if.mst_port                  ht_fsync_if_o,
   fractal_sync_if.mst_port                  hn_fsync_if_o,
   fractal_sync_if.mst_port                  vt_fsync_if_o,
