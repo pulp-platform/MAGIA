@@ -76,25 +76,33 @@ module magia_tile_vip
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
 
-  assign test_mode              = 1'b0;
-  assign tile_enable            = 1'b1;
-  assign data_in_req            = '0;
-  assign scan_cg_en             = 1'b0;
-  assign mtvec_addr             = '0;
-  assign dm_halt_addr           = '0;
-  assign dm_exception_addr      = '0;
-  assign mhartid                = '0;
-  assign mimpid_patch           = '0;
-  assign debug_req              = 1'b0;
-  assign wu_wfe                 = 1'b0;
-  assign ht_fsync_if_o[0].wake  = 1'b0;
-  assign ht_fsync_if_o[0].error = 1'b0;
-  assign hn_fsync_if_o[0].wake  = 1'b0;
-  assign hn_fsync_if_o[0].error = 1'b0;
-  assign vt_fsync_if_o[0].wake  = 1'b0;
-  assign vt_fsync_if_o[0].error = 1'b0;
-  assign vn_fsync_if_o[0].wake  = 1'b0;
-  assign vn_fsync_if_o[0].error = 1'b0;
+  assign test_mode               = 1'b0;
+  assign tile_enable             = 1'b1;
+  assign data_in_req             = '0;
+  assign scan_cg_en              = 1'b0;
+  assign mtvec_addr              = '0;
+  assign dm_halt_addr            = '0;
+  assign dm_exception_addr       = '0;
+  assign mhartid                 = '0;
+  assign mimpid_patch            = '0;
+  assign debug_req               = 1'b0;
+  assign wu_wfe                  = 1'b0;
+  assign ht_fsync_if_o[0].wake   = 1'b0;
+  assign ht_fsync_if_o[0].lvl    = '0;
+  assign ht_fsync_if_o[0].id_rsp = '0;
+  assign ht_fsync_if_o[0].error  = 1'b0;
+  assign hn_fsync_if_o[0].wake   = 1'b0;
+  assign hn_fsync_if_o[0].lvl    = '0;
+  assign hn_fsync_if_o[0].id_rsp = '0;
+  assign hn_fsync_if_o[0].error  = 1'b0;
+  assign vt_fsync_if_o[0].wake   = 1'b0;
+  assign vt_fsync_if_o[0].lvl    = '0;
+  assign vt_fsync_if_o[0].id_rsp = '0;
+  assign vt_fsync_if_o[0].error  = 1'b0;
+  assign vn_fsync_if_o[0].wake   = 1'b0;
+  assign vn_fsync_if_o[0].lvl    = '0;
+  assign vn_fsync_if_o[0].id_rsp = '0;
+  assign vn_fsync_if_o[0].error  = 1'b0;
 
 /*******************************************************/
 /**               Hardwired Signals End               **/

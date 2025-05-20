@@ -33,7 +33,7 @@ package magia_tb_pkg;
   parameter int unsigned L2_U_W            = magia_pkg::L2_U_W;
 
   parameter int unsigned TILE_FSYNC_AGGR_W = magia_pkg::TILE_FSYNC_AGGR_W;  // Width of the FractalSync aggr of the Tile - FS network link
+  parameter int unsigned TILE_FSYNC_LVL_W  = magia_pkg::TILE_FSYNC_LVL_W;   // Width of the FractalSync lvl of the Tile - FS network link
   parameter int unsigned TILE_FSYNC_ID_W   = magia_pkg::TILE_FSYNC_ID_W;    // Width of the FractalSync id of the Tile - FS network link
-  parameter int unsigned TILE_FSYNC_SD_W   = magia_pkg::TILE_FSYNC_SD_W;    // Width of the FractalSync src/dst of the Tile - FS network link
 
 endpackage: magia_tb_pkg

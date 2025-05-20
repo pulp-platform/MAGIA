@@ -248,11 +248,11 @@ package magia_tile_pkg;
   parameter logic[FSYNC_OPCODE_W-1:0] FSYNC_OPCODE = 7'b101_1011;                       // Fractal Sync Decoder instruction OPCODE
   parameter logic[ FSYNC_FUNC3_W-1:0] FSYNC_FUNC3  = 3'b010;                            // Fractal Sync Decoder instruction FUNC3
   parameter int unsigned FSYNC_AGGR_W              = magia_pkg::TILE_FSYNC_AGGR_W;      // Fractal Sync Aggr. width for non-neighbor nodes
+  parameter int unsigned FSYNC_LVL_W               = magia_pkg::TILE_FSYNC_LVL_W;       // Fractal Sync Level width for non-neighbor nodes
   parameter int unsigned FSYNC_ID_W                = magia_pkg::TILE_FSYNC_ID_W;        // Fractal Sync Id width for non-neighbor nodes
-  parameter int unsigned FSYNC_SD_W                = magia_pkg::TILE_FSYNC_SD_W;        // Fractal Sync Src/Dst width for non-neighbor nodes
   parameter int unsigned FSYNC_NBR_AGGR_W          = 1;                                 // Fractal Sync Aggr. width for neighbor nodes
+  parameter int unsigned FSYNC_NBR_LVL_W           = 1;                                 // Fractal Sync Level width for neighbor nodes
   parameter int unsigned FSYNC_NBR_ID_W            = 1;                                 // Fractal Sync Id width for neighbor nodes
-  parameter int unsigned FSYNC_NBR_SD_W            = 2;                                 // Fractal Sync Src/Dst width for neighbor nodes
   parameter bit          FSYNC_STALL               = 1;                                 // Fractal Sync Stall during synchronization
 
   // Parameters of the AXI XBAR
@@ -451,9 +451,9 @@ package magia_tile_pkg;
     NoAddrRules         : 3
   };
 
-  `FSYNC_TYPEDEF_ALL(ht_tile_fsync, logic[FSYNC_AGGR_W-1:0], logic[FSYNC_ID_W-1:0], logic[FSYNC_SD_W-1:0], logic[FSYNC_SD_W-1:0])
-  `FSYNC_TYPEDEF_ALL(vt_tile_fsync, logic[FSYNC_AGGR_W-1:0], logic[FSYNC_ID_W-1:0], logic[FSYNC_SD_W-1:0], logic[FSYNC_SD_W-1:0])
-  `FSYNC_TYPEDEF_ALL(hn_tile_fsync, logic[FSYNC_NBR_AGGR_W-1:0], logic[FSYNC_NBR_ID_W-1:0], logic[FSYNC_NBR_SD_W-1:0], logic[FSYNC_NBR_SD_W-1:0])
-  `FSYNC_TYPEDEF_ALL(vn_tile_fsync, logic[FSYNC_NBR_AGGR_W-1:0], logic[FSYNC_NBR_ID_W-1:0], logic[FSYNC_NBR_SD_W-1:0], logic[FSYNC_NBR_SD_W-1:0])
+  `FSYNC_TYPEDEF_ALL(ht_tile_fsync, logic[FSYNC_AGGR_W-1:0], logic[FSYNC_LVL_W-1:0], logic[FSYNC_ID_W-1:0])
+  `FSYNC_TYPEDEF_ALL(vt_tile_fsync, logic[FSYNC_AGGR_W-1:0], logic[FSYNC_LVL_W-1:0], logic[FSYNC_ID_W-1:0])
+  `FSYNC_TYPEDEF_ALL(hn_tile_fsync, logic[FSYNC_NBR_AGGR_W-1:0], logic[FSYNC_NBR_LVL_W-1:0], logic[FSYNC_NBR_ID_W-1:0])
+  `FSYNC_TYPEDEF_ALL(vn_tile_fsync, logic[FSYNC_NBR_AGGR_W-1:0], logic[FSYNC_NBR_LVL_W-1:0], logic[FSYNC_NBR_ID_W-1:0])
 
 endpackage: magia_tile_pkg

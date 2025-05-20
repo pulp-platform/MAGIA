@@ -201,20 +201,20 @@ module magia_vip
       string_char_t chars[$];
       bit[magia_tb_pkg::L2_ID_W-1:0] write_id;
       always @(posedge clk) begin: print_monitor
-        if ((i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0000) && (i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw_valid))
+        if ((i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0000) && (i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw_valid))
           stderr_ready = 1'b1;
-        if ((i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0004+((i*magia_tb_pkg::N_TILES_X+j)*4)) && (i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw_valid)) begin
+        if ((i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0004+((i*magia_tb_pkg::N_TILES_X+j)*4)) && (i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw_valid)) begin
           stdio_ready  = 1'b1;
-          write_id = i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.id;
+          write_id = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.id;
         end
-        if ((i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w_valid) && stderr_ready) begin
-          errors       = i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data[7:0];
+        if ((i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w_valid) && stderr_ready) begin
+          errors       = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data[7:0];
           stderr_ready = 1'b0;
         end
-        if ((i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w_valid) && stdio_ready) begin
-          if (i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data[7:0] == 10)  // ASCII code for new line (\n) is 10
+        if ((i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w_valid) && stdio_ready) begin
+          if (i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data[7:0] == 10)  // ASCII code for new line (\n) is 10
             print_line[write_id] = 1'b1;
-          chars.push_back('{i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data[7:0], write_id});
+          chars.push_back('{i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data[7:0], write_id});
           stdio_ready = 1'b0;
         end
         for (int k = 0; k < 2**magia_tb_pkg::L2_ID_W; k++) begin
@@ -255,19 +255,19 @@ module magia_vip
   bit[31:0] curr_instr_id[magia_tb_pkg::N_TILES];
   for (genvar i = 0; i < magia_tb_pkg::N_TILES_Y; i++) begin: gen_tile_instr_monitor_y
     for (genvar j = 0; j < magia_tb_pkg::N_TILES_X; j++) begin: gen_tile_instr_monitor_x 
-      assign curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_cv32e40x_core.core_i.id_stage_i.id_ex_pipe_o.instr.bus_resp.rdata;
+      assign curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.core_i.id_stage_i.id_ex_pipe_o.instr.bus_resp.rdata;
       always @(curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j]) begin: instr_ex_reporter
         if (curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] == 32'h50500013) 
-          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected sentinel instruction in EX stage at time %0dns",i*magia_tb_pkg::N_TILES_X+j , j, i, time_var);
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected sentinel instruction in EX stage at time %0dns",i*magia_tb_pkg::N_TILES_X+j , i, j, time_var);
         if (curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] == 32'h0062A3AF) 
-          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected AMO (sync) instruction at time %0dns",i*magia_tb_pkg::N_TILES_X+j , j, i, time_var);
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected AMO (sync) instruction at time %0dns",i*magia_tb_pkg::N_TILES_X+j , i, j, time_var);
       end
-      assign curr_instr_id[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_cv32e40x_core.core_i.id_stage_i.if_id_pipe_i.instr.bus_resp.rdata;
+      assign curr_instr_id[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.core_i.id_stage_i.if_id_pipe_i.instr.bus_resp.rdata;
       always @(curr_instr_id[i*magia_tb_pkg::N_TILES_X+j]) begin: instr_id_reporter
         if (curr_instr_id[i*magia_tb_pkg::N_TILES_X+j] == 32'h40400013) 
-          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected sentinel instruction in ID stage at time %0dns",i*magia_tb_pkg::N_TILES_X+j , j, i, time_var);
-        if (curr_instr_id[i*magia_tb_pkg::N_TILES_X+j] == 32'h0002A05B) 
-          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected fsync instruction at time %0dns",i*magia_tb_pkg::N_TILES_X+j , j, i, time_var);
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected sentinel instruction in ID stage at time %0dns",i*magia_tb_pkg::N_TILES_X+j , i, j, time_var);
+        if (curr_instr_id[i*magia_tb_pkg::N_TILES_X+j] == 32'h0062A05B) 
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)] detected fsync instruction at time %0dns",i*magia_tb_pkg::N_TILES_X+j , i, j, time_var);
       end
     end
   end
