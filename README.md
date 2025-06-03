@@ -12,6 +12,14 @@ MAGIA is developed as part of the [PULP (Parallel Ultra-Low Power)](https://pulp
 
 MAGIA uses [bender](https://github.com/pulp-platform/bender) to manage its dependencies and to automatically generate compilation scripts.
 
+We use a virtual python environment which requires python>=3.6.8, to create it use:
+
+```bash
+make python_venv
+```
+
+By default, it uses the `python` in your `$PATH`. You can specify the version by exporting the `BASE_PYTHON` environment variable.
+
 ### Simulation
 
 The following *optional* parameters can be specified:
@@ -30,34 +38,40 @@ The following *optional* parameters can be specified:
 ```bash
 source setup_env.sh
 ```
-**2)** Download *Bender* (`magia` folder):
+**2)** Install *python dependencies* (`magia` folder):
+```bash
+make python_deps
+```
+**3)** Download *Bender* (`magia` folder):
 ```bash
 make bender
 ```
-**3)** Clone the *dependencies* and generate the *compilation script* (`magia` folder):
+**4)** Clone the *dependencies* and generate the *compilation script* (`magia` folder):
 ```bash
 make update-ips > update-ips.log <mesh_dv>
 ```
-**3\*)** Apply FlooNoC *patch* - **currently FlooNoC requires this step but should not need it in the future** (`magia` folder):
+**4\*)** Apply FlooNoC *patch* - **currently FlooNoC requires this step but should not need it in the future** (`magia` folder):
 ```bash
 make floonoc-patch
 ```
-**4)** *Build* the hardware (`magia` folder):
+**5)** *Build* the hardware (`magia` folder):
 ```bash
 make build-hw > build-hw.log <mesh_dv> <fast_sim>
 ```
-**5)** *Compile* the test code (`magia` folder):
+**6)** *Compile* the test code (`magia` folder):
 ```bash
 make all <test>
 ```
-**6)** *Run* test (`magia` folder):
+**7)** *Run* test (`magia` folder):
 ```bash
 make run <test> <gui> <mesh_dv>
 ```
 
 **Full example**:
 ```bash
+make python_venv
 source setup_env.sh
+make python_deps
 make bender
 make update-ips > update-ips.log
 make build-hw > build-hw.log fast_sim=1
