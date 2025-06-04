@@ -12,13 +12,13 @@ MAGIA is developed as part of the [PULP (Parallel Ultra-Low Power)](https://pulp
 
 MAGIA uses [bender](https://github.com/pulp-platform/bender) to manage its dependencies and to automatically generate compilation scripts.
 
-We use a virtual python environment which requires python>=3.6.8, to create it use:
+We use a virtual python environment which requires python>=3.6.8. To create the envrionment use:
 
 ```bash
 make python_venv
 ```
 
-By default, it uses the `python` in your `$PATH`. You can specify the version by exporting the `BASE_PYTHON` environment variable.
+By default, the `python` in your `$PATH` is used. You can specify the version by optionally exporting the `BASE_PYTHON` environment variable.
 
 ### Simulation
 
