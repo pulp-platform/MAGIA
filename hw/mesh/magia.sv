@@ -301,7 +301,22 @@ module magia
       .v_2d_fsync_rsp_i  ( v_root_fsync_rsp  )
     );
   end else if ((N_TILES_Y == 4) && (N_TILES_X == 4)) begin: gen_4x4_fsync
-    
+    fractal_sync_4x4 i_mesh_fsync (
+      .clk_i                                  ,
+      .rst_ni                                 ,
+      .h_1d_fsync_req_i  ( ht_tile_fsync_req ),
+      .h_1d_fsync_rsp_o  ( ht_tile_fsync_rsp ),
+      .v_1d_fsync_req_i  ( vt_tile_fsync_req ),
+      .v_1d_fsync_rsp_o  ( vt_tile_fsync_rsp ),
+      .h_nbr_fsycn_req_i ( hn_tile_fsync_req ),
+      .h_nbr_fsycn_rsp_o ( hn_tile_fsync_rsp ),
+      .v_nbr_fsycn_req_i ( vn_tile_fsync_req ),
+      .v_nbr_fsycn_rsp_o ( vn_tile_fsync_rsp ),
+      .h_2d_fsync_req_o  ( h_root_fsync_req  ),
+      .h_2d_fsync_rsp_i  ( h_root_fsync_rsp  ),
+      .v_2d_fsync_req_o  ( v_root_fsync_req  ),
+      .v_2d_fsync_rsp_i  ( v_root_fsync_rsp  )
+    );
   end else if ((N_TILES_Y == 8) && (N_TILES_X == 8)) begin: gen_8x8_fsync
     
   end else if ((N_TILES_Y == 16) && (N_TILES_X == 16)) begin: gen_16x16_fsync

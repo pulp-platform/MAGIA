@@ -36,7 +36,7 @@ dependencies:
   safety_island     : { git: "https://github.com/pulp-platform/safety_island.git"     , rev: 2273db6c780ab7c582feaf0c9645ad644c35aa11 } # branch: vi/redmule_scaleup
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
-  fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: d65bd594c5d9ae0b909a18af83ce977702e3178a } # branch: fsync_extended
+  fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: 578623340b7c5a5417924f15ca36dd6e5a9ea016 } # branch: fsync_extended
   floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , rev: f4a36265cda8b56faee45692afb20ddfffba6dee } # branch: main
 
 export_include_dirs:

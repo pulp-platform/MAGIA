@@ -30,8 +30,8 @@
 #define SYNC_BASE   (RESERVED_START + SYNC_OFFSET)
 #define SYNC_EN     (SYNC_BASE + 0x4)
 
-#define MESH_Y_TILES (2)
-#define MESH_X_TILES (2)
+#define MESH_Y_TILES (4)
+#define MESH_X_TILES (4)
 #define NUM_HARTS    (MESH_Y_TILES*MESH_X_TILES)
 
 #define GET_Y_ID(mhartid)  (mhartid/MESH_X_TILES)
