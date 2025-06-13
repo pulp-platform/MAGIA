@@ -1,3 +1,24 @@
+/*
+ * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Authors: Victor Isachi <victor.isachi@unibo.it>
+ * 
+ * MAGIA Naive NoC Synchronization Test
+ */
+
 #include "magia_tile_utils.h"
 #include "magia_utils.h"
 #include "cache_fill.h"
@@ -20,7 +41,8 @@ int main(void) {
   volatile uint32_t sync_count[NUM_HARTS];
   volatile uint32_t sync_en[NUM_HARTS];
   mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) = 0;
-  h_pprintf("Starting NoC Synch test...\n");
+  // h_pprintf("Starting NoC Synch test...\n");
+  printf("Starting NoC Synch test...\n");
 
 #ifdef PERF_MEASURE
 #ifdef P_CYCLES
@@ -34,7 +56,8 @@ int main(void) {
 #endif
 #endif
 
-  h_pprintf("Running naive algorithm...\n");
+  //h_pprintf("Running naive algorithm...\n");
+  printf("Running naive algorithm...\n");
 
 #ifdef PERF_MEASURE
 #ifdef P_CYCLES
@@ -58,7 +81,8 @@ int main(void) {
       do {
         sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
 #if VERBOSE > 100
-        h_pprintf("current sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+        // h_pprintf("current sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+        printf("current sync_count: %0d\n", sync_count[get_hartid()]);
 #endif
       } while (sync_count[get_hartid()] < NUM_HARTS-1);
 
@@ -72,7 +96,8 @@ int main(void) {
       do {
         sync_en[get_hartid()] = mmio32(SYNC_EN + SYNC_NODE_ID*L1_TILE_OFFSET);
 #if VERBOSE > 100
-        h_pprintf("current sync_en: "); pprintf(ds(sync_en[get_hartid()])); pprintln;
+        // h_pprintf("current sync_en: "); pprintf(ds(sync_en[get_hartid()])); pprintln;
+        printf("current sync_en: %0d\n", sync_en[get_hartid()]);
 #endif
       } while (sync_en[get_hartid()] != 1);
 
@@ -83,19 +108,22 @@ int main(void) {
       do {
         sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
 #if VERBOSE > 100
-        h_pprintf("current sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+        // h_pprintf("current sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+        printf("current sync_count: %0d\n", sync_count[get_hartid()]);
 #endif
       } while (sync_count[get_hartid()] != 1);
     }
     sentinel_instr_ex(); // Indicate occurred synchronization
 #if VERBOSE > 1
     sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
-    h_pprintf("sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+    // h_pprintf("sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+    printf("sync_count: %0d\n", sync_count[get_hartid()]);
 #endif
     mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) = 0; // Reset synchronization register
 #if VERBOSE > 10
     sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
-    h_pprintf("reset sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+    // h_pprintf("reset sync_count: "); pprintf(ds(sync_count[get_hartid()])); pprintln;
+    printf("reset sync_count: %0d\n", sync_count[get_hartid()]);
 #endif
   }
 
@@ -111,19 +139,23 @@ int main(void) {
 #ifdef PERF_MEASURE
 #ifdef P_CYCLES
     if (start_cycle[get_hartid()] && end_cycle[get_hartid()]){
-      h_pprintf("PERFORMANCE COUNTER: "); pprintf(ds(end_cycle[get_hartid()] - start_cycle[get_hartid()])); pprintf(" cycles (");
-      pprintf(ds(start_cycle[get_hartid()])); pprintf(" - "); pprintf(ds(end_cycle[get_hartid()])); n_pprintf(")cycle");
+      // h_pprintf("PERFORMANCE COUNTER: "); pprintf(ds(end_cycle[get_hartid()] - start_cycle[get_hartid()])); pprintf("cycles (");
+      // pprintf(ds(start_cycle[get_hartid()])); pprintf(" - "); pprintf(ds(end_cycle[get_hartid()])); n_pprintf(")cycle");
+      printf("PERFORMANCE COUNTER: %0dcycles (%0d - %0d)cycles\n", end_cycle[get_hartid()] - start_cycle[get_hartid()], start_cycle[get_hartid()], end_cycle[get_hartid()]);
     }
     else
-      h_pprintf("PERFORMANCE COUNTER: ERROR cycle counter overlow...\n");
+      // h_pprintf("PERFORMANCE COUNTER: ERROR cycle counter overlow...\n");
+      printf("PERFORMANCE COUNTER: ERROR cycle counter overlow...\n");
 #endif
 #ifdef P_TIME
     if (start_time[get_hartid()] && end_time[get_hartid()]){
-      h_pprintf("PERFORMANCE COUNTER: "); pprintf(ds(end_time[get_hartid()] - start_time[get_hartid()])); pprintf("ns (");
-      pprintf(ds(start_time[get_hartid()])); pprintf(" - "); pprintf(ds(end_time[get_hartid()])); n_pprintf(")ns");
+      // h_pprintf("PERFORMANCE COUNTER: "); pprintf(ds(end_time[get_hartid()] - start_time[get_hartid()])); pprintf("ns (");
+      // pprintf(ds(start_time[get_hartid()])); pprintf(" - "); pprintf(ds(end_time[get_hartid()])); n_pprintf(")ns");
+      printf("PERFORMANCE COUNTER: %0dns (%0d - %0d)ns\n", end_time[get_hartid()] - start_time[get_hartid()], start_time[get_hartid()], end_time[get_hartid()]);
     }
     else
-      h_pprintf("PERFORMANCE COUNTER: ERROR time counter overlow...\n");
+      // h_pprintf("PERFORMANCE COUNTER: ERROR time counter overlow...\n");
+      printf("PERFORMANCE COUNTER: ERROR time counter overlow...\n");
 #endif
 #endif
 
@@ -133,7 +165,8 @@ int main(void) {
 #endif
 #endif
 
-  h_pprintf("NoC Synch test finished...\n");
+  // h_pprintf("NoC Synch test finished...\n");
+  printf("NoC Synch test finished...\n");
 
   mmio16(TEST_END_ADDR + get_hartid()*2) = DEFAULT_EXIT_CODE - get_hartid();
 
