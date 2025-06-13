@@ -13,7 +13,8 @@
 # limitations under the License.
 # SPDX-License-Identifier: SHL-0.51
 #
-# Authors: Victor Isachi <victor.isachi@unibo.it>
+# Authors: Yvan Tortorella <yvan.tortorella@unibo.it>
+#          Victor Isachi <victor.isachi@unibo.it>
 # 
 # MAGIA Makefile
  
@@ -24,7 +25,7 @@ SW             ?= $(mkfile_path)/sw
 BUILD_DIR      ?= $(mkfile_path)/work
 QUESTA         ?= questa-2023.4
 BENDER_DIR     ?= .
-BENDER         ?= bender
+BENDER         ?= ./bender
 ISA            ?= riscv
 ARCH           ?= rv
 XLEN           ?= 32
@@ -135,6 +136,18 @@ IDMA_ADD_IDS ?= rw_axi_rw_obi
 
 # Parameters used for FlooNoC
 FLOONOC_ROOT ?= $(shell $(BENDER) path floo_noc)
+
+# Setup python3 venv and install dependencies
+BASE_PYTHON ?= python
+
+.PHONY: python_venv python_deps
+
+python_venv:
+	$(BASE_PYTHON) -m venv magia_venv
+
+python_deps:
+	$(BASE_PYTHON) -m pip install --upgrade pip setuptools && \
+    $(BASE_PYTHON) -m pip install -r requirements.txt
 
 # Generate instructions and data stimuli
 all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb

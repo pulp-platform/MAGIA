@@ -203,7 +203,8 @@ module magia_vip
       always @(posedge clk) begin: print_monitor
         if ((i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0000) && (i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw_valid))
           stderr_ready = 1'b1;
-        if ((i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0004+((i*magia_tb_pkg::N_TILES_Y+j)*4)) && (i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw_valid)) begin
+        // NOTE: all print peripherals are assumed to be aliased
+        if ((i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0004/*+((i*magia_tb_pkg::N_TILES_Y+j)*4)*/) && (i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw_valid)) begin
           stdio_ready  = 1'b1;
           write_id = i_magia.gen_x_tile[i].gen_y_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.id;
         end
@@ -219,6 +220,7 @@ module magia_vip
         end
         for (int k = 0; k < 2**magia_tb_pkg::L2_ID_W; k++) begin
           if (print_line[k] == 1'b1) begin
+            $write("[mhartid %0d] ", i*magia_tb_pkg::N_TILES_X+j);
             for (int j = 0; j < chars.size(); j++) begin
               if (chars[j].id == k) begin
                 $write("%c", chars[j].data);
