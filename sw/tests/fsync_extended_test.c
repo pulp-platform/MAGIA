@@ -16,9 +16,9 @@ int main(void) {
   irq_en(1<<IRQ_FSYNC_DONE);
 #endif
 
-  // /// Horizontal neighbor synch.
-  // aggregates[get_hartid()] = 0b1;
-  // ids[get_hartid()] = 0b00;
+  /// Horizontal neighbor synch.
+  aggregates[get_hartid()] = 0b1;
+  ids[get_hartid()] = 0b00;
 
   // /// Vertical neighbor synch.
   // aggregates[get_hartid()] = 0b1;
@@ -32,39 +32,42 @@ int main(void) {
   // aggregates[get_hartid()] = 0b11;
   // ids[get_hartid()] = 0b01;
 
-  /// Diagonal synch.
-  switch (get_hartid()) {
-    case 0:
-      aggregates[get_hartid()] = 0b10;
-      ids[get_hartid()] = 0b00;
-      break;
-    case 1:
-      aggregates[get_hartid()] = 0b10;
-      ids[get_hartid()] = 0b01;
-      break;
-    case 2:
-      aggregates[get_hartid()] = 0b10;
-      ids[get_hartid()] = 0b01;
-      break;
-    case 3:
-      aggregates[get_hartid()] = 0b10;
-      ids[get_hartid()] = 0b00;
-      break;
-    default: break;
-  }
+  // /// Diagonal synch. 2x2 FractalSync network
+  // switch (get_hartid()) {
+  //   case 0:
+  //     aggregates[get_hartid()] = 0b10;
+  //     ids[get_hartid()] = 0b00;
+  //     break;
+  //   case 1:
+  //     aggregates[get_hartid()] = 0b10;
+  //     ids[get_hartid()] = 0b01;
+  //     break;
+  //   case 2:
+  //     aggregates[get_hartid()] = 0b10;
+  //     ids[get_hartid()] = 0b01;
+  //     break;
+  //   case 3:
+  //     aggregates[get_hartid()] = 0b10;
+  //     ids[get_hartid()] = 0b00;
+  //     break;
+  //   default: break;
+  // }
 
-  h_pprintf("FractalSync aggregate: 0b"); pprintf(bs(aggregates[get_hartid()])); pprintf(", id: "); pprintf(ds(ids[get_hartid()])); n_pprintf("...");
+  // h_pprintf("FractalSync aggregate: 0b"); pprintf(bs(aggregates[get_hartid()])); pprintf(", id: "); pprintf(ds(ids[get_hartid()])); n_pprintf("...");
+  printf("FractalSync aggregate: 0x%0x, id: %0d...\n", aggregates[get_hartid()], ids[get_hartid()]);
 
   fsync(ids[get_hartid()], aggregates[get_hartid()]);
 
 #ifndef STALLING
   asm volatile("wfi" ::: "memory");
-  h_pprintf("Detected IRQ...\n");
+  // h_pprintf("Detected IRQ...\n");
+  printf("Detected IRQ...\n");
 #endif
 
   sentinel_instr_id();  
 
-  h_pprintf("FractalSync test finished...\n");
+  // h_pprintf("FractalSync test finished...\n");
+  printf("FractalSync test finished...\n");
 
   mmio16(TEST_END_ADDR + get_hartid()*2) = DEFAULT_EXIT_CODE - get_hartid();
 
