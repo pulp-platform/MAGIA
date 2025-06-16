@@ -138,7 +138,7 @@ IDMA_ADD_IDS ?= rw_axi_rw_obi
 FLOONOC_ROOT ?= $(shell $(BENDER) path floo_noc)
 
 # Setup python3 venv and install dependencies
-BASE_PYTHON ?= python3
+BASE_PYTHON ?= python
 
 .PHONY: python_venv python_deps
 
