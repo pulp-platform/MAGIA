@@ -6,3 +6,5 @@ scripts/compile.tcl
 work/
 update-ips.log
 build-hw.log
+profile-ips.log
+magia_venv/
