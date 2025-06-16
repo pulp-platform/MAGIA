@@ -23,7 +23,7 @@
 mkfile_path    := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
 SW             ?= $(mkfile_path)/sw
 BUILD_DIR      ?= $(mkfile_path)/work
-QUESTA         ?= questa-2023.4
+QUESTA         ?= 
 BENDER_DIR     ?= .
 BENDER         ?= ./bender
 ISA            ?= riscv
@@ -65,7 +65,7 @@ test          ?= hello_world
 mesh_dv       ?= 1
 fast_sim      ?= 0
 # Add here a path to the core traces of each tile you want to monitor
-num_cores     ?= 64
+num_cores     ?= 16
 $(foreach i, $(shell seq 0 $(shell echo $$(($(num_cores)-1)))), \
 	$(eval log_path_$(i) := ./core_$(i)_traces.log)               \
 )
@@ -138,7 +138,7 @@ IDMA_ADD_IDS ?= rw_axi_rw_obi
 FLOONOC_ROOT ?= $(shell $(BENDER) path floo_noc)
 
 # Setup python3 venv and install dependencies
-BASE_PYTHON ?= python
+BASE_PYTHON ?= python3
 
 .PHONY: python_venv python_deps
 
@@ -190,6 +190,7 @@ bender:
 include bender_common.mk
 include bender_sim.mk
 include bender_synth.mk
+include bender_profile.mk
 
 bender_defs += -D COREV_ASSERT_OFF
 
@@ -235,6 +236,15 @@ synth-ips:
 	$(common_targs) $(common_defs) \
 	$(synth_targs)  $(synth_defs)  \
 	> ${compile_script_synth}
+
+profile-ips:
+	$(BENDER) update
+	$(BENDER) script vsim          			\
+	--vlog-arg="$(compile_flag)"   			\
+	--vcom-arg="-pedanticerrors"   			\
+	$(bender_targs) $(bender_defs) 			\
+	$(profile_targs)    $(profile_defs)    	\
+	> ${compile_script}
 
 floonoc-patch:
 	cd $(FLOONOC_ROOT) &&                  \

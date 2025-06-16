@@ -251,7 +251,7 @@ module magia_vip
 /*******************************************************/
 /**           Instruction Monitor Beginning           **/
 /*******************************************************/
-
+`ifdef PROFILE
   bit[31:0] curr_instr_ex[magia_tb_pkg::N_TILES];
   bit[31:0] curr_instr_id[magia_tb_pkg::N_TILES];
   for (genvar i = 0; i < magia_tb_pkg::N_TILES_X; i++) begin: gen_tile_instr_monitor_x
@@ -272,6 +272,7 @@ module magia_vip
       end
     end
   end
+`endif
 
 /*******************************************************/
 /**              Instruction Monitor End              **/
