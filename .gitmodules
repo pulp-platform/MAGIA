@@ -1,0 +1,3 @@
+[submodule "magia-sdk"]
+	path = magia-sdk
+	url = git@github.com:Dequino/magia-sdk.git
