@@ -91,7 +91,7 @@ Each tile is controlled by a [cv32e40x](https://github.com/pulp-platform/cv32e40
 ### Mesh
 Replicating the MAGIA tile, we scale up to a homogeneous two-dimensional (2D) mesh of compute tiles. The NoC allows access to the global west-side L2 via a number of interfaces equal to the number of rows. The mesh features a 2D XY topology with 32-bit physical links. The conversion between the AXI4 protocol, used by the compute tiles, and the network-level protocol is performed by Network Interfaces (NIs) between each tile and the near router.
 
-Rendez-vous among tiles are managed through the FractalSync (FS) mechanism and the dedicated H-tree network.
+Rendez-vous among tiles are managed through the FractalSync (FS) mechanism and the dedicated network.
 
 ### Memory map
 L1 size: 1 MB per tile (896kB Usable - 64kB Stack, 64kB Reserved (e.g. synchronization)).
@@ -202,13 +202,92 @@ idma_start_out();
 
 ### FractalSync instructions
 
-Synchronizing a synchronization domain (i.e. a set of tiles that have a common FractalSync node) can be done with the function below. Note that all synchronization nodes in a synchronization domain must request synchronization for it to occur.
+Synchronizing tiles via barriers can be achieved by the instruction below. Arbitrary sets of tiles can be synchronized, with each tile participating in one barrier at a time.
 
 ```c
 /* Request barrier synchronization.
- * level [uint32_t]: Level of the synchronization tree where synchronization ought to occur.
+ * id        [uint32_t]: ID of the synchronization barrier - specific to each node of the synchronization tree.
+ * aggregate [uint32_t]: Aggregate pattern of synchronization.
  */  
-fsync(level);
+fsync(id, aggregate);
+```
+
+A set of instructions for common synchronization patterns - implmented with the above `fsync()` - is also available.
+
+```c
+/*
+ * Synchonize each tile with its immediate neighbor to the right, starting from leftmost tile.
+ * As an example, the first row in a KxK mesh will have the following synchonization pattern:
+ * 0<->1 2<->3 4 ... (K-3) (K-2)<->(K-1)
+ */
+fsync_h_nbr();
+
+/*
+ * Synchonize each tile with its immediate neighbor to the right, starting from second leftmost tile.
+ * The edges of the mesh synchronize among themselves in a ring fashion.
+ * As an example, the first row in a KxK mesh will have the following synchonization pattern:
+ * 0 1<->2 3<->4 ... (K-3)<->(K-2) (K-1)
+ * ^---------------------------------^
+ */
+fsync_h_tor_nbr();
+
+/*
+ * Synchonize each tile with its immediate neighbor to the bottom, starting from upmost tile.
+ * As an example, the first column in a KxK mesh will have the following synchonization pattern:
+ * 0
+ * |
+ * K
+ * 
+ * 2K
+ * |
+ * 3K
+ * 
+ * 4K
+ * ...
+ * (K-3)K
+ *
+ * (K-2)K
+ * |
+ * (K-1)K
+ */
+fsync_v_nbr();
+
+/*
+ * Synchonize each tile with its immediate neighbor to the bottom, starting from second upmost tile.
+ * The edges of the mesh synchronize among themselves in a ring fashion.
+ * As an example, the first column in a KxK mesh will have the following synchonization pattern:
+ * 0 <
+ * 
+ * K <------
+ * |        |
+ * 2K       |
+ *          |
+ * 3K       |
+ * |        |
+ * 4K       |
+ * ...      |
+ * (K-3)K   |
+ * |        |
+ * (K-2)K   |
+ *          |
+ * (K-1)K <-
+ */
+fsync_v_tor_nbr();
+
+/*
+ * Synchonize all tiles within the same row.
+ */
+fsync_rows();
+
+/*
+ * Synchonize all tiles within the same column.
+ */
+fsync_cols();
+
+/*
+ * Synchonize all tiles in the mesh.
+ */
+fsync_global();
 ```
 
 ## 🧰 Changing number of tiles
