@@ -16,7 +16,7 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * MAGIA FractalSync Synchronization Test
+ * MAGIA Extended FractalSync Synchronization Test
  */
 
 #include "magia_tile_utils.h"
@@ -109,7 +109,7 @@ int main(void) {
   printf("[FractalSync] Vertical neighbor test ending\n");
 
   printf("[FractalSync] Vertical ring neighbor test starting\n");
-  fsync_h_tor_nbr();
+  fsync_v_tor_nbr();
 
 #ifndef STALLING
   asm volatile("wfi" ::: "memory");
