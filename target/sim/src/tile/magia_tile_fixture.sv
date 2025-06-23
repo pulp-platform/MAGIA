@@ -40,7 +40,10 @@ module magia_tile_fixture;
   magia_tile_pkg::axi_xbar_slv_req_t data_in_req;
   magia_tile_pkg::axi_xbar_slv_rsp_t data_in_rsp;
 
-  fractal_if #(.LVL_WIDTH(1))        sync_if[1]();
+  fractal_sync_if                    ht_fsync_if_o[1]();
+  fractal_sync_if                    hn_fsync_if_o[1]();
+  fractal_sync_if                    vt_fsync_if_o[1]();
+  fractal_sync_if                    vn_fsync_if_o[1]();
   
   logic                              scan_cg_en;
 
@@ -94,7 +97,10 @@ module magia_tile_fixture;
     .data_in_req_i       ( data_in_req       ),
     .data_in_rsp_o       ( data_in_rsp       ),
 
-    .sync_if_o           ( sync_if[0]        ),
+    .ht_fsync_if_o       ( ht_fsync_if_o[0]  ),
+    .hn_fsync_if_o       ( hn_fsync_if_o[0]  ),
+    .vt_fsync_if_o       ( vt_fsync_if_o[0]  ),
+    .vn_fsync_if_o       ( vn_fsync_if_o[0]  ),
     
     .scan_cg_en_i        ( scan_cg_en        ),
 

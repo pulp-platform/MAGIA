@@ -57,8 +57,11 @@ module magia_tile
   input  magia_tile_pkg::axi_xbar_slv_req_t data_in_req_i,
   output magia_tile_pkg::axi_xbar_slv_rsp_t data_in_rsp_o,
 
-  // Fractal Sync interface
-  fractal_if.mst_port                       sync_if_o,
+  // FractalSync interface
+  fractal_sync_if.mst_port                  ht_fsync_if_o,
+  fractal_sync_if.mst_port                  hn_fsync_if_o,
+  fractal_sync_if.mst_port                  vt_fsync_if_o,
+  fractal_sync_if.mst_port                  vn_fsync_if_o,
 
   // Signals used by the core
   input  logic                              scan_cg_en_i,
@@ -1042,14 +1045,20 @@ module magia_tile
     .OPCODE_OFF ( magia_tile_pkg::FSYNC_OPCODE_OFF ),
     .FUNC3_OFF  ( magia_tile_pkg::FSYNC_FUNC3_OFF  ),
     .N_CFG_REG  ( magia_tile_pkg::FSYNC_N_CFG_REG  ),
-    .LVL_W      ( magia_tile_pkg::FSYNC_LVL_W      ),
+    .AGGR_W     ( magia_tile_pkg::FSYNC_AGGR_W     ),
+    .ID_W       ( magia_tile_pkg::FSYNC_ID_W       ),
+    .NBR_AGGR_W ( magia_tile_pkg::FSYNC_NBR_AGGR_W ),
+    .NBR_ID_W   ( magia_tile_pkg::FSYNC_NBR_ID_W   ),
     .STALL      ( magia_tile_pkg::FSYNC_STALL      )
   ) i_fsync_dec (
     .clk_i          ( sys_clk                                                   ),
     .rst_ni         ( rst_ni                                                    ),
     .clear_i        ( fsync_clear                                               ),
     .xif_issue_if_i ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_FSYNC_IDX] ),
-    .sync_if_o      ( sync_if_o                                                 ),
+    .ht_fsync_if_o  ( ht_fsync_if_o                                             ),
+    .hn_fsync_if_o  ( hn_fsync_if_o                                             ),
+    .vt_fsync_if_o  ( vt_fsync_if_o                                             ),
+    .vn_fsync_if_o  ( vn_fsync_if_o                                             ),
     .done_o         ( fsync_done                                                ),
     .error_o        ( fsync_error                                               )
   );

@@ -23,16 +23,17 @@ package magia_tb_pkg;
 
   `include "axi/typedef.svh"
 
-  parameter int unsigned N_MEM_BANKS  = magia_pkg::N_MEM_BANKS;  // Number of TCDM banks (1 extra bank for missaligned accesses)
-  parameter int unsigned N_WORDS_BANK = magia_pkg::N_WORDS_BANK; // Number of words per TCDM bank
-  parameter int unsigned N_TILES_X    = magia_pkg::N_TILES_X;    // Number of Tile columns
-  parameter int unsigned N_TILES_Y    = magia_pkg::N_TILES_Y;    // Number of Tile rowns
-  parameter int unsigned N_TILES      = magia_pkg::N_TILES;      // Number of Tiles in the Mesh
+  parameter int unsigned N_MEM_BANKS       = magia_pkg::N_MEM_BANKS;  // Number of TCDM banks (1 extra bank for missaligned accesses)
+  parameter int unsigned N_WORDS_BANK      = magia_pkg::N_WORDS_BANK; // Number of words per TCDM bank
+  parameter int unsigned N_TILES_Y         = magia_pkg::N_TILES_Y;    // Number of Tile rowns
+  parameter int unsigned N_TILES_X         = magia_pkg::N_TILES_X;    // Number of Tile columns
+  parameter int unsigned N_TILES           = magia_pkg::N_TILES;      // Number of Tiles in the Mesh
 
-  parameter int unsigned L2_ID_W      = magia_pkg::L2_ID_W;
-  parameter int unsigned L2_U_W       = magia_pkg::L2_U_W;
+  parameter int unsigned L2_ID_W           = magia_pkg::L2_ID_W;
+  parameter int unsigned L2_U_W            = magia_pkg::L2_U_W;
 
-  parameter int unsigned FSYNC_LVL    = magia_pkg::FSYNC_LVL;
-  parameter int unsigned TILE_FSYNC_W = magia_pkg::TILE_FSYNC_W; // Width of the FractalSync level of the Tile - FS network link
+  parameter int unsigned TILE_FSYNC_AGGR_W = magia_pkg::TILE_FSYNC_AGGR_W;  // Width of the FractalSync aggr of the Tile - FS network link
+  parameter int unsigned TILE_FSYNC_LVL_W  = magia_pkg::TILE_FSYNC_LVL_W;   // Width of the FractalSync lvl of the Tile - FS network link
+  parameter int unsigned TILE_FSYNC_ID_W   = magia_pkg::TILE_FSYNC_ID_W;    // Width of the FractalSync id of the Tile - FS network link
 
 endpackage: magia_tb_pkg

@@ -70,12 +70,14 @@ module magia_fixture;
 /*******************************************************/
 
   magia #(
-    .N_TILES_X    ( magia_tb_pkg::N_TILES_X    ),
-    .N_TILES_Y    ( magia_tb_pkg::N_TILES_Y    ),
-    .N_TILES      ( magia_tb_pkg::N_TILES      ),
-    .N_MEM_BANKS  ( magia_tb_pkg::N_MEM_BANKS  ),
-    .N_WORDS_BANK ( magia_tb_pkg::N_WORDS_BANK ),
-    .TILE_FSYNC_W ( magia_tb_pkg::TILE_FSYNC_W )
+    .N_TILES_Y         ( magia_tb_pkg::N_TILES_Y         ),
+    .N_TILES_X         ( magia_tb_pkg::N_TILES_X         ),
+    .N_TILES           ( magia_tb_pkg::N_TILES           ),
+    .N_MEM_BANKS       ( magia_tb_pkg::N_MEM_BANKS       ),
+    .N_WORDS_BANK      ( magia_tb_pkg::N_WORDS_BANK      ),
+    .TILE_FSYNC_AGGR_W ( magia_tb_pkg::TILE_FSYNC_AGGR_W ),
+    .TILE_FSYNC_LVL_W  ( magia_tb_pkg::TILE_FSYNC_LVL_W  ),
+    .TILE_FSYNC_ID_W   ( magia_tb_pkg::TILE_FSYNC_ID_W   )
   ) i_magia (
     .clk_i               ( clk               ),
     .rst_ni              ( rst_n             ),

@@ -41,7 +41,10 @@ module magia_tile_vip
   output magia_tile_pkg::axi_xbar_slv_req_t data_in_req,
   input  magia_tile_pkg::axi_xbar_slv_rsp_t data_in_rsp,
 
-  fractal_if.slv_port                       sync_if[1],
+  fractal_sync_if.slv_port                  ht_fsync_if_o[1],
+  fractal_sync_if.slv_port                  hn_fsync_if_o[1],
+  fractal_sync_if.slv_port                  vt_fsync_if_o[1],
+  fractal_sync_if.slv_port                  vn_fsync_if_o[1],
   
   output logic                              scan_cg_en,
 
@@ -73,19 +76,33 @@ module magia_tile_vip
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
 
-  assign test_mode         = 1'b0;
-  assign tile_enable       = 1'b1;
-  assign data_in_req       = '0;
-  assign scan_cg_en        = 1'b0;
-  assign mtvec_addr        = '0;
-  assign dm_halt_addr      = '0;
-  assign dm_exception_addr = '0;
-  assign mhartid           = '0;
-  assign mimpid_patch      = '0;
-  assign debug_req         = 1'b0;
-  assign wu_wfe            = 1'b0;
-  assign sync_if[0].wake   = 1'b0;
-  assign sync_if[0].error  = 1'b0;
+  assign test_mode               = 1'b0;
+  assign tile_enable             = 1'b1;
+  assign data_in_req             = '0;
+  assign scan_cg_en              = 1'b0;
+  assign mtvec_addr              = '0;
+  assign dm_halt_addr            = '0;
+  assign dm_exception_addr       = '0;
+  assign mhartid                 = '0;
+  assign mimpid_patch            = '0;
+  assign debug_req               = 1'b0;
+  assign wu_wfe                  = 1'b0;
+  assign ht_fsync_if_o[0].wake   = 1'b0;
+  assign ht_fsync_if_o[0].lvl    = '0;
+  assign ht_fsync_if_o[0].id_rsp = '0;
+  assign ht_fsync_if_o[0].error  = 1'b0;
+  assign hn_fsync_if_o[0].wake   = 1'b0;
+  assign hn_fsync_if_o[0].lvl    = '0;
+  assign hn_fsync_if_o[0].id_rsp = '0;
+  assign hn_fsync_if_o[0].error  = 1'b0;
+  assign vt_fsync_if_o[0].wake   = 1'b0;
+  assign vt_fsync_if_o[0].lvl    = '0;
+  assign vt_fsync_if_o[0].id_rsp = '0;
+  assign vt_fsync_if_o[0].error  = 1'b0;
+  assign vn_fsync_if_o[0].wake   = 1'b0;
+  assign vn_fsync_if_o[0].lvl    = '0;
+  assign vn_fsync_if_o[0].id_rsp = '0;
+  assign vn_fsync_if_o[0].error  = 1'b0;
 
 /*******************************************************/
 /**               Hardwired Signals End               **/

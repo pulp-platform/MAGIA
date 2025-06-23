@@ -30,13 +30,13 @@
 #define SYNC_BASE   (RESERVED_START + SYNC_OFFSET)
 #define SYNC_EN     (SYNC_BASE + 0x4)
 
-#define MESH_X_TILES (8)
-#define MESH_Y_TILES (8)
-#define NUM_HARTS    (MESH_X_TILES*MESH_Y_TILES)
+#define MESH_Y_TILES (4)
+#define MESH_X_TILES (4)
+#define NUM_HARTS    (MESH_Y_TILES*MESH_X_TILES)
 
-#define GET_X_ID(mhartid)  (mhartid/MESH_Y_TILES)
-#define GET_Y_ID(mhartid)  (mhartid%MESH_Y_TILES)
-#define GET_ID(y_id, x_id) ((x_id*MESH_Y_TILES)+y_id)
+#define GET_Y_ID(mhartid)  (mhartid/MESH_X_TILES)
+#define GET_X_ID(mhartid)  (mhartid%MESH_X_TILES)
+#define GET_ID(y_id, x_id) ((y_id*MESH_X_TILES)+x_id)
 
 #define h_pprintf(x) (h_psprint(get_hartid(), x))
 #define n_pprintf(x) (n_psprint(get_hartid(), x))
