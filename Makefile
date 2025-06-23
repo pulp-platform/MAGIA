@@ -23,7 +23,7 @@
 mkfile_path    := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
 SW             ?= $(mkfile_path)/sw
 BUILD_DIR      ?= $(mkfile_path)/work
-QUESTA         ?= 
+QUESTA         ?= questa-2023.4
 BENDER_DIR     ?= .
 BENDER         ?= ./bender
 ISA            ?= riscv
@@ -65,7 +65,7 @@ test          ?= hello_world
 mesh_dv       ?= 1
 fast_sim      ?= 0
 # Add here a path to the core traces of each tile you want to monitor
-num_cores     ?= 16
+num_cores     ?= 64
 $(foreach i, $(shell seq 0 $(shell echo $$(($(num_cores)-1)))), \
 	$(eval log_path_$(i) := ./core_$(i)_traces.log)               \
 )

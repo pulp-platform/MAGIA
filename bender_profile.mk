@@ -17,12 +17,6 @@ profile_targs += -t rtl
 profile_targs += -t test
 profile_targs += -t idma_test
 
-#ifeq ($(REDMULE_COMPLEX),1)
-#	sim_targs += -t redmule_test_complex
-#else
-#	sim_targs += -t redmule_test_hwpe
-#endif
-
 profile_targs += -t magia_tile_test
 
 profile_targs += -t magia_dv
