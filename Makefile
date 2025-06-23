@@ -190,6 +190,7 @@ bender:
 include bender_common.mk
 include bender_sim.mk
 include bender_synth.mk
+include bender_profile.mk
 
 bender_defs += -D COREV_ASSERT_OFF
 
@@ -235,6 +236,15 @@ synth-ips:
 	$(common_targs) $(common_defs) \
 	$(synth_targs)  $(synth_defs)  \
 	> ${compile_script_synth}
+
+profile-ips:
+	$(BENDER) update
+	$(BENDER) script vsim          			\
+	--vlog-arg="$(compile_flag)"   			\
+	--vcom-arg="-pedanticerrors"   			\
+	$(bender_targs) $(bender_defs) 			\
+	$(profile_targs)    $(profile_defs)    	\
+	> ${compile_script}
 
 floonoc-patch:
 	cd $(FLOONOC_ROOT) &&                  \
