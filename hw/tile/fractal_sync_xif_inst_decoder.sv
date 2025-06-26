@@ -307,7 +307,7 @@ module fractal_sync_xif_inst_decoder
           end
         end
         WAIT: begin
-          n_sync_state = (ht_fsync_if_o.wake | hn_fsync_if_o.wake | vt_fsync_if_o.wake | vn_fsync_if_o.errowaker) ? DONE : WAIT;
+          n_sync_state = (ht_fsync_if_o.wake | hn_fsync_if_o.wake | vt_fsync_if_o.wake | vn_fsync_if_o.wake) ? DONE : WAIT;
         end
         DONE: begin
           n_sync_state = IDLE;
