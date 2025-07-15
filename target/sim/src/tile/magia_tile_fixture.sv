@@ -24,6 +24,7 @@ module magia_tile_fixture;
   import magia_tile_pkg::*;
   import magia_pkg::*;
   import magia_tile_tb_pkg::*;
+  import floo_axi_mesh_1x2_noc_pkg::*;
 
 /*******************************************************/
 /**        Internal Signal Definitions Beginning      **/
@@ -34,11 +35,25 @@ module magia_tile_fixture;
   logic                              test_mode;
   logic                              tile_enable;
 
-  magia_pkg::axi_default_req_t       data_out_req;
-  magia_pkg::axi_default_rsp_t       data_out_rsp;
+  floo_req_t                         noc_south_req_i;
+  floo_rsp_t                         noc_south_rsp_o;
+  floo_req_t                         noc_south_req_o;
+  floo_rsp_t                         noc_south_rsp_i;
 
-  magia_tile_pkg::axi_xbar_slv_req_t data_in_req;
-  magia_tile_pkg::axi_xbar_slv_rsp_t data_in_rsp;
+  floo_req_t                         noc_east_req_i;
+  floo_rsp_t                         noc_east_rsp_o;
+  floo_req_t                         noc_east_req_o;
+  floo_rsp_t                         noc_east_rsp_i;
+
+  floo_req_t                         noc_north_req_i;
+  floo_rsp_t                         noc_north_rsp_o;
+  floo_req_t                         noc_north_req_o;
+  floo_rsp_t                         noc_north_rsp_i;
+
+  floo_req_t                         noc_west_req_i;
+  floo_rsp_t                         noc_west_rsp_o;
+  floo_req_t                         noc_west_req_o;
+  floo_rsp_t                         noc_west_rsp_i;
 
   fractal_sync_if                    ht_fsync_if_o[1]();
   fractal_sync_if                    hn_fsync_if_o[1]();
@@ -91,11 +106,28 @@ module magia_tile_fixture;
     .test_mode_i         ( test_mode         ),
     .tile_enable_i       ( tile_enable       ),
 
-    .data_out_req_o      ( data_out_req      ),
-    .data_out_rsp_i      ( data_out_rsp      ), 
+    .noc_south_req_i     ( noc_south_req_i   ),
+    .noc_south_rsp_o     ( noc_south_rsp_o   ),
+    .noc_south_req_o     ( noc_south_req_o   ),
+    .noc_south_rsp_i     ( noc_south_rsp_i   ),
 
-    .data_in_req_i       ( data_in_req       ),
-    .data_in_rsp_o       ( data_in_rsp       ),
+    .noc_east_req_i      ( noc_east_req_i    ),
+    .noc_east_rsp_o      ( noc_east_rsp_o    ),
+    .noc_east_req_o      ( noc_east_req_o    ),
+    .noc_east_rsp_i      ( noc_east_rsp_i    ),
+
+    .noc_north_req_i     ( noc_north_req_i   ),
+    .noc_north_rsp_o     ( noc_north_rsp_o   ),
+    .noc_north_req_o     ( noc_north_req_o   ),
+    .noc_north_rsp_i     ( noc_north_rsp_i   ),
+
+    .noc_west_req_i      ( noc_west_req_i    ),
+    .noc_west_rsp_o      ( noc_west_rsp_o    ),
+    .noc_west_req_o      ( noc_west_req_o    ),
+    .noc_west_rsp_i      ( noc_west_rsp_i    ),
+
+    .x_id_i              ( 0                 ),
+    .y_id_i              ( 0                 ),
 
     .ht_fsync_if_o       ( ht_fsync_if_o[0]  ),
     .hn_fsync_if_o       ( hn_fsync_if_o[0]  ),

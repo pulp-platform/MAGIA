@@ -26,6 +26,7 @@ module magia_vip
   import magia_pkg::*;
   import magia_tile_tb_pkg::*;
   import magia_tb_pkg::*;
+  import magia_noc_pkg::*;
 #(
   // Timing
   parameter time         CLK_PERIOD = 5ns,
@@ -63,8 +64,10 @@ module magia_vip
 
   output logic                                                wu_wfe,
 
-  input  magia_pkg::axi_l2_req_t[magia_tb_pkg::N_TILES_Y-1:0] l2_data_req,
-  output magia_pkg::axi_l2_rsp_t[magia_tb_pkg::N_TILES_Y-1:0] l2_data_rsp
+  input  floo_req_t [magia_pkg::N_TILES_Y-1:0]                l2_noc_req_i,
+  output floo_rsp_t [magia_pkg::N_TILES_Y-1:0]                l2_noc_rsp_o,
+  output floo_req_t [magia_pkg::N_TILES_Y-1:0]                l2_noc_req_o,
+  input  floo_rsp_t [magia_pkg::N_TILES_Y-1:0]                l2_noc_rsp_i
 );
 
 /*******************************************************/
@@ -103,12 +106,12 @@ module magia_vip
 
   // Preload instruction cache subroutine
   task automatic inst_preload(input string image);
-    $readmemh(image, i_l2_mem.mem);
+    $readmemh(image, i_l2_mem.i_l2_mem.mem);
   endtask: inst_preload
 
   // Preload data subroutine
   task automatic data_preload(input string image);
-    $readmemh(image, i_l2_mem.mem);
+    $readmemh(image, i_l2_mem.i_l2_mem.mem);
   endtask: data_preload
 
   task wait_for_reset;
@@ -134,13 +137,13 @@ module magia_vip
     while (!eoc) begin
       eoc = 1'b1;
       for (int i = 0; i < magia_tb_pkg::N_TILES; i++)
-        if ({i_l2_mem.mem[32'hCC03_0000 + (2*i + 1)], i_l2_mem.mem[32'hCC03_0000 + 2*i]} == 0)
+        if ({i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + (2*i + 1)], i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + 2*i]} == 0)
           eoc = 1'b0;
       #10000;
     end
     
     for (int i = 0; i < magia_tb_pkg::N_TILES; i++)
-      exit_code |= {i_l2_mem.mem[32'hCC03_0000 + (2*i + 1)], i_l2_mem.mem[32'hCC03_0000 + 2*i]} << i*16;
+      exit_code |= {i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + (2*i + 1)], i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + 2*i]} << i*16;
   endtask: wait_for_eoc
 
 /*******************************************************/
@@ -148,38 +151,17 @@ module magia_vip
 /*******************************************************/
 /**                  L2 MEM Beginning                 **/
 /*******************************************************/
-
-  axi_sim_mem #(
-    .AddrWidth          ( magia_pkg::ADDR_W       ),
-    .DataWidth          ( magia_pkg::DATA_W       ),
-    .IdWidth            ( magia_tb_pkg::L2_ID_W   ),
-    .UserWidth          ( magia_tb_pkg::L2_U_W    ),
-    .NumPorts           ( magia_tb_pkg::N_TILES_Y ),
-    .axi_req_t          ( magia_pkg::axi_l2_req_t ),
-    .axi_rsp_t          ( magia_pkg::axi_l2_rsp_t ),
-    .WarnUninitialized  ( 1                       ),
-    .ClearErrOnAccess   ( 1                       ),
-    .ApplDelay          ( CLK_PERIOD * T_APPL     ),
-    .AcqDelay           ( CLK_PERIOD * T_TEST     )
-  ) i_l2_mem (
-    .clk_i              ( clk         ),
-    .rst_ni             ( rst_n       ),
-    .axi_req_i          ( l2_data_req ),
-    .axi_rsp_o          ( l2_data_rsp ),
-    .mon_w_valid_o      (             ),
-    .mon_w_addr_o       (             ),
-    .mon_w_data_o       (             ),
-    .mon_w_id_o         (             ),
-    .mon_w_user_o       (             ),
-    .mon_w_beat_count_o (             ),
-    .mon_w_last_o       (             ),
-    .mon_r_valid_o      (             ),
-    .mon_r_addr_o       (             ),
-    .mon_r_data_o       (             ),
-    .mon_r_id_o         (             ),
-    .mon_r_user_o       (             ),
-    .mon_r_beat_count_o (             ),
-    .mon_r_last_o       (             )
+  magia_l2_mem_wrapper #(
+    .NumPorts   ( magia_tb_pkg::N_TILES_Y ),
+    .ApplDelay  ( CLK_PERIOD * T_APPL     ),
+    .AcqDelay   ( CLK_PERIOD * T_TEST     )
+  ) i_l2_mem  (
+    .clk_i      ( clk           ),
+    .rst_ni     ( rst_n         ),
+    .noc_req_i  ( l2_noc_req_i  ),
+    .noc_rsp_o  ( l2_noc_rsp_o  ),
+    .noc_req_o  ( l2_noc_req_o  ),
+    .noc_rsp_i  ( l2_noc_rsp_i  )
   );
 
 /*******************************************************/
