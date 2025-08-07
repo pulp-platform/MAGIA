@@ -30,6 +30,7 @@ dependencies:
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 5a48a854573fca5bbabc1cfd4110fa4530a50ed7 } # branch: vi/redmule_scaleup
   cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , rev: 917ecbf908bdaa22c5713bbcff277d142506bb16 } # branch: michaero/astral
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
+  fpu_ss            : { git: "https://github.com/pulp-platform/fpu_ss.git"            , rev: 9b67aeac9d9e2ed846675199bda90c83154ba412 } # branch: vi/bender_manifest
   obi               : { git: "https://github.com/pulp-platform/obi.git"               , version: 0.1.6                                }
   axi               : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: 0.4.4                                }
@@ -60,10 +61,11 @@ sources:
       - hw/tile/converters/cache2instr.sv
       - hw/tile/converters/obi2hci.sv
       - hw/tile/converters/hci2obi.sv
+      - hw/tile/converters/xif_if2struct.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
       - hw/tile/idma_xif_inst_decoder.sv
-      - hw/tile/xif_inst_demux.sv
+      - hw/tile/xif_inst_dispatcher.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
       - hw/tile/idma_ctrl.sv
       - hw/tile/fractal_sync_xif_inst_decoder.sv
@@ -99,10 +101,11 @@ sources:
       - hw/tile/converters/cache2instr.sv
       - hw/tile/converters/obi2hci.sv
       - hw/tile/converters/hci2obi.sv
+      - hw/tile/converters/xif_if2struct.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
       - hw/tile/idma_xif_inst_decoder.sv
-      - hw/tile/xif_inst_demux.sv
+      - hw/tile/xif_inst_dispatcher.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
       - hw/tile/idma_ctrl.sv
       - hw/tile/fractal_sync_xif_inst_decoder.sv
