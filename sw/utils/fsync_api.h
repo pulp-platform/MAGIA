@@ -23,10 +23,14 @@
 #define FSYNC_API_H
 
   #include "fsync_isa_utils.h"
+  #include "magia_tile_utils.h"
   #include "magia_utils.h"
 
+  #define _FS_GLOBAL_AGGR (0xFFFFFFFF >> (1+__builtin_clz(NUM_HARTS)))
+  #define _FS_GLOBAL_ID   (-1)
+
   // Lookup table indicating the number of levels
-  inline uint32_t lvl_lookup(){
+  static inline uint32_t lvl_lookup(){
     switch (NUM_HARTS){
       case 4:    return 2;
       case 16:   return 4;
@@ -37,7 +41,7 @@
   }
 
   // Lookup table indicating the one-hot encoding of the maximul level
-  inline uint32_t oh_max_lvl_lookup(){
+  static inline uint32_t oh_max_lvl_lookup(){
     switch (NUM_HARTS){
       case 4:    return 0b0000000010;
       case 16:   return 0b0000001000;
@@ -48,7 +52,7 @@
   }
 
   // Lookup table indicating the one-hot encoding of the level used by the row/column synchronization routines (one-hot encoding of the penultimate level)
-  inline uint32_t rc_lvl_lookup(){
+  static inline uint32_t rc_lvl_lookup(){
     switch (NUM_HARTS){
       case 4:    return 0b000000001;
       case 16:   return 0b000000100;
@@ -59,24 +63,13 @@
   }
 
   // Lookup table indicating the aggregate pattern of row/colum synchronization
-  inline uint32_t rc_aggr_lookup(){
+  static inline uint32_t rc_aggr_lookup(){
     switch (NUM_HARTS){
       case 4:    return 0b0000000;
       case 16:   return 0b0000001;
       case 64:   return 0b0000101;
       case 256:  return 0b0010101;
       case 1024: return 0b1010101;
-    }
-  }
-
-  // Lookup table indicating the aggregate pattern of global synchronization
-  inline uint32_t gl_aggr_lookup(){
-    switch (NUM_HARTS){
-      case 4:    return 0b0000000011;
-      case 16:   return 0b0000001111;
-      case 64:   return 0b0000111111;
-      case 256:  return 0b0011111111;
-      case 1024: return 0b1111111111;
     }
   }
 
@@ -92,7 +85,7 @@
     else                           return 2*(hartid_x-MESH_X_TILES/2)+1;
   }
 
-  inline void fsync_h_nbr(){
+  static inline void fsync_h_nbr(){
     fsync(0, 1);
   }
 
@@ -109,7 +102,7 @@
     }
   }
 
-  inline void fsync_v_nbr(){
+  static inline void fsync_v_nbr(){
     fsync(1, 1);
   }
 
@@ -142,8 +135,8 @@
     fsync(id, aggregate);
   }
 
-  inline void fsync_global(){
-    fsync(-1, gl_aggr_lookup());
+  static inline void fsync_global(){
+    fsync(_FS_GLOBAL_ID, _FS_GLOBAL_AGGR);
   }
 
 #endif /*FSYNC_API_H*/
