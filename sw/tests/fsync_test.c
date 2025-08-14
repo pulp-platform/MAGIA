@@ -37,8 +37,7 @@
 #define CACHE_HEAT_CYCLES (3)
 
 int main(void) {
-  volatile uint32_t aggregates[NUM_HARTS];
-  volatile uint32_t ids[NUM_HARTS];
+  uint32_t tile_hartid = get_hartid();
 
   printf("Starting Fractal Sync test...\n");
 
@@ -56,17 +55,17 @@ int main(void) {
       irq_en(1<<IRQ_FSYNC_DONE);
 #endif
       
-      aggregates[get_hartid()] = (1 << (i+1))-1;
-      ids[get_hartid()] = 0;
+      uint32_t aggregates = (1 << (i+1))-1;
+      uint32_t ids = 0;
 #if VERBOSE > 10
-      printf("aggregate: 0x%0x\n", aggregates[get_hartid()]);
-      printf("id: 0x%0x\n", ids[get_hartid()]);
+      printf("aggregate: 0x%0x\n", aggregates);
+      printf("id: 0x%0x\n", ids);
 #endif
 
       // Instruction immediately preceding synchronization: indicates start of the synchronization region
       sentinel_start();
 
-      fsync(ids[get_hartid()], aggregates[get_hartid()]);
+      fsync(ids, aggregates);
 #ifndef STALLING
       asm volatile("wfi" ::: "memory");
       printf("Detected IRQ...\n");
@@ -112,7 +111,7 @@ int main(void) {
 
   printf("Fractal Sync test finished...\n");
 
-  mmio16(TEST_END_ADDR + get_hartid()*2) = DEFAULT_EXIT_CODE - get_hartid();
+  mmio16(TEST_END_ADDR + tile_hartid*2) = DEFAULT_EXIT_CODE - tile_hartid;
 
   return 0;
 }

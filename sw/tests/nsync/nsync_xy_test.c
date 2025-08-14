@@ -32,7 +32,10 @@
 #define CACHE_HEAT_CYCLES (3)
 
 int main(void) {
-  volatile uint32_t sync_count[NUM_HARTS];
+  uint32_t tile_hartid    = get_hartid();
+  uint32_t tile_xid       = GET_X_ID(tile_hartid);
+  uint32_t tile_yid       = GET_Y_ID(tile_hartid);
+  uint32_t tile_1d_syncid = GET_ID(GET_Y_ID(tile_hartid), SYNC_NODE_X_ID);
   
   printf("Starting NoC Synch test...\n");
 
@@ -47,55 +50,35 @@ int main(void) {
     sentinel_start();
     
     // Phase I - synchronize along X direction
-    if (GET_X_ID(get_hartid()) != SYNC_NODE_X_ID){  // SRC
+    if (tile_xid != SYNC_NODE_X_ID){  // SRC
       // Send synchronization request to DST
-      amo_increment(SYNC_BASE + (GET_ID(GET_Y_ID(get_hartid()), SYNC_NODE_X_ID))*L1_TILE_OFFSET, 1);
+      amo_increment(SYNC_BASE + tile_1d_syncid*L1_TILE_OFFSET, 1);
 
       // Wait for DST synchronization response
-      do {
-        sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
-#if VERBOSE > 100
-        printf("current sync_count: %0d\n", sync_count[get_hartid()]);
-#endif
-      } while (sync_count[get_hartid()] < 1);
+      while (mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) < 1);
 
       // Reset barrier counter
-      mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) = 0;
+      mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) = 0;
     } else {  // DST
       // Wait for all SRCs to request synchronization
-      do {
-        sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
-#if VERBOSE > 100
-        printf("current sync_count: %0d\n", sync_count[get_hartid()]);
-#endif
-      } while (sync_count[get_hartid()] < (MESH_X_TILES-1));
+      while (mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) < (MESH_X_TILES-1));
 
       // Phase II - synchronize along Y direction
-      if (get_hartid() != SYNC_NODE_ID) { // SRC
+      if (tile_hartid != SYNC_NODE_ID) { // SRC
         // Send synchronization request to DST
         amo_increment(SYNC_BASE + SYNC_NODE_ID*L1_TILE_OFFSET, 1);
 
         // Wait for DST synchronization response
-        do {
-          sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
-#if VERBOSE > 100
-          printf("current sync_count: %0d\n", sync_count[get_hartid()]);
-#endif
-        } while (sync_count[get_hartid()] < MESH_X_TILES);
+        while (mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) < MESH_X_TILES);
 
         // Reset barrier counter
-        mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) = 0;
+        mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) = 0;
       } else {  // DST
         // Wait for all SRCs to request synchronization
-        do {
-          sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
-#if VERBOSE > 100
-          printf("current sync_count: %0d\n", sync_count[get_hartid()]);
-#endif
-        } while (sync_count[get_hartid()] < (MESH_X_TILES+MESH_Y_TILES-2));
+        while (mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) < (MESH_X_TILES+MESH_Y_TILES-2));
 
         // Reset barrier counter
-        mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) = 0;
+        mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) = 0;
         
         // Send synchronization response to all SRCs
         for (int i = 0; i < SYNC_NODE_Y_ID; i++) amo_increment(SYNC_BASE + (GET_ID(i, SYNC_NODE_X_ID))*L1_TILE_OFFSET, 1);
@@ -103,8 +86,8 @@ int main(void) {
       }
 
       // Send synchronization response to all SRCs
-      for (int i = 0; i < SYNC_NODE_X_ID; i++) amo_increment(SYNC_BASE + (GET_ID(GET_Y_ID(get_hartid()), i))*L1_TILE_OFFSET, 1);
-      for (int i = SYNC_NODE_X_ID+1; i < MESH_X_TILES; i++) amo_increment(SYNC_BASE + (GET_ID(GET_Y_ID(get_hartid()), i))*L1_TILE_OFFSET, 1);
+      for (int i = 0; i < SYNC_NODE_X_ID; i++) amo_increment(SYNC_BASE + (GET_ID(tile_yid, i))*L1_TILE_OFFSET, 1);
+      for (int i = SYNC_NODE_X_ID+1; i < MESH_X_TILES; i++) amo_increment(SYNC_BASE + (GET_ID(tile_yid, i))*L1_TILE_OFFSET, 1);
     }
 
     // Instruction immediately following synchronization: indicates end of the synchronization region

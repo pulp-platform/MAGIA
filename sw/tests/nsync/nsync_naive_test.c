@@ -32,8 +32,8 @@
 #define CACHE_HEAT_CYCLES (3)
 
 int main(void) {
-  volatile uint32_t sync_count[NUM_HARTS];
-  
+  uint32_t tile_hartid = get_hartid();
+
   printf("Starting NoC Synch test...\n");
 
   printf("Running naive algorithm...\n");
@@ -46,17 +46,12 @@ int main(void) {
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
     sentinel_start();
 
-    if (get_hartid() == SYNC_NODE_ID) { // DST
+    if (tile_hartid == SYNC_NODE_ID) { // DST
       // Wait for all SRCs to request synchronization
-      do {
-        sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
-#if VERBOSE > 100
-        printf("current sync_count: %0d\n", sync_count[get_hartid()]);
-#endif
-      } while (sync_count[get_hartid()] < NUM_HARTS-1);
+      while (mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) < NUM_HARTS-1);
 
       // Reset barrier counter
-      mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) = 0;
+      mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) = 0;
 
       // Send synchronization response to all SRCs
       for (int i = 0; i < SYNC_NODE_ID; i++) amo_increment(SYNC_BASE + i*L1_TILE_OFFSET, 1);
@@ -66,15 +61,10 @@ int main(void) {
       amo_increment(SYNC_BASE + SYNC_NODE_ID*L1_TILE_OFFSET, 1);
 
       // Wait for DST synchronization response
-      do {
-        sync_count[get_hartid()] = mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET);
-#if VERBOSE > 100
-        printf("current sync_count: %0d\n", sync_count[get_hartid()]);
-#endif
-      } while (sync_count[get_hartid()] < 1);
+      while (mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) < 1);
 
       // Reset barrier counter
-      mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) = 0;
+      mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) = 0;
     }
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
@@ -83,7 +73,7 @@ int main(void) {
 
   printf("NoC Synch test finished...\n");
 
-  mmio16(TEST_END_ADDR + get_hartid()*2) = DEFAULT_EXIT_CODE - get_hartid();
+  mmio16(TEST_END_ADDR + tile_hartid*2) = DEFAULT_EXIT_CODE - tile_hartid;
 
   return 0;
 }
