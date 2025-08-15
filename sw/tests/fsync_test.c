@@ -28,7 +28,9 @@
 #define VERBOSE (0)
 
 // #define CLIB_FS_TEST
-#define GLOBAL_FS_TEST
+// #define GLOBAL_FS_TEST
+#define HNBR_FS_TEST
+// #define VNBR_FS_TEST
 
 #define NUM_LEVELS (31-__builtin_clz(NUM_HARTS))
 
@@ -77,6 +79,7 @@ int main(void) {
       printf("Synchronized...\n");
     }
 #endif
+
 #ifdef GLOBAL_FS_TEST
 #if VERBOSE > 1
     printf("Fractal Sync global synchrnonization test...\n");
@@ -95,6 +98,67 @@ int main(void) {
     sentinel_start();
 
     fsync_global();
+#ifndef STALLING
+    asm volatile("wfi" ::: "memory");
+    printf("Detected IRQ...\n");
+#endif
+
+    // Instruction immediately following synchronization: indicates end of the synchronization region
+    sentinel_end();
+
+#if VERBOSE > 1
+    printf("Synchronized...\n");
+#endif
+
+#ifdef HNBR_FS_TEST
+#if VERBOSE > 1
+    printf("Fractal Sync horizontal neighbor synchrnonization test...\n");
+#endif
+
+#ifndef STALLING
+    irq_en(1<<IRQ_FSYNC_DONE);
+#endif
+
+#if VERBOSE > 10
+    printf("aggregate: 0x%0x\n", _FS_HNBR_AGGR);
+    printf("id: 0x%0x\n", _FS_HNBR_ID);
+#endif
+
+    // Instruction immediately preceding synchronization: indicates start of the synchronization region
+    sentinel_start();
+
+    fsync_hnbr();
+#ifndef STALLING
+    asm volatile("wfi" ::: "memory");
+    printf("Detected IRQ...\n");
+#endif
+
+    // Instruction immediately following synchronization: indicates end of the synchronization region
+    sentinel_end();
+
+#if VERBOSE > 1
+    printf("Synchronized...\n");
+#endif
+#endif
+
+#ifdef VNBR_FS_TEST
+#if VERBOSE > 1
+    printf("Fractal Sync vertical neighbor synchrnonization test...\n");
+#endif
+
+#ifndef STALLING
+    irq_en(1<<IRQ_FSYNC_DONE);
+#endif
+
+#if VERBOSE > 10
+    printf("aggregate: 0x%0x\n", _FS_VNBR_AGGR);
+    printf("id: 0x%0x\n", _FS_VNBR_ID);
+#endif
+
+    // Instruction immediately preceding synchronization: indicates start of the synchronization region
+    sentinel_start();
+
+    fsync_vnbr();
 #ifndef STALLING
     asm volatile("wfi" ::: "memory");
     printf("Detected IRQ...\n");

@@ -28,6 +28,10 @@
 
   #define _FS_GLOBAL_AGGR (0xFFFFFFFF >> (1+__builtin_clz(NUM_HARTS)))
   #define _FS_GLOBAL_ID   (-1)
+  #define _FS_HNBR_AGGR   (0x1)
+  #define _FS_HNBR_ID     (0)
+  #define _FS_VNBR_AGGR   (0x1)
+  #define _FS_VNBR_ID     (1)
 
   // Lookup table indicating the number of levels
   static inline uint32_t lvl_lookup(){
@@ -85,8 +89,8 @@
     else                           return 2*(hartid_x-MESH_X_TILES/2)+1;
   }
 
-  static inline void fsync_h_nbr(){
-    fsync(0, 1);
+  static inline void fsync_hnbr(){
+    fsync(_FS_HNBR_ID, _FS_HNBR_AGGR);
   }
 
   void fsync_h_tor_nbr(){
@@ -102,8 +106,8 @@
     }
   }
 
-  static inline void fsync_v_nbr(){
-    fsync(1, 1);
+  static inline void fsync_vnbr(){
+    fsync(_FS_VNBR_ID, _FS_VNBR_AGGR);
   }
 
   void fsync_v_tor_nbr(){
