@@ -109,6 +109,7 @@ int main(void) {
 #if VERBOSE > 1
     printf("Synchronized...\n");
 #endif
+#endif
 
 #ifdef HNBR_FS_TEST
 #if VERBOSE > 1
