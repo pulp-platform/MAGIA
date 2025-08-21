@@ -326,3 +326,13 @@ hw-clean:
 	rm -rf modelsim.ini
 
 hw-all: hw-clean hw-lib hw-compile hw-opt
+
+# Nonfree components
+MAGIA_NONFREE_REMOTE ?= git@iis-git.ee.ethz.ch:pulp-restricted/magia-nonfree
+MAGIA_NONFREE_DIR ?= $(mkfile_path)/nonfree
+MAGIA_NONFREE_COMMIT ?= main # TBC
+
+.PHONY: magia-nonfree-init
+magia-nonfree-init:
+	git clone $(MAGIA_NONFREE_REMOTE) $(MAGIA_NONFREE_DIR)
+	cd $(MAGIA_NONFREE_DIR) && git checkout $(MAGIA_NONFREE_COMMIT)

@@ -1,0 +1,27 @@
+# Copyright 2025 ETH Zurich and University of Bologna.
+# Licensed under the Apache License, Version 2.0, see LICENSE.APACHE for details.
+# SPDX-License-Identifier: Apache-2.0
+
+# Author: Alessandro Nadalini <alessandro.nadalini3@unibo.it>
+
+# We initialize the nonfree repo, then spawn a sub-pipeline from it
+
+stages:
+  - nonfree
+
+init:
+  stage: nonfree
+  script: make magia-nonfree-init
+  artifacts:
+    paths: [ nonfree/ci.yml ]
+
+subpipe:
+  stage: nonfree
+  needs: [ init ]
+  variables:
+    PARENT_PIPELINE_SOURCE: $CI_PIPELINE_SOURCE
+  trigger:
+    include:
+      - artifact: nonfree/ci.yml
+        job: init
+    strategy: depend
