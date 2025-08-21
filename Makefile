@@ -237,6 +237,14 @@ update-ips:
 	$(sim_targs)    $(sim_deps)    \
 	> ${compile_script}
 
+vsim-scripts:
+	$(BENDER) script vsim          \
+	--vlog-arg="$(compile_flag)"   \
+	--vcom-arg="-pedanticerrors"   \
+	$(bender_targs) $(bender_defs) \
+	$(sim_targs)    $(sim_deps)    \
+	> ${compile_script}
+
 synth-ips:
 	$(BENDER) update
 	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_ADD_IDS=$(IDMA_ADD_IDS)
