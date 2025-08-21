@@ -45,10 +45,10 @@ for line in "${lines[@]}"; do
   fi
 done
 
-#if (( exit_code == 0 )); then
-#  echo "All tests passed: ${#lines[@]} line(s), total errors: $total"
-#else
-#  echo "Some tests failed: ${#lines[@]} line(s), lines with errors: $nonzero, total errors: $total"
-#fi
+if (( exit_code == 0 )); then
+  echo "Test passed! Total errors: $total"
+else
+  echo "Test failed: Total errors: $total"
+fi
 
 exit $exit_code
