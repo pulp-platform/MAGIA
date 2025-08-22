@@ -1,54 +1,64 @@
 #!/usr/bin/env bash
 
-# Usage: ./check_errors.sh <logfile>
+# Copyright 2025 ETH Zurich and University of Bologna.
+# Solderpad Hardware License, Version 0.51, see LICENSE.SHL for details.
+# SPDX-License-Identifier: SHL-0.51
 
-if [[ $# -lt 1 ]]; then
-  echo "Usage: $0 <logfile>"
+# Author: Alessandro Nadalini <alessandro.nadalini3@unibo.it>
+
+set -u
+
+if [ $# -lt 1 ]; then
+  echo "Usage: $0 <logfile>" >&2
   exit 2
 fi
 
-logfile="$1"
-if [[ ! -f "$logfile" ]]; then
-  echo "File not found: $logfile"
+logfile=$1
+if [ ! -f "$logfile" ]; then
+  echo "File not found: $logfile" >&2
   exit 2
 fi
 
-# Be tolerant on spacing and the trailing word (error / errors / error(s))
-# Filter candidate lines, then parse counts robustly.
-mapfile -t lines < <(grep -E "Finished[[:space:]]+test[[:space:]]+with[[:space:]]+[0-9]+" "$logfile" || true)
-
-if [[ ${#lines[@]} -eq 0 ]]; then
-  echo "No matching lines found in $logfile"
-  exit 2
-fi
-
-exit_code=0
 total=0
-nonzero=0
+matched=0
 
-for line in "${lines[@]}"; do
-  # Extract the number immediately following "... Finished test with "
-  # No look-aheads; just capture the first group of digits after the phrase.
-  num=$(sed -nE 's/.*Finished[[:space:]]+test[[:space:]]+with[[:space:]]+([0-9]+).*/\1/p' <<< "$line")
+# Try to collect per-test lines first ("Finished test with N error(s)")
+finished_nums=$(
+  grep -Eio 'Finished[[:space:]]+test[[:space:]]+with[[:space:]]+[0-9]+[[:space:]]+error(s)?' "$logfile" 2>/dev/null \
+  | grep -Eo '[0-9]+' 2>/dev/null
+)
 
-  if [[ -z "$num" ]]; then
-    echo "Could not parse error count in line: $line"
-    exit 2
+if [ -n "${finished_nums:-}" ]; then
+  matched=1
+  # Sum N over all matches
+  while IFS= read -r n; do
+    [ -n "$n" ] && total=$(( total + n ))
+  done <<< "$finished_nums"
+else
+  # Fallback: use "Errors: N" summary lines
+  summary_nums=$(
+    grep -Eio 'Errors:[[:space:]]*[0-9]+' "$logfile" 2>/dev/null \
+    | grep -Eo '[0-9]+' 2>/dev/null
+  )
+  if [ -n "${summary_nums:-}" ]; then
+    matched=1
+    while IFS= read -r n; do
+      [ -n "$n" ] && total=$(( total + n ))
+    done <<< "$summary_nums"
   fi
+fi
 
-  #echo "Found $num error(s) in line: $line"
+# Ignore any "SIMULATION FINISHED WITH EXIT CODE: ..."
 
-  (( total += num ))
-  if (( num != 0 )); then
-    exit_code=1
-    (( nonzero++ ))
-  fi
-done
+if [ "$matched" -eq 0 ]; then
+  echo "No recognizable error counters found; cannot determine result." >&2
+  exit 2
+fi
 
-if (( exit_code == 0 )); then
+if [ "$total" -eq 0 ]; then
   echo "Test passed! Total errors: $total"
+  exit 0
 else
   echo "Test failed: Total errors: $total"
+  exit 1
 fi
-
-exit $exit_code
