@@ -97,12 +97,11 @@ package magia_tile_pkg;
   // Parameters used by the core
   parameter bit          X_EXT_EN        = 1;                                           // Enable eXtension Interface (X) support, see eXtension Interface        
   parameter int unsigned X_NUM_RS        = 3;                                           // Number of register file read ports that can be used by the eXtension interface
-  parameter int unsigned X_ID_W          = magia_pkg::ID_W + 
-                                           magia_pkg::ID_W_OFFSET;                      // Identification width for the eXtension interface
+  parameter int unsigned X_ID_W          = 4;                                           // Identification width for the eXtension interface
   parameter int unsigned X_MEM_W         = 32;                                          // Memory access width for loads/stores via the eXtension interface
   parameter int unsigned X_RFR_W         = 32;                                          // Register file read access width for the eXtension interface
   parameter int unsigned X_RFW_W         = 32;                                          // Register file write access width for the eXtension interface
-  parameter bit[31:0]    X_MISA          = 32'h0;                                       // MISA extensions implemented on the eXtension interface, see Machine ISA (misa). X_MISA can only be used to set a subset of the following: {P, V, F, M}
+  parameter bit[31:0]    X_MISA          = 32'h20;                                      // MISA extensions implemented on the eXtension interface, see Machine ISA (misa). X_MISA can only be used to set a subset of the following: {P, V, F, M}
   parameter bit[1 :0]    X_ECS_XS        = 2'b0;                                        // Default value for mstatus.XS if X_EXT = 1, see Machine Status (mstatus)
   parameter bit[31:0]    DM_REGION_START = 32'hF0000000;                                // Start address of Debug Module region, see Debug & Trigger
   parameter bit[31:0]    DM_REGION_END   = 32'hF0003FFF;                                // End address of Debug Module region, see Debug & Trigger
@@ -170,8 +169,9 @@ package magia_tile_pkg;
     OBI2AXI = 1'b1
   } idma_transfer_ch_e;                                                                 // iDMA type of transfer channel
 
-  // Parameters used by the Xif Instruction Demuxer
-  parameter int unsigned N_COPROC         = 3;                                          // RedMulE, iDMA and Fractal Sync
+  // Parameters used by the Xif Instruction Dispatcher
+  parameter int unsigned N_COPROC         = 4;                                          // RedMulE, iDMA, Fractal Sync and FPU
+  parameter int unsigned N_RULES          = N_COPROC-1;                                 // RedMulE, iDMA and Fractal Sync all have custom Xif instructions but not FPU
   parameter int unsigned N_REDMULE_SIGN   = 9;                                          // Number of signitures (= {opcode, func3}) in the programming model of RedMulE
   parameter int unsigned N_IDMA_SIGN      = 5;                                          // Number of signitures (= {opcode, func3}) in the programming model of the iDMA decoder
   parameter int unsigned N_FSYNC_SIGN     = 1;                                          // Number of signitures (= {opcode, func3}) in the programming model of Fractal Sync
@@ -179,9 +179,10 @@ package magia_tile_pkg;
   typedef enum logic[1:0]{
     XIF_REDMULE_IDX = 2'b00,
     XIF_IDMA_IDX    = 2'b01,
-    XIF_FSYNC_IDX   = 2'b10
-  } xif_inst_demux_idx_e;
-  parameter int unsigned DEFAULT_IDX      = XIF_REDMULE_IDX;                            // RedMulE will handle the instructions by default
+    XIF_FSYNC_IDX   = 2'b10,
+    XIF_FPU_IDX     = 2'b11
+  } xif_inst_dispatch_idx_e;
+  parameter int unsigned DEFAULT_IDX      = XIF_FPU_IDX;                                // FPU will handle the instructions by default
   parameter int unsigned OPCODE_W         = 7;                                          // ISA OPCODE Width
   parameter int unsigned OPCODE_OFF       = 0;                                          // ISA OPCODE Offset
   parameter int unsigned FUNC3_W          = 3;                                          // ISA FUNC3 Width
@@ -281,6 +282,30 @@ package magia_tile_pkg;
   parameter int unsigned FETCH_DW       = magia_pkg::DATA_W;                            // i$ Fetch interface data width. Power of two; >= 8.
   parameter int unsigned FILL_AW        = magia_pkg::ADDR_W;                            // i$ Fill interface address width. Same as FILL_AW; >= 1.
   parameter int unsigned FILL_DW        = magia_pkg::DATA_W;                            // i$ Fill interface data width. Power of two; >= 8.
+  
+  // Parameters used by the FPU
+  parameter bit                             FPU_ZFINX          = 0;                     // FPU use Zfinx extension instead of the F ISA extention
+  parameter int unsigned                    FPU_BUFFER_DEPTH   = 8;                     // FPU FIFO depth that buffers instructions coming from core
+  parameter bit                             FPU_OOO            = 1;                     // FPU enable out-of-order execution
+  parameter bit                             FPU_FWD            = 1;                     // FPU enable forwarding from output to input of FPnew
+  parameter bit                             FPU_DIVSQRT        = 0;                     // FPU disable FPnew T-head-based DivSqrt unit (supported only for FP32 unit)
+  parameter fpnew_pkg::fpu_features_t       FPU_FEATURES       = '{
+    Width:         32,
+    EnableVectors: 1'b0,
+    EnableNanBox:  1'b1,
+    FpFmtMask:     6'b100000,
+    IntFmtMask:    4'b0010
+  };                                                                                    // FPU features: support only for FP32 and INT32
+  parameter fpnew_pkg::fpu_implementation_t FPU_IMPLEMENTATION = '{
+    PipeRegs:   '{default: 1},
+    UnitTypes:  '{'{default: fpnew_pkg::PARALLEL},
+                  '{default: fpnew_pkg::MERGED},
+                  '{default: fpnew_pkg::PARALLEL},
+                  '{default: fpnew_pkg::MERGED},
+                  '{default: fpnew_pkg::DISABLED}
+                },
+    PipeConfig: fpnew_pkg::BEFORE
+  };                                                                                    // FPU implementation
   
   typedef struct packed {
     int unsigned                 idx;

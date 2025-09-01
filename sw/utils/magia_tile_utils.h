@@ -78,47 +78,55 @@ void wait_print(unsigned int cycles){
     }
 }
 
-inline void irq_en(volatile uint32_t index_oh){
+static inline void irq_en(volatile uint32_t index_oh){
     asm volatile("addi t0, %0, 0\n\t"
                  "csrrs zero, mie, t0"
                  ::"r"(index_oh));
 }
 
-inline uint32_t irq_st(){
+static inline uint32_t irq_st(){
     uint32_t irq_status;
     asm volatile("csrr %0, mip"
                  :"=r"(irq_status):);
     return irq_status;
 }
 
-inline void wait_nop(uint32_t nops){
+static inline void wait_nop(uint32_t nops){
     for (int i = 0; i < nops; i++) asm volatile("addi x0, x0, 0" ::);
 }
 
-inline void sentinel_instr_id(){
+static inline void sentinel_instr_id(){
     asm volatile("addi x0, x0, 0x404" ::);
 }
 
-inline void sentinel_instr_ex(){
+static inline void sentinel_instr_ex(){
     asm volatile("addi x0, x0, 0x505" ::);
 }
 
-inline void ccount_en(){
+static inline void sentinel_start(){
+    asm volatile("addi x0, x0, 0x5AA" ::);
+}
+
+static inline void sentinel_end(){
+    asm volatile("addi x0, x0, 0x5FF" ::);
+}
+
+static inline void ccount_en(){
     asm volatile("csrrci zero, 0x320, 0x1" ::);
 }
 
-inline void ccount_dis(){
+static inline void ccount_dis(){
     asm volatile("csrrsi zero, 0x320, 0x1" ::);
 }
 
-inline uint32_t get_cyclel(){
+static inline uint32_t get_cyclel(){
     uint32_t cyclel;
     asm volatile("csrr %0, cycle"
                  :"=r"(cyclel):);
     return cyclel;
 }
 
-inline uint32_t get_cycleh(){
+static inline uint32_t get_cycleh(){
     uint32_t cycleh;
     asm volatile("csrr %0, cycleh"
                  :"=r"(cycleh):);
@@ -132,14 +140,14 @@ uint32_t get_cycle(){
     return cyclel;
 }
 
-inline uint32_t get_timel(){
+static inline uint32_t get_timel(){
     uint32_t timel;
     asm volatile("csrr %0, time"
                  :"=r"(timel):);
     return timel;
 }
 
-inline uint32_t get_timeh(){
+static inline uint32_t get_timeh(){
     uint32_t timeh;
     asm volatile("csrr %0, timeh"
                  :"=r"(timeh):);

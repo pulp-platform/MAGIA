@@ -11,7 +11,7 @@ export PATH=/usr/pack/gcc-5.2.0-af/x86_64-rhe6-linux/bin:$PATH
 export PATH=/usr/local/anaconda3-2023.07/condabin:$PATH
 export PATH=/home/visachi/.local/bin:$PATH
 export XLEN=32
-export XTEN=imac
+export XTEN=imafc
 echo "Sourcing python virtual environment"
 source ./magia_venv/bin/activate
 echo "Finished setting up the environment"
