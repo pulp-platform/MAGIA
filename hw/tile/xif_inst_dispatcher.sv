@@ -16,14 +16,15 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * Xif Instruction Demuxer
+ * Xif Instruction Dispatcher
  */
 
-module xif_inst_demux 
+module xif_inst_dispatcher 
   import magia_tile_pkg::*;
   import cv32e40x_pkg::*;
 #(
   parameter int unsigned N_COPROC    = magia_tile_pkg::N_COPROC,
+  parameter int unsigned N_RULES     = magia_tile_pkg::N_RULES,
   parameter int unsigned N_SIGN      = magia_tile_pkg::N_SIGN,
   parameter int unsigned DEFAULT_IDX = magia_tile_pkg::DEFAULT_IDX,
   parameter int unsigned OPCODE_OFF  = magia_tile_pkg::OPCODE_OFF,
@@ -33,10 +34,16 @@ module xif_inst_demux
   parameter int unsigned SIGN_W      = magia_tile_pkg::SIGN_W,
   parameter type xif_inst_rule_t     = magia_tile_pkg::xif_inst_rule_t
 )(
+  input  logic                                        clk_i,
+  input  logic                                        rst_ni,
+  
   cv32e40x_if_xif.coproc_issue                        xif_issue_if_i,
   cv32e40x_if_xif.cpu_issue                           xif_issue_if_o[N_COPROC],
 
-  input magia_tile_pkg::xif_inst_rule_t[N_COPROC-1:0] rules_i
+  cv32e40x_if_xif.coproc_result                       xif_result_if_o,
+  cv32e40x_if_xif.cpu_result                          xif_result_if_i,
+
+  input magia_tile_pkg::xif_inst_rule_t[N_RULES-1:0] rules_i
 );
 
 /*******************************************************/
@@ -54,6 +61,11 @@ module xif_inst_demux
     logic      exc;      
   } x_issue_resp_t;
 
+  typedef enum logic {
+    IDLE,
+    PROP
+  } result_state_e;
+
 /*******************************************************/
 /**           Parameters and Definitions End          **/
 /*******************************************************/
@@ -70,6 +82,8 @@ module xif_inst_demux
 
   logic         [N_COPROC-1:0] issue_ready;
   x_issue_resp_t[N_COPROC-1:0] issue_resp;
+
+  result_state_e c_result_state, n_result_state;
 
 /*******************************************************/
 /**                Internal Signals End               **/
@@ -109,8 +123,10 @@ module xif_inst_demux
   always_comb begin: sign_detector
     for (int i = 0; i < N_COPROC; i++) begin
       coproc_sign[i] = 1'b0;
-      for (int j = 0; j < N_SIGN; j++) begin
-        coproc_sign[i] |= (sign == rules_i[i].sign_list[j]) ? 1'b1 : 1'b0;
+      if (i < N_RULES) begin  // Only check first N_RULES coprocessors, the rest do not have associated rule
+        for (int j = 0; j < N_SIGN; j++) begin
+          coproc_sign[i] |= (sign == rules_i[i].sign_list[j]) ? 1'b1 : 1'b0;
+        end
       end
     end
   end
@@ -155,8 +171,32 @@ module xif_inst_demux
     end
   end
 
+  always_ff @(posedge clk_i, negedge rst_ni) begin: result_state_register
+    if (!rst_ni) c_result_state <= IDLE;
+    else         c_result_state <= n_result_state;
+  end
+
+  always_comb begin: result_state_logic
+    n_result_state = c_result_state;
+    case (c_result_state)
+      IDLE: if (!default_issue)               n_result_state = PROP;
+      PROP: if (xif_result_if_o.result_ready) n_result_state = IDLE;
+    endcase
+  end
+  
+  always_comb begin: result_handler
+    xif_result_if_o.result_valid = xif_result_if_i.result_valid;
+    xif_result_if_i.result_ready = xif_result_if_o.result_ready;
+    xif_result_if_o.result       = xif_result_if_i.result;
+    if (c_result_state == PROP) begin
+      xif_result_if_o.result_valid = xif_result_if_o.result_ready;
+      xif_result_if_i.result_ready = 1'b0;
+      xif_result_if_o.result       = '0;
+    end
+  end
+
 /*******************************************************/
 /**             Instruction Dispatcher End            **/
 /*******************************************************/
 
-endmodule: xif_inst_demux
+endmodule: xif_inst_dispatcher

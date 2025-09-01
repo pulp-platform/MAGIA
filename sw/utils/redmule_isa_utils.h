@@ -29,7 +29,7 @@
   //             (0b00101   << 15) | \     /* Rs1 - t0 */
   //             (0x00      <<  7) | \     /* Empty */
   //             (0b0001011 <<  0)   \n"); /* OpCode */
-inline void redmule_mcnfig(volatile uint16_t k_size, volatile uint16_t m_size, volatile uint16_t n_size){
+static inline void redmule_mcnfig(volatile uint16_t k_size, volatile uint16_t m_size, volatile uint16_t n_size){
   uint32_t cfg_reg0 = (k_size << 16) | (m_size << 0);
   uint32_t cfg_reg1 = n_size << 0;
   asm volatile("addi t0, %0, 0" ::"r"(cfg_reg0));
@@ -53,7 +53,7 @@ inline void redmule_mcnfig(volatile uint16_t k_size, volatile uint16_t m_size, v
   //            (0b001     << 10) | \     /* Operation selection */
   //            (0b001     <<  7) | \     /* Data format */
   //            (0b0101011 <<  0)   \n"); /* OpCode */
-inline void redmule_marith(volatile uint32_t y_base, volatile uint32_t w_base, volatile uint32_t x_base){
+static inline void redmule_marith(volatile uint32_t y_base, volatile uint32_t w_base, volatile uint32_t x_base){
   asm volatile("addi t2, %0, 0" ::"r"(y_base));
   asm volatile("addi t1, %0, 0" ::"r"(w_base));
   asm volatile("addi t0, %0, 0" ::"r"(x_base));
