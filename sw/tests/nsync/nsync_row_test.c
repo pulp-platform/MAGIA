@@ -16,7 +16,7 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  * 
- * MAGIA NoC Horizontal Neighbor Synchronization Test
+ * MAGIA NoC Row Synchronization Test
  */
 
 #include "magia_tile_utils.h"
@@ -25,15 +25,18 @@
 
 #define VERBOSE (0)
 
+#define SYNC_NODE_X_ID ((MESH_X_TILES-1)/2)
+
 #define CACHE_HEAT_CYCLES (3)
 
 int main(void) {
   uint32_t tile_hartid = get_hartid();
   uint32_t tile_xid    = GET_X_ID(tile_hartid);
+  uint32_t tile_yid    = GET_Y_ID(tile_hartid);
 
   printf("Starting NoC Synch test...\n");
 
-  printf("Running horizontal neighbor algorithm...\n");
+  printf("Running row algorithm...\n");
 
   // Filling up the cache
   fill_icache();
@@ -43,24 +46,25 @@ int main(void) {
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
     sentinel_start();
     
-    if (tile_xid % 2) { // SRC
+    if (tile_xid == SYNC_NODE_X_ID) { // DST
+      // Wait for all SRCs to request synchronization
+      while (mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) < MESH_X_TILES-1);
+
+      // Reset barrier counter
+      mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) = 0;
+
+      // Send synchronization response to all SRCs
+      for (int i = 0; i < SYNC_NODE_X_ID; i++) amo_increment(SYNC_BASE + (GET_ID(tile_yid, i))*L1_TILE_OFFSET, 1);
+      for (int i = SYNC_NODE_X_ID+1; i < MESH_X_TILES; i++) amo_increment(SYNC_BASE + (GET_ID(tile_yid, i))*L1_TILE_OFFSET, 1);
+    } else { // SRC
       // Send synchronization request to DST
-      amo_increment(SYNC_BASE + (tile_hartid-1)*L1_TILE_OFFSET, 1);
+      amo_increment(SYNC_BASE + (GET_ID(tile_yid, SYNC_NODE_X_ID))*L1_TILE_OFFSET, 1);
 
       // Wait for DST synchronization response
       while (mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) < 1);
 
       // Reset barrier counter
       mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) = 0;
-    } else { // DST
-      // Wait for all SRCs to request synchronization
-      while (mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) < 1);
-
-      // Reset barrier counter
-      mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) = 0;
-
-      // Send synchronization response to SRC
-      amo_increment(SYNC_BASE + (tile_hartid+1)*L1_TILE_OFFSET, 1);
     }
 
     // Instruction immediately following synchronization: indicates end of the synchronization region

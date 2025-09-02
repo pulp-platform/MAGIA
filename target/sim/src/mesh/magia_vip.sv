@@ -358,6 +358,16 @@ module magia_vip
       automatic time global_last_end = 0;
       automatic time global_sync_time;
 
+      automatic time row_last_start[magia_tb_pkg::N_TILES_Y] = '{default: 0};
+      automatic time row_last_end[magia_tb_pkg::N_TILES_Y] = '{default: 0};
+      automatic time row_sync_times[magia_tb_pkg::N_TILES_Y] = '{default: 0};
+      automatic time row_sync_time = 0;
+
+      automatic time col_last_start[magia_tb_pkg::N_TILES_X] = '{default: 0};
+      automatic time col_last_end[magia_tb_pkg::N_TILES_X] = '{default: 0};
+      automatic time col_sync_times[magia_tb_pkg::N_TILES_X] = '{default: 0};
+      automatic time col_sync_time = 0;
+
       automatic time hnbr_last_start[n_pairs] = '{default: 0};
       automatic time hnbr_last_end[n_pairs] = '{default: 0};
       automatic time hnbr_sync_times[n_pairs] = '{default: 0};
@@ -368,12 +378,42 @@ module magia_vip
       automatic time vnbr_sync_times[n_pairs] = '{default: 0};
       automatic time vnbr_sync_time = 0;
 
+      automatic time hring_last_start[n_pairs] = '{default: 0};
+      automatic time hring_last_end[n_pairs] = '{default: 0};
+      automatic time hring_sync_times[n_pairs] = '{default: 0};
+      automatic time hring_sync_time = 0;
+
+      automatic time vring_last_start[n_pairs] = '{default: 0};
+      automatic time vring_last_end[n_pairs] = '{default: 0};
+      automatic time vring_sync_times[n_pairs] = '{default: 0};
+      automatic time vring_sync_time = 0;
+
       for (int unsigned i = 0; i < magia_tb_pkg::N_TILES; i++) begin
         if (global_last_start < start_sentinel[i][sync_iteration]) global_last_start = start_sentinel[i][sync_iteration];
         if (global_last_end < end_sentinel[i][sync_iteration]) global_last_end = end_sentinel[i][sync_iteration];
       end
       global_sync_time = global_last_end - global_last_start - sentinel_overhead;
       $display("[TB][SYNC PERF][GLOBAL] detected completed synchronization in EX stage. Synchronization time %0tns (%0d clock cycles)", global_sync_time, global_sync_time/CLK_PERIOD);
+      
+      for (int unsigned i = 0; i < magia_tb_pkg::N_TILES_Y; i++) begin
+        for (int unsigned j = 0; j < magia_tb_pkg::N_TILES_X; j++) begin
+          if (row_last_start[i] < start_sentinel[i*magia_tb_pkg::N_TILES_X+j][sync_iteration]) row_last_start[i] = start_sentinel[i*magia_tb_pkg::N_TILES_X+j][sync_iteration];
+          if (row_last_end[i] < end_sentinel[i*magia_tb_pkg::N_TILES_X+j][sync_iteration]) row_last_end[i] = end_sentinel[i*magia_tb_pkg::N_TILES_X+j][sync_iteration];
+        end
+        row_sync_times[i] = row_last_end[i] - row_last_start[i] - sentinel_overhead;
+        if (row_sync_time < row_sync_times[i]) row_sync_time = row_sync_times[i];
+      end
+      $display("[TB][SYNC PERF][ROW] detected completed synchronization in EX stage. Synchronization time %0tns (%0d clock cycles)", row_sync_time, row_sync_time/CLK_PERIOD);
+
+      for (int unsigned i = 0; i < magia_tb_pkg::N_TILES_X; i++) begin
+        for (int unsigned j = 0; j < magia_tb_pkg::N_TILES_Y; j++) begin
+          if (col_last_start[i] < start_sentinel[i+j*magia_tb_pkg::N_TILES_X][sync_iteration]) col_last_start[i] = start_sentinel[i+j*magia_tb_pkg::N_TILES_X][sync_iteration];
+          if (col_last_end[i] < end_sentinel[i+j*magia_tb_pkg::N_TILES_X][sync_iteration]) col_last_end[i] = end_sentinel[i+j*magia_tb_pkg::N_TILES_X][sync_iteration];
+        end
+        col_sync_times[i] = col_last_end[i] - col_last_start[i] - sentinel_overhead;
+        if (col_sync_time < col_sync_times[i]) col_sync_time = col_sync_times[i];
+      end
+      $display("[TB][SYNC PERF][COLUMN] detected completed synchronization in EX stage. Synchronization time %0tns (%0d clock cycles)", col_sync_time, col_sync_time/CLK_PERIOD);
       
       for (int unsigned i = 0; i < n_pairs; i++) begin
         automatic int unsigned src_idx = 2*i+1;
@@ -394,6 +434,40 @@ module magia_vip
         if (vnbr_sync_time < vnbr_sync_times[i]) vnbr_sync_time = vnbr_sync_times[i];
       end
       $display("[TB][SYNC PERF][VNBR] detected completed synchronization in EX stage. Synchronization time %0tns (%0d clock cycles)", vnbr_sync_time, vnbr_sync_time/CLK_PERIOD);
+
+      for (int unsigned i = 0; i < n_pairs; i++) begin
+        automatic int unsigned src_idx;
+        automatic int unsigned dst_idx;
+        if (i%(magia_tb_pkg::N_TILES_X/2)) begin
+          src_idx = 2*i;
+          dst_idx = 2*i-1;
+        end else begin
+          src_idx = 2*i;
+          dst_idx = 2*i-1 + magia_tb_pkg::N_TILES_X;
+        end
+        hring_last_start[i] = start_sentinel[dst_idx][sync_iteration] > start_sentinel[src_idx][sync_iteration] ? start_sentinel[dst_idx][sync_iteration] : start_sentinel[src_idx][sync_iteration];
+        hring_last_end[i] = end_sentinel[dst_idx][sync_iteration] > end_sentinel[src_idx][sync_iteration] ? end_sentinel[dst_idx][sync_iteration] : end_sentinel[src_idx][sync_iteration];
+        hring_sync_times[i] = hring_last_end[i] - hring_last_start[i] - sentinel_overhead;
+        if (hring_sync_time < hring_sync_times[i]) hring_sync_time = hring_sync_times[i];
+      end
+      $display("[TB][SYNC PERF][HRING] detected completed synchronization in EX stage. Synchronization time %0tns (%0d clock cycles)", hring_sync_time, hring_sync_time/CLK_PERIOD);
+
+      for (int unsigned i = 0; i < n_pairs; i++) begin
+        automatic int unsigned src_idx;
+        automatic int unsigned dst_idx;
+        if (i%(magia_tb_pkg::N_TILES_Y/2)) begin
+          src_idx = i%magia_tb_pkg::N_TILES_X + 2*(i/magia_tb_pkg::N_TILES_X)*magia_tb_pkg::N_TILES_X;
+          dst_idx = i%magia_tb_pkg::N_TILES_X + 2*(i/magia_tb_pkg::N_TILES_X)*magia_tb_pkg::N_TILES_X - magia_tb_pkg::N_TILES_X;
+        end else begin
+          src_idx = i%magia_tb_pkg::N_TILES_X + 2*(i/magia_tb_pkg::N_TILES_X)*magia_tb_pkg::N_TILES_X;
+          dst_idx = i%magia_tb_pkg::N_TILES_X + 2*(i/magia_tb_pkg::N_TILES_X)*magia_tb_pkg::N_TILES_X - magia_tb_pkg::N_TILES_X + magia_tb_pkg::N_TILES;
+        end
+        vring_last_start[i] = start_sentinel[dst_idx][sync_iteration] > start_sentinel[src_idx][sync_iteration] ? start_sentinel[dst_idx][sync_iteration] : start_sentinel[src_idx][sync_iteration];
+        vring_last_end[i] = end_sentinel[dst_idx][sync_iteration] > end_sentinel[src_idx][sync_iteration] ? end_sentinel[dst_idx][sync_iteration] : end_sentinel[src_idx][sync_iteration];
+        vring_sync_times[i] = vring_last_end[i] - vring_last_start[i] - sentinel_overhead;
+        if (vring_sync_time < vring_sync_times[i]) vring_sync_time = vring_sync_times[i];
+      end
+      $display("[TB][SYNC PERF][VRING] detected completed synchronization in EX stage. Synchronization time %0tns (%0d clock cycles)", vring_sync_time, vring_sync_time/CLK_PERIOD);
 
       sync_iteration++;
     end

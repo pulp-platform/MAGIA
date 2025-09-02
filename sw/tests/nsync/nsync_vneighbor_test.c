@@ -54,7 +54,7 @@ int main(void) {
       mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) = 0;
     } else { // DST
       // Wait for all SRCs to request synchronization
-      while ( mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) < 1);
+      while (mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) < 1);
 
       // Reset barrier counter
       mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) = 0;

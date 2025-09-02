@@ -27,10 +27,14 @@
 
 #define VERBOSE (0)
 
-// #define CLIB_FS_TEST
+#define CLIB_FS_TEST
 // #define GLOBAL_FS_TEST
-#define HNBR_FS_TEST
+// #define ROW_FS_TEST
+// #define COL_FS_TEST
+// #define HNBR_FS_TEST
 // #define VNBR_FS_TEST
+// #define HRING_FS_TEST
+// #define VRING_FS_TEST
 
 #define NUM_LEVELS (31-__builtin_clz(NUM_HARTS))
 
@@ -39,7 +43,9 @@
 #define CACHE_HEAT_CYCLES (3)
 
 int main(void) {
-  uint32_t tile_hartid = get_hartid();
+  uint32_t tile_hartid  = get_hartid();
+  uint32_t tile_xhartid = GET_X_ID(tile_hartid);
+  uint32_t tile_yhartid = GET_Y_ID(tile_hartid);
 
   printf("Starting Fractal Sync test...\n");
 
@@ -160,6 +166,144 @@ int main(void) {
     sentinel_start();
 
     fsync_vnbr();
+#ifndef STALLING
+    asm volatile("wfi" ::: "memory");
+    printf("Detected IRQ...\n");
+#endif
+
+    // Instruction immediately following synchronization: indicates end of the synchronization region
+    sentinel_end();
+
+#if VERBOSE > 1
+    printf("Synchronized...\n");
+#endif
+#endif
+
+#ifdef HRING_FS_TEST
+#if VERBOSE > 1
+    printf("Fractal Sync horizontal ring synchrnonization test...\n");
+#endif
+
+#ifndef STALLING
+    irq_en(1<<IRQ_FSYNC_DONE);
+#endif
+
+#if VERBOSE > 10
+    if ((tile_xhartid == 0) || (tile_xhartid == MESH_X_TILES-1)){
+      uint32_t id = row_id_lookup(tile_yhartid);
+      printf("aggregate: 0x%0x\n", _FS_RC_LVL);
+      printf("id: 0x%0x\n", id);
+    } else {
+      printf("aggregate: 0x%0x\n", _FS_HRING_AGGR);
+      printf("id: 0x%0x\n", _FS_HRING_ID);
+    }
+#endif
+
+    // Instruction immediately preceding synchronization: indicates start of the synchronization region
+    sentinel_start();
+
+    fsync_hring();
+#ifndef STALLING
+    asm volatile("wfi" ::: "memory");
+    printf("Detected IRQ...\n");
+#endif
+
+    // Instruction immediately following synchronization: indicates end of the synchronization region
+    sentinel_end();
+
+#if VERBOSE > 1
+    printf("Synchronized...\n");
+#endif
+#endif
+
+#ifdef VRING_FS_TEST
+#if VERBOSE > 1
+    printf("Fractal Sync vertical ring synchrnonization test...\n");
+#endif
+
+#ifndef STALLING
+    irq_en(1<<IRQ_FSYNC_DONE);
+#endif
+
+#if VERBOSE > 10
+    if ((tile_yhartid == 0) || (tile_yhartid == MESH_Y_TILES-1)){
+      uint32_t id = col_id_lookup(tile_xhartid);
+      printf("aggregate: 0x%0x\n", _FS_RC_LVL);
+      printf("id: 0x%0x\n", id);
+    } else {
+      printf("aggregate: 0x%0x\n", _FS_VRING_AGGR);
+      printf("id: 0x%0x\n", _FS_VRING_ID);
+    }
+#endif
+
+    // Instruction immediately preceding synchronization: indicates start of the synchronization region
+    sentinel_start();
+
+    fsync_vring();
+#ifndef STALLING
+    asm volatile("wfi" ::: "memory");
+    printf("Detected IRQ...\n");
+#endif
+
+    // Instruction immediately following synchronization: indicates end of the synchronization region
+    sentinel_end();
+
+#if VERBOSE > 1
+    printf("Synchronized...\n");
+#endif
+#endif
+
+#ifdef ROW_FS_TEST
+#if VERBOSE > 1
+    printf("Fractal Sync row synchrnonization test...\n");
+#endif
+
+#ifndef STALLING
+    irq_en(1<<IRQ_FSYNC_DONE);
+#endif
+
+#if VERBOSE > 10
+    uint32_t id = row_id_lookup(tile_yhartid);
+    printf("aggregate: 0x%0x\n", _FS_RC_AGGR);
+    printf("id: 0x%0x\n", id);
+#endif
+
+    // Instruction immediately preceding synchronization: indicates start of the synchronization region
+    sentinel_start();
+
+    fsync_rows();
+#ifndef STALLING
+    asm volatile("wfi" ::: "memory");
+    printf("Detected IRQ...\n");
+#endif
+
+    // Instruction immediately following synchronization: indicates end of the synchronization region
+    sentinel_end();
+
+#if VERBOSE > 1
+    printf("Synchronized...\n");
+#endif
+#endif
+
+#ifdef COL_FS_TEST
+#if VERBOSE > 1
+    printf("Fractal Sync column synchrnonization test...\n");
+#endif
+
+#ifndef STALLING
+    irq_en(1<<IRQ_FSYNC_DONE);
+#endif
+
+#if VERBOSE > 10
+    uint32_t id = col_id_lookup(tile_xhartid);
+    printf("aggregate: 0x%0x\n", _FS_RC_AGGR);
+    printf("id: 0x%0x\n", id);
+#endif
+
+    // Instruction immediately preceding synchronization: indicates start of the synchronization region
+    sentinel_start();
+
+    fsync_cols();
 #ifndef STALLING
     asm volatile("wfi" ::: "memory");
     printf("Detected IRQ...\n");
