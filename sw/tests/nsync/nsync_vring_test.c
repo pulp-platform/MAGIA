@@ -70,10 +70,10 @@ int main(void) {
         mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) = 0;
 
         // Send synchronization response to SRC
-        amo_increment(SYNC_BASE + (tile_hartid-MESH_X_TILES)*L1_TILE_OFFSET, 1);
+        amo_increment(SYNC_BASE + (tile_hartid+MESH_X_TILES)*L1_TILE_OFFSET, 1);
       } else { // SRC
         // Send synchronization request to DST
-        amo_increment(SYNC_BASE + (tile_hartid+MESH_X_TILES)*L1_TILE_OFFSET, 1);
+        amo_increment(SYNC_BASE + (tile_hartid-MESH_X_TILES)*L1_TILE_OFFSET, 1);
 
         // Wait for DST synchronization response
         while (mmio32(SYNC_BASE + tile_hartid*L1_TILE_OFFSET) < 1);
