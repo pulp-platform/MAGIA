@@ -1,0 +1,13 @@
+tests/amo_test/*
+tests/boot_test/*
+tests/fpu_test/*
+tests/fsync_extended_test/*
+tests/fsync_test/*
+tests/hello_mesh/*
+tests/hello_world/*
+tests/idma_test/*
+tests/inter_l1_test/*
+tests/l1_test/*
+tests/mesh_test/*
+tests/redmule_test/*
+tests/tile_test/*
