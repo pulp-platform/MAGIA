@@ -134,16 +134,27 @@ module magia_vip
 
   task automatic wait_for_eoc(output bit[magia_tb_pkg::N_TILES*16-1:0] exit_code);
     bit eoc = 1'b0;
-    while (!eoc) begin
-      eoc = 1'b1;
+    int tile_cnt;
+    int error = 0;
+
+    do begin
+      tile_cnt = 0;
+      //eoc = 1'b1;
       for (int i = 0; i < magia_tb_pkg::N_TILES; i++)
-        if ({i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + (2*i + 1)], i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + 2*i]} == 0)
-          eoc = 1'b0;
+        if (i_l2_mem.mem[32'hCC03_0000 + 2*i+1][3] == 1'b1)
+          tile_cnt++;
       #10000;
-    end
+    end while(tile_cnt<magia_tb_pkg::N_TILES);
     
-    for (int i = 0; i < magia_tb_pkg::N_TILES; i++)
-      exit_code |= {i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + (2*i + 1)], i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + 2*i]} << i*16;
+    if(tile_cnt == magia_tb_pkg::N_TILES) begin
+      for (int i = 0; i < magia_tb_pkg::N_TILES; i++) begin
+        if({i_l2_mem.mem[32'hCC03_0000 + 2*i+1],i_l2_mem.mem[32'hCC03_0000 + 2*i]} != 16'h800) begin
+            $display("TILE[%d] ERRORS: %d", i, {i_l2_mem.mem[32'hCC03_0000 + 2*i+1],i_l2_mem.mem[32'hCC03_0000 + 2*i]}[10:0]);
+            error++;
+        end
+      end
+      exit_code = error;
+    end
   endtask: wait_for_eoc
 
 /*******************************************************/
