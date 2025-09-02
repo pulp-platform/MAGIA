@@ -21,8 +21,8 @@
 
 # Paths to folders
 mkfile_path    := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
-SW             ?= $(mkfile_path)/sw
-BUILD_DIR      ?= $(mkfile_path)/work
+SW             ?= sw
+BUILD_DIR      ?= sim/work
 ifneq (,$(wildcard /etc/iis.version))
     QUESTA ?= questa-2025.1
     BENDER ?= bender
@@ -57,14 +57,14 @@ questa_opt_fast_flag += -suppress 3009
 questa_run_flag      += -t 1ns -debugDB -suppress 3009
 questa_run_fast_flag += -t 1ns -suppress 3009
 
-INI_PATH  = $(mkfile_path)/modelsim.ini
+INI_PATH  = sim/modelsim.ini
 WORK_PATH = $(BUILD_DIR)
 
 # Useful Parameters
 gui           ?= 0
 ipstools      ?= 0
-inst_hex_name ?= stim_instr.txt 
-data_hex_name ?= stim_data.txt 
+inst_hex_name ?= build/stim_instr.txt 
+data_hex_name ?= build/stim_data.txt 
 inst_entry    ?= 0xCC000000
 data_entry    ?= 0xCC010000
 boot_addr     ?= 0xCC000080
@@ -76,7 +76,7 @@ num_cores     ?= 16
 $(foreach i, $(shell seq 0 $(shell echo $$(($(num_cores)-1)))), \
 	$(eval log_path_$(i) := ./core_$(i)_traces.log)               \
 )
-itb_file      ?= $(ITB)
+itb_file      ?= build/verif.itb
 
 ifeq ($(verbose),1)
 	FLAGS += -DVERBOSE
@@ -101,39 +101,42 @@ CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O2
 LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
 
 # Setup build object dirs
-CRT=$(BUILD_DIR)/crt0.o
-OBJ=$(BUILD_DIR)/$(TEST_SRCS)/verif.o
-BIN=$(BUILD_DIR)/$(TEST_SRCS)/verif
-DUMP=$(BUILD_DIR)/$(TEST_SRCS)/verif.dump
-ODUMP=$(BUILD_DIR)/$(TEST_SRCS)/verif.objdump
-ITB=$(BUILD_DIR)/$(TEST_SRCS)/verif.itb
-STIM_INSTR=$(BUILD_DIR)/$(TEST_SRCS)/stim_instr.txt
-STIM_DATA=$(BUILD_DIR)/$(TEST_SRCS)/stim_data.txt
-VSIM_INI=$(BUILD_DIR)/$(TEST_SRCS)/modelsim.ini
-VSIM_LIBS=$(BUILD_DIR)/$(TEST_SRCS)/work
+CRT=$(TEST_DIR)/$(test)/build/crt0.o
+OBJ=$(TEST_DIR)/$(test)/build/verif.o
+BIN=$(TEST_DIR)/$(test)/build/verif
+DUMP=$(TEST_DIR)/$(test)/build/verif.dump
+ODUMP=$(TEST_DIR)/$(test)/build/verif.objdump
+ITB=$(TEST_DIR)/$(test)/build/verif.itb
+STIM_INSTR=$(TEST_DIR)/$(test)/build/stim_instr.txt
+STIM_DATA=$(TEST_DIR)/$(test)/build/stim_data.txt
+VSIM_INI=modelsim.ini
+VSIM_LIBS=work
 
 # Build implicit rules
 $(STIM_INSTR) $(STIM_DATA): $(BIN)
-	objcopy --srec-len 1 --output-target=srec $(BIN) $(BIN).s19
-	scripts/parse_s19.pl $(BIN).s19 > $(BIN).txt
+	objcopy --srec-len 1 --output-target=srec $(BIN) $(BIN).s19 &&	\
+	scripts/parse_s19.pl $(BIN).s19 > $(BIN).txt &&					\
 	python scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
-	ln -sfn $(INI_PATH) $(VSIM_INI)
-	ln -sfn $(WORK_PATH) $(VSIM_LIBS)
+	cd $(TEST_DIR)/$(test) &&										\
+	ln -sfn ../../../$(INI_PATH) $(VSIM_INI) &&						\
+	ln -sfn ../../../$(WORK_PATH) $(VSIM_LIBS)
 
 $(BIN): $(CRT) $(OBJ)
 	$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT)
 
-$(CRT): $(BUILD_DIR)
+$(CRT):
+	cd $(TEST_DIR) &&							\
+	mkdir -p $(test) &&							\
+	cd $(test) &&								\
+	mkdir -p build								
 	$(CC) $(CC_OPTS) -c $(BOOTSCRIPT) -o $(CRT)
 
-$(OBJ): $(TEST_SRCS) $(BUILD_DIR)/$(TEST_SRCS)
+$(OBJ):
+	cd $(TEST_DIR) &&											\
+	mkdir -p $(test) &&											\
+	cd $(test) &&												\
+	mkdir -p build												
 	$(CC) $(CC_OPTS) -c $(TEST_SRCS) $(FLAGS) $(INC) -o $(OBJ)
-
-$(BUILD_DIR)/$(TEST_SRCS):
-	mkdir -p $(BUILD_DIR)/$(TEST_SRCS)
-
-$(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
 
 SHELL := /bin/bash
 
@@ -162,7 +165,7 @@ all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb
 # Run the simulation
 run: $(CRT)
 ifeq ($(gui), 0)
-	cd $(BUILD_DIR)/$(TEST_SRCS);                                                                \
+	cd $(TEST_DIR)/$(test);                                                                		 \
 	$(QUESTA) vsim -c vopt_tb $(questa_run_fast_flag) -do "run -a"                               \
 	+INST_HEX=$(inst_hex_name)                                                                   \
 	+DATA_HEX=$(data_hex_name)                                                                   \
@@ -174,8 +177,8 @@ ifeq ($(gui), 0)
 	)                                                                                            \
 	+itb_file=$(itb_file)
 else
-	cd $(BUILD_DIR)/$(TEST_SRCS);                                                                \
-	$(QUESTA) vsim vopt_tb $(questa_run_flag)                                                    \
+	cd $(TEST_DIR)/$(test);                                                                		 \
+	$(QUESTA) vsim vopt_tb $(questa_run_flag) -l transcript                                      \
 	-do "add log -r sim:/$(tb)/*"                                                                \
 	-do "source $(WAVES)"                                                                        \
 	+INST_HEX=$(inst_hex_name)                                                                   \
@@ -224,7 +227,7 @@ ifeq ($(mesh_dv),1)
 else
 	tb         := magia_tile_tb
 endif
-WAVES        := $(mkfile_path)/wave.do
+WAVES        := ./wave.do
 bender_targs += -t redmule_complex
 bender_targs += -t cv32e40x_bhv
 
@@ -278,7 +281,7 @@ clean-sdk:
 	rm -rf $(SW)/pulp-sdk
 
 clean:
-	rm -rf $(BUILD_DIR)/$(TEST_SRCS)
+	rm -rf $(TEST_DIR)/$(test)
 
 dis:
 	$(OBJDUMP) -d -S $(BIN) > $(DUMP)
@@ -306,9 +309,7 @@ hw-clean-all:
 	rm -rf $(BUILD_DIR)
 	rm -rf .bender
 	rm -rf $(compile_script)
-	rm -rf modelsim.ini
-	rm -rf *.log
-	rm -rf transcript
+	rm -rf sim/modelsim.ini
 	rm -rf .cached_ipdb.json
 
 hw-opt:
@@ -323,15 +324,15 @@ hw-compile:
 	$(QUESTA) vsim $(questa_compile_flag) -c +incdir+$(UVM_HOME) -do 'quit -code [source $(compile_script)]'
 
 hw-lib:
-	@touch modelsim.ini
-	@mkdir -p $(BUILD_DIR)
-	@$(QUESTA) vlib $(BUILD_DIR)
-	@$(QUESTA) vmap work $(BUILD_DIR)
-	@chmod +w modelsim.ini
+	cd sim &&							\
+	touch modelsim.ini	&&				\
+	mkdir -p work
+	$(QUESTA) vlib $(BUILD_DIR)
+	$(QUESTA) vmap work $(BUILD_DIR)
+	chmod +w modelsim.ini
 
 hw-clean:
-	rm -rf transcript
-	rm -rf modelsim.ini
+	rm -rf sim/modelsim.ini
 
 hw-all: hw-clean hw-lib hw-compile hw-opt
 
