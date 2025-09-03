@@ -60,7 +60,8 @@ _start:
 
   /* If program returns from main, call exit routine */
   mv   a0, s0
-  wfi
+  la   t2, exit
+  jalr  x1, t2
 
   .global _init
   .global _fini
@@ -68,6 +69,17 @@ _init:
 _fini:
   # These don't have to do anything since we use init_array/fini_array.
   ret
+
+exit:
+ csrr    a0, mhartid 
+ andi    a1, a0, 0x1f
+ li      a1, 0xCC030000
+ li      a2, 0x800
+ xor     s0, s0, a2
+ add     a1, a1, a0
+ add     a1, a1, a0
+ sh      s0, 0(a1)
+ wfi
 
 .section .vectors, "ax"
 .option norvc;

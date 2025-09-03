@@ -320,7 +320,5 @@ int main(void) {
 
   printf("Fractal Sync test finished...\n");
 
-  mmio16(TEST_END_ADDR + tile_hartid*2) = DEFAULT_EXIT_CODE - tile_hartid;
-
   return 0;
 }
