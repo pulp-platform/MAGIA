@@ -51,8 +51,6 @@ int main(void) {
   }
 
   printf("Test PASSED: counter reached\n");
-  
-  mmio16(TEST_END_ADDR + get_hartid()*2) = DEFAULT_EXIT_CODE - get_hartid();
 
   return 0;
 }

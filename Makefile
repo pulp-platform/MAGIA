@@ -20,7 +20,6 @@
  
 
 # Paths to folders
-mkfile_path    := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
 SW             ?= sw
 BUILD_DIR      ?= sim/work
 ifneq (,$(wildcard /etc/iis.version))
@@ -166,7 +165,7 @@ all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb
 run: $(CRT)
 ifeq ($(gui), 0)
 	cd $(TEST_DIR)/$(test);                                                                		 \
-	$(QUESTA) vsim -c vopt_tb $(questa_run_fast_flag) -do "run -a"                               \
+	$(QUESTA) vsim -c vopt_tb $(questa_run_fast_flag) -l transcript -do "run -a"                 \
 	+INST_HEX=$(inst_hex_name)                                                                   \
 	+DATA_HEX=$(data_hex_name)                                                                   \
 	+INST_ENTRY=$(inst_entry)                                                                    \
@@ -321,7 +320,7 @@ endif
 
 hw-compile:
 	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_ADD_IDS=$(IDMA_ADD_IDS)
-	$(QUESTA) vsim $(questa_compile_flag) -c +incdir+$(UVM_HOME) -do 'quit -code [source $(compile_script)]'
+	$(QUESTA) vsim $(questa_compile_flag) -c -l sim/compile.log +incdir+$(UVM_HOME) -do 'quit -code [source $(compile_script)]'
 
 hw-lib:
 	cd sim &&							\
@@ -329,17 +328,17 @@ hw-lib:
 	mkdir -p work
 	$(QUESTA) vlib $(BUILD_DIR)
 	$(QUESTA) vmap work $(BUILD_DIR)
-	chmod +w modelsim.ini
+	chmod +w $(INI_PATH)
 
 hw-clean:
-	rm -rf sim/modelsim.ini
+	rm -rf $(INI_PATH) $(BUILD_DIR)
 
 hw-all: hw-clean hw-lib hw-compile hw-opt
 
 # Nonfree components
 MAGIA_NONFREE_REMOTE ?= git@iis-git.ee.ethz.ch:pulp-restricted/magia-nonfree
-MAGIA_NONFREE_DIR ?= $(mkfile_path)/nonfree
-MAGIA_NONFREE_COMMIT ?= main # TBC
+MAGIA_NONFREE_DIR ?= nonfree
+MAGIA_NONFREE_COMMIT ?= main
 
 .PHONY: magia-nonfree-init
 magia-nonfree-init:

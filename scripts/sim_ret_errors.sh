@@ -6,59 +6,24 @@
 
 # Author: Alessandro Nadalini <alessandro.nadalini3@unibo.it>
 
-set -u
+LOGFILE="$1"
 
-if [ $# -lt 1 ]; then
-  echo "Usage: $0 <logfile>" >&2
+if [[ ! -f "$LOGFILE" ]]; then
+  echo "Error: File not found!"
   exit 2
 fi
 
-logfile=$1
-if [ ! -f "$logfile" ]; then
-  echo "File not found: $logfile" >&2
-  exit 2
+# Extract the number from the last occurrence of "Errors: N"
+errors=$(grep -oP 'Errors:\s*\K[0-9]+' "$LOGFILE" | tail -n 1)
+
+if [[ -z "$errors" ]]; then
+  echo "No 'Errors:' pattern found in log file."
+  exit 3
 fi
 
-total=0
-matched=0
-
-# Try to collect per-test lines first ("Finished test with N error(s)")
-finished_nums=$(
-  grep -Eio 'Finished[[:space:]]+test[[:space:]]+with[[:space:]]+[0-9]+[[:space:]]+error(s)?' "$logfile" 2>/dev/null \
-  | grep -Eo '[0-9]+' 2>/dev/null
-)
-
-if [ -n "${finished_nums:-}" ]; then
-  matched=1
-  # Sum N over all matches
-  while IFS= read -r n; do
-    [ -n "$n" ] && total=$(( total + n ))
-  done <<< "$finished_nums"
-else
-  # Fallback: use "Errors: N" summary lines
-  summary_nums=$(
-    grep -Eio 'Errors:[[:space:]]*[0-9]+' "$logfile" 2>/dev/null \
-    | grep -Eo '[0-9]+' 2>/dev/null
-  )
-  if [ -n "${summary_nums:-}" ]; then
-    matched=1
-    while IFS= read -r n; do
-      [ -n "$n" ] && total=$(( total + n ))
-    done <<< "$summary_nums"
-  fi
-fi
-
-# Ignore any "SIMULATION FINISHED WITH EXIT CODE: ..."
-
-if [ "$matched" -eq 0 ]; then
-  echo "No recognizable error counters found; cannot determine result." >&2
-  exit 2
-fi
-
-if [ "$total" -eq 0 ]; then
-  echo "Test passed! Total errors: $total"
-  exit 0
-else
-  echo "Test failed: Total errors: $total"
+# Exit with 1 if errors > 0, else 0
+if [[ "$errors" -gt 0 ]]; then
   exit 1
+else
+  exit 0
 fi

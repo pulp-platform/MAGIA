@@ -216,13 +216,5 @@ int main(void) {
   }
   printf("Finished test with %0d errors\n", num_errors);
 
-  uint32_t exit_code;
-  if(num_errors)
-    exit_code = FAIL_EXIT_CODE;
-  else
-    exit_code = PASS_EXIT_CODE;
-
-  mmio16(TEST_END_ADDR) = exit_code;
-
-  return 0;
+  return num_errors;
 }
