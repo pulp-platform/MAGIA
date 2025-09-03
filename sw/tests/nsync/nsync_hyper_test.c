@@ -257,8 +257,8 @@ int main(void) {
       // amo_increment(SYNC_BASE + 4*sync_bit + q2_rootid*L1_TILE_OFFSET, 1);
     }
 #if VERBOSE > 10
-      printf("[ROOT PHASE] END: sync_bit - %0d, sync_ohbit - 0x%0x, sync_mask - 0x%0x, sync_sign - 0x%0x\n",
-        sync_bit, sync_ohbit, sync_mask, sync_sign);
+    printf("[ROOT PHASE] END: sync_bit - %0d, sync_ohbit - 0x%0x, sync_mask - 0x%0x, sync_sign - 0x%0x\n",
+      sync_bit, sync_ohbit, sync_mask, sync_sign);
 #endif
 
     // Descend tree
