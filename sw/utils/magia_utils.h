@@ -34,26 +34,24 @@
 #define MESH_X_TILES (4)
 #define NUM_HARTS    (MESH_Y_TILES*MESH_X_TILES)
 
-#define GET_Y_ID(mhartid)  (mhartid/MESH_X_TILES)
-#define GET_X_ID(mhartid)  (mhartid%MESH_X_TILES)
-#define GET_ID(y_id, x_id) ((y_id*MESH_X_TILES)+x_id)
+#define GET_Y_ID(mhartid)  ((mhartid)/MESH_X_TILES)
+#define GET_X_ID(mhartid)  ((mhartid)%MESH_X_TILES)
+#define GET_ID(y_id, x_id) (((y_id)*MESH_X_TILES)+(x_id))
 
 #define h_pprintf(x) (h_psprint(get_hartid(), x))
 #define n_pprintf(x) (n_psprint(get_hartid(), x))
 #define   pprintf(x) (  psprint(get_hartid(), x))
 #define   pprintln   (  pprintf("\n"))
 
-inline uint32_t get_hartid(){
+static inline uint32_t get_hartid(){
     uint32_t hartid;
     asm volatile("csrr %0, mhartid"
                  :"=r"(hartid):);
     return hartid;
 }
 
-inline void amo_increment(volatile uint32_t addr){
-    asm volatile("addi t0, %0, 0" ::"r"(addr));
-    asm volatile("li t1, 1" ::);
-    asm volatile("amoadd.w t2, t1, (t0)" ::);
+static inline void amo_increment(volatile uint32_t addr, volatile uint32_t amnt){
+    asm volatile("amoadd.w x0, %1, (%0)" ::"r"(addr), "r"(amnt):"memory");
 }
 
 char* utoa(unsigned int value, unsigned int base, char* result) {

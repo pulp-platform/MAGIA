@@ -28,6 +28,7 @@ module magia_tile
   import redmule_pkg::*;
   import hci_package::*;
   import cv32e40x_pkg::*;
+  import fpu_ss_pkg::*;
   import snitch_icache_pkg::*;
   import idma_pkg::*;
   import obi_pkg::*;
@@ -40,7 +41,7 @@ module magia_tile
   // Parameters used by the core
   parameter cv32e40x_pkg::rv32_e  CORE_ISA                 = cv32e40x_pkg::RV32I,            // RV32I (default) 32 registers in the RF - RV32E 16 registers in the RF
   parameter cv32e40x_pkg::a_ext_e CORE_A                   = cv32e40x_pkg::A,                // Atomic Istruction (A) support (dafault: full support)
-  parameter cv32e40x_pkg::b_ext_e CORE_B                   = cv32e40x_pkg::B_NONE,           // Bit Manipulation support (dafault: not enabled)
+  parameter cv32e40x_pkg::b_ext_e CORE_B                   = cv32e40x_pkg::ZBA_ZBB_ZBC_ZBS,  // Bit Manipulation support (dafault: full support)
   parameter cv32e40x_pkg::m_ext_e CORE_M                   = cv32e40x_pkg::M,                // Multiply and Divide support (dafault: full support)
 
   // Parameters used by the iDMA
@@ -114,11 +115,17 @@ module magia_tile
   magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_req; // Index 0 -> L2, Index 1 -> L1SPM
   magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_rsp; // Index 0 -> L2, Index 1 -> L1SPM
 
+  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_cut_req; // Index 0 -> L2, Index 1 -> L1SPM
+  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_cut_rsp; // Index 0 -> L2, Index 1 -> L1SPM
+
   magia_tile_pkg::core_obi_data_req_t core_l1_data_amo_req;
   magia_tile_pkg::core_obi_data_rsp_t core_l1_data_amo_rsp;
 
   magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_MGR-1:0] obi_xbar_slv_req; // Index 0 -> core request, Index 1 -> ext request
   magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_MGR-1:0] obi_xbar_slv_rsp; // Index 0 -> core request, Index 1 -> ext request
+
+  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_MGR-1:0] obi_xbar_slv_cut_req; // Index 0 -> core request, Index 1 -> ext request
+  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_MGR-1:0] obi_xbar_slv_cut_rsp; // Index 0 -> core request, Index 1 -> ext request
 
   magia_tile_pkg::core_obi_data_req_t ext_obi_data_req;
   magia_tile_pkg::core_obi_data_rsp_t ext_obi_data_rsp;
@@ -206,7 +213,7 @@ module magia_tile
   logic idma_obi2axi_done;
   logic idma_obi2axi_error;
 
-  magia_tile_pkg::xif_inst_rule_t[magia_tile_pkg::N_COPROC-1:0] xif_coproc_rules;
+  magia_tile_pkg::xif_inst_rule_t[magia_tile_pkg::N_RULES-1:0] xif_coproc_rules;
   
   logic sys_clk;
   logic sys_clk_en;
@@ -233,6 +240,26 @@ module magia_tile
   logic fsync_clear;   // Can be used to manage iDMA clear at top-level
   logic fsync_done;
   logic fsync_error;
+
+  logic                           x_compressed_valid;
+  logic                           x_compressed_ready;
+  fpu_ss_pkg::x_compressed_req_t  x_compressed_req;
+  fpu_ss_pkg::x_compressed_resp_t x_compressed_resp;
+  logic                           x_issue_valid;
+  logic                           x_issue_ready;
+  fpu_ss_pkg::x_issue_req_t       x_issue_req;
+  fpu_ss_pkg::x_issue_resp_t      x_issue_resp;
+  logic                           x_commit_valid;
+  fpu_ss_pkg::x_commit_t          x_commit;
+  logic                           x_mem_valid;
+  logic                           x_mem_ready;
+  fpu_ss_pkg::x_mem_req_t         x_mem_req;
+  fpu_ss_pkg::x_mem_resp_t        x_mem_resp;
+  logic                           x_mem_result_valid;
+  fpu_ss_pkg::x_mem_result_t      x_mem_result;
+  logic                           x_result_valid;
+  logic                           x_result_ready;
+  fpu_ss_pkg::x_result_t          x_result;
 
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
@@ -350,6 +377,12 @@ module magia_tile
   assign enable_prefetching = 1'b0;
   assign flush_valid[0]     = fencei_flush_req; // Single port i$
   assign fencei_flush_ack   = flush_ready[0];   // Signle port i$
+
+  assign xif_redmule_if.result_ready     = 1'b0;
+  assign xif_redmule_if.compressed_valid = 1'b0;
+  assign xif_redmule_if.compressed_req   = '0;
+  assign xif_redmule_if.mem_ready        = 1'b0;
+  assign xif_redmule_if.mem_resp         = '0;
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -567,6 +600,18 @@ module magia_tile
     .clk( sys_clk )
   );
 
+  cv32e40x_if_xif xif_redmule_if ();
+
+  cv32e40x_if_xif #(
+    .X_NUM_RS    ( magia_tile_pkg::X_NUM_RS ),
+    .X_ID_WIDTH  ( magia_tile_pkg::X_ID_W   ),
+    .X_MEM_WIDTH ( magia_tile_pkg::X_MEM_W  ),
+    .X_RFR_WIDTH ( magia_tile_pkg::X_RFR_W  ),
+    .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
+    .X_MISA      ( magia_tile_pkg::X_MISA   ),
+    .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
+  ) xif_fpu_if ();
+  
   cv32e40x_if_xif #(
     .X_NUM_RS    ( magia_tile_pkg::X_NUM_RS ),
     .X_ID_WIDTH  ( magia_tile_pkg::X_ID_W   ),
@@ -585,7 +630,7 @@ module magia_tile
     .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
     .X_MISA      ( magia_tile_pkg::X_MISA   ),
     .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
-  ) xif_coproc_if[magia_tile_pkg::N_COPROC] (); // Index 0 -> RedMulE, Index 1 -> iDMA, Index 2 -> Fractal Sync
+  ) xif_coproc_if[magia_tile_pkg::N_COPROC] (); // Index 0 -> RedMulE, Index 1 -> iDMA, Index 2 -> Fractal Sync, Index 3 -> FPU
 
 /*******************************************************/
 /**             Interface Definitions End             **/
@@ -628,9 +673,9 @@ module magia_tile
     .evt_o               ( redmule_evt                                                 ),
 
     .xif_issue_if_i      ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX] ),
-    .xif_result_if_o     ( xif_if.coproc_result                                        ),
-    .xif_compressed_if_i ( xif_if.coproc_compressed                                    ),
-    .xif_mem_if_o        ( xif_if.coproc_mem                                           ),
+    .xif_result_if_o     ( xif_redmule_if.coproc_result                                ),
+    .xif_compressed_if_i ( xif_redmule_if.coproc_compressed                            ),
+    .xif_mem_if_o        ( xif_redmule_if.coproc_mem                                   ),
 
     .data_req_o          ( redmule_data_req                                            ),
     .data_rsp_i          ( redmule_data_rsp                                            ),
@@ -780,6 +825,23 @@ module magia_tile
     .mgr_port_req_o ( core_l1_data_amo_req                         ),
     .mgr_port_rsp_i ( core_l1_data_amo_rsp                         )
   );
+
+  for (genvar i = 0; i < magia_tile_pkg::N_MGR; i++) begin: gen_obi_xbar_sbr_cut
+    obi_cut #(
+      .ObiCfg       ( magia_tile_pkg::obi_amo_cfg            ),
+      .obi_a_chan_t ( magia_tile_pkg::core_data_obi_a_chan_t ),
+      .obi_r_chan_t ( magia_tile_pkg::core_data_obi_r_chan_t ),
+      .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t    ),
+      .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t    )
+    ) i_obi_cut_sbr (
+      .clk_i          ( sys_clk                 ),
+      .rst_ni         ( rst_ni                  ),
+      .sbr_port_req_i ( obi_xbar_slv_req[i]     ),
+      .sbr_port_rsp_o ( obi_xbar_slv_rsp[i]     ),
+      .mgr_port_req_o ( obi_xbar_slv_cut_req[i] ),
+      .mgr_port_rsp_i ( obi_xbar_slv_cut_rsp[i] )
+    );
+   end
   
   obi_xbar #(
     .SbrPortObiCfg      ( magia_tile_pkg::obi_amo_cfg            ),
@@ -801,14 +863,31 @@ module magia_tile
     .clk_i            ( sys_clk                 ),
     .rst_ni           ( rst_ni                  ),
     .testmode_i       ( test_mode_i             ),
-    .sbr_ports_req_i  ( obi_xbar_slv_req    ),
-    .sbr_ports_rsp_o  ( obi_xbar_slv_rsp    ),
-    .mgr_ports_req_o  ( core_mem_data_req   ),
-    .mgr_ports_rsp_i  ( core_mem_data_rsp   ),
+    .sbr_ports_req_i  ( obi_xbar_slv_cut_req    ),
+    .sbr_ports_rsp_o  ( obi_xbar_slv_cut_rsp    ),
+    .mgr_ports_req_o  ( core_mem_data_cut_req   ),
+    .mgr_ports_rsp_i  ( core_mem_data_cut_rsp   ),
     .addr_map_i       ( obi_xbar_rule           ),
     .en_default_idx_i ( obi_xbar_en_default_idx ),
     .default_idx_i    ( obi_xbar_default_idx    )
   );
+
+  for (genvar i = 0; i < magia_tile_pkg::N_SBR; i++) begin: gen_obi_xbar_mgr_cut
+    obi_cut #(
+      .ObiCfg       ( magia_tile_pkg::obi_amo_cfg            ),
+      .obi_a_chan_t ( magia_tile_pkg::core_data_obi_a_chan_t ),
+      .obi_r_chan_t ( magia_tile_pkg::core_data_obi_r_chan_t ),
+      .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t    ),
+      .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t    )
+    ) i_obi_xbar_mgr_cut (
+      .clk_i          ( sys_clk                  ),
+      .rst_ni         ( rst_ni                   ),
+      .sbr_port_req_i ( core_mem_data_cut_req[i] ),
+      .sbr_port_rsp_o ( core_mem_data_cut_rsp[i] ),
+      .mgr_port_req_o ( core_mem_data_req[i]     ),
+      .mgr_port_rsp_i ( core_mem_data_rsp[i]     )
+    );
+   end
 
 /*******************************************************/
 /**         Core Data Demuxing (OBI XBAR) End         **/
@@ -874,23 +953,28 @@ module magia_tile
 /*******************************************************/
 /**                 L1 SPM (TCDM) End                 **/
 /*******************************************************/
-/**                Xif DEMUX Beginning                **/
+/**              Xif Dispatcher Beginning             **/
 /*******************************************************/
 
-  xif_inst_demux #(
+  xif_inst_dispatcher #(
     .N_COPROC        ( magia_tile_pkg::N_COPROC        ),
+    .N_RULES         ( magia_tile_pkg::N_RULES         ),
     .DEFAULT_IDX     ( magia_tile_pkg::DEFAULT_IDX     ),
-    .OPCODE_OFF      ( magia_tile_pkg::DMA_OPCODE_OFF  ),
-    .OPCODE_W        ( magia_tile_pkg::DMA_OPCODE_W    ),
+    .OPCODE_OFF      ( magia_tile_pkg::OPCODE_OFF      ),
+    .OPCODE_W        ( magia_tile_pkg::OPCODE_W        ),
     .xif_inst_rule_t ( magia_tile_pkg::xif_inst_rule_t )
-  ) i_xif_inst_demux (
-    .xif_issue_if_i ( xif_if.coproc_issue     ),
-    .xif_issue_if_o ( xif_coproc_if.cpu_issue ),
-    .rules_i        ( xif_coproc_rules        )
+  ) i_xif_inst_dispatcher (
+    .clk_i           ( sys_clk                 ),
+    .rst_ni          ( rst_ni                  ),
+    .xif_issue_if_i  ( xif_if.coproc_issue     ),
+    .xif_issue_if_o  ( xif_coproc_if.cpu_issue ),
+    .xif_result_if_o ( xif_if.coproc_result    ),
+    .xif_result_if_i ( xif_fpu_if.cpu_result   ),
+    .rules_i         ( xif_coproc_rules        )
   );
 
 /*******************************************************/
-/**                   Xif DEMUX End                   **/
+/**                 Xif Dispatcher End                **/
 /*******************************************************/
 /**                   iDMA Beginning                  **/
 /*******************************************************/
@@ -1065,6 +1149,72 @@ module magia_tile
 
 /*******************************************************/
 /**                Fractal Sync Out End               **/
+/*******************************************************/
+/**           Floating-Point Unit Beginning           **/
+/*******************************************************/
+
+  fpu_ss #(
+    .PULP_ZFINX         ( magia_tile_pkg::FPU_ZFINX          ),
+    .INPUT_BUFFER_DEPTH ( magia_tile_pkg::FPU_BUFFER_DEPTH   ),
+    .OUT_OF_ORDER       ( magia_tile_pkg::FPU_OOO            ),
+    .FORWARDING         ( magia_tile_pkg::FPU_FWD            ),
+    .PulpDivsqrt        ( magia_tile_pkg::FPU_DIVSQRT        ),
+    .FPU_FEATURES       ( magia_tile_pkg::FPU_FEATURES       ),
+    .FPU_IMPLEMENTATION ( magia_tile_pkg::FPU_IMPLEMENTATION )
+  ) i_fpu (
+    .clk_i                ( sys_clk            ),
+    .rst_ni               ( rst_ni             ),
+    .x_compressed_valid_i ( x_compressed_valid ),
+    .x_compressed_ready_o ( x_compressed_ready ),
+    .x_compressed_req_i   ( x_compressed_req   ),
+    .x_compressed_resp_o  ( x_compressed_resp  ),
+    .x_issue_valid_i      ( x_issue_valid      ),
+    .x_issue_ready_o      ( x_issue_ready      ),
+    .x_issue_req_i        ( x_issue_req        ),
+    .x_issue_resp_o       ( x_issue_resp       ),
+    .x_commit_valid_i     ( x_commit_valid     ),
+    .x_commit_i           ( x_commit           ),
+    .x_mem_valid_o        ( x_mem_valid        ),
+    .x_mem_ready_i        ( x_mem_ready        ),
+    .x_mem_req_o          ( x_mem_req          ),
+    .x_mem_resp_i         ( x_mem_resp         ),
+    .x_mem_result_valid_i ( x_mem_result_valid ),
+    .x_mem_result_i       ( x_mem_result       ),
+    .x_result_valid_o     ( x_result_valid     ),
+    .x_result_ready_i     ( x_result_ready     ),
+    .x_result_o           ( x_result           )
+  );
+
+  xif_if2struct i_xif_if2struct (
+    .xif_compressed_if_i  ( xif_if.coproc_compressed                                ),
+    .xif_issue_if_i       ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_FPU_IDX] ),
+    .xif_commit_if_i      ( xif_if.coproc_commit                                    ),
+    .xif_mem_if_o         ( xif_if.coproc_mem                                       ),
+    .xif_mem_result_if_i  ( xif_if.coproc_mem_result                                ),
+    .xif_result_if_o      ( xif_fpu_if.coproc_result                                ),
+    .x_compressed_valid_o ( x_compressed_valid                                      ),
+    .x_compressed_ready_i ( x_compressed_ready                                      ),
+    .x_compressed_req_o   ( x_compressed_req                                        ),
+    .x_compressed_resp_i  ( x_compressed_resp                                       ),
+    .x_issue_valid_o      ( x_issue_valid                                           ),
+    .x_issue_ready_i      ( x_issue_ready                                           ),
+    .x_issue_req_o        ( x_issue_req                                             ),
+    .x_issue_resp_i       ( x_issue_resp                                            ),
+    .x_commit_valid_o     ( x_commit_valid                                          ),
+    .x_commit_o           ( x_commit                                                ),
+    .x_mem_valid_i        ( x_mem_valid                                             ),
+    .x_mem_ready_o        ( x_mem_ready                                             ),
+    .x_mem_req_i          ( x_mem_req                                               ),
+    .x_mem_resp_o         ( x_mem_resp                                              ),
+    .x_mem_result_valid_o ( x_mem_result_valid                                      ),
+    .x_mem_result_o       ( x_mem_result                                            ),
+    .x_result_valid_i     ( x_result_valid                                          ),
+    .x_result_ready_o     ( x_result_ready                                          ),
+    .x_result_i           ( x_result                                                )
+  );
+
+/*******************************************************/
+/**              Floating-Point Unit End              **/
 /*******************************************************/
 
 endmodule: magia_tile

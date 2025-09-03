@@ -21,4 +21,5 @@ profile_targs += -t magia_tile_test
 
 profile_targs += -t magia_dv
 
-profile_defs += -D PROFILE
+profile_defs += -D PROFILE_SYNC
+# profile_defs += -D PROFILE_DETAILED

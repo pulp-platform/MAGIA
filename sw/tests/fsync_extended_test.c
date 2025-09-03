@@ -73,7 +73,7 @@ int main(void) {
 #endif
 
   printf("[FractalSync] Horizontal neighbor test starting\n");
-  fsync_h_nbr();
+  fsync_hnbr();
 
 #ifndef STALLING
   asm volatile("wfi" ::: "memory");
@@ -85,7 +85,7 @@ int main(void) {
   printf("[FractalSync] Horizontal neighbor test ending\n");
 
   printf("[FractalSync] Horizontal ring neighbor test starting\n");
-  fsync_h_tor_nbr();
+  fsync_hring();
 
 #ifndef STALLING
   asm volatile("wfi" ::: "memory");
@@ -97,7 +97,7 @@ int main(void) {
   printf("[FractalSync] Horizontal ring neighbor test ending\n");
 
   printf("[FractalSync] Vertical neighbor test starting\n");
-  fsync_v_nbr();
+  fsync_vnbr();
 
 #ifndef STALLING
   asm volatile("wfi" ::: "memory");
@@ -109,7 +109,7 @@ int main(void) {
   printf("[FractalSync] Vertical neighbor test ending\n");
 
   printf("[FractalSync] Vertical ring neighbor test starting\n");
-  fsync_v_tor_nbr();
+  fsync_vring();
 
 #ifndef STALLING
   asm volatile("wfi" ::: "memory");
