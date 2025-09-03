@@ -23,7 +23,7 @@
 #include "magia_utils.h"
 #include "cache_fill.h"
 
-#define VERBOSE (100)
+#define VERBOSE (0)
 
 #define SYNC_NODE_X_ID ((MESH_X_TILES-1)/2)
 #define SYNC_START_BIT (0)
