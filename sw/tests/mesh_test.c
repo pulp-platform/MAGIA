@@ -229,7 +229,7 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
       num_errors++;
       // h_pprintf("DST[0x"); pprintf(hs(dst_addr + 2*i)); pprintf("]: 0x"); pprintf(hs(mmio16(dst_addr + 2*i)));
       // pprintf(" != SRC[0x"); pprintf(hs(src_addr + 2*i)); pprintf("]: 0x"); n_pprintf(hs(mmio16(src_addr + 2*i)));
-      printf("DST[0x%0x]: 0x%0x != SRC[%0d]: 0x%0x\n", dst_addr + 2*i, mmio16(dst_addr + 2*i), i, src_data[i]);
+      printf("DST[0x%0x]: 0x%0x != SRC[%0d]: 0x%0x\n", dst_addr + 2*i, mmio16(dst_addr + 2*i), i, mmio16(src_addr + 2*i));
     }
   }
   // h_pprintf("Detected "); pprintf(ds(num_errors)); n_pprintf(" error(s) in the transfer...");
