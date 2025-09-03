@@ -57,11 +57,11 @@ int main(void) {
   printf("Verifying results...\n");
   uint32_t exit_code[NUM_HARTS];
   if(mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET) != EXPECTED_VAL){
-    exit_code[get_hartid()] = FAIL_EXIT_CODE;
+    exit_code[get_hartid()] = 1;
     // h_pprintf("Test FAILED\n");
     printf("Test FAILED\n");
   }else{
-    exit_code[get_hartid()] = PASS_EXIT_CODE;
+    exit_code[get_hartid()] = 0;
     // h_pprintf("Test PASSED\n");
     printf("Test PASSED\n");
   }
@@ -71,8 +71,6 @@ int main(void) {
   //   pprintf(" - Expected: ");       pprintf(ds(EXPECTED_VAL)); pprintln;
   printf("Final Synch Value: %0d - Expected: %0d\n", mmio32(SYNC_BASE + get_hartid()*L1_TILE_OFFSET), EXPECTED_VAL);
 #endif
-  
-  mmio16(TEST_END_ADDR + get_hartid()*2) = exit_code[get_hartid()] - get_hartid();
 
-  return 0;
+  return exit_code[get_hartid()];
 }

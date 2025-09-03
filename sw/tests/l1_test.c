@@ -117,14 +117,13 @@ int main(void) {
   printf("Verifying results...\n");
 
   mmio32(L2_BASE) = mmio32(L1_BASE);
-  if (mmio32(L2_BASE) == expected_result)
-    exit_code = PASS_EXIT_CODE;
+  if (mmio32(L2_BASE) == expected_result){
+    printf("TEST PASSED!!\n");
+    return 0;
+  }
   else {
-    exit_code = FAIL_EXIT_CODE;
     printf("FAIL: expected %0d, detected %0d...\n", expected_result, mmio32(L2_BASE));
+    return 1;
   }
 
-  mmio16(TEST_END_ADDR) = exit_code;
-
-  return 0;
 }

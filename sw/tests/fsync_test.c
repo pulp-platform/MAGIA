@@ -134,7 +134,5 @@ int main(void) {
   // h_pprintf("Fractal Sync test finished...\n");
   printf("Fractal Sync test finished...\n");
 
-  mmio16(TEST_END_ADDR + get_hartid()*2) = DEFAULT_EXIT_CODE - get_hartid();
-
   return 0;
 }
