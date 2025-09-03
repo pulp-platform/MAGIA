@@ -33,6 +33,12 @@ module magia_tile
   import idma_pkg::*;
   import obi_pkg::*;
   import axi_pkg::*;
+  import floo_pkg::*;
+  `ifndef TARGET_STANDALONE_TILE
+  import magia_noc_pkg::*;
+  `else
+  import floo_axi_mesh_1x2_noc_pkg::*;
+  `endif
 #(
   // Parameters used by hci_interconnect and l1_spm
   parameter int unsigned          N_MEM_BANKS              = magia_pkg::N_MEM_BANKS,         // Number of memory banks 
@@ -52,11 +58,30 @@ module magia_tile
   input  logic                              test_mode_i,
   input  logic                              tile_enable_i,
 
-  output magia_pkg::axi_default_req_t       data_out_req_o,
-  input  magia_pkg::axi_default_rsp_t       data_out_rsp_i,
+  // NoC input and output links
+  input  floo_req_t                         noc_south_req_i,
+  output floo_rsp_t                         noc_south_rsp_o,
+  output floo_req_t                         noc_south_req_o,
+  input  floo_rsp_t                         noc_south_rsp_i,
 
-  input  magia_tile_pkg::axi_xbar_slv_req_t data_in_req_i,
-  output magia_tile_pkg::axi_xbar_slv_rsp_t data_in_rsp_o,
+  input  floo_req_t                         noc_east_req_i,
+  output floo_rsp_t                         noc_east_rsp_o,
+  output floo_req_t                         noc_east_req_o,
+  input  floo_rsp_t                         noc_east_rsp_i,
+
+  input  floo_req_t                         noc_north_req_i,
+  output floo_rsp_t                         noc_north_rsp_o,
+  output floo_req_t                         noc_north_req_o,
+  input  floo_rsp_t                         noc_north_rsp_i,
+
+  input  floo_req_t                         noc_west_req_i,
+  output floo_rsp_t                         noc_west_rsp_o,
+  output floo_req_t                         noc_west_req_o,
+  input  floo_rsp_t                         noc_west_rsp_i,
+
+  // Tile spatial IDs
+  input  logic [31:0]                       x_id_i,
+  input  logic [31:0]                       y_id_i,
 
   // FractalSync interface
   fractal_sync_if.mst_port                  ht_fsync_if_o,
@@ -241,6 +266,12 @@ module magia_tile
   logic fsync_done;
   logic fsync_error;
 
+  // FlooNoC connections between NI and router
+  floo_req_t [4:0] floo_router_req_in;
+  floo_rsp_t [4:0] floo_router_rsp_in;
+  floo_req_t [4:0] floo_router_req_out;
+  floo_rsp_t [4:0] floo_router_rsp_out;
+  
   logic                           x_compressed_valid;
   logic                           x_compressed_ready;
   fpu_ss_pkg::x_compressed_req_t  x_compressed_req;
@@ -284,17 +315,12 @@ module magia_tile
   assign obi_xbar_en_default_idx = '1; // Routing to the AXI Xbar all requests with an address outside the range of the internal L1 and the external L2
   assign obi_xbar_default_idx    = '0;
 
-  assign data_out_req_o        = axi_xbar_data_out_req;
-  assign axi_xbar_data_out_rsp = data_out_rsp_i;
-
   assign axi_xbar_data_in_req[magia_tile_pkg::AXI_IDMA_IDX]       = idma_axi_req;
   assign idma_axi_rsp                                             = axi_xbar_data_in_rsp[magia_tile_pkg::AXI_IDMA_IDX];
   assign axi_xbar_data_in_req[magia_tile_pkg::AXI_CORE_DATA_IDX]  = core_l2_data_req;
   assign core_l2_data_rsp                                         = axi_xbar_data_in_rsp[magia_tile_pkg::AXI_CORE_DATA_IDX];
   assign axi_xbar_data_in_req[magia_tile_pkg::AXI_CORE_INSTR_IDX] = core_l2_instr_req;
   assign core_l2_instr_rsp                                        = axi_xbar_data_in_rsp[magia_tile_pkg::AXI_CORE_INSTR_IDX];
-  assign axi_xbar_data_in_req[magia_tile_pkg::AXI_EXT_IDX]        = data_in_req_i;
-  assign data_in_rsp_o                                            = axi_xbar_data_in_rsp[magia_tile_pkg::AXI_EXT_IDX];
 
   assign obi_xbar_slv_req[magia_tile_pkg::OBI_CORE_IDX] = core_obi_data_req;
   assign core_obi_data_rsp                              = obi_xbar_slv_rsp[magia_tile_pkg::OBI_CORE_IDX];
@@ -1115,6 +1141,94 @@ module magia_tile
 
 /*******************************************************/
 /**            Data Out - L2 (AXI XBAR) End           **/
+/*******************************************************/
+/**             FlooNoC modules Beginning             **/
+/*******************************************************/
+  
+  floo_axi_chimney #(
+    .AxiCfg         ( AxiCfg                                    ),
+    .ChimneyCfg     ( set_ports(ChimneyDefaultCfg, 1'b1, 1'b1)  ),
+    .RouteCfg       ( RouteCfg                                  ),
+    .id_t           ( id_t                                      ),
+    .rob_idx_t      ( rob_idx_t                                 ),
+    .hdr_t          ( hdr_t                                     ),
+    .sam_rule_t     ( sam_rule_t                                ),
+    .Sam            ( Sam                                       ),
+    .axi_in_req_t   ( axi_data_slv_req_t                        ),
+    .axi_in_rsp_t   ( axi_data_slv_rsp_t                        ),
+    .axi_out_req_t  ( axi_data_mst_req_t                        ),
+    .axi_out_rsp_t  ( axi_data_mst_rsp_t                        ),
+    .floo_req_t     ( floo_req_t                                ),
+    .floo_rsp_t     ( floo_rsp_t                                )
+  ) i_magia_tile_ni (
+    .clk_i          ( sys_clk                                           ),
+    .rst_ni         ( rst_ni                                            ),
+    .test_enable_i  ( test_mode_i                                       ),
+    .sram_cfg_i     ( '0                                                ),
+    .axi_in_req_i   ( axi_xbar_data_out_req                             ),
+    .axi_in_rsp_o   ( axi_xbar_data_out_rsp                             ),
+    .axi_out_req_o  ( axi_xbar_data_in_req[magia_tile_pkg::AXI_EXT_IDX] ),
+    .axi_out_rsp_i  ( axi_xbar_data_in_rsp[magia_tile_pkg::AXI_EXT_IDX] ),
+    .id_i           ( '{x: (x_id_i+1), y: y_id_i, port_id: 0}           ),
+    .route_table_i  ( '0                                                ),
+    .floo_req_o     ( floo_router_req_in[4]                             ),
+    .floo_rsp_i     ( floo_router_rsp_out[4]                            ),
+    .floo_req_i     ( floo_router_req_out[4]                            ),
+    .floo_rsp_o     ( floo_router_rsp_in[4]                             )
+  );
+
+  floo_axi_router #(
+    .AxiCfg       ( AxiCfg      ),
+    .RouteAlgo    ( XYRouting   ),
+    .NumRoutes    ( 5           ),
+    .NumInputs    ( 5           ),
+    .NumOutputs   ( 5           ),
+    .InFifoDepth  ( 2           ),
+    .OutFifoDepth ( 2           ),
+    .id_t         ( id_t        ),
+    .hdr_t        ( hdr_t       ),
+    .floo_req_t   ( floo_req_t  ),
+    .floo_rsp_t   ( floo_rsp_t  )
+  ) i_magia_tile_router (
+    .clk_i          ( sys_clk                                 ),
+    .rst_ni         ( rst_ni                                  ),
+    .test_enable_i  ( test_mode_i                             ),
+    .id_i           ( '{x: (x_id_i+1), y: y_id_i, port_id: 0} ),
+    .id_route_map_i ( '0                                      ),
+    .floo_req_i     ( floo_router_req_in                      ),
+    .floo_rsp_o     ( floo_router_rsp_out                     ),
+    .floo_req_o     ( floo_router_req_out                     ),
+    .floo_rsp_i     ( floo_router_rsp_in                      )
+  );
+
+  // Output requests
+  assign noc_south_req_o = floo_router_req_out[0];
+  assign floo_router_rsp_in[0] = noc_south_rsp_i;
+
+  assign noc_east_req_o = floo_router_req_out[1];
+  assign floo_router_rsp_in[1] = noc_east_rsp_i;
+
+  assign noc_north_req_o = floo_router_req_out[2];
+  assign floo_router_rsp_in[2] = noc_north_rsp_i;
+
+  assign noc_west_req_o = floo_router_req_out[3];
+  assign floo_router_rsp_in[3] = noc_west_rsp_i;
+
+  // Input requests
+  assign floo_router_req_in[0] = noc_south_req_i;
+  assign noc_south_rsp_o = floo_router_rsp_out[0];
+
+  assign floo_router_req_in[1] = noc_east_req_i;
+  assign noc_east_rsp_o = floo_router_rsp_out[1];
+
+  assign floo_router_req_in[2] = noc_north_req_i;
+  assign noc_north_rsp_o = floo_router_rsp_out[2];
+
+  assign floo_router_req_in[3] = noc_west_req_i;
+  assign noc_west_rsp_o = floo_router_rsp_out[3];
+
+/*******************************************************/
+/**                FlooNoC modules End                **/
 /*******************************************************/
 /**             Fractal Sync Out Beginning            **/
 /*******************************************************/

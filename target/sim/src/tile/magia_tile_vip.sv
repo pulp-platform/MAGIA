@@ -23,6 +23,7 @@ module magia_tile_vip
   import magia_tile_pkg::*;
   import magia_pkg::*;
   import magia_tile_tb_pkg::*;
+  import floo_axi_mesh_1x2_noc_pkg::*;
 #(
   // Timing
   parameter time         CLK_PERIOD = 5ns,
@@ -35,11 +36,25 @@ module magia_tile_vip
   output logic                              test_mode,
   output logic                              tile_enable,
 
-  input  magia_pkg::axi_default_req_t       data_out_req,
-  output magia_pkg::axi_default_rsp_t       data_out_rsp,
+  output  floo_req_t                         noc_south_req_i,
+  input   floo_rsp_t                         noc_south_rsp_o,
+  input   floo_req_t                         noc_south_req_o,
+  output  floo_rsp_t                         noc_south_rsp_i,
 
-  output magia_tile_pkg::axi_xbar_slv_req_t data_in_req,
-  input  magia_tile_pkg::axi_xbar_slv_rsp_t data_in_rsp,
+  output floo_req_t                         noc_east_req_i,
+  input  floo_rsp_t                         noc_east_rsp_o,
+  input  floo_req_t                         noc_east_req_o,
+  output floo_rsp_t                         noc_east_rsp_i,
+
+  output floo_req_t                         noc_north_req_i,
+  input  floo_rsp_t                         noc_north_rsp_o,
+  input  floo_req_t                         noc_north_req_o,
+  output floo_rsp_t                         noc_north_rsp_i,
+
+  output floo_req_t                         noc_west_req_i,
+  input  floo_rsp_t                         noc_west_rsp_o,
+  input  floo_req_t                         noc_west_req_o,
+  output floo_rsp_t                         noc_west_rsp_i,
 
   fractal_sync_if.slv_port                  ht_fsync_if_o[1],
   fractal_sync_if.slv_port                  hn_fsync_if_o[1],
@@ -78,7 +93,9 @@ module magia_tile_vip
 
   assign test_mode               = 1'b0;
   assign tile_enable             = 1'b1;
-  assign data_in_req             = '0;
+  assign noc_east_req_i          = '0;
+  assign noc_north_req_i         = '0;
+  assign noc_south_req_i         = '0;
   assign scan_cg_en              = 1'b0;
   assign mtvec_addr              = '0;
   assign dm_halt_addr            = '0;
@@ -126,12 +143,12 @@ module magia_tile_vip
 
   // Preload instruction cache subroutine
   task automatic inst_preload(input string image);
-    $readmemh(image, i_l2_mem.mem);
+    $readmemh(image, i_l2_mem.i_l2_mem.mem);
   endtask: inst_preload
 
   // Preload data subroutine
   task automatic data_preload(input string image);
-    $readmemh(image, i_l2_mem.mem);
+    $readmemh(image, i_l2_mem.i_l2_mem.mem);
   endtask: data_preload
 
   task wait_for_reset;
@@ -152,9 +169,9 @@ module magia_tile_vip
   endtask: elf_run
 
   task automatic wait_for_eoc(output bit[31:0] exit_code);
-    while ({i_l2_mem.mem[32'hCC03_0001], i_l2_mem.mem[32'hCC03_0000]} == 0)
+    while ({i_l2_mem.i_l2_mem.mem[32'hCC03_0001], i_l2_mem.i_l2_mem.mem[32'hCC03_0000]} == 0)
       #10000;
-    exit_code = {i_l2_mem.mem[32'hCC03_0001], i_l2_mem.mem[32'hCC03_0000]};
+    exit_code = {i_l2_mem.i_l2_mem.mem[32'hCC03_0001], i_l2_mem.i_l2_mem.mem[32'hCC03_0000]};
   endtask: wait_for_eoc
 
 /*******************************************************/
@@ -163,36 +180,17 @@ module magia_tile_vip
 /**                  L2 MEM Beginning                 **/
 /*******************************************************/
 
-  axi_sim_mem #(
-    .AddrWidth          ( magia_pkg::ADDR_W            ),
-    .DataWidth          ( magia_pkg::DATA_W            ),
-    .IdWidth            ( magia_pkg::AXI_NOC_ID_W      ),
-    .UserWidth          ( magia_pkg::AXI_NOC_U_W       ),
-    .axi_req_t          ( magia_pkg::axi_default_req_t ),
-    .axi_rsp_t          ( magia_pkg::axi_default_rsp_t ),
-    .WarnUninitialized  ( 1                            ),
-    .ClearErrOnAccess   ( 1                            ),
-    .ApplDelay          ( CLK_PERIOD * T_APPL          ),
-    .AcqDelay           ( CLK_PERIOD * T_TEST          )
-  ) i_l2_mem (
-    .clk_i              ( clk          ),
-    .rst_ni             ( rst_n        ),
-    .axi_req_i          ( data_out_req ),
-    .axi_rsp_o          ( data_out_rsp ),
-    .mon_w_valid_o      (              ),
-    .mon_w_addr_o       (              ),
-    .mon_w_data_o       (              ),
-    .mon_w_id_o         (              ),
-    .mon_w_user_o       (              ),
-    .mon_w_beat_count_o (              ),
-    .mon_w_last_o       (              ),
-    .mon_r_valid_o      (              ),
-    .mon_r_addr_o       (              ),
-    .mon_r_data_o       (              ),
-    .mon_r_id_o         (              ),
-    .mon_r_user_o       (              ),
-    .mon_r_beat_count_o (              ),
-    .mon_r_last_o       (              )
+  magia_l2_mem_wrapper #(
+    .NumPorts   ( 1                       ),
+    .ApplDelay  ( CLK_PERIOD * T_APPL     ),
+    .AcqDelay   ( CLK_PERIOD * T_TEST     )
+  ) i_l2_mem  (
+    .clk_i      ( clk             ),
+    .rst_ni     ( rst_n           ),
+    .noc_req_i  ( noc_west_req_o  ),
+    .noc_rsp_o  ( noc_west_rsp_i  ),
+    .noc_req_o  ( noc_west_req_i  ),
+    .noc_rsp_i  ( noc_west_rsp_o  )
   );
 
 /*******************************************************/
@@ -205,21 +203,21 @@ int errors = -1;
 bit stdio_ready  = 0;
 bit stderr_ready = 0;
 always @(posedge clk) begin: print_monitor
-  if ((data_out_req.aw.addr == 32'hFFFF0000) && (data_out_req.aw_valid)) stderr_ready = 1'b1;
-  if ((data_out_req.aw.addr == 32'hFFFF0004) && (data_out_req.aw_valid)) stdio_ready  = 1'b1;
-  if ((data_out_req.w_valid) && stderr_ready) begin
+  if ((i_magia_tile.axi_xbar_data_out_req.aw.addr == 32'hFFFF0000) && (i_magia_tile.axi_xbar_data_out_req.aw_valid)) stderr_ready = 1'b1;
+  if ((i_magia_tile.axi_xbar_data_out_req.aw.addr == 32'hFFFF0004) && (i_magia_tile.axi_xbar_data_out_req.aw_valid)) stdio_ready  = 1'b1;
+  if ((i_magia_tile.axi_xbar_data_out_req.w_valid) && stderr_ready) begin
     // NOTE: This is stupid! But unless we keep track of the outstanding AXI writes (which would require some logic) this should work,
     //       unless other modules (not related to the print function) transfer bytes (instead of words) to the L2
-    if (data_out_req.w.data < 256 && data_out_req.w.data > 0) begin
-      errors       = data_out_req.w.data;
+    if (i_magia_tile.axi_xbar_data_out_req.w.data < 256 && i_magia_tile.axi_xbar_data_out_req.w.data > 0) begin
+      errors       = i_magia_tile.axi_xbar_data_out_req.w.data;
       stderr_ready = 1'b0;
     end
   end
-  if ((data_out_req.w_valid) && stdio_ready) begin
+  if ((i_magia_tile.axi_xbar_data_out_req.w_valid) && stdio_ready) begin
     // NOTE: This is stupid! But unless we keep track of the outstanding AXI writes (which would require some logic) this should work,
     //       unless other modules (not related to the print function) transfer bytes (instead of words) to the L2
-    if (data_out_req.w.data < 256 && data_out_req.w.data > 0) begin
-      $write("%c", data_out_req.w.data);
+    if (i_magia_tile.axi_xbar_data_out_req.w.data < 256 && i_magia_tile.axi_xbar_data_out_req.w.data > 0) begin
+      $write("%c", i_magia_tile.axi_xbar_data_out_req.w.data);
       stdio_ready = 1'b0;
     end
   end

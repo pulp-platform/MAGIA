@@ -62,26 +62,26 @@ typedef struct packed {
 } sam_rule_t;
 
 localparam sam_rule_t[SamNumRules-1:0] Sam = '{
-'{idx: '{x: 0, y: 3, port_id: 0}, start_addr: 32'hf0000000, end_addr: 32'h100000000},// L2_ni_3
-'{idx: '{x: 0, y: 2, port_id: 0}, start_addr: 32'he0000000, end_addr: 32'hf0000000},// L2_ni_2
-'{idx: '{x: 0, y: 1, port_id: 0}, start_addr: 32'hd0000000, end_addr: 32'he0000000},// L2_ni_1
-'{idx: '{x: 0, y: 0, port_id: 0}, start_addr: 32'hc0000000, end_addr: 32'hd0000000},// L2_ni_0
-'{idx: '{x: 4, y: 3, port_id: 0}, start_addr: 32'h00f00000, end_addr: 32'h01000000},// magia_tile_ni_3_3
-'{idx: '{x: 4, y: 2, port_id: 0}, start_addr: 32'h00e00000, end_addr: 32'h00f00000},// magia_tile_ni_3_2
-'{idx: '{x: 4, y: 1, port_id: 0}, start_addr: 32'h00d00000, end_addr: 32'h00e00000},// magia_tile_ni_3_1
-'{idx: '{x: 4, y: 0, port_id: 0}, start_addr: 32'h00c00000, end_addr: 32'h00d00000},// magia_tile_ni_3_0
-'{idx: '{x: 3, y: 3, port_id: 0}, start_addr: 32'h00b00000, end_addr: 32'h00c00000},// magia_tile_ni_2_3
-'{idx: '{x: 3, y: 2, port_id: 0}, start_addr: 32'h00a00000, end_addr: 32'h00b00000},// magia_tile_ni_2_2
-'{idx: '{x: 3, y: 1, port_id: 0}, start_addr: 32'h00900000, end_addr: 32'h00a00000},// magia_tile_ni_2_1
-'{idx: '{x: 3, y: 0, port_id: 0}, start_addr: 32'h00800000, end_addr: 32'h00900000},// magia_tile_ni_2_0
-'{idx: '{x: 2, y: 3, port_id: 0}, start_addr: 32'h00700000, end_addr: 32'h00800000},// magia_tile_ni_1_3
-'{idx: '{x: 2, y: 2, port_id: 0}, start_addr: 32'h00600000, end_addr: 32'h00700000},// magia_tile_ni_1_2
-'{idx: '{x: 2, y: 1, port_id: 0}, start_addr: 32'h00500000, end_addr: 32'h00600000},// magia_tile_ni_1_1
-'{idx: '{x: 2, y: 0, port_id: 0}, start_addr: 32'h00400000, end_addr: 32'h00500000},// magia_tile_ni_1_0
-'{idx: '{x: 1, y: 3, port_id: 0}, start_addr: 32'h00300000, end_addr: 32'h00400000},// magia_tile_ni_0_3
-'{idx: '{x: 1, y: 2, port_id: 0}, start_addr: 32'h00200000, end_addr: 32'h00300000},// magia_tile_ni_0_2
-'{idx: '{x: 1, y: 1, port_id: 0}, start_addr: 32'h00100000, end_addr: 32'h00200000},// magia_tile_ni_0_1
-'{idx: '{x: 1, y: 0, port_id: 0}, start_addr: 32'h00000000, end_addr: 32'h00100000} // magia_tile_ni_0_0
+'{idx: '{x: 0, y: 3, port_id: 0}, start_addr: 32'hf0000000, end_addr: 32'h100000000},// L2_3_sam_idx
+'{idx: '{x: 0, y: 2, port_id: 0}, start_addr: 32'he0000000, end_addr: 32'hf0000000},// L2_2_sam_idx
+'{idx: '{x: 0, y: 1, port_id: 0}, start_addr: 32'hd0000000, end_addr: 32'he0000000},// L2_1_sam_idx
+'{idx: '{x: 0, y: 0, port_id: 0}, start_addr: 32'hc0000000, end_addr: 32'hd0000000},// L2_0_sam_idx
+'{idx: '{x: 4, y: 3, port_id: 0}, start_addr: 32'h00f00000, end_addr: 32'h01000000},// magia_tile_x3_y3_sam_idx
+'{idx: '{x: 3, y: 3, port_id: 0}, start_addr: 32'h00e00000, end_addr: 32'h00f00000},// magia_tile_x2_y3_sam_idx
+'{idx: '{x: 2, y: 3, port_id: 0}, start_addr: 32'h00d00000, end_addr: 32'h00e00000},// magia_tile_x1_y3_sam_idx
+'{idx: '{x: 1, y: 3, port_id: 0}, start_addr: 32'h00c00000, end_addr: 32'h00d00000},// magia_tile_x0_y3_sam_idx
+'{idx: '{x: 4, y: 2, port_id: 0}, start_addr: 32'h00b00000, end_addr: 32'h00c00000},// magia_tile_x3_y2_sam_idx
+'{idx: '{x: 3, y: 2, port_id: 0}, start_addr: 32'h00a00000, end_addr: 32'h00b00000},// magia_tile_x2_y2_sam_idx
+'{idx: '{x: 2, y: 2, port_id: 0}, start_addr: 32'h00900000, end_addr: 32'h00a00000},// magia_tile_x1_y2_sam_idx
+'{idx: '{x: 1, y: 2, port_id: 0}, start_addr: 32'h00800000, end_addr: 32'h00900000},// magia_tile_x0_y2_sam_idx
+'{idx: '{x: 4, y: 1, port_id: 0}, start_addr: 32'h00700000, end_addr: 32'h00800000},// magia_tile_x3_y1_sam_idx
+'{idx: '{x: 3, y: 1, port_id: 0}, start_addr: 32'h00600000, end_addr: 32'h00700000},// magia_tile_x2_y1_sam_idx
+'{idx: '{x: 2, y: 1, port_id: 0}, start_addr: 32'h00500000, end_addr: 32'h00600000},// magia_tile_x1_y1_sam_idx
+'{idx: '{x: 1, y: 1, port_id: 0}, start_addr: 32'h00400000, end_addr: 32'h00500000},// magia_tile_x0_y1_sam_idx
+'{idx: '{x: 4, y: 0, port_id: 0}, start_addr: 32'h00300000, end_addr: 32'h00400000},// magia_tile_x3_y0_sam_idx
+'{idx: '{x: 3, y: 0, port_id: 0}, start_addr: 32'h00200000, end_addr: 32'h00300000},// magia_tile_x2_y0_sam_idx
+'{idx: '{x: 2, y: 0, port_id: 0}, start_addr: 32'h00100000, end_addr: 32'h00200000},// magia_tile_x1_y0_sam_idx
+'{idx: '{x: 1, y: 0, port_id: 0}, start_addr: 32'h00000000, end_addr: 32'h00100000} // magia_tile_x0_y0_sam_idx
 
 };
 
