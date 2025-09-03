@@ -62,7 +62,5 @@ int main(void) {
   c = f_add(a, b);
   printf("Float operation result: 0x%0x [expected: 0x428A3D71(69.12f)]\n", c);
 
-  mmio16(TEST_END_ADDR) = DEFAULT_EXIT_CODE;
-
   return 0;
 }
