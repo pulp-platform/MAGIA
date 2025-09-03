@@ -22,119 +22,305 @@
 #include "magia_tile_utils.h"
 #include "magia_utils.h"
 #include "fsync_isa_utils.h"
+#include "fsync_api.h"
 #include "cache_fill.h"
 
 #define VERBOSE (0)
 
-#define NUM_LEVELS (6)
+#define CLIB_FS_TEST
+// #define GLOBAL_FS_TEST
+// #define ROW_FS_TEST
+// #define COL_FS_TEST
+// #define HNBR_FS_TEST
+// #define VNBR_FS_TEST
+// #define HRING_FS_TEST
+// #define VRING_FS_TEST
+
+#define NUM_LEVELS (31-__builtin_clz(NUM_HARTS))
+
 #define STALLING
 
 #define CACHE_HEAT_CYCLES (3)
 
-/// Only measure via 1 method (cycles xor time) otherwise the 2 methods interfere with each other
-/// Note SW performance measures add overhead
-// #define PERF_MEASURE
-// #define P_CYCLES
-// #define P_TIME
-
 int main(void) {
-  uint32_t levels[NUM_HARTS];
+  uint32_t tile_hartid  = get_hartid();
+  uint32_t tile_xhartid = GET_X_ID(tile_hartid);
+  uint32_t tile_yhartid = GET_Y_ID(tile_hartid);
 
-#ifdef PERF_MEASURE
-#ifdef P_CYCLES
-  uint32_t start_cycle[NUM_HARTS];
-  uint32_t end_cycle[NUM_HARTS];
-  ccount_en();
+  printf("Starting Fractal Sync test...\n");
+
+  // Filling up the cache
+  fill_icache();
+
+  // Execute synchronization multiple times to pre-heat the cache
+  for (int i = 0; i < CACHE_HEAT_CYCLES; i++) {
+#ifdef CLIB_FS_TEST
+    // Climb FS tree test
+    for (int i = 0; i < NUM_LEVELS; i++){
+      printf("Fractal Sync at level %0d...\n", i+1);
+
+#ifndef STALLING
+      irq_en(1<<IRQ_FSYNC_DONE);
 #endif
-#ifdef P_TIME
-  uint32_t start_time[NUM_HARTS];
-  uint32_t end_time[NUM_HARTS];
-#endif
+      
+      uint32_t aggregates = (1 << (i+1))-1;
+      uint32_t ids = 0;
+#if VERBOSE > 10
+      printf("aggregate: 0x%0x\n", aggregates);
+      printf("id: 0x%0x\n", ids);
 #endif
 
-  for (int i = NUM_LEVELS-1; i < NUM_LEVELS; i++){
-    // h_pprintf("Fractal Sync at level "); pprintf(ds(i+1)); n_pprintf("...");
-    printf("Fractal Sync at level %0d...\n", i+1);
+      // Instruction immediately preceding synchronization: indicates start of the synchronization region
+      sentinel_start();
+
+      fsync(ids, aggregates);
+#ifndef STALLING
+      asm volatile("wfi" ::: "memory");
+      printf("Detected IRQ...\n");
+#endif
+
+      // Instruction immediately following synchronization: indicates end of the synchronization region
+      sentinel_end();
+
+      printf("Synchronized...\n");
+    }
+#endif
+
+#ifdef GLOBAL_FS_TEST
+#if VERBOSE > 1
+    printf("Fractal Sync global synchrnonization test...\n");
+#endif
 
 #ifndef STALLING
     irq_en(1<<IRQ_FSYNC_DONE);
 #endif
-    
-    levels[get_hartid()] = 1 << i; 
+
 #if VERBOSE > 10
-    // h_pprintf("levels: 0x"); n_pprintf(hs(levels[get_hartid()]));
-    printf("levels: 0x%0x\n", levels[get_hartid()]);
+    printf("aggregate: 0x%0x\n", _FS_GLOBAL_AGGR);
+    printf("id: 0x%0x\n", _FS_GLOBAL_ID);
 #endif
 
-#ifdef PERF_MEASURE
-#ifdef P_CYCLES
-    start_cycle[get_hartid()] = get_cycle();
-#endif
-#ifdef P_TIME
-    start_time[get_hartid()]  = get_time();
-#endif
-#endif
+    // Instruction immediately preceding synchronization: indicates start of the synchronization region
+    sentinel_start();
 
-    // Filling up the cache
-    fill_icache();
-
-    // Execute synchronization multiple times to pre-heat the cache
-    for (int i = 0; i < CACHE_HEAT_CYCLES; i++) {
-      fsync(levels[get_hartid()]);
+    fsync_global();
 #ifndef STALLING
-      asm volatile("wfi" ::: "memory");
-      // h_pprintf("Detected IRQ...\n");
-      printf("Detected IRQ...\n");
-#endif
-      sentinel_instr_id();   // Indicate occurred synchronization
-    }
-
-#ifdef PERF_MEASURE
-#ifdef P_CYCLES
-    end_cycle[get_hartid()] = get_cycle();
-#endif
-#ifdef P_TIME
-    end_time[get_hartid()]  = get_time();
-#endif
+    asm volatile("wfi" ::: "memory");
+    printf("Detected IRQ...\n");
 #endif
 
-    // h_pprintf("Synchronized...\n");
+    // Instruction immediately following synchronization: indicates end of the synchronization region
+    sentinel_end();
+
+#if VERBOSE > 1
     printf("Synchronized...\n");
-
-#ifdef PERF_MEASURE
-#ifdef P_CYCLES
-    if (start_cycle[get_hartid()] && end_cycle[get_hartid()]){
-      // h_pprintf("PERFORMANCE COUNTER: "); pprintf(ds(end_cycle[get_hartid()] - start_cycle[get_hartid()])); pprintf("cycles (");
-      // pprintf(ds(start_cycle[get_hartid()])); pprintf(" - "); pprintf(ds(end_cycle[get_hartid()])); n_pprintf(")cycle");
-      printf("PERFORMANCE COUNTER: %0dcycles (%0d - %0d)cycles\n", end_cycle[get_hartid()] - start_cycle[get_hartid()], start_cycle[get_hartid()], end_cycle[get_hartid()]);
-    }
-    else
-      // h_pprintf("PERFORMANCE COUNTER: ERROR cycle counter overlow...\n");
-      printf("PERFORMANCE COUNTER: ERROR cycle counter overlow...\n");
 #endif
-#ifdef P_TIME
-    if (start_time[get_hartid()] && end_time[get_hartid()]){
-      // h_pprintf("PERFORMANCE COUNTER: "); pprintf(ds(end_time[get_hartid()] - start_time[get_hartid()])); pprintf("ns (");
-      // pprintf(ds(start_time[get_hartid()])); pprintf(" - "); pprintf(ds(end_time[get_hartid()])); n_pprintf(")ns");
-      printf("PERFORMANCE COUNTER: %0dns (%0d - %0d)ns\n", end_time[get_hartid()] - start_time[get_hartid()], start_time[get_hartid()], end_time[get_hartid()]);
+#endif
+
+#ifdef HNBR_FS_TEST
+#if VERBOSE > 1
+    printf("Fractal Sync horizontal neighbor synchrnonization test...\n");
+#endif
+
+#ifndef STALLING
+    irq_en(1<<IRQ_FSYNC_DONE);
+#endif
+
+#if VERBOSE > 10
+    printf("aggregate: 0x%0x\n", _FS_HNBR_AGGR);
+    printf("id: 0x%0x\n", _FS_HNBR_ID);
+#endif
+
+    // Instruction immediately preceding synchronization: indicates start of the synchronization region
+    sentinel_start();
+
+    fsync_hnbr();
+#ifndef STALLING
+    asm volatile("wfi" ::: "memory");
+    printf("Detected IRQ...\n");
+#endif
+
+    // Instruction immediately following synchronization: indicates end of the synchronization region
+    sentinel_end();
+
+#if VERBOSE > 1
+    printf("Synchronized...\n");
+#endif
+#endif
+
+#ifdef VNBR_FS_TEST
+#if VERBOSE > 1
+    printf("Fractal Sync vertical neighbor synchrnonization test...\n");
+#endif
+
+#ifndef STALLING
+    irq_en(1<<IRQ_FSYNC_DONE);
+#endif
+
+#if VERBOSE > 10
+    printf("aggregate: 0x%0x\n", _FS_VNBR_AGGR);
+    printf("id: 0x%0x\n", _FS_VNBR_ID);
+#endif
+
+    // Instruction immediately preceding synchronization: indicates start of the synchronization region
+    sentinel_start();
+
+    fsync_vnbr();
+#ifndef STALLING
+    asm volatile("wfi" ::: "memory");
+    printf("Detected IRQ...\n");
+#endif
+
+    // Instruction immediately following synchronization: indicates end of the synchronization region
+    sentinel_end();
+
+#if VERBOSE > 1
+    printf("Synchronized...\n");
+#endif
+#endif
+
+#ifdef HRING_FS_TEST
+#if VERBOSE > 1
+    printf("Fractal Sync horizontal ring synchrnonization test...\n");
+#endif
+
+#ifndef STALLING
+    irq_en(1<<IRQ_FSYNC_DONE);
+#endif
+
+#if VERBOSE > 10
+    if ((tile_xhartid == 0) || (tile_xhartid == MESH_X_TILES-1)){
+      uint32_t id = row_id_lookup(tile_yhartid);
+      printf("aggregate: 0x%0x\n", _FS_RC_LVL);
+      printf("id: 0x%0x\n", id);
+    } else {
+      printf("aggregate: 0x%0x\n", _FS_HRING_AGGR);
+      printf("id: 0x%0x\n", _FS_HRING_ID);
     }
-    else
-      // h_pprintf("PERFORMANCE COUNTER: ERROR time counter overlow...\n");
-      printf("PERFORMANCE COUNTER: ERROR time counter overlow...\n");
+#endif
+
+    // Instruction immediately preceding synchronization: indicates start of the synchronization region
+    sentinel_start();
+
+    fsync_hring();
+#ifndef STALLING
+    asm volatile("wfi" ::: "memory");
+    printf("Detected IRQ...\n");
+#endif
+
+    // Instruction immediately following synchronization: indicates end of the synchronization region
+    sentinel_end();
+
+#if VERBOSE > 1
+    printf("Synchronized...\n");
+#endif
+#endif
+
+#ifdef VRING_FS_TEST
+#if VERBOSE > 1
+    printf("Fractal Sync vertical ring synchrnonization test...\n");
+#endif
+
+#ifndef STALLING
+    irq_en(1<<IRQ_FSYNC_DONE);
+#endif
+
+#if VERBOSE > 10
+    if ((tile_yhartid == 0) || (tile_yhartid == MESH_Y_TILES-1)){
+      uint32_t id = col_id_lookup(tile_xhartid);
+      printf("aggregate: 0x%0x\n", _FS_RC_LVL);
+      printf("id: 0x%0x\n", id);
+    } else {
+      printf("aggregate: 0x%0x\n", _FS_VRING_AGGR);
+      printf("id: 0x%0x\n", _FS_VRING_ID);
+    }
+#endif
+
+    // Instruction immediately preceding synchronization: indicates start of the synchronization region
+    sentinel_start();
+
+    fsync_vring();
+#ifndef STALLING
+    asm volatile("wfi" ::: "memory");
+    printf("Detected IRQ...\n");
+#endif
+
+    // Instruction immediately following synchronization: indicates end of the synchronization region
+    sentinel_end();
+
+#if VERBOSE > 1
+    printf("Synchronized...\n");
+#endif
+#endif
+
+#ifdef ROW_FS_TEST
+#if VERBOSE > 1
+    printf("Fractal Sync row synchrnonization test...\n");
+#endif
+
+#ifndef STALLING
+    irq_en(1<<IRQ_FSYNC_DONE);
+#endif
+
+#if VERBOSE > 10
+    uint32_t id = row_id_lookup(tile_yhartid);
+    printf("aggregate: 0x%0x\n", _FS_RC_AGGR);
+    printf("id: 0x%0x\n", id);
+#endif
+
+    // Instruction immediately preceding synchronization: indicates start of the synchronization region
+    sentinel_start();
+
+    fsync_rows();
+#ifndef STALLING
+    asm volatile("wfi" ::: "memory");
+    printf("Detected IRQ...\n");
+#endif
+
+    // Instruction immediately following synchronization: indicates end of the synchronization region
+    sentinel_end();
+
+#if VERBOSE > 1
+    printf("Synchronized...\n");
+#endif
+#endif
+
+#ifdef COL_FS_TEST
+#if VERBOSE > 1
+    printf("Fractal Sync column synchrnonization test...\n");
+#endif
+
+#ifndef STALLING
+    irq_en(1<<IRQ_FSYNC_DONE);
+#endif
+
+#if VERBOSE > 10
+    uint32_t id = col_id_lookup(tile_xhartid);
+    printf("aggregate: 0x%0x\n", _FS_RC_AGGR);
+    printf("id: 0x%0x\n", id);
+#endif
+
+    // Instruction immediately preceding synchronization: indicates start of the synchronization region
+    sentinel_start();
+
+    fsync_cols();
+#ifndef STALLING
+    asm volatile("wfi" ::: "memory");
+    printf("Detected IRQ...\n");
+#endif
+
+    // Instruction immediately following synchronization: indicates end of the synchronization region
+    sentinel_end();
+
+#if VERBOSE > 1
+    printf("Synchronized...\n");
 #endif
 #endif
   }
 
-#ifdef PERF_MEASURE
-#ifdef P_CYCLES
-  ccount_dis();
-#endif
-#endif
-
-  // h_pprintf("Fractal Sync test finished...\n");
   printf("Fractal Sync test finished...\n");
 
-  mmio16(TEST_END_ADDR + get_hartid()*2) = DEFAULT_EXIT_CODE - get_hartid();
+  mmio16(TEST_END_ADDR + tile_hartid*2) = DEFAULT_EXIT_CODE - tile_hartid;
 
   return 0;
 }

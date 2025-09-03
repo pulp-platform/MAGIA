@@ -30,7 +30,7 @@
   //             (0b010     << 12) | \     /* FUNC3 */
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1011011 <<  0)   \n"); /* OPCODE */
-inline void fsync(volatile uint32_t id, volatile uint32_t aggregate){
+static inline void fsync(volatile uint32_t id, volatile uint32_t aggregate){
   asm volatile("addi t1, %0, 0" ::"r"(id));
   asm volatile("addi t0, %0, 0" ::"r"(aggregate));
   asm volatile(
