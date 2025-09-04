@@ -485,6 +485,42 @@ module magia_vip
   end
 `endif
 
+`ifdef PROFILE_SENTINEL
+  localparam time sentinel_overhead = CLK_PERIOD; // Overhead of the sentinel start/end pair
+  bit[31:0] curr_instr_ex[magia_tb_pkg::N_TILES];
+  time start_sentinel[magia_tb_pkg::N_TILES][$];
+  time end_sentinel[magia_tb_pkg::N_TILES][$];
+  time sentinel_latency[magia_tb_pkg::N_TILES];
+  for (genvar i = 0; i < magia_tb_pkg::N_TILES_Y; i++) begin: gen_tile_instr_monitor_y
+    for (genvar j = 0; j < magia_tb_pkg::N_TILES_X; j++) begin: gen_tile_instr_monitor_x 
+      assign curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.core_i.id_stage_i.id_ex_pipe_o.instr_valid ?
+      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.core_i.id_stage_i.id_ex_pipe_o.instr.bus_resp.rdata : '0;
+      always @(curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j]) begin: instr_ex_reporter
+        if (curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] == 32'h5AA00013) begin
+          start_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)] Detected sentinel start instruction in EX stage at time %0dns", 
+          i*magia_tb_pkg::N_TILES_X+j, i, j, $time);
+        end
+        if (curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] == 32'h5FF00013) begin
+          end_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)] Detected sentinel end instruction in EX stage at time %0dns", 
+          i*magia_tb_pkg::N_TILES_X+j, i, j, $time);
+
+          if (start_sentinel[i*magia_tb_pkg::N_TILES_X+j].size() < 1) begin
+            $error("[TB][mhartid %0d - Tile (%0d, %0d)] Detected sentinel end instruction without corresponding sentinel start instruction",
+            i*magia_tb_pkg::N_TILES_X+j, i, j);
+            end_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back();
+          end else begin
+            sentinel_latency[i*magia_tb_pkg::N_TILES_X+j] = end_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - start_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - sentinel_overhead;
+            $display("[TB][mhartid %0d - Tile (%0d, %0d)] Detected sentinel start-end pair with latency %0tns (%0d clock cycles)",
+            i*magia_tb_pkg::N_TILES_X+j, i, j, sentinel_latency[i*magia_tb_pkg::N_TILES_X+j], sentinel_latency[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD);
+          end
+        end
+      end
+    end
+  end
+`endif
+
 /*******************************************************/
 /**              Instruction Monitor End              **/
 /*******************************************************/
