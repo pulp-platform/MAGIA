@@ -253,20 +253,20 @@ end
 
 `ifdef PROFILE_SENTINEL
   localparam time sentinel_overhead = CLK_PERIOD; // Overhead of the sentinel start/end pair
-  bit[31:0] curr_instr_ex;
+  bit[31:0] curr_instr_wb;
   time start_sentinel[$];
   time end_sentinel[$];
   time sentinel_latency;
-  assign curr_instr_ex = i_magia_tile.i_cv32e40x_core.core_i.id_stage_i.id_ex_pipe_o.instr_valid ?
-  i_magia_tile.i_cv32e40x_core.core_i.id_stage_i.id_ex_pipe_o.instr.bus_resp.rdata : '0;
-  always @(curr_instr_ex) begin: instr_ex_reporter
-    if (curr_instr_ex == 32'h5AA00013) begin
+  assign curr_instr_wb = i_magia_tile.i_cv32e40x_core.core_i.wb_stage_i.ex_wb_pipe_i.instr_valid ?
+  i_magia_tile.i_cv32e40x_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
+  always @(curr_instr_wb) begin: instr_wb_reporter
+    if (curr_instr_wb == 32'h5AA00013) begin
       start_sentinel.push_back($time);
-      $display("[TB] Detected sentinel start instruction in EX stage at time %0dns", $time);
+      $display("[TB] Detected sentinel start instruction in WB stage at time %0dns", $time);
     end
-    if (curr_instr_ex == 32'h5FF00013) begin
+    if (curr_instr_wb == 32'h5FF00013) begin
       end_sentinel.push_back($time);
-      $display("[TB] Detected sentinel end instruction in EX stage at time %0dns", $time);
+      $display("[TB] Detected sentinel end instruction in WB stage at time %0dns", $time);
 
       if (start_sentinel.size() < 1) begin
         $error("[TB] Detected sentinel end instruction without corresponding sentinel start instruction");
