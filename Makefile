@@ -222,6 +222,12 @@ WAVES        := $(mkfile_path)/wave.do
 bender_targs += -t redmule_complex
 bender_targs += -t cv32e40x_bhv
 
+init-pd:
+	git clone git@iis-git.ee.ethz.ch:rfiorani/magia-pd.git pd
+	cd pd/tsmc7; icdesign tsmc7 -update all -nogui
+
+-include pd/pd.mk
+
 update-ips:
 	$(BENDER) update
 	$(BENDER) script vsim          \
