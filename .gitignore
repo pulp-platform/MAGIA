@@ -6,6 +6,7 @@ scripts/compile.tcl
 scripts/synth_compile.tcl
 work/
 update-ips.log
+synth-ips.log
 build-hw.log
 profile-ips.log
 magia_venv/
