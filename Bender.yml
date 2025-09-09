@@ -48,11 +48,20 @@ sources:
   - target: all(magia_dv, standalone_tile)
     files:
       - target/sim/src/tile/floo_axi_mesh_1x2_pkg.sv
+      - target/sim/src/tile/magia_tile_vip.sv
+      - target/sim/src/tile/magia_tile_fixture.sv
+      - target/sim/src/tile/magia_tile_tb.sv
   # MAGIA
   - target: all(magia_dv)
     defines:
       CORE_TRACES: ~
     files:
+      # NoC
+      - hw/mesh/noc/floo_axi_mesh_2x2_noc.sv
+      - hw/mesh/noc/floo_axi_mesh_4x4_noc.sv
+      - hw/mesh/noc/floo_axi_mesh_8x8_noc.sv
+      - hw/mesh/noc/floo_axi_mesh_16x16_noc.sv
+      - hw/mesh/noc/floo_axi_mesh_32x32_noc.sv
       # MAGIA Packages
       - hw/mesh/magia_pkg.sv
       - hw/tile/magia_tile_pkg.sv
@@ -76,17 +85,9 @@ sources:
       - hw/tile/fractal_sync_xif_inst_decoder.sv
       - hw/tile/magia_tile.sv
       # MAGIA
-      - hw/mesh/noc/floo_axi_mesh_2x2_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_4x4_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_8x8_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_16x16_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_32x32_noc.sv
       - hw/mesh/magia.sv
       # MAGIA DV
       - target/sim/src/tile/magia_tile_tb_pkg.sv
-      - target/sim/src/tile/magia_tile_vip.sv
-      - target/sim/src/tile/magia_tile_fixture.sv
-      - target/sim/src/tile/magia_tile_tb.sv
       - target/sim/src/mesh/magia_tb_pkg.sv
       - target/sim/src/mesh/magia_l2_mem_wrapper.sv
       - target/sim/src/mesh/magia_vip.sv
