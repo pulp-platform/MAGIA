@@ -69,10 +69,10 @@ inst_entry    ?= 0xCC000000
 data_entry    ?= 0xCC010000
 boot_addr     ?= 0xCC000080
 test          ?= hello_world
-mesh_dv       ?= 1
+mesh_dv       ?= 0
 fast_sim      ?= 0
 # Add here a path to the core traces of each tile you want to monitor
-num_cores     ?= 16
+num_cores     ?= 4
 $(foreach i, $(shell seq 0 $(shell echo $$(($(num_cores)-1)))), \
 	$(eval log_path_$(i) := ./core_$(i)_traces.log)               \
 )
@@ -116,7 +116,7 @@ VSIM_LIBS=$(BUILD_DIR)/$(TEST_SRCS)/work
 $(STIM_INSTR) $(STIM_DATA): $(BIN)
 	objcopy --srec-len 1 --output-target=srec $(BIN) $(BIN).s19
 	scripts/parse_s19.pl $(BIN).s19 > $(BIN).txt
-	python scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
+	python3 scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
 	ln -sfn $(INI_PATH) $(VSIM_INI)
 	ln -sfn $(WORK_PATH) $(VSIM_LIBS)
 
@@ -145,7 +145,7 @@ IDMA_ADD_IDS ?= rw_axi_rw_obi
 FLOONOC_ROOT ?= $(shell $(BENDER) path floo_noc)
 
 # Setup python3 venv and install dependencies
-BASE_PYTHON ?= python
+BASE_PYTHON ?= python3
 
 .PHONY: python_venv python_deps
 
@@ -278,7 +278,7 @@ objdump:
 	$(OBJDUMP) -d -l -s $(BIN) > $(ODUMP)
 
 itb:
-	python scripts/objdump2itb.py $(ODUMP) > $(ITB)
+	python3 scripts/objdump2itb.py $(ODUMP) > $(ITB)
 
 OP     ?= gemm
 fp_fmt ?= FP16
