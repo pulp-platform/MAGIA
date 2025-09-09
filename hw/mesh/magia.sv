@@ -24,6 +24,7 @@
 module magia 
   import magia_pkg::*;
   import magia_tile_pkg::*;
+  import magia_noc_pkg::*;
 #(
   parameter int unsigned N_TILES_Y         = magia_pkg::N_TILES_Y,          // Number of Tile rowns
   parameter int unsigned N_TILES_X         = magia_pkg::N_TILES_X,          // Number of Tile columns
@@ -66,8 +67,10 @@ module magia
   input  logic                                  wu_wfe_i,
 
   // Only west-side L2
-  output magia_pkg::axi_l2_req_t[N_TILES_Y-1:0] l2_data_req_o,
-  input  magia_pkg::axi_l2_rsp_t[N_TILES_Y-1:0] l2_data_rsp_i
+  output floo_req_t [N_TILES_Y-1:0]             l2_noc_req_o,
+  input  floo_rsp_t [N_TILES_Y-1:0]             l2_noc_rsp_i,
+  input  floo_req_t [N_TILES_Y-1:0]             l2_noc_req_i,
+  output floo_rsp_t [N_TILES_Y-1:0]             l2_noc_rsp_o
 );
 
 /*******************************************************/
@@ -75,12 +78,16 @@ module magia
 /*******************************************************/
 
   logic[31:0] mhartid[N_TILES];
-  
-  magia_pkg::axi_default_req_t[N_TILES_Y-1:0][N_TILES_X-1:0] data_out_req;
-  magia_pkg::axi_default_rsp_t[N_TILES_Y-1:0][N_TILES_X-1:0] data_out_rsp;
 
-  magia_tile_pkg::axi_xbar_slv_req_t[N_TILES_Y-1:0][N_TILES_X-1:0] data_in_req;
-  magia_tile_pkg::axi_xbar_slv_rsp_t[N_TILES_Y-1:0][N_TILES_X-1:0] data_in_rsp;
+  // FlooNoC buses
+  floo_req_t [N_TILES-1:0] tile_south_req_in, tile_south_req_out;
+  floo_rsp_t [N_TILES-1:0] tile_south_rsp_in, tile_south_rsp_out;
+  floo_req_t [N_TILES-1:0] tile_east_req_in, tile_east_req_out;
+  floo_rsp_t [N_TILES-1:0] tile_east_rsp_in, tile_east_rsp_out;
+  floo_req_t [N_TILES-1:0] tile_north_req_in, tile_north_req_out;
+  floo_rsp_t [N_TILES-1:0] tile_north_rsp_in, tile_north_rsp_out;
+  floo_req_t [N_TILES-1:0] tile_west_req_in, tile_west_req_out;
+  floo_rsp_t [N_TILES-1:0] tile_west_rsp_in, tile_west_rsp_out;
 
   magia_tile_pkg::ht_tile_fsync_req_t ht_tile_fsync_req[N_TILES][1]; // Single link CU-FSync interface
   magia_tile_pkg::ht_tile_fsync_rsp_t ht_tile_fsync_rsp[N_TILES][1]; // Single link CU-FSync interface
@@ -165,12 +172,27 @@ module magia
         .rst_ni                                                  ,
         .test_mode_i                                             ,
         .tile_enable_i                                           ,
-  
-        .data_out_req_o      ( data_out_req[i][j]               ),
-        .data_out_rsp_i      ( data_out_rsp[i][j]               ),
-  
-        .data_in_req_i       ( data_in_req[i][j]                ),
-        .data_in_rsp_o       ( data_in_rsp[i][j]                ),
+
+        .noc_south_req_o     ( tile_south_req_out[i*N_TILES_X+j]),
+        .noc_south_rsp_i     ( tile_south_rsp_in[i*N_TILES_X+j] ),
+        .noc_east_req_o      ( tile_east_req_out[i*N_TILES_X+j] ),
+        .noc_east_rsp_i      ( tile_east_rsp_in[i*N_TILES_X+j]  ),
+        .noc_north_req_o     ( tile_north_req_out[i*N_TILES_X+j]),
+        .noc_north_rsp_i     ( tile_north_rsp_in[i*N_TILES_X+j] ),
+        .noc_west_req_o      ( tile_west_req_out[i*N_TILES_X+j] ),
+        .noc_west_rsp_i      ( tile_west_rsp_in[i*N_TILES_X+j]  ),
+
+        .noc_south_req_i     ( tile_south_req_in[i*N_TILES_X+j] ),
+        .noc_south_rsp_o     ( tile_south_rsp_out[i*N_TILES_X+j]),
+        .noc_east_req_i      ( tile_east_req_in[i*N_TILES_X+j]  ),
+        .noc_east_rsp_o      ( tile_east_rsp_out[i*N_TILES_X+j] ),
+        .noc_north_req_i     ( tile_north_req_in[i*N_TILES_X+j] ),
+        .noc_north_rsp_o     ( tile_north_rsp_out[i*N_TILES_X+j]),
+        .noc_west_req_i      ( tile_west_req_in[i*N_TILES_X+j]  ),
+        .noc_west_rsp_o      ( tile_west_rsp_out[i*N_TILES_X+j] ),
+
+        .x_id_i              ( j                                ),
+        .y_id_i              ( i                                ),
   
         .ht_fsync_if_o       ( ht_fsync_if[i*N_TILES_X+j]       ),
         .hn_fsync_if_o       ( hn_fsync_if[i*N_TILES_X+j]       ),
@@ -206,79 +228,104 @@ module magia
       localparam string core_trace_file_name = $sformatf("%s%0d", "log_file_", i*N_TILES_X+j);
       defparam i_magia_tile.i_cv32e40x_core.rvfi_i.tracer_i.LOGFILE_PATH_PLUSARG = core_trace_file_name;
   `endif
+
+      if (i == 0) begin
+        if (j == 0) begin // T-L corner
+          assign tile_north_req_in[i*N_TILES_X+j] = '0;
+          assign tile_north_rsp_in[i*N_TILES_X+j] = '0;
+          assign tile_west_req_in[i*N_TILES_X+j] = l2_noc_req_i[i];
+          assign l2_noc_rsp_o[i] = tile_west_rsp_out[i*N_TILES_X+j];
+          assign l2_noc_req_o[i] = tile_west_req_out[i*N_TILES_X+j];
+          assign tile_west_rsp_in[i*N_TILES_X+j] = l2_noc_rsp_i[i];
+          assign tile_south_req_in[i*N_TILES_X+j] = tile_north_req_out[(i+1)*N_TILES_X+j];
+          assign tile_south_rsp_in[i*N_TILES_X+j] = tile_north_rsp_out[(i+1)*N_TILES_X+j];
+          assign tile_east_req_in[i*N_TILES_X+j] = tile_west_req_out[i*N_TILES_X+j+1];
+          assign tile_east_rsp_in[i*N_TILES_X+j] = tile_west_rsp_out[i*N_TILES_X+j+1];
+        end else if (j == N_TILES_X-1) begin // T-R corner
+          assign tile_north_req_in[i*N_TILES_X+j] = '0;
+          assign tile_north_rsp_in[i*N_TILES_X+j] = '0;
+          assign tile_west_req_in[i*N_TILES_X+j] = tile_east_req_out[i*N_TILES_X+j-1];
+          assign tile_west_rsp_in[i*N_TILES_X+j] = tile_east_rsp_out[i*N_TILES_X+j-1];
+          assign tile_south_req_in[i*N_TILES_X+j] = tile_north_req_out[(i+1)*N_TILES_X+j];
+          assign tile_south_rsp_in[i*N_TILES_X+j] = tile_north_rsp_out[(i+1)*N_TILES_X+j];
+          assign tile_east_req_in[i*N_TILES_X+j] = '0;
+          assign tile_east_rsp_in[i*N_TILES_X+j] = '0;
+        end else if ((j > 0) && (j < (N_TILES_X-1))) begin // First row without corners
+          assign tile_north_req_in[i*N_TILES_X+j] = '0;
+          assign tile_north_rsp_in[i*N_TILES_X+j] = '0;
+          assign tile_west_req_in[i*N_TILES_X+j] = tile_east_req_out[i*N_TILES_X+j-1];
+          assign tile_west_rsp_in[i*N_TILES_X+j] = tile_east_rsp_out[i*N_TILES_X+j-1];
+          assign tile_south_req_in[i*N_TILES_X+j] = tile_north_req_out[(i+1)*N_TILES_X+j];
+          assign tile_south_rsp_in[i*N_TILES_X+j] = tile_north_rsp_out[(i+1)*N_TILES_X+j];
+          assign tile_east_req_in[i*N_TILES_X+j] = tile_west_req_out[i*N_TILES_X+j+1];
+          assign tile_east_rsp_in[i*N_TILES_X+j] = tile_west_rsp_out[i*N_TILES_X+j+1];
+        end
+      end else if (i == N_TILES_Y-1) begin
+        if (j == 0) begin // B-L corner
+          assign tile_north_req_in[i*N_TILES_X+j] = tile_south_req_out[(i-1)*N_TILES_X+j];
+          assign tile_north_rsp_in[i*N_TILES_X+j] = tile_south_rsp_out[(i-1)*N_TILES_X+j];
+          assign tile_west_req_in[i*N_TILES_X+j] = l2_noc_req_i[i];
+          assign l2_noc_rsp_o[i] = tile_west_rsp_out[i*N_TILES_X+j];
+          assign l2_noc_req_o[i] = tile_west_req_out[i*N_TILES_X+j];
+          assign tile_west_rsp_in[i*N_TILES_X+j] = l2_noc_rsp_i[i];
+          assign tile_south_req_in[i*N_TILES_X+j] = '0;
+          assign tile_south_rsp_in[i*N_TILES_X+j] = '0;
+          assign tile_east_req_in[i*N_TILES_X+j] = tile_west_req_out[i*N_TILES_X+j+1];
+          assign tile_east_rsp_in[i*N_TILES_X+j] = tile_west_rsp_out[i*N_TILES_X+j+1];
+        end else if (j == N_TILES_X-1) begin // B-R corner
+          assign tile_north_req_in[i*N_TILES_X+j] = tile_south_req_out[(i-1)*N_TILES_X+j];
+          assign tile_north_rsp_in[i*N_TILES_X+j] = tile_south_rsp_out[(i-1)*N_TILES_X+j];
+          assign tile_west_req_in[i*N_TILES_X+j] = tile_east_req_out[i*N_TILES_X+j-1];
+          assign tile_west_rsp_in[i*N_TILES_X+j] = tile_east_rsp_out[i*N_TILES_X+j-1];
+          assign tile_south_req_in[i*N_TILES_X+j] = '0;
+          assign tile_south_rsp_in[i*N_TILES_X+j] = '0;
+          assign tile_east_req_in[i*N_TILES_X+j] = '0;
+          assign tile_east_rsp_in[i*N_TILES_X+j] = '0;
+        end else if ((j > 0) && (j < (N_TILES_X-1))) begin // Last row without corners
+          assign tile_north_req_in[i*N_TILES_X+j] = tile_south_req_out[(i-1)*N_TILES_X+j];
+          assign tile_north_rsp_in[i*N_TILES_X+j] = tile_south_rsp_out[(i-1)*N_TILES_X+j];
+          assign tile_west_req_in[i*N_TILES_X+j] = tile_east_req_out[i*N_TILES_X+j-1];
+          assign tile_west_rsp_in[i*N_TILES_X+j] = tile_east_rsp_out[i*N_TILES_X+j-1];
+          assign tile_south_req_in[i*N_TILES_X+j] = '0;
+          assign tile_south_rsp_in[i*N_TILES_X+j] = '0;
+          assign tile_east_req_in[i*N_TILES_X+j] = tile_west_req_out[i*N_TILES_X+j+1];
+          assign tile_east_rsp_in[i*N_TILES_X+j] = tile_west_rsp_out[i*N_TILES_X+j+1];
+        end
+      end else if (j == 0 && i != 0 && i != N_TILES_Y-1) begin // First column
+        assign tile_north_req_in[i*N_TILES_X+j] = tile_south_req_out[(i-1)*N_TILES_X+j];
+        assign tile_north_rsp_in[i*N_TILES_X+j] = tile_south_rsp_out[(i-1)*N_TILES_X+j];
+        assign tile_west_req_in[i*N_TILES_X+j] = l2_noc_req_i[i];
+        assign l2_noc_rsp_o[i] = tile_west_rsp_out[i*N_TILES_X+j];
+        assign l2_noc_req_o[i] = tile_west_req_out[i*N_TILES_X+j];
+        assign tile_west_rsp_in[i*N_TILES_X+j] = l2_noc_rsp_i[i];
+        assign tile_south_req_in[i*N_TILES_X+j] = tile_north_req_out[(i+1)*N_TILES_X+j];
+        assign tile_south_rsp_in[i*N_TILES_X+j] = tile_north_rsp_out[(i+1)*N_TILES_X+j];
+        assign tile_east_req_in[i*N_TILES_X+j] = tile_west_req_out[i*N_TILES_X+j+1];
+        assign tile_east_rsp_in[i*N_TILES_X+j] = tile_west_rsp_out[i*N_TILES_X+j+1];
+      end else if (j == N_TILES_X-1 && i != 0 && i != N_TILES_Y-1) begin // Last column
+        assign tile_north_req_in[i*N_TILES_X+j] = tile_south_req_out[(i-1)*N_TILES_X+j];
+        assign tile_north_rsp_in[i*N_TILES_X+j] = tile_south_rsp_out[(i-1)*N_TILES_X+j];
+        assign tile_west_req_in[i*N_TILES_X+j] = tile_east_req_out[i*N_TILES_X+j-1];
+        assign tile_west_rsp_in[i*N_TILES_X+j] = tile_east_rsp_out[i*N_TILES_X+j-1];
+        assign tile_south_req_in[i*N_TILES_X+j] = tile_north_req_out[(i+1)*N_TILES_X+j];
+        assign tile_south_rsp_in[i*N_TILES_X+j] = tile_north_rsp_out[(i+1)*N_TILES_X+j];
+        assign tile_east_req_in[i*N_TILES_X+j] = '0;
+        assign tile_east_rsp_in[i*N_TILES_X+j] = '0;
+      end else begin // Central tiles
+        assign tile_north_req_in[i*N_TILES_X+j] = tile_south_req_out[(i-1)*N_TILES_X+j];
+        assign tile_north_rsp_in[i*N_TILES_X+j] = tile_south_rsp_out[(i-1)*N_TILES_X+j];
+        assign tile_west_req_in[i*N_TILES_X+j] = tile_east_req_out[i*N_TILES_X+j-1];
+        assign tile_west_rsp_in[i*N_TILES_X+j] = tile_east_rsp_out[i*N_TILES_X+j-1];
+        assign tile_south_req_in[i*N_TILES_X+j] = tile_north_req_out[(i+1)*N_TILES_X+j];
+        assign tile_south_rsp_in[i*N_TILES_X+j] = tile_north_rsp_out[(i+1)*N_TILES_X+j];
+        assign tile_east_req_in[i*N_TILES_X+j] = tile_west_req_out[i*N_TILES_X+j+1];
+        assign tile_east_rsp_in[i*N_TILES_X+j] = tile_west_rsp_out[i*N_TILES_X+j+1];
+      end
     end
   end
 
 /*******************************************************/
 /**                  MAGIA Tiles End                  **/
-/*******************************************************/
-/**                 Mesh NoC Beginning                **/
-/*******************************************************/
-
-  if ((N_TILES_Y == 2) && (N_TILES_X == 2)) begin: gen_2x2_noc
-    floo_axi_mesh_2x2_noc i_mesh_noc (
-      .clk_i                                      ,
-      .rst_ni                                     ,
-      .test_enable_i             ( test_mode_i   ),
-      .magia_tile_data_slv_req_i ( data_out_req  ),
-      .magia_tile_data_slv_rsp_o ( data_out_rsp  ),
-      .magia_tile_data_mst_req_o ( data_in_req   ),
-      .magia_tile_data_mst_rsp_i ( data_in_rsp   ),
-      .L2_data_mst_req_o         ( l2_data_req_o ),
-      .L2_data_mst_rsp_i         ( l2_data_rsp_i )
-    );
-  end else if ((N_TILES_Y == 4) && (N_TILES_X == 4)) begin: gen_4x4_noc
-    floo_axi_mesh_4x4_noc i_mesh_noc (
-      .clk_i                                      ,
-      .rst_ni                                     ,
-      .test_enable_i             ( test_mode_i   ),
-      .magia_tile_data_slv_req_i ( data_out_req  ),
-      .magia_tile_data_slv_rsp_o ( data_out_rsp  ),
-      .magia_tile_data_mst_req_o ( data_in_req   ),
-      .magia_tile_data_mst_rsp_i ( data_in_rsp   ),
-      .L2_data_mst_req_o         ( l2_data_req_o ),
-      .L2_data_mst_rsp_i         ( l2_data_rsp_i )
-    );
-  end else if ((N_TILES_Y == 8) && (N_TILES_X == 8)) begin: gen_8x8_noc
-    floo_axi_mesh_8x8_noc i_mesh_noc (
-      .clk_i                                      ,
-      .rst_ni                                     ,
-      .test_enable_i             ( test_mode_i   ),
-      .magia_tile_data_slv_req_i ( data_out_req  ),
-      .magia_tile_data_slv_rsp_o ( data_out_rsp  ),
-      .magia_tile_data_mst_req_o ( data_in_req   ),
-      .magia_tile_data_mst_rsp_i ( data_in_rsp   ),
-      .L2_data_mst_req_o         ( l2_data_req_o ),
-      .L2_data_mst_rsp_i         ( l2_data_rsp_i )
-    );
-  end else if ((N_TILES_Y == 16) && (N_TILES_X == 16)) begin: gen_16x16_noc
-    floo_axi_mesh_16x16_noc i_mesh_noc (
-      .clk_i                                      ,
-      .rst_ni                                     ,
-      .test_enable_i             ( test_mode_i   ),
-      .magia_tile_data_slv_req_i ( data_out_req  ),
-      .magia_tile_data_slv_rsp_o ( data_out_rsp  ),
-      .magia_tile_data_mst_req_o ( data_in_req   ),
-      .magia_tile_data_mst_rsp_i ( data_in_rsp   ),
-      .L2_data_mst_req_o         ( l2_data_req_o ),
-      .L2_data_mst_rsp_i         ( l2_data_rsp_i )
-    );
-  end else if ((N_TILES_Y == 32) && (N_TILES_X == 32)) begin: gen_32x32_noc
-    floo_axi_mesh_32x32_noc i_mesh_noc (
-      .clk_i                                      ,
-      .rst_ni                                     ,
-      .test_enable_i             ( test_mode_i   ),
-      .magia_tile_data_slv_req_i ( data_out_req  ),
-      .magia_tile_data_slv_rsp_o ( data_out_rsp  ),
-      .magia_tile_data_mst_req_o ( data_in_req   ),
-      .magia_tile_data_mst_rsp_i ( data_in_rsp   ),
-      .L2_data_mst_req_o         ( l2_data_req_o ),
-      .L2_data_mst_rsp_i         ( l2_data_rsp_i )
-    );
-  end else $fatal("Unsupported Mesh configuration");
-
-/*******************************************************/
-/**                    Mesh NoC End                    */
 /*******************************************************/
 /**           FractalSync Network Beginning           **/
 /*******************************************************/
