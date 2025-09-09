@@ -262,16 +262,16 @@ int main(void) {
   printf("N_SIZE: 0x%0x\n", N_SIZE);
 #endif
 
-  redmule_mcnfig(K_SIZE, M_SIZE, N_SIZE);
-
-  redmule_marith(Y_BASE + get_hartid()*L1_TILE_OFFSET, W_BASE + get_hartid()*L1_TILE_OFFSET, X_BASE + get_hartid()*L1_TILE_OFFSET);
-
 #ifdef IRQ_EN
   irq_en(1<<IRQ_REDMULE_EVT_0);
 #endif
 
   // h_pprintf("Testing matrix multiplication with RedMulE...\n");
   printf("Testing matrix multiplication with RedMulE...\n");
+
+  redmule_mcnfig(K_SIZE, M_SIZE, N_SIZE);
+
+  redmule_marith(Y_BASE + get_hartid()*L1_TILE_OFFSET, W_BASE + get_hartid()*L1_TILE_OFFSET, X_BASE + get_hartid()*L1_TILE_OFFSET);
 
 #ifdef IRQ_EN
   // Wait for end of computation
