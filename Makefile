@@ -23,9 +23,14 @@
 mkfile_path    := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
 SW             ?= $(mkfile_path)/sw
 BUILD_DIR      ?= $(mkfile_path)/work
-QUESTA         ?= questa-2023.4
+ifneq (,$(wildcard /etc/iis.version))
+    QUESTA ?= questa-2025.1
+    BENDER ?= bender
+else
+    QUESTA ?=
+    BENDER ?= ./bender
+endif
 BENDER_DIR     ?= .
-BENDER         ?= ./bender
 ISA            ?= riscv
 ARCH           ?= rv
 XLEN           ?= 32

@@ -34,14 +34,14 @@ module xif_inst_dispatcher
   parameter int unsigned SIGN_W      = magia_tile_pkg::SIGN_W,
   parameter type xif_inst_rule_t     = magia_tile_pkg::xif_inst_rule_t
 )(
-  input  logic                                        clk_i,
-  input  logic                                        rst_ni,
+  input  logic                                       clk_i,
+  input  logic                                       rst_ni,
   
-  cv32e40x_if_xif.coproc_issue                        xif_issue_if_i,
-  cv32e40x_if_xif.cpu_issue                           xif_issue_if_o[N_COPROC],
+  cv32e40x_if_xif.coproc_issue                       xif_issue_if_i,
+  cv32e40x_if_xif.cpu_issue                          xif_issue_if_o[N_COPROC],
 
-  cv32e40x_if_xif.coproc_result                       xif_result_if_o,
-  cv32e40x_if_xif.cpu_result                          xif_result_if_i,
+  cv32e40x_if_xif.coproc_result                      xif_result_if_o,
+  cv32e40x_if_xif.cpu_result                         xif_result_if_i,
 
   input magia_tile_pkg::xif_inst_rule_t[N_RULES-1:0] rules_i
 );
@@ -61,8 +61,9 @@ module xif_inst_dispatcher
     logic      exc;      
   } x_issue_resp_t;
 
-  typedef enum logic {
+  typedef enum logic[1:0] {
     IDLE,
+    WAIT,
     PROP
   } result_state_e;
 
@@ -179,8 +180,9 @@ module xif_inst_dispatcher
   always_comb begin: result_state_logic
     n_result_state = c_result_state;
     case (c_result_state)
-      IDLE: if (!default_issue)               n_result_state = PROP;
-      PROP: if (xif_result_if_o.result_ready) n_result_state = IDLE;
+      IDLE: if (!default_issue)                n_result_state = WAIT;
+      WAIT: if (xif_result_if_o.result_ready)  n_result_state = PROP;
+      PROP: if (!xif_result_if_o.result_ready) n_result_state = IDLE;
     endcase
   end
   
