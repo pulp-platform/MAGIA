@@ -47,12 +47,38 @@ sources:
   # MAGIA standalone tile
   - target: all(magia_dv, standalone_tile)
     files:
+      # NoC
       - target/sim/src/tile/floo_axi_mesh_1x2_pkg.sv
+      # MAGIA Packages
+      - hw/mesh/magia_pkg.sv
+      - hw/tile/magia_tile_pkg.sv
+      # MAGIA Tile
+      - hw/tile/converters/data2obi.sv
+      - hw/tile/converters/obi2data.sv
+      - hw/tile/converters/instr2obi.sv
+      - hw/tile/converters/obi2instr.sv
+      - hw/tile/converters/instr2cache.sv
+      - hw/tile/converters/cache2instr.sv
+      - hw/tile/converters/obi2hci.sv
+      - hw/tile/converters/hci2obi.sv
+      - hw/tile/converters/xif_if2struct.sv
+      - hw/tile/obi_demux_addr.sv
+      - hw/tile/l1_spm.sv
+      - hw/tile/idma_xif_inst_decoder.sv
+      - hw/tile/xif_inst_dispatcher.sv
+      - hw/tile/idma_axi_obi_transfer_ch.sv
+      - hw/tile/idma_ctrl.sv
+      - hw/tile/fractal_sync_xif_inst_decoder.sv
+      - hw/tile/magia_tile.sv
+      # MAGIA DV
+      - target/sim/src/tile/magia_tile_tb_pkg.sv
+      - target/sim/src/mesh/magia_tb_pkg.sv
+      - target/sim/src/mesh/magia_l2_mem_wrapper.sv
       - target/sim/src/tile/magia_tile_vip.sv
       - target/sim/src/tile/magia_tile_fixture.sv
       - target/sim/src/tile/magia_tile_tb.sv
   # MAGIA
-  - target: all(magia_dv)
+  - target: all(magia_dv, not(standalone_tile))
     defines:
       CORE_TRACES: ~
     files:
