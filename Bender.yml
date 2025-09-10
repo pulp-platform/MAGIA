@@ -46,6 +46,8 @@ export_include_dirs:
 sources:
   # MAGIA standalone tile
   - target: all(magia_dv, standalone_tile)
+    defines:
+      CORE_TRACES: ~
     files:
       # NoC
       - target/sim/src/tile/floo_axi_mesh_1x2_pkg.sv
