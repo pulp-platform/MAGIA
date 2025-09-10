@@ -192,7 +192,8 @@ endif
 # Download bender
 bender:
 	curl --proto '=https'  \
-	--tlsv1.2 https://pulp-platform.github.io/bender/init -sSf | sh -s -- 0.28.1
+	--tlsv1.2 https://pulp-platform.github.io/bender/init -sSf | sh -s -- 0.28.1 \
+	export PATH=$(pwd):$(PATH)
 
 include bender_common.mk
 include bender_sim.mk
