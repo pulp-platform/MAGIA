@@ -46,9 +46,11 @@ module magia_tile_tb;
     fixture.vip.elf_run();
     fixture.vip.wait_for_eoc(exit_code);
 
-    $display("SIMULATION FINISHED WITH EXIT CODE: %0h\n", exit_code);
+    if(exit_code != 0)
+      $fatal(1, "SIMULATION FINISHED WITH EXIT CODE: %0h\n", exit_code);
+    else
+      $finish(0, "SIMULATION FINISHED WITH EXIT CODE: %0h\n", exit_code);
 
-    $finish;
   end
 
 endmodule: magia_tile_tb
