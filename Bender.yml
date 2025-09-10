@@ -30,7 +30,7 @@ dependencies:
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 5a48a854573fca5bbabc1cfd4110fa4530a50ed7 } # branch: vi/redmule_scaleup
   cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , rev: 917ecbf908bdaa22c5713bbcff277d142506bb16 } # branch: michaero/astral
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
-  fpu_ss            : { git: "https://github.com/pulp-platform/fpu_ss.git"            , rev: 9b67aeac9d9e2ed846675199bda90c83154ba412 } # branch: vi/bender_manifest
+  fpu_ss            : { git: "https://github.com/pulp-platform/fpu_ss.git"            , rev: 6a83b1754196c3d4509ce823118a190917f3b88a } # branch: vi/bender_manifest
   obi               : { git: "https://github.com/pulp-platform/obi.git"               , version: 0.1.6                                }
   axi               : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: 0.4.4                                }
@@ -46,13 +46,41 @@ export_include_dirs:
 sources:
   # MAGIA standalone tile
   - target: all(magia_dv, standalone_tile)
+    defines:
+      CORE_TRACES: ~
     files:
+      # NoC
       - target/sim/src/tile/floo_axi_mesh_1x2_pkg.sv
+      # MAGIA Packages
+      - hw/mesh/magia_pkg.sv
+      - hw/tile/magia_tile_pkg.sv
+      # MAGIA Tile
+      - hw/tile/converters/data2obi.sv
+      - hw/tile/converters/obi2data.sv
+      - hw/tile/converters/instr2obi.sv
+      - hw/tile/converters/obi2instr.sv
+      - hw/tile/converters/instr2cache.sv
+      - hw/tile/converters/cache2instr.sv
+      - hw/tile/converters/obi2hci.sv
+      - hw/tile/converters/hci2obi.sv
+      - hw/tile/converters/xif_if2struct.sv
+      - hw/tile/obi_demux_addr.sv
+      - hw/tile/l1_spm.sv
+      - hw/tile/idma_xif_inst_decoder.sv
+      - hw/tile/xif_inst_dispatcher.sv
+      - hw/tile/idma_axi_obi_transfer_ch.sv
+      - hw/tile/idma_ctrl.sv
+      - hw/tile/fractal_sync_xif_inst_decoder.sv
+      - hw/tile/magia_tile.sv
+      # MAGIA DV
+      - target/sim/src/tile/magia_tile_tb_pkg.sv
+      - target/sim/src/mesh/magia_tb_pkg.sv
+      - target/sim/src/mesh/magia_l2_mem_wrapper.sv
       - target/sim/src/tile/magia_tile_vip.sv
       - target/sim/src/tile/magia_tile_fixture.sv
       - target/sim/src/tile/magia_tile_tb.sv
   # MAGIA
-  - target: all(magia_dv)
+  - target: all(magia_dv, not(standalone_tile))
     defines:
       CORE_TRACES: ~
     files:
