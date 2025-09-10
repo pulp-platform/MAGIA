@@ -48,8 +48,10 @@ module magia_tile_tb;
 
     if(exit_code != 0)
       $fatal(1, "SIMULATION FINISHED WITH EXIT CODE: %0h\n", exit_code);
-    else
-      $finish(0, "SIMULATION FINISHED WITH EXIT CODE: %0h\n", exit_code);
+    else begin
+      $display("SIMULATION FINISHED WITH EXIT CODE: %0h\n", exit_code)
+      $finish(0);
+    end
 
   end
 
