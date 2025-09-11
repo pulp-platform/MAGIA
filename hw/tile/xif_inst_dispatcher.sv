@@ -182,7 +182,7 @@ module xif_inst_dispatcher
     case (c_result_state)
       IDLE: if (!default_issue)                n_result_state = WAIT;
       WAIT: if (xif_result_if_o.result_ready)  n_result_state = PROP;
-      PROP: if (!xif_result_if_o.result_ready) n_result_state = IDLE;
+      PROP: if (!xif_result_if_o.result_ready) n_result_state = default_issue ? IDLE : WAIT;
     endcase
   end
   
