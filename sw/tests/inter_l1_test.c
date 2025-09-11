@@ -54,10 +54,7 @@ int main() {
       if (error[i]) total_errors++;
     if (total_errors) { /*h_pprintf("TEST FAILED!!"); pprintln;*/ printf("TEST FAILED!!"); }
     else              { /*h_pprintf("TEST PASSED!!"); pprintln;*/ printf("TEST PASSED!!"); }
-  } else wait_nop(SETTLE_CYCLE);
+  } else wait_nop(SETTLE_CYCLE);         
 
-  if (total_errors) mmio16(TEST_END_ADDR + get_hartid()*2) = FAIL_EXIT_CODE;
-  else              mmio16(TEST_END_ADDR + get_hartid()*2) = PASS_EXIT_CODE;         
-
-  return 0;
+  return total_errors;
 }
