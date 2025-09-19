@@ -17,6 +17,10 @@ profile_targs += -t rtl
 profile_targs += -t test
 profile_targs += -t idma_test
 
+ifeq ($(mesh_dv), 0)
+	profile_targs += -t standalone_tile
+endif
+
 profile_targs += -t magia_tile_test
 
 profile_targs += -t magia_dv
