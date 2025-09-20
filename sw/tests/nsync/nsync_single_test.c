@@ -40,7 +40,7 @@ int main(void) {
   // Execute synchronization multiple times to pre-heat the cache
   for (int i = 0; i < CACHE_HEAT_CYCLES; i++) {
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
-    sentinel_start();
+    stnl_snc_s();
     
     if (tile_hartid % 2) { // SRC
       // Send synchronization request to DST
@@ -63,7 +63,7 @@ int main(void) {
     }
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
-    sentinel_end();
+    stnl_snc_f();
   }
 
   printf("NoC Synch test finished...\n");
