@@ -55,7 +55,7 @@ int main(void) {
     uint32_t sync_sign  = 0;
     
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
-    sentinel_start();
+    stnl_snc_s();
     
     // Ascend tree
     while ((sync_bit < SYNC_MAX_BIT) && ((tile_hartid & sync_mask) == sync_sign)) {
@@ -381,7 +381,7 @@ int main(void) {
 #endif
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
-    sentinel_end();
+    stnl_snc_f();
   }
 
   printf("NoC Synch test finished...\n");
