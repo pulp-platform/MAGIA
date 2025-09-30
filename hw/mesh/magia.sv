@@ -415,7 +415,7 @@ module magia
       .v_2d_fsync_req_o  ( v_root_fsync_req  ),
       .v_2d_fsync_rsp_i  ( v_root_fsync_rsp  )
     );
-  end else $fatal("Unsupported Mesh configuration");
+  end else $fatal(1,"Unsupported Mesh configuration");
 
 /*******************************************************/
 /**              FractalSync Network End              **/
