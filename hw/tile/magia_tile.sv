@@ -124,6 +124,8 @@ module magia_tile
   logic[magia_pkg::ADDR_W-1:0] tile_l1_end_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_reserved_start_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_reserved_end_addr;
+  logic[magia_pkg::ADDR_W-1:0] tile_redmule_ctrl_start_addr;
+  logic[magia_pkg::ADDR_W-1:0] tile_redmule_ctrl_end_addr;
   
   magia_tile_pkg::redmule_data_req_t redmule_data_req;
   magia_tile_pkg::redmule_data_rsp_t redmule_data_rsp;
@@ -137,8 +139,8 @@ module magia_tile
   magia_tile_pkg::core_obi_data_req_t core_obi_data_req;
   magia_tile_pkg::core_obi_data_rsp_t core_obi_data_rsp;
 
-  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_req; // Index 0 -> L2, Index 1 -> L1SPM
-  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_rsp; // Index 0 -> L2, Index 1 -> L1SPM
+  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_req; // Index 0 -> L2, Index 1 -> L1SPM Index 2 -> RedMulE_ctrl
+  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_rsp; // Index 0 -> L2, Index 1 -> L1SPM Index 2 -> RedMulE_ctrl
 
   magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_cut_req; // Index 0 -> L2, Index 1 -> L1SPM
   magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_cut_rsp; // Index 0 -> L2, Index 1 -> L1SPM
@@ -302,11 +304,15 @@ module magia_tile
   assign tile_l1_end_addr         = magia_tile_pkg::L1_ADDR_END         + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
   assign tile_reserved_start_addr = magia_tile_pkg::RESERVED_ADDR_START + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
   assign tile_reserved_end_addr   = magia_tile_pkg::RESERVED_ADDR_END   + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
-  
+  assign tile_redmule_ctrl_start_addr = magia_tile_pkg::REDMULE_CTRL_ADDR_START;
+  assign tile_redmule_ctrl_end_addr   = magia_tile_pkg::REDMULE_CTRL_ADDR_END;
+
   assign obi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START,    end_addr: magia_tile_pkg::L2_ADDR_END    };
   assign obi_xbar_rule[magia_tile_pkg::L1SPM_IDX]    = '{idx: 32'd1, start_addr: tile_l1_start_addr,               end_addr: tile_l1_end_addr               };
   assign obi_xbar_rule[magia_tile_pkg::RESERVED_IDX] = '{idx: 32'd1, start_addr: tile_reserved_start_addr,         end_addr: tile_reserved_end_addr         };
   assign obi_xbar_rule[magia_tile_pkg::STACK_IDX]    = '{idx: 32'd1, start_addr: magia_tile_pkg::STACK_ADDR_START, end_addr: magia_tile_pkg::STACK_ADDR_END };
+  assign obi_xbar_rule[magia_tile_pkg::REDMULE_CTRL_IDX] = '{idx: 32'd2, start_addr: tile_redmule_ctrl_start_addr, end_addr: tile_redmule_ctrl_end_addr     };
+
 
   assign axi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START, end_addr: magia_tile_pkg::L2_ADDR_END };
   assign axi_xbar_rule[magia_tile_pkg::L1SPM_IDX]    = '{idx: 32'd1, start_addr: tile_l1_start_addr,            end_addr: tile_l1_end_addr            };
@@ -348,7 +354,7 @@ module magia_tile
   assign hci_clear = 1'b0;
   assign hci_ctrl  = '0;
 
-  assign redmule_ctrl_req = '0;
+
 
   assign idma_clear = 1'b0;
 
@@ -556,6 +562,32 @@ module magia_tile
     .rsp_r_user_i           ( axi2obi_rsp_r_user                            )
   );
 
+  // RedMule controller OBI-to-HWPE control interface
+  obi2hwpe_ctrl obi2hwpe_ctrl_inst (
+    .obi_req_i  ( core_mem_data_req[2]                       ),     
+    .obi_rsp_o  ( core_mem_data_rsp[2]                       ),
+    .ctrl_req_o ( redmule_ctrl_req                           ),
+    .ctrl_rsp_i ( redmule_ctrl_rsp                           )
+  );
+
+
+
+  // PURE SIGNAL DUMP: Show all signal values when any signal changes
+  always_ff @(posedge sys_clk) begin
+    if (core_mem_data_req[2].req || redmule_ctrl_req.req || core_mem_data_rsp[2].rvalid || redmule_ctrl_rsp.r_valid) begin
+      $display("[%0t] OBI_SIDE: req=%0b gnt=%0b rvalid=%0b addr=%08h we=%0b be=0x%02h wdata=0x%08h rdata=0x%08h err=%0b", 
+               $time, core_mem_data_req[2].req, core_mem_data_rsp[2].gnt, core_mem_data_rsp[2].rvalid, 
+               core_mem_data_req[2].a.addr, core_mem_data_req[2].a.we, core_mem_data_req[2].a.be, 
+               core_mem_data_req[2].a.wdata, core_mem_data_rsp[2].r.rdata, core_mem_data_rsp[2].r.err);
+      $display("[%0t] HWPE_SIDE: req=%0b gnt=%0b r_valid=%0b add=%08h wen=%0b be=0x%02h data=0x%08h r_data=0x%08h", 
+               $time, redmule_ctrl_req.req, redmule_ctrl_rsp.gnt, redmule_ctrl_rsp.r_valid, 
+               redmule_ctrl_req.add, redmule_ctrl_req.wen, redmule_ctrl_req.be, 
+               redmule_ctrl_req.data, redmule_ctrl_rsp.r_data);
+    end
+  end
+
+  
+
 /*******************************************************/
 /**                Type Conversions End               **/
 /*******************************************************/
@@ -683,7 +715,7 @@ module magia_tile
     .N_CORES            ( magia_tile_pkg::N_CORE             ),
     .DW                 ( magia_tile_pkg::REDMULE_DW         ),
     .UW                 ( magia_tile_pkg::REDMULE_UW         ),
-    .X_EXT              ( magia_tile_pkg::X_EXT_EN           ),
+    .X_EXT              ( 1'b0                               ), // RedMulE does not implement the eXtension Interface (X) - using HWPE-CTRL mode
     .SysInstWidth       ( magia_pkg::INSTR_W                 ),
     .SysDataWidth       ( magia_pkg::DATA_W                  ),
     .redmule_data_req_t ( magia_tile_pkg::redmule_data_req_t ),
@@ -698,10 +730,11 @@ module magia_tile
     .busy_o              ( redmule_busy                                                ),
     .evt_o               ( redmule_evt                                                 ),
 
-    .xif_issue_if_i      ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX] ),
-    .xif_result_if_o     ( xif_redmule_if.coproc_result                                ),
-    .xif_compressed_if_i ( xif_redmule_if.coproc_compressed                            ),
-    .xif_mem_if_o        ( xif_redmule_if.coproc_mem                                   ),
+    // XIF interface not used in HWPE mode (X_EXT = 1'b0)
+    // .xif_issue_if_i      ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX] ),
+    // .xif_result_if_o     ( xif_redmule_if.coproc_result                                ),
+    // .xif_compressed_if_i ( xif_redmule_if.coproc_compressed                            ),
+    // .xif_mem_if_o        ( xif_redmule_if.coproc_mem                                   ),
 
     .data_req_o          ( redmule_data_req                                            ),
     .data_rsp_i          ( redmule_data_rsp                                            ),

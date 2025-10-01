@@ -64,6 +64,7 @@ sources:
       - hw/tile/converters/obi2hci.sv
       - hw/tile/converters/hci2obi.sv
       - hw/tile/converters/xif_if2struct.sv
+      - hw/tile/converters/obi2hwpe_ctrl.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
       - hw/tile/idma_xif_inst_decoder.sv
@@ -104,6 +105,7 @@ sources:
       - hw/tile/converters/obi2hci.sv
       - hw/tile/converters/hci2obi.sv
       - hw/tile/converters/xif_if2struct.sv
+      - hw/tile/converters/obi2hwpe_ctrl.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
       - hw/tile/idma_xif_inst_decoder.sv
@@ -138,6 +140,7 @@ sources:
       - hw/tile/converters/obi2hci.sv
       - hw/tile/converters/hci2obi.sv
       - hw/tile/converters/xif_if2struct.sv
+      - hw/tile/converters/obi2hwpe_ctrl.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
       - hw/tile/idma_xif_inst_decoder.sv
