@@ -231,7 +231,7 @@ else
 endif
 WAVES        := $(mkfile_path)/wave.do
 bender_targs += -t redmule_hwpe
-
+bender_targs += -t cv32e40x_bhv
 
 update-ips:
 	$(BENDER) update
