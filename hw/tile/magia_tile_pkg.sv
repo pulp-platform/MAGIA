@@ -39,30 +39,21 @@ package magia_tile_pkg;
 
   // Address map
   
-  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START  = 32'h0000_0000;
-  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_SIZE        = 32'h0000_00FF; 
+  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START  = 32'h0000_0100;
+  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_SIZE        = 32'h0000_0400; //1KB
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_END    = REDMULE_CTRL_ADDR_START + REDMULE_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_START     = REDMULE_CTRL_ADDR_END + 1;
-  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_SIZE           = 32'h0000_03FF;
-  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_END       = IDMA_CTRL_ADDR_START + IDMA_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_START    = IDMA_CTRL_ADDR_END + 1;
-  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_SIZE          = 32'h0000_00FF; 
-  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_END      = FSYNC_CTRL_ADDR_START + FSYNC_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_START    = FSYNC_CTRL_ADDR_END + 1;
-  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_SIZE          = 32'h0000_0FFF; 
-  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_END      = EVENT_UNIT_ADDR_START + EVENT_UNIT_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START      = EVENT_UNIT_ADDR_END + 1;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE            = 32'h0000_E9FF; // Calculated to make RESERVED_END = 0x0000FFFF
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START      = REDMULE_CTRL_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE            = 32'h0000_FC00; //63KiB
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END        = RESERVED_ADDR_START + RESERVED_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START         = RESERVED_ADDR_END + 1;
-  localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE               = 32'h0000_FFFF;
+  localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START         = RESERVED_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE               = 32'h0001_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_END           = STACK_ADDR_START + STACK_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_START            = STACK_ADDR_END + 1;
-  localparam logic [magia_pkg::ADDR_W-1:0] L1_SIZE                  = 32'h000D_FFFF;
+  localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_START            = STACK_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] L1_SIZE                  = 32'h000E_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_END              = L1_ADDR_START + L1_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_TILE_OFFSET           = 32'h0010_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_START            = 32'hC000_0000;
-  localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                  = 32'h3FFF_FFFF;
+  localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                  = 32'h4000_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_END              = L2_ADDR_START + L2_SIZE;
 
   // Parameters used by the HCI
@@ -143,10 +134,10 @@ package magia_tile_pkg;
   parameter int unsigned RID_WIDTH    = 1;                                              // Width of the rid   signal (response channel identifier, see OBI documentation)
   parameter int unsigned MID_WIDTH    = 1;                                              // Width of the mid   signal (manager identifier, see OBI documentation)
   parameter int unsigned OBI_ID_WIDTH = 1;                                              // Width of the id - configuration
-  parameter int unsigned N_SBR        = 5;                                              // Number of slaves (HCI, AXI XBAR, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl) - Event_Unit now via eu_direct_link
+  parameter int unsigned N_SBR        = 3;                                              // Number of slaves (HCI, AXI XBAR, RedMulE_Ctrl)
   parameter int unsigned N_MGR        = 2;                                              // Number of masters (Core, AXI XBAR)
   parameter int unsigned N_MAX_TRAN   = 1;                                              // Number of maximum outstanding transactions
-  parameter int unsigned N_ADDR_RULE  = 7;                                              // Number of address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl) - Event_Unit now via eu_direct_link
+  parameter int unsigned N_ADDR_RULE  = 5;                                              // Number of address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl)
   localparam int unsigned N_BIT_SBR   = $clog2(N_SBR);                                  // Number of bits required to identify each slave
 
   // Parameters used by AXI
@@ -351,13 +342,11 @@ package magia_tile_pkg;
   } core_cache_instr_rsp_t;
 
   typedef enum logic[2:0]{
-    FSYNC_CTRL_IDX   = 6,
-    IDMA_IDX         = 5,
     REDMULE_CTRL_IDX = 4,
-    STACK_IDX        = 3,
-    RESERVED_IDX     = 2,
-    L1SPM_IDX        = 1,
-    L2_IDX           = 0
+    STACK_IDX    = 3,
+    RESERVED_IDX = 2,
+    L1SPM_IDX    = 1,
+    L2_IDX       = 0
   } mem_array_idx_e;
 
   typedef enum logic[1:0]{
