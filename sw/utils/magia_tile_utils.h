@@ -22,6 +22,7 @@
 #ifndef MAGIA_TILE_UTILS_H
 #define MAGIA_TILE_UTILS_H
 
+#include <stdint.h>
 #include "tinyprintf.h"
 
 #define NUM_L1_BANKS (32)
@@ -29,7 +30,9 @@
 #define BITS_WORD    (32)
 #define BITS_BYTE    (8)
 
-#define RESERVED_START (0x00000000)
+#define REDMULE_BASE   (0x00000100)
+#define REDMULE_END    (0x000004FF)
+#define RESERVED_START (0x00000500)
 #define RESERVED_END   (0x0000FFFF)
 #define STACK_START    (0x00010000)
 #define STACK_END      (0x0001FFFF)
