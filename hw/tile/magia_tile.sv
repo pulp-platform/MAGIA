@@ -271,6 +271,8 @@ module magia_tile
   floo_rsp_t [4:0] floo_router_rsp_in;
   floo_req_t [4:0] floo_router_req_out;
   floo_rsp_t [4:0] floo_router_rsp_out;
+
+  id_t floo_id;
   
   logic                           x_compressed_valid;
   logic                           x_compressed_ready;
@@ -409,6 +411,8 @@ module magia_tile
   assign xif_redmule_if.compressed_req   = '0;
   assign xif_redmule_if.mem_ready        = 1'b0;
   assign xif_redmule_if.mem_resp         = '0;
+
+  assign floo_id = '{x: (x_id_i+1), y: y_id_i, port_id: 0};
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -1169,7 +1173,7 @@ module magia_tile
     .axi_in_rsp_o   ( axi_xbar_data_out_rsp                             ),
     .axi_out_req_o  ( axi_xbar_data_in_req[magia_tile_pkg::AXI_EXT_IDX] ),
     .axi_out_rsp_i  ( axi_xbar_data_in_rsp[magia_tile_pkg::AXI_EXT_IDX] ),
-    .id_i           ( '{x: (x_id_i+1), y: y_id_i, port_id: 0}           ),
+    .id_i           ( floo_id                                           ),
     .route_table_i  ( '0                                                ),
     .floo_req_o     ( floo_router_req_in[4]                             ),
     .floo_rsp_i     ( floo_router_rsp_out[4]                            ),
@@ -1190,15 +1194,15 @@ module magia_tile
     .floo_req_t   ( floo_req_t  ),
     .floo_rsp_t   ( floo_rsp_t  )
   ) i_magia_tile_router (
-    .clk_i          ( sys_clk                                 ),
-    .rst_ni         ( rst_ni                                  ),
-    .test_enable_i  ( test_mode_i                             ),
-    .id_i           ( '{x: (x_id_i+1), y: y_id_i, port_id: 0} ),
-    .id_route_map_i ( '0                                      ),
-    .floo_req_i     ( floo_router_req_in                      ),
-    .floo_rsp_o     ( floo_router_rsp_out                     ),
-    .floo_req_o     ( floo_router_req_out                     ),
-    .floo_rsp_i     ( floo_router_rsp_in                      )
+    .clk_i          ( sys_clk             ),
+    .rst_ni         ( rst_ni              ),
+    .test_enable_i  ( test_mode_i         ),
+    .id_i           ( floo_id             ),
+    .id_route_map_i ( '0                  ),
+    .floo_req_i     ( floo_router_req_in  ),
+    .floo_rsp_o     ( floo_router_rsp_out ),
+    .floo_req_o     ( floo_router_req_out ),
+    .floo_rsp_i     ( floo_router_rsp_in  )
   );
 
   // Output requests
