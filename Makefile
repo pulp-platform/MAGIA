@@ -231,6 +231,12 @@ WAVES        := ./wave.do
 bender_targs += -t redmule_complex
 bender_targs += -t cv32e40x_bhv
 
+init-pd:
+	git clone ssh://git@compute.eees.dei.unibo.it:22222/rfiorani/magia-gf12-pd.git pd
+	$(MAKE) init-tech
+
+-include pd/pd.mk
+
 update-ips:
 	$(BENDER) update
 	$(BENDER) script vsim          \
