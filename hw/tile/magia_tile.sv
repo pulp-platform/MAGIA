@@ -124,12 +124,6 @@ module magia_tile
   logic[magia_pkg::ADDR_W-1:0] tile_l1_end_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_reserved_start_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_reserved_end_addr;
-  
-  magia_tile_pkg::redmule_data_req_t redmule_data_req;
-  magia_tile_pkg::redmule_data_rsp_t redmule_data_rsp;
-
-  magia_tile_pkg::redmule_ctrl_req_t redmule_ctrl_req;  // Can be used to manage RedMulE control at top-level
-  magia_tile_pkg::redmule_ctrl_rsp_t redmule_ctrl_rsp;  // Can be used to manage RedMulE control at top-level
 
   magia_tile_pkg::core_data_req_t core_data_req;
   magia_tile_pkg::core_data_rsp_t core_data_rsp;
@@ -348,7 +342,12 @@ module magia_tile
   assign hci_clear = 1'b0;
   assign hci_ctrl  = '0;
 
-  assign redmule_ctrl_req = '0;
+  assign hwpe_redmule_ctrl[0].req  = 1'b0;
+  assign hwpe_redmule_ctrl[0].add  = '0;
+  assign hwpe_redmule_ctrl[0].wen  = 1'b0;
+  assign hwpe_redmule_ctrl[0].be   = '0;
+  assign hwpe_redmule_ctrl[0].data = '0;
+  assign hwpe_redmule_ctrl[0].id   = '0;
 
   assign idma_clear = 1'b0;
 
@@ -579,8 +578,8 @@ module magia_tile
 /*******************************************************/
 /**           Interface Definitions Beginning         **/
 /*******************************************************/
-
-  hci_mem_intf #(
+  
+  hci_core_intf #(
     .AW ( magia_tile_pkg::AWM    ),
     .DW ( magia_tile_pkg::DW_LIC ),
     .BW ( magia_tile_pkg::BW_LIC ),
@@ -593,16 +592,22 @@ module magia_tile
   hci_core_intf #(
     .DW ( magia_tile_pkg::DW_LIC ),
     .AW ( magia_tile_pkg::AWC    ),
-    .OW ( magia_tile_pkg::AWC    ),
+    .IW ( magia_tile_pkg::IW     ),
     .UW ( magia_tile_pkg::UW_LIC )
   ) hci_core_if[magia_tile_pkg::N_CORE-1:0] (
     .clk( sys_clk )
   );
 
+  hwpe_ctrl_intf_periph #(
+    .ID_WIDTH(magia_tile_pkg::IW)
+  ) hwpe_redmule_ctrl[magia_tile_pkg::N_HWPE-1:0] (
+    .clk(sys_clk)
+  );
+  
   hci_core_intf #(
     .DW ( magia_tile_pkg::REDMULE_DW ),
     .AW ( magia_tile_pkg::AWH        ),
-    .OW ( magia_tile_pkg::OWH        ),
+    .IW ( magia_tile_pkg::IW         ),
     .UW ( magia_tile_pkg::REDMULE_UW )
   ) hci_redmule_if[magia_tile_pkg::N_HWPE-1:0] (
     .clk( sys_clk )
@@ -611,7 +616,7 @@ module magia_tile
   hci_core_intf #(
     .DW ( magia_tile_pkg::DW_LIC ),
     .AW ( magia_tile_pkg::AWC    ),
-    .OW ( magia_tile_pkg::AWC    ),
+    .IW ( magia_tile_pkg::IW     ),
     .UW ( magia_tile_pkg::UW_LIC )
   ) hci_dma_if[magia_tile_pkg::N_DMA-1:0] (
     .clk( sys_clk )
@@ -620,7 +625,7 @@ module magia_tile
   hci_core_intf #(
     .DW ( magia_tile_pkg::DW_LIC ),
     .AW ( magia_tile_pkg::AWC    ),
-    .OW ( magia_tile_pkg::AWC    ),
+    .IW ( magia_tile_pkg::IW     ),
     .UW ( magia_tile_pkg::UW_LIC )
   ) hci_ext_if[magia_tile_pkg::N_EXT-1:0] (
     .clk( sys_clk )
@@ -665,7 +670,6 @@ module magia_tile
 /*******************************************************/
 
   `HCI_ASSIGN_TO_INTF(hci_core_if[0],                                   core_l1_data_req,   core_l1_data_rsp)   // Only 1 core supported
-  `HCI_ASSIGN_TO_INTF(hci_redmule_if[0],                                redmule_data_req,   redmule_data_rsp)   // Only 1 RedMulE supported
   `HCI_ASSIGN_TO_INTF(hci_dma_if[magia_tile_pkg::HCI_DMA_CH_READ_IDX],  idma_hci_read_req,  idma_hci_read_rsp)  // iDMA HCI read channel
   `HCI_ASSIGN_TO_INTF(hci_dma_if[magia_tile_pkg::HCI_DMA_CH_WRITE_IDX], idma_hci_write_req, idma_hci_write_rsp) // iDMA HCI write channel
 
@@ -679,17 +683,21 @@ module magia_tile
 /*******************************************************/
 
   redmule_top #(
-    .ID_WIDTH           ( magia_tile_pkg::REDMULE_ID_W       ),
-    .N_CORES            ( magia_tile_pkg::N_CORE             ),
-    .DW                 ( magia_tile_pkg::REDMULE_DW         ),
-    .UW                 ( magia_tile_pkg::REDMULE_UW         ),
-    .X_EXT              ( magia_tile_pkg::X_EXT_EN           ),
-    .SysInstWidth       ( magia_pkg::INSTR_W                 ),
-    .SysDataWidth       ( magia_pkg::DATA_W                  ),
-    .redmule_data_req_t ( magia_tile_pkg::redmule_data_req_t ),
-    .redmule_data_rsp_t ( magia_tile_pkg::redmule_data_rsp_t ),
-    .redmule_ctrl_req_t ( magia_tile_pkg::redmule_ctrl_req_t ),
-    .redmule_ctrl_rsp_t ( magia_tile_pkg::redmule_ctrl_rsp_t )
+    .ID_WIDTH           ( magia_tile_pkg::REDMULE_ID_W          ),
+    .N_CORES            ( magia_tile_pkg::N_CORE                ),
+    .DW                 ( magia_tile_pkg::REDMULE_DW            ),
+    .UW                 ( magia_tile_pkg::REDMULE_UW            ),
+    .X_EXT              ( magia_tile_pkg::X_EXT_EN              ),
+    .SysInstWidth       ( magia_pkg::INSTR_W                    ),
+    .SysDataWidth       ( magia_pkg::DATA_W                     ),
+    .NumContext         ( magia_tile_pkg::REDMULE_N_CONTEXT     ),
+    .FpFormat           ( magia_tile_pkg::REDMULE_FPFORMAT      ),
+    .Height             ( magia_tile_pkg::REDMULE_HEIGHT        ),
+    .Width              ( magia_tile_pkg::REDMULE_WIDTH         ),
+    .NumPipeRegs        ( magia_tile_pkg::REDMULE_P_REGS        ),
+    .PipeConfig         ( magia_tile_pkg::REDMULE_P_CONFIG      ),
+    .BITW               ( /*DO NOT OVERWRITE*/                  ),
+    .HCI_SIZE_tcdm      ( magia_tile_pkg::REDMULE_HCI_SIZE_TCDM )
   ) i_redmule_top (
     .clk_i               ( sys_clk                                                     ),
     .rst_ni              ( rst_ni                                                      ),
@@ -703,11 +711,9 @@ module magia_tile
     .xif_compressed_if_i ( xif_redmule_if.coproc_compressed                            ),
     .xif_mem_if_o        ( xif_redmule_if.coproc_mem                                   ),
 
-    .data_req_o          ( redmule_data_req                                            ),
-    .data_rsp_i          ( redmule_data_rsp                                            ),
+    .periph              ( hwpe_redmule_ctrl[0]                                        ), // Only 1 RedMulE supported
 
-    .ctrl_req_i          ( redmule_ctrl_req                                            ),
-    .ctrl_rsp_o          ( redmule_ctrl_rsp                                            )
+    .tcdm                ( hci_redmule_if[0]                                           )  // Only 1 RedMulE supported
   );
 
 /*******************************************************/
@@ -922,39 +928,35 @@ module magia_tile
 /*******************************************************/
 
   hci_interconnect #(
-    .N_HWPE  ( magia_tile_pkg::N_HWPE  ),
-    .N_CORE  ( magia_tile_pkg::N_CORE  ),
-    .N_DMA   ( magia_tile_pkg::N_DMA   ),
-    .N_EXT   ( magia_tile_pkg::N_EXT   ),
-    .N_MEM   ( N_MEM_BANKS             ),
-    .AWC     ( magia_tile_pkg::AWC     ),
-    .AWM     ( magia_tile_pkg::AWM     ),
-    .DW_LIC  ( magia_tile_pkg::DW_LIC  ),
-    .BW_LIC  ( magia_tile_pkg::BW_LIC  ),
-    .UW_LIC  ( magia_tile_pkg::UW_LIC  ),
-    .DW_SIC  (                         ),
-    .TS_BIT  ( magia_tile_pkg::TS_BIT  ),
-    .IW      ( magia_tile_pkg::IW      ),
-    .EXPFIFO ( magia_tile_pkg::EXPFIFO ),
-    .DWH     ( magia_tile_pkg::DWH     ),
-    .AWH     ( magia_tile_pkg::AWH     ),
-    .BWH     ( magia_tile_pkg::BWH     ),
-    .WWH     ( magia_tile_pkg::WWH     ),
-    .OWH     ( magia_tile_pkg::OWH     ),
-    .UWH     ( magia_tile_pkg::UWH     ),
-    .SEL_LIC ( magia_tile_pkg::SEL_LIC )
+    .N_HWPE               ( magia_tile_pkg::N_HWPE        ),
+    .N_CORE               ( magia_tile_pkg::N_CORE        ),
+    .N_DMA                ( magia_tile_pkg::N_DMA         ),
+    .N_EXT                ( magia_tile_pkg::N_EXT         ),
+    .N_MEM                ( N_MEM_BANKS                   ),
+    .TS_BIT               ( magia_tile_pkg::TS_BIT        ),
+    .IW                   ( magia_tile_pkg::IW            ),
+    .EXPFIFO              ( magia_tile_pkg::EXPFIFO       ),
+    .SEL_LIC              ( magia_tile_pkg::SEL_LIC       ),
+    .FILTER_WRITE_R_VALID ( /*DO NOT OVERWRITE*/          ),
+    .HCI_SIZE_cores       ( magia_tile_pkg::HCI_SIZE_CORE ),
+    .HCI_SIZE_mems        ( magia_tile_pkg::HCI_SIZE_MEM  ),
+    .HCI_SIZE_hwpe        ( magia_tile_pkg::HCI_SIZE_HWPE ),
+    .WAIVE_RQ3_ASSERT     (                               ),
+    .WAIVE_RQ4_ASSERT     (                               ),
+    .WAIVE_RSP3_ASSERT    (                               ),
+    .WAIVE_RSP5_ASSERT    (                               )
   ) i_local_interconnect (
-    .clk_i   ( sys_clk           ),
-    .rst_ni  ( rst_ni            ),
-    .clear_i ( hci_clear         ),
+    .clk_i   ( sys_clk          ),
+    .rst_ni  ( rst_ni           ),
+    .clear_i ( hci_clear        ),
 
-    .ctrl_i  ( hci_ctrl          ),
+    .ctrl_i  ( hci_ctrl         ),
     
-    .cores   ( hci_core_if       ),
-    .dma     ( hci_dma_if        ),
-    .ext     ( hci_ext_if        ),
-    .mems    ( hci_tcdm_sram_if  ),
-    .hwpe    ( hci_redmule_if[0] )
+    .cores   ( hci_core_if      ),
+    .dma     ( hci_dma_if       ),
+    .ext     ( hci_ext_if       ),
+    .mems    ( hci_tcdm_sram_if ),
+    .hwpe    ( hci_redmule_if   )
   );
 
 /*******************************************************/
