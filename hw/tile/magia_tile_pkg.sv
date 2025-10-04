@@ -84,15 +84,41 @@ package magia_tile_pkg;
   parameter int unsigned TS_BIT  = 21;                                                  // TEST_SET_BIT (for Log Interconnect)
   parameter int unsigned IW      = N_HWPE+N_CORE+N_DMA+N_EXT;                           // ID Width HCI
   parameter int unsigned EXPFIFO = 0;                                                   // FIFO Depth for HWPE Interconnect
-  parameter int unsigned DWH     = 544;                                                 // Data Width for HWPE Interconnect: RedMulE Hx(P+1)xBits + Bank width = 8x(3+1)x16+32 
+  parameter int unsigned DWH     = 256+32;                                              // Data Width for HWPE Interconnect: RedMulE Hx(P+1)xBits + Bank width = 8x(1+1)x16+32 
   parameter int unsigned AWH     = magia_pkg::ADDR_W;                                   // Address Width for HWPE Interconnect
   parameter int unsigned BWH     = magia_pkg::BYTE_W;                                   // Byte Width for HWPE Interconnect
   parameter int unsigned WWH     = DWH;                                                 // Word Width for HWPE Interconnect
-  parameter int unsigned OWH     = AWH;                                                 // Offset Width for HWPE Interconnect
   parameter int unsigned UWH     = magia_pkg::USR_W;                                    // User Width for HWPE Interconnect
-  parameter int unsigned SEL_LIC = 1;                                                   // Log interconnect type selector
+  parameter int unsigned SEL_LIC = 0;                                                   // Log interconnect type selector
   localparam int unsigned SWH    = DWH/BWH;                                             // Strobe Width for HWPE Interconnect
   localparam int unsigned WDH    = DWH/WWH;                                             // Number of words per data for HWPE Interconnect
+  parameter hci_package::hci_size_parameter_t HCI_SIZE_CORE = '{
+    DW:  DW_LIC,
+    AW:  AWC,
+    BW:  BW_LIC,
+    UW:  UW_LIC,
+    IW:  IW,
+    EW:  hci_package::DEFAULT_EW,
+    EHW: hci_package::DEFAULT_EHW
+  };                                                                                     // HCI core interface sizes
+  parameter hci_package::hci_size_parameter_t HCI_SIZE_MEM  = '{
+    DW:  DW_LIC,
+    AW:  AWM,
+    BW:  BW_LIC,
+    UW:  UW_LIC,
+    IW:  IW,
+    EW:  hci_package::DEFAULT_EW,
+    EHW: hci_package::DEFAULT_EHW
+  };                                                                                     // HCI mem interface sizes
+  parameter hci_package::hci_size_parameter_t HCI_SIZE_HWPE = '{
+    DW:  DWH,
+    AW:  AWH,
+    BW:  BWH,
+    UW:  UWH,
+    IW:  IW,
+    EW:  hci_package::DEFAULT_EW,
+    EHW: hci_package::DEFAULT_EHW
+  };                                                                                     // HCI hwpe interface sizes
 
   // Parameters used by the core
   parameter bit          X_EXT_EN        = 1;                                           // Enable eXtension Interface (X) support, see eXtension Interface        
@@ -109,10 +135,25 @@ package magia_tile_pkg;
   parameter int unsigned CLIC_ID_W       = 1;                                           // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
 
   // Parameters used by RedMulE
-  parameter int unsigned REDMULE_DW   = DWH;                                            // RedMulE Data Width
-  parameter int unsigned REDMULE_ID_W = magia_pkg::ID_W + 
-                                        magia_pkg::ID_W_OFFSET;                         // RedMulE ID Width
-  parameter int unsigned REDMULE_UW   = UWH;                                            // RedMulE User Width
+  parameter int unsigned                      REDMULE_DW            = DWH;                             // RedMulE Data Width
+  parameter int unsigned                      REDMULE_ID_W          = magia_pkg::ID_W + 
+                                                                      magia_pkg::ID_W_OFFSET;          // RedMulE ID Width
+  parameter int unsigned                      REDMULE_UW            = UWH;                             // RedMulE User Width
+  parameter int unsigned                      REDMULE_N_CONTEXT     = 2;                               // RedMulE Number of sequential jobs for the slave device
+  parameter fpnew_pkg::fp_format_e            REDMULE_FPFORMAT      = fpnew_pkg::FP16;                 // RedMulE Data format
+  parameter int unsigned                      REDMULE_HEIGHT        = 8;                               // RedMulE Number of PEs within a row
+  parameter int unsigned                      REDMULE_P_REGS        = 1;                               // RedMulE Number of pipeline registers within each PE
+  parameter int unsigned                      REDMULE_WIDTH         = REDMULE_HEIGHT*REDMULE_P_REGS;   // RedMulE Number of parallel rows
+  parameter fpnew_pkg::pipe_config_t          REDMULE_P_CONFIG      = fpnew_pkg::DISTRIBUTED;          // RedMulE Configuration of pipeline registers
+  parameter hci_package::hci_size_parameter_t REDMULE_HCI_SIZE_TCDM = '{
+    DW:  DWH,
+    AW:  AWH,
+    BW:  BWH,
+    UW:  UWH,
+    IW:  IW,
+    EW:  0,
+    EHW: 0
+  };                                                                                                   // RedMulE HCI interface sizes
   
   // Parameters used by OBI
   parameter int unsigned AUSER_WIDTH  = 1;                                              // Width of the auser signal (see OBI documentation): not used by the CV32E40X
@@ -386,12 +427,6 @@ package magia_tile_pkg;
 
   typedef logic[iDMA_AddrWidth-1:0] idma_addr_t;
 
-  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic[IW-1:0])
-  `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic[DWH-1:0], logic[IW-1:0])
-  
-  `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic signed[WDH-1:0][AWH:0], logic[UWH-1:0])
-  `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic[DWH-1:0], logic[UWH-1:0])
-
   localparam obi_pkg::obi_optional_cfg_t obi_amo_optional_cfg = obi_pkg::obi_all_optional_config(AUSER_WIDTH, WUSER_WIDTH, RUSER_WIDTH, MID_WIDTH, ACHK_WIDTH, RCHK_WIDTH);
   localparam obi_pkg::obi_cfg_t          obi_amo_cfg          = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, OBI_ID_WIDTH, obi_amo_optional_cfg);
   localparam bit                         RegisterAmo          = 1;
@@ -410,8 +445,8 @@ package magia_tile_pkg;
   `OBI_TYPEDEF_DEFAULT_REQ_T(core_obi_instr_req_t, core_instr_obi_a_chan_t)
   `OBI_TYPEDEF_RSP_T(core_obi_instr_rsp_t, core_instr_obi_r_chan_t)
 
-  `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic signed[WD_LIC-1:0][AWH:0], logic[UWH-1:0])
-  `HCI_TYPEDEF_RSP_T(core_hci_data_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0])
+  `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic[UWH-1:0], logic[IW-1:0], logic)
+  `HCI_TYPEDEF_RSP_T(core_hci_data_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0], logic[IW-1:0], logic)
 
   `AXI_TYPEDEF_ALL_CT(core_axi_data, core_axi_data_req_t, core_axi_data_rsp_t, logic[magia_pkg::ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[AXI_U_W-1:0])
   `AXI_TYPEDEF_ALL_CT(core_axi_instr, core_axi_instr_req_t, core_axi_instr_rsp_t, logic[magia_pkg::ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[AXI_U_W-1:0])
@@ -459,8 +494,8 @@ package magia_tile_pkg;
   `AXI_ALIAS(core_axi_data, axi_xbar_slv, core_axi_data_req_t, axi_xbar_slv_req_t, core_axi_data_rsp_t, axi_xbar_slv_rsp_t)
   `AXI_ALIAS(core_axi_data, axi_xbar_mst, core_axi_data_req_t, axi_xbar_mst_req_t, core_axi_data_rsp_t, axi_xbar_mst_rsp_t)
 
-  `HCI_TYPEDEF_REQ_T(idma_hci_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic signed[WD_LIC-1:0][AWH:0], logic[UWH-1:0])
-  `HCI_TYPEDEF_RSP_T(idma_hci_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0])
+  `HCI_TYPEDEF_REQ_T(idma_hci_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic[UWH-1:0], logic[IW-1:0], logic)
+  `HCI_TYPEDEF_RSP_T(idma_hci_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0], logic[IW-1:0], logic)
   
   localparam axi_pkg::xbar_cfg_t axi_xbar_cfg = '{
     NoSlvPorts          : AxiXbarNoSlvPorts,

@@ -26,13 +26,14 @@ module l1_spm #(
   parameter int unsigned ID_W      = 1,     // ID width
   parameter              SIM_INIT  = "ones" // Simulation initialization value
 )(
-  input logic        clk_i,
-  input logic        rst_ni,
-  hci_mem_intf.slave tcdm_slave[N_BANK] // Memory interface
+  input logic          clk_i,
+  input logic          rst_ni,
+  hci_core_intf.target tcdm_slave[N_BANK] // Memory interface
 );
 
   for (genvar i = 0; i < N_BANK; i++) begin: gen_tcdm_bank
     logic[ID_W-1:0] rsp_id_d, rsp_id_q;
+    logic           r_valid_d, r_valid_q, r_valid_delayed_d, r_valid_delayed_q;
 
     assign rsp_id_d           = tcdm_slave[i].id;
     assign tcdm_slave[i].r_id = rsp_id_q;
@@ -65,6 +66,23 @@ module l1_spm #(
     );
 
     assign tcdm_slave[i].gnt = 1'b1;
+    assign tcdm_slave[i].r_valid = 1'b1;
+
+    /// TWO PIPELINE STAGES: used to assert r_valid two clock cycles after a read request (useful for 2 latency cycle tc_sram)
+    // assign r_valid_d = tcdm_slave[i].wen ? tcdm_slave[i].req : 1'b0;
+    // assign r_valid_delayed_d = r_valid_q;
+
+    // always @(posedge clk_i, negedge rst_ni) begin
+    //   if (!rst_ni) begin
+    //     r_valid_q <= 1'b0;
+    //     r_valid_delayed_q <= 1'b0;
+    //   end else begin
+    //     r_valid_q <= r_valid_d;
+    //     r_valid_delayed_q <= r_valid_delayed_d;
+    //   end
+    // end
+
+    // assign tcdm_slave[i].r_valid = r_valid_delayed_q;
   end
 
 endmodule: l1_spm
