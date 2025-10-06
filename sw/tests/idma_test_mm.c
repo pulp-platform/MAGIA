@@ -14,8 +14,7 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- *         Based on idma_test.c by Victor Isachi
+ * Authors: 
  * 
  * MAGIA iDMA Test using Memory-Mapped Control
  */
@@ -35,7 +34,7 @@
 
 #define VERBOSE (0)
 
-//#define IRQ_EN
+#define IRQ_EN
 
 #define WAIT_CYCLES (10)
 
