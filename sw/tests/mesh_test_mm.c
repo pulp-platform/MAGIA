@@ -14,8 +14,7 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- *         Based on mesh_test.c by Victor Isachi
+ * Authors:
  * 
  * MAGIA Mesh Test - Memory Mapped Version
  */
@@ -51,7 +50,7 @@
 
 #define CONCURRENT
 
-//#define IRQ_EN
+#define IRQ_EN
 
 void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uint32_t dst_address){
   uint32_t dst_addr;
@@ -149,11 +148,6 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
 }
 
 int main(void) {
-  // Execute test ONLY on tile 0
-  if (get_hartid() != 0) {
-    mmio16(TEST_END_ADDR + get_hartid()*2) = PASS_EXIT_CODE - get_hartid();
-    return 0;
-  }
   // X
   printf("Initializing X through iDMA...\n");
   idma_mv_in(M_SIZE, N_SIZE, x_inp, (X_BASE + get_hartid()*L1_TILE_OFFSET));
