@@ -14,8 +14,7 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- *         Based on redmule_test.c by Victor Isachi
+ * Authors: 
  * 
  * RedMulE Matrix Multiplication Test with MMIO HWPE Control Functions
  * 
@@ -43,7 +42,7 @@
 
 #define VERBOSE (0)
 
-//#define IRQ_EN
+#define IRQ_EN
 
 #define WAIT_CYCLES (10)
 
