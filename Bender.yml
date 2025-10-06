@@ -71,6 +71,8 @@ sources:
       - hw/tile/xif_inst_dispatcher.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
       - hw/tile/idma_ctrl.sv
+      - hw/tile/idma_obi_ctrl_decoder.sv
+      - hw/tile/idma_ctrl_mm.sv
       - hw/tile/fractal_sync_xif_inst_decoder.sv
       - hw/tile/magia_tile.sv
       # MAGIA DV
@@ -112,6 +114,7 @@ sources:
       - hw/tile/xif_inst_dispatcher.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
       - hw/tile/idma_ctrl.sv
+      - hw/tile/idma_obi_ctrl_decoder.sv
       - hw/tile/fractal_sync_xif_inst_decoder.sv
       - hw/tile/magia_tile.sv
       # MAGIA
@@ -147,6 +150,7 @@ sources:
       - hw/tile/xif_inst_dispatcher.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
       - hw/tile/idma_ctrl.sv
+      - hw/tile/idma_obi_ctrl_decoder.sv
       - hw/tile/fractal_sync_xif_inst_decoder.sv
       - hw/tile/magia_tile.sv
       # MAGIA

@@ -54,7 +54,10 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START  = 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_SIZE        = 32'h0000_0400; //1KB
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_END    = REDMULE_CTRL_ADDR_START + REDMULE_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START      = REDMULE_CTRL_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_START     = REDMULE_CTRL_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_SIZE           = 32'h0000_0200; //512B
+  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_END       = IDMA_CTRL_ADDR_START + IDMA_CTRL_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START      = IDMA_CTRL_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE            = 32'h0000_FC00; //63KiB
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END        = RESERVED_ADDR_START + RESERVED_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START         = RESERVED_ADDR_END;
@@ -128,10 +131,10 @@ package magia_tile_pkg;
   parameter int unsigned RID_WIDTH    = 1;                                              // Width of the rid   signal (response channel identifier, see OBI documentation)
   parameter int unsigned MID_WIDTH    = 1;                                              // Width of the mid   signal (manager identifier, see OBI documentation)
   parameter int unsigned OBI_ID_WIDTH = 1;                                              // Width of the id - configuration
-  parameter int unsigned N_SBR        = 3;                                              // Number of slaves (HCI, AXI XBAR, RedMulE_Ctrl)
+  parameter int unsigned N_SBR        = 4;                                              // Number of slaves (HCI, AXI XBAR, RedMulE_Ctrl, iDMA_Ctrl)
   parameter int unsigned N_MGR        = 2;                                              // Number of masters (Core, AXI XBAR)
   parameter int unsigned N_MAX_TRAN   = 1;                                              // Number of maximum outstanding transactions
-  parameter int unsigned N_ADDR_RULE  = 5;                                              // Number of address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl)
+  parameter int unsigned N_ADDR_RULE  = 6;                                              // Number of address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl, iDMA_Ctrl)
   localparam int unsigned N_BIT_SBR   = $clog2(N_SBR);                                  // Number of bits required to identify each slave
 
   // Parameters used by AXI
@@ -174,17 +177,13 @@ package magia_tile_pkg;
   } idma_transfer_ch_e;                                                                 // iDMA type of transfer channel
 
   // Parameters used by the Xif Instruction Dispatcher
-  parameter int unsigned N_COPROC         = 4;                                          // RedMulE, iDMA, Fractal Sync and FPU
-  parameter int unsigned N_RULES          = N_COPROC-1;                                 // RedMulE, iDMA and Fractal Sync all have custom Xif instructions but not FPU
-  parameter int unsigned N_REDMULE_SIGN   = 9;                                          // Number of signitures (= {opcode, func3}) in the programming model of RedMulE
-  parameter int unsigned N_IDMA_SIGN      = 5;                                          // Number of signitures (= {opcode, func3}) in the programming model of the iDMA decoder
+  parameter int unsigned N_COPROC         = 2;                                          // Fractal Sync and FPU
+  parameter int unsigned N_RULES          = 1;                                          // Only Fractal Sync has custom Xif instructions, FPU is default
   parameter int unsigned N_FSYNC_SIGN     = 1;                                          // Number of signitures (= {opcode, func3}) in the programming model of Fractal Sync
-  parameter int unsigned N_SIGN           = 9;                                          // Number of opcodes = max{RedMulE_signitures, iDMA_signitures, FractalSync_signitures}
+  parameter int unsigned N_SIGN           = 1;                                          // Number of opcodes for Fractal Sync
   typedef enum logic[1:0]{
-    XIF_REDMULE_IDX = 2'b00,
-    XIF_IDMA_IDX    = 2'b01,
-    XIF_FSYNC_IDX   = 2'b10,
-    XIF_FPU_IDX     = 2'b11
+    XIF_FSYNC_IDX   = 2'b00,
+    XIF_FPU_IDX     = 2'b01
   } xif_inst_dispatch_idx_e;
   parameter int unsigned DEFAULT_IDX      = XIF_FPU_IDX;                                // FPU will handle the instructions by default
   parameter int unsigned OPCODE_W         = 7;                                          // ISA OPCODE Width
@@ -370,11 +369,12 @@ package magia_tile_pkg;
   } core_cache_instr_rsp_t;
 
   typedef enum logic[2:0]{
+    IDMA_IDX         = 5,
     REDMULE_CTRL_IDX = 4,
-    STACK_IDX    = 3,
-    RESERVED_IDX = 2,
-    L1SPM_IDX    = 1,
-    L2_IDX       = 0
+    STACK_IDX        = 3,
+    RESERVED_IDX     = 2,
+    L1SPM_IDX        = 1,
+    L2_IDX           = 0
   } mem_array_idx_e;
 
   typedef enum logic[1:0]{

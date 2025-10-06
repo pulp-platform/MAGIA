@@ -126,12 +126,16 @@ module magia_tile
   logic[magia_pkg::ADDR_W-1:0] tile_reserved_end_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_redmule_ctrl_start_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_redmule_ctrl_end_addr;
+  logic[magia_pkg::ADDR_W-1:0] tile_idma_ctrl_start_addr;
+  logic[magia_pkg::ADDR_W-1:0] tile_idma_ctrl_end_addr;
   
   magia_tile_pkg::redmule_data_req_t redmule_data_req;
   magia_tile_pkg::redmule_data_rsp_t redmule_data_rsp;
 
   magia_tile_pkg::redmule_ctrl_req_t redmule_ctrl_req;  // Can be used to manage RedMulE control at top-level
   magia_tile_pkg::redmule_ctrl_rsp_t redmule_ctrl_rsp;  // Can be used to manage RedMulE control at top-level
+
+  // OBI to iDMA Bridge (Memory-mapped interface) - now encapsulated in idma_ctrl_mm
 
   magia_tile_pkg::core_data_req_t core_data_req;
   magia_tile_pkg::core_data_rsp_t core_data_rsp;
@@ -231,14 +235,6 @@ module magia_tile
   logic                                  axi2obi_rsp_r_user;
 
   logic idma_clear;         // Can be used to manage iDMA clear at top-level
-  logic idma_axi2obi_start;
-  logic idma_axi2obi_busy;
-  logic idma_axi2obi_done;
-  logic idma_axi2obi_error;
-  logic idma_obi2axi_start;
-  logic idma_obi2axi_busy;
-  logic idma_obi2axi_done;
-  logic idma_obi2axi_error;
 
   magia_tile_pkg::xif_inst_rule_t[magia_tile_pkg::N_RULES-1:0] xif_coproc_rules;
   
@@ -267,6 +263,16 @@ module magia_tile
   logic fsync_clear;   // Can be used to manage iDMA clear at top-level
   logic fsync_done;
   logic fsync_error;
+
+  // iDMA transfer channel IRQ signals
+  logic idma_a2o_busy;
+  logic idma_a2o_start;
+  logic idma_a2o_done;
+  logic idma_a2o_error;
+  logic idma_o2a_busy;
+  logic idma_o2a_start;
+  logic idma_o2a_done;
+  logic idma_o2a_error;
 
   // FlooNoC connections between NI and router
   floo_req_t [4:0] floo_router_req_in;
@@ -306,12 +312,15 @@ module magia_tile
   assign tile_reserved_end_addr   = magia_tile_pkg::RESERVED_ADDR_END   + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
   assign tile_redmule_ctrl_start_addr = magia_tile_pkg::REDMULE_CTRL_ADDR_START;
   assign tile_redmule_ctrl_end_addr   = magia_tile_pkg::REDMULE_CTRL_ADDR_END;
+  assign tile_idma_ctrl_start_addr = magia_tile_pkg::IDMA_CTRL_ADDR_START;
+  assign tile_idma_ctrl_end_addr   = magia_tile_pkg::IDMA_CTRL_ADDR_END;
 
   assign obi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START,    end_addr: magia_tile_pkg::L2_ADDR_END    };
   assign obi_xbar_rule[magia_tile_pkg::L1SPM_IDX]    = '{idx: 32'd1, start_addr: tile_l1_start_addr,               end_addr: tile_l1_end_addr               };
   assign obi_xbar_rule[magia_tile_pkg::RESERVED_IDX] = '{idx: 32'd1, start_addr: tile_reserved_start_addr,         end_addr: tile_reserved_end_addr         };
   assign obi_xbar_rule[magia_tile_pkg::STACK_IDX]    = '{idx: 32'd1, start_addr: magia_tile_pkg::STACK_ADDR_START, end_addr: magia_tile_pkg::STACK_ADDR_END };
   assign obi_xbar_rule[magia_tile_pkg::REDMULE_CTRL_IDX] = '{idx: 32'd2, start_addr: tile_redmule_ctrl_start_addr, end_addr: tile_redmule_ctrl_end_addr     };
+  assign obi_xbar_rule[magia_tile_pkg::IDMA_IDX]     = '{idx: 32'd3, start_addr: tile_idma_ctrl_start_addr,        end_addr: tile_idma_ctrl_end_addr        };
 
 
   assign axi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START, end_addr: magia_tile_pkg::L2_ADDR_END };
@@ -360,32 +369,19 @@ module magia_tile
 
   assign fsync_clear = 1'b0;
 
-  assign xif_coproc_rules[magia_tile_pkg::XIF_REDMULE_IDX] = '{sign_list: '{ {{redmule_pkg::MCNFIG, 3'h0}}, 
-                                                                             {{redmule_pkg::MARITH, 3'h0}}, {{redmule_pkg::MARITH, 3'h1}}, 
-                                                                             {{redmule_pkg::MARITH, 3'h2}}, {{redmule_pkg::MARITH, 3'h3}}, 
-                                                                             {{redmule_pkg::MARITH, 3'h4}}, {{redmule_pkg::MARITH, 3'h5}}, 
-                                                                             {{redmule_pkg::MARITH, 3'h6}}, {{redmule_pkg::MARITH, 3'h7}} }};
-  assign xif_coproc_rules[magia_tile_pkg::XIF_IDMA_IDX]    = '{sign_list: '{ {{magia_tile_pkg::CONF_OPCODE, magia_tile_pkg::CONF_FUNC3}}, 
-                                                                             {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_AL_FUNC3}},
-                                                                             {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_SR2_FUNC3}},
-                                                                             {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_SR3_FUNC3}},
-                                                                             {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_S_FUNC3}},
-                                                                             {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_S_FUNC3}},
-                                                                             {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_S_FUNC3}},
-                                                                             {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_S_FUNC3}},
-                                                                             {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_S_FUNC3}} }};
+
   assign xif_coproc_rules[magia_tile_pkg::XIF_FSYNC_IDX]   = '{sign_list: '{ default: {magia_tile_pkg::FSYNC_OPCODE, magia_tile_pkg::FSYNC_FUNC3} }};
 
   assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_EVT_0] = redmule_evt[0][0];  // Only 1 core supported
   assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_EVT_1] = redmule_evt[0][1];  // Only 1 core supported
-  assign irq[magia_tile_pkg::IRQ_IDX_A2O_ERROR]     = idma_axi2obi_error;
-  assign irq[magia_tile_pkg::IRQ_IDX_O2A_ERROR]     = idma_obi2axi_error;
-  assign irq[magia_tile_pkg::IRQ_IDX_A2O_DONE]      = idma_axi2obi_done;
-  assign irq[magia_tile_pkg::IRQ_IDX_O2A_DONE]      = idma_obi2axi_done;
-  assign irq[magia_tile_pkg::IRQ_IDX_A2O_START]     = idma_axi2obi_start;
-  assign irq[magia_tile_pkg::IRQ_IDX_O2A_START]     = idma_obi2axi_start;
-  assign irq[magia_tile_pkg::IRQ_IDX_A2O_BUSY]      = idma_axi2obi_busy;
-  assign irq[magia_tile_pkg::IRQ_IDX_O2A_BUSY]      = idma_obi2axi_busy;
+  assign irq[magia_tile_pkg::IRQ_IDX_A2O_ERROR]     = idma_a2o_error;    // AXI2OBI transfer error
+  assign irq[magia_tile_pkg::IRQ_IDX_O2A_ERROR]     = idma_o2a_error;    // OBI2AXI transfer error
+  assign irq[magia_tile_pkg::IRQ_IDX_A2O_DONE]      = idma_a2o_done;     // AXI2OBI transfer completed
+  assign irq[magia_tile_pkg::IRQ_IDX_O2A_DONE]      = idma_o2a_done;     // OBI2AXI transfer completed
+  assign irq[magia_tile_pkg::IRQ_IDX_A2O_START]     = idma_a2o_start;    // AXI2OBI transfer started
+  assign irq[magia_tile_pkg::IRQ_IDX_O2A_START]     = idma_o2a_start;    // OBI2AXI transfer started
+  assign irq[magia_tile_pkg::IRQ_IDX_A2O_BUSY]      = idma_a2o_busy;     // AXI2OBI transfer busy
+  assign irq[magia_tile_pkg::IRQ_IDX_O2A_BUSY]      = idma_o2a_busy;     // OBI2AXI transfer busy
   assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_BUSY]  = redmule_busy;
   assign irq[magia_tile_pkg::IRQ_IDX_FSYNC_DONE]    = fsync_done;
   assign irq[magia_tile_pkg::IRQ_IDX_FSYNC_ERROR]   = fsync_error;
@@ -410,11 +406,7 @@ module magia_tile
   assign flush_valid[0]     = fencei_flush_req; // Single port i$
   assign fencei_flush_ack   = flush_ready[0];   // Signle port i$
 
-  assign xif_redmule_if.result_ready     = 1'b0;
-  assign xif_redmule_if.compressed_valid = 1'b0;
-  assign xif_redmule_if.compressed_req   = '0;
-  assign xif_redmule_if.mem_ready        = 1'b0;
-  assign xif_redmule_if.mem_resp         = '0;
+
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -569,25 +561,6 @@ module magia_tile
     .ctrl_req_o ( redmule_ctrl_req                           ),
     .ctrl_rsp_i ( redmule_ctrl_rsp                           )
   );
-
-
-
-  // PURE SIGNAL DUMP: Show all signal values when any signal changes
-  always_ff @(posedge sys_clk) begin
-    if (core_mem_data_req[2].req || redmule_ctrl_req.req || core_mem_data_rsp[2].rvalid || redmule_ctrl_rsp.r_valid) begin
-      $display("[%0t] OBI_SIDE: req=%0b gnt=%0b rvalid=%0b addr=%08h we=%0b be=0x%02h wdata=0x%08h rdata=0x%08h err=%0b", 
-               $time, core_mem_data_req[2].req, core_mem_data_rsp[2].gnt, core_mem_data_rsp[2].rvalid, 
-               core_mem_data_req[2].a.addr, core_mem_data_req[2].a.we, core_mem_data_req[2].a.be, 
-               core_mem_data_req[2].a.wdata, core_mem_data_rsp[2].r.rdata, core_mem_data_rsp[2].r.err);
-      $display("[%0t] HWPE_SIDE: req=%0b gnt=%0b r_valid=%0b add=%08h wen=%0b be=0x%02h data=0x%08h r_data=0x%08h", 
-               $time, redmule_ctrl_req.req, redmule_ctrl_rsp.gnt, redmule_ctrl_rsp.r_valid, 
-               redmule_ctrl_req.add, redmule_ctrl_req.wen, redmule_ctrl_req.be, 
-               redmule_ctrl_req.data, redmule_ctrl_rsp.r_data);
-    end
-  end
-
-  
-
 /*******************************************************/
 /**                Type Conversions End               **/
 /*******************************************************/
@@ -658,7 +631,7 @@ module magia_tile
     .clk( sys_clk )
   );
 
-  cv32e40x_if_xif xif_redmule_if ();
+
 
   cv32e40x_if_xif #(
     .X_NUM_RS    ( magia_tile_pkg::X_NUM_RS ),
@@ -688,7 +661,7 @@ module magia_tile
     .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
     .X_MISA      ( magia_tile_pkg::X_MISA   ),
     .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
-  ) xif_coproc_if[magia_tile_pkg::N_COPROC] (); // Index 0 -> RedMulE, Index 1 -> iDMA, Index 2 -> Fractal Sync, Index 3 -> FPU
+  ) xif_coproc_if[magia_tile_pkg::N_COPROC] (); // Index 0 -> Fractal Sync, Index 1 -> FPU
 
 /*******************************************************/
 /**             Interface Definitions End             **/
@@ -729,12 +702,6 @@ module magia_tile
 
     .busy_o              ( redmule_busy                                                ),
     .evt_o               ( redmule_evt                                                 ),
-
-    // XIF interface not used in HWPE mode (X_EXT = 1'b0)
-    // .xif_issue_if_i      ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX] ),
-    // .xif_result_if_o     ( xif_redmule_if.coproc_result                                ),
-    // .xif_compressed_if_i ( xif_redmule_if.coproc_compressed                            ),
-    // .xif_mem_if_o        ( xif_redmule_if.coproc_mem                                   ),
 
     .data_req_o          ( redmule_data_req                                            ),
     .data_rsp_i          ( redmule_data_rsp                                            ),
@@ -1038,41 +1005,48 @@ module magia_tile
 /**                   iDMA Beginning                  **/
 /*******************************************************/
 
-  idma_ctrl #(
-    .ERROR_CAP ( ERROR_CAP                      ),
-    .axi_req_t ( magia_tile_pkg::idma_axi_req_t ),
-    .axi_rsp_t ( magia_tile_pkg::idma_axi_rsp_t ),
-    .obi_req_t ( magia_tile_pkg::idma_obi_req_t ),
-    .obi_rsp_t ( magia_tile_pkg::idma_obi_rsp_t )
-  ) i_idma_ctrl (
-    .clk_i           ( sys_clk                                                  ),
-    .rst_ni          ( rst_ni                                                   ),
-    .testmode_i      ( test_mode_i                                              ),
-    .clear_i         ( idma_clear                                               ),
 
-    .xif_issue_if_i  ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_IDMA_IDX] ),
+  idma_ctrl_mm #(
+    .ERROR_CAP         ( ERROR_CAP                         ),
+    .obi_req_t         ( magia_tile_pkg::core_obi_data_req_t ),
+    .obi_rsp_t         ( magia_tile_pkg::core_obi_data_rsp_t ),
+    .idma_fe_reg_req_t ( magia_tile_pkg::idma_fe_reg_req_t   ),
+    .idma_fe_reg_rsp_t ( magia_tile_pkg::idma_fe_reg_rsp_t   ),
+    .axi_req_t         ( magia_tile_pkg::idma_axi_req_t      ),
+    .axi_rsp_t         ( magia_tile_pkg::idma_axi_rsp_t      ),
+    .idma_obi_req_t    ( magia_tile_pkg::idma_obi_req_t      ),
+    .idma_obi_rsp_t    ( magia_tile_pkg::idma_obi_rsp_t      )
+  ) i_idma_ctrl_mm (
+    .clk_i             ( sys_clk                             ),
+    .rst_ni            ( rst_ni                              ),
+    .test_en_i         ( test_mode_i                         ),
+    .clear_i           ( idma_clear                          ),
 
-    .axi_read_req_o  ( idma_axi_read_req                                        ),
-    .axi_read_rsp_i  ( idma_axi_read_rsp                                        ),
+    // OBI Slave Interface (CPU memory-mapped access)
+    .obi_req_i         ( core_mem_data_req[3]                ),
+    .obi_rsp_o         ( core_mem_data_rsp[3]                ),
 
-    .axi_write_req_o ( idma_axi_write_req                                       ),
-    .axi_write_rsp_i ( idma_axi_write_rsp                                       ),
+    // AXI Master Interfaces (to L2 memory)
+    .axi_read_req_o    ( idma_axi_read_req                   ),
+    .axi_read_rsp_i    ( idma_axi_read_rsp                   ),
+    .axi_write_req_o   ( idma_axi_write_req                  ),
+    .axi_write_rsp_i   ( idma_axi_write_rsp                  ),
 
-    .obi_read_req_o  ( idma_obi_read_req                                        ),
-    .obi_read_rsp_i  ( idma_obi_read_rsp                                        ),
+    // OBI Master Interfaces (to L1 memory)
+    .obi_read_req_o    ( idma_obi_read_req                   ),
+    .obi_read_rsp_i    ( idma_obi_read_rsp                   ),
+    .obi_write_req_o   ( idma_obi_write_req                  ),
+    .obi_write_rsp_i   ( idma_obi_write_rsp                  ),
 
-    .obi_write_req_o ( idma_obi_write_req                                       ),
-    .obi_write_rsp_i ( idma_obi_write_rsp                                       ),
-
-    .axi2obi_start_o ( idma_axi2obi_start                                       ),
-    .axi2obi_busy_o  ( idma_axi2obi_busy                                        ),
-    .axi2obi_done_o  ( idma_axi2obi_done                                        ),
-    .axi2obi_error_o ( idma_axi2obi_error                                       ),
-
-    .obi2axi_start_o ( idma_obi2axi_start                                       ),
-    .obi2axi_busy_o  ( idma_obi2axi_busy                                        ),
-    .obi2axi_done_o  ( idma_obi2axi_done                                        ),
-    .obi2axi_error_o ( idma_obi2axi_error                                       )
+    // Serialized IRQ outputs
+    .irq_a2o_busy_o    ( idma_a2o_busy                       ),
+    .irq_a2o_start_o   ( idma_a2o_start                      ),
+    .irq_a2o_done_o    ( idma_a2o_done                       ),
+    .irq_a2o_error_o   ( idma_a2o_error                      ),
+    .irq_o2a_busy_o    ( idma_o2a_busy                       ),
+    .irq_o2a_start_o   ( idma_o2a_start                      ),
+    .irq_o2a_done_o    ( idma_o2a_done                       ),
+    .irq_o2a_error_o   ( idma_o2a_error                      )
   );
 
   axi_rw_join #(
