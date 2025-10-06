@@ -45,7 +45,13 @@ module idma_axi_obi_transfer_ch
   input  axi_rsp_t         axi_rsp_i,
 
   output obi_req_t         obi_req_o,
-  input  obi_rsp_t         obi_rsp_i
+  input  obi_rsp_t         obi_rsp_i,
+
+  // IRQ-related outputs
+  output logic             transfer_busy_o,
+  output logic             transfer_start_o,
+  output logic             transfer_done_o,
+  output logic             transfer_error_o
 );
 
 /*******************************************************/
@@ -321,5 +327,13 @@ module idma_axi_obi_transfer_ch
 /*******************************************************/
 /**                    Back-end End                   **/
 /*******************************************************/
+/**                 IRQ Signal Generation             **/
+/*******************************************************/
+
+  // Generate IRQ signals from internal transfer state
+  assign transfer_busy_o  = |busy;           // Any busy indication from iDMA
+  assign transfer_start_o = issue_id;        // Transfer started (ID issued)
+  assign transfer_done_o  = retire_id;       // Transfer completed (ID retired)
+  assign transfer_error_o = eh_req_valid;    // Error handling request indicates error
 
 endmodule: idma_axi_obi_transfer_ch
