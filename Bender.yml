@@ -27,7 +27,7 @@ dependencies:
   idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: a6b190c7991331432afa9a2899d032bc1b176830 } # branch: vi/redmule_scaleup
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: e3e00383adf3789dc29ddc8af2edd6fe62ba4d50 } # branch: vi/scaleup_rebased
-  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 16c23e6e22ec9d3622508321024242c38a8371a4 } # branch: vi/scaleup_rebased
+  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: ed023cb1effa8e395cc3d456b3500c56092523be } # branch: vi/scaleup_rebased
   cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , rev: 917ecbf908bdaa22c5713bbcff277d142506bb16 } # branch: michaero/astral
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
   fpu_ss            : { git: "https://github.com/pulp-platform/fpu_ss.git"            , rev: 6a83b1754196c3d4509ce823118a190917f3b88a } # branch: vi/bender_manifest
