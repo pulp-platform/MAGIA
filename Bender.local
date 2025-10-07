@@ -1,7 +1,7 @@
 overrides:
   fpnew              : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: a8e0cba6dd50f357ece73c2c955d96efc3c6c315 }
   obi                : { git: "https://github.com/pulp-platform/obi.git"               , version: 0.1.7                                }
-  hci                : { git: "https://github.com/pulp-platform/hci.git"               , rev: 16c23e6e22ec9d3622508321024242c38a8371a4 }
+  hci                : { git: "https://github.com/pulp-platform/hci.git"               , rev: ed023cb1effa8e395cc3d456b3500c56092523be }
   hwpe-ctrl          : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: e3e00383adf3789dc29ddc8af2edd6fe62ba4d50 }
   cv32e40p           : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: 1a93f340e9dadb9f7c8c471f27a40932c8b1c62e }
   cv32e40x           : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: a90101211048ba1a16cedbe4db963ab6e12569d7 }
