@@ -605,6 +605,12 @@ module magia_tile
   );
   
   hci_core_intf #(
+`ifndef SYNTHESIS
+    .WAIVE_RQ3_ASSERT  ( 1'b1 ),
+    .WAIVE_RQ4_ASSERT  ( 1'b1 ),
+    .WAIVE_RSP3_ASSERT ( 1'b1 ),
+    .WAIVE_RSP5_ASSERT ( 1'b1 ),
+`endif
     .DW ( magia_tile_pkg::REDMULE_DW ),
     .AW ( magia_tile_pkg::AWH        ),
     .IW ( magia_tile_pkg::IW         ),
