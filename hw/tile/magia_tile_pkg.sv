@@ -230,6 +230,7 @@ package magia_tile_pkg;
   parameter int unsigned FUNC3_OFF        = 12;                                         // ISA FUNC3 Offset
   parameter int unsigned SIGN_W           = OPCODE_W + FUNC3_W;                         // Width of the instruction signiture
   parameter bit          PRIORITY         = 0;                                          // Indicates that the dispatcher should rout the instruction to only 1 coprocessor (with highest priority)
+  parameter int unsigned OS_INSTR         = 8;                                          // Indicates the maximum number of non-default outstanding instructions that the Xif dispatcher can handle
 
   // Parameters used by the iDMA instruction decoder
   parameter int unsigned DMA_INSTR_W              = magia_pkg::INSTR_W;                 // iDMA Decoder instruction width
