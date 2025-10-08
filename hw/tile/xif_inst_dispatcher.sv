@@ -32,6 +32,7 @@ module xif_inst_dispatcher
   parameter int unsigned OPCODE_W    = magia_tile_pkg::OPCODE_W,
   parameter int unsigned FUNC3_W     = magia_tile_pkg::FUNC3_W,
   parameter int unsigned SIGN_W      = magia_tile_pkg::SIGN_W,
+  parameter int unsigned OS_INSTR    = magia_tile_pkg::OS_INSTR,
   parameter type xif_inst_rule_t     = magia_tile_pkg::xif_inst_rule_t
 )(
   input  logic                                       clk_i,
@@ -50,6 +51,13 @@ module xif_inst_dispatcher
 /**        Parameters and Definitions Beginning       **/
 /*******************************************************/
 
+  localparam int unsigned INSTR_COUNT_W = $clog2(OS_INSTR);
+
+  typedef enum logic {
+    IDLE,
+    PROP
+  } result_state_e;
+  
   // IMPORTANT NOTE: must mirror what is found in cv32e40x_if_xif.sv
   typedef struct packed {
     logic      accept;   
@@ -60,12 +68,6 @@ module xif_inst_dispatcher
     logic      ecswrite ;
     logic      exc;      
   } x_issue_resp_t;
-
-  typedef enum logic[1:0] {
-    IDLE,
-    WAIT,
-    PROP
-  } result_state_e;
 
 /*******************************************************/
 /**           Parameters and Definitions End          **/
@@ -84,7 +86,8 @@ module xif_inst_dispatcher
   logic         [N_COPROC-1:0] issue_ready;
   x_issue_resp_t[N_COPROC-1:0] issue_resp;
 
-  result_state_e c_result_state, n_result_state;
+  result_state_e           c_result_state, n_result_state;
+  logic[INSTR_COUNT_W-1:0] instr_count_q,  instr_count_d;
 
 /*******************************************************/
 /**                Internal Signals End               **/
@@ -172,18 +175,24 @@ module xif_inst_dispatcher
     end
   end
 
-  always_ff @(posedge clk_i, negedge rst_ni) begin: result_state_register
-    if (!rst_ni) c_result_state <= IDLE;
-    else         c_result_state <= n_result_state;
+  always_ff @(posedge clk_i, negedge rst_ni) begin: result_state_counter_registers
+    if (!rst_ni) begin c_result_state <= IDLE;           instr_count_q <= '0;            end
+    else         begin c_result_state <= n_result_state; instr_count_q <= instr_count_d; end
   end
 
   always_comb begin: result_state_logic
-    n_result_state = c_result_state;
-    case (c_result_state)
-      IDLE: if (!default_issue)                n_result_state = WAIT;
-      WAIT: if (xif_result_if_o.result_ready)  n_result_state = PROP;
-      PROP: if (!xif_result_if_o.result_ready) n_result_state = default_issue ? IDLE : WAIT;
-    endcase
+    n_result_state = instr_count_q > 0 ? PROP : IDLE;
+  end
+  
+  always_comb begin: _counter_logic
+    instr_count_d = instr_count_q;
+    if ((xif_issue_if_i.issue_valid) && (xif_issue_if_i.issue_ready) && (!default_issue)) begin
+      if ((instr_count_q < OS_INSTR) && (!xif_result_if_o.result_valid)) begin
+        instr_count_d = instr_count_q+1;
+      end
+    end else if ((xif_result_if_o.result_valid) && (instr_count_q > 0)) begin
+      instr_count_d = instr_count_q-1;
+    end
   end
   
   always_comb begin: result_handler
