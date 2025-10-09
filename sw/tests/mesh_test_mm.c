@@ -14,7 +14,8 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Authors:
+ * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
+ *         Based on mesh_test.c by Victor Isachi
  * 
  * MAGIA Mesh Test - Memory Mapped Version
  */
