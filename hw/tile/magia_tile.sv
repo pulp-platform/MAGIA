@@ -128,6 +128,8 @@ module magia_tile
   logic[magia_pkg::ADDR_W-1:0] tile_redmule_ctrl_end_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_idma_ctrl_start_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_idma_ctrl_end_addr;
+  logic[magia_pkg::ADDR_W-1:0] tile_fsync_ctrl_start_addr;
+  logic[magia_pkg::ADDR_W-1:0] tile_fsync_ctrl_end_addr;
   
   magia_tile_pkg::redmule_data_req_t redmule_data_req;
   magia_tile_pkg::redmule_data_rsp_t redmule_data_rsp;
@@ -143,8 +145,8 @@ module magia_tile
   magia_tile_pkg::core_obi_data_req_t core_obi_data_req;
   magia_tile_pkg::core_obi_data_rsp_t core_obi_data_rsp;
 
-  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_req; // Index 0 -> L2, Index 1 -> L1SPM Index 2 -> RedMulE_ctrl
-  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_rsp; // Index 0 -> L2, Index 1 -> L1SPM Index 2 -> RedMulE_ctrl
+  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_req; // Index 0 -> L2, Index 1 -> L1SPM, Index 2 -> RedMulE_ctrl, Index 3 -> iDMA_ctrl, Index 4 -> FSync_ctrl
+  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_rsp; // Index 0 -> L2, Index 1 -> L1SPM, Index 2 -> RedMulE_ctrl, Index 3 -> iDMA_ctrl, Index 4 -> FSync_ctrl
 
   magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_cut_req; // Index 0 -> L2, Index 1 -> L1SPM
   magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_cut_rsp; // Index 0 -> L2, Index 1 -> L1SPM
@@ -236,7 +238,7 @@ module magia_tile
 
   logic idma_clear;         // Can be used to manage iDMA clear at top-level
 
-  magia_tile_pkg::xif_inst_rule_t[magia_tile_pkg::N_RULES-1:0] xif_coproc_rules;
+  
   
   logic sys_clk;
   logic sys_clk_en;
@@ -314,6 +316,8 @@ module magia_tile
   assign tile_redmule_ctrl_end_addr   = magia_tile_pkg::REDMULE_CTRL_ADDR_END;
   assign tile_idma_ctrl_start_addr = magia_tile_pkg::IDMA_CTRL_ADDR_START;
   assign tile_idma_ctrl_end_addr   = magia_tile_pkg::IDMA_CTRL_ADDR_END;
+  assign tile_fsync_ctrl_start_addr = magia_tile_pkg::FSYNC_CTRL_ADDR_START;
+  assign tile_fsync_ctrl_end_addr   = magia_tile_pkg::FSYNC_CTRL_ADDR_END;
 
   assign obi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START,    end_addr: magia_tile_pkg::L2_ADDR_END    };
   assign obi_xbar_rule[magia_tile_pkg::L1SPM_IDX]    = '{idx: 32'd1, start_addr: tile_l1_start_addr,               end_addr: tile_l1_end_addr               };
@@ -321,6 +325,7 @@ module magia_tile
   assign obi_xbar_rule[magia_tile_pkg::STACK_IDX]    = '{idx: 32'd1, start_addr: magia_tile_pkg::STACK_ADDR_START, end_addr: magia_tile_pkg::STACK_ADDR_END };
   assign obi_xbar_rule[magia_tile_pkg::REDMULE_CTRL_IDX] = '{idx: 32'd2, start_addr: tile_redmule_ctrl_start_addr, end_addr: tile_redmule_ctrl_end_addr     };
   assign obi_xbar_rule[magia_tile_pkg::IDMA_IDX]     = '{idx: 32'd3, start_addr: tile_idma_ctrl_start_addr,        end_addr: tile_idma_ctrl_end_addr        };
+  assign obi_xbar_rule[magia_tile_pkg::FSYNC_CTRL_IDX] = '{idx: 32'd4, start_addr: tile_fsync_ctrl_start_addr,     end_addr: tile_fsync_ctrl_end_addr       };
 
 
   assign axi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START, end_addr: magia_tile_pkg::L2_ADDR_END };
@@ -370,7 +375,7 @@ module magia_tile
   assign fsync_clear = 1'b0;
 
 
-  assign xif_coproc_rules[magia_tile_pkg::XIF_FSYNC_IDX]   = '{sign_list: '{ default: {magia_tile_pkg::FSYNC_OPCODE, magia_tile_pkg::FSYNC_FUNC3} }};
+
 
   assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_EVT_0] = redmule_evt[0][0];  // Only 1 core supported
   assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_EVT_1] = redmule_evt[0][1];  // Only 1 core supported
@@ -661,7 +666,7 @@ module magia_tile
     .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
     .X_MISA      ( magia_tile_pkg::X_MISA   ),
     .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
-  ) xif_coproc_if[magia_tile_pkg::N_COPROC] (); // Index 0 -> Fractal Sync, Index 1 -> FPU
+  ) xif_coproc_if[magia_tile_pkg::N_COPROC] (); // Index 0 -> FPU 
 
 /*******************************************************/
 /**             Interface Definitions End             **/
@@ -996,7 +1001,7 @@ module magia_tile
     .xif_issue_if_o  ( xif_coproc_if.cpu_issue ),
     .xif_result_if_o ( xif_if.coproc_result    ),
     .xif_result_if_i ( xif_fpu_if.cpu_result   ),
-    .rules_i         ( xif_coproc_rules        )
+    .rules_i         ( '0                      )  // No custom rules - FPU handles all
   );
 
 /*******************************************************/
@@ -1240,32 +1245,25 @@ module magia_tile
 /**             Fractal Sync Out Beginning            **/
 /*******************************************************/
 
-  fractal_sync_xif_inst_decoder #(
-    .INSTR_W    ( magia_tile_pkg::FSYNC_INSTR_W    ),
-    .DATA_W     ( magia_tile_pkg::FSYNC_DATA_W     ),
-    .ADDR_W     ( magia_tile_pkg::FSYNC_ADDR_W     ),
-    .N_RF_PORTS ( magia_tile_pkg::FSYNC_N_RF_PORTS ),
-    .OPCODE_W   ( magia_tile_pkg::FSYNC_OPCODE_W   ),
-    .FUNC3_W    ( magia_tile_pkg::FSYNC_FUNC3_W    ),
-    .OPCODE_OFF ( magia_tile_pkg::FSYNC_OPCODE_OFF ),
-    .FUNC3_OFF  ( magia_tile_pkg::FSYNC_FUNC3_OFF  ),
-    .N_CFG_REG  ( magia_tile_pkg::FSYNC_N_CFG_REG  ),
-    .AGGR_W     ( magia_tile_pkg::FSYNC_AGGR_W     ),
-    .ID_W       ( magia_tile_pkg::FSYNC_ID_W       ),
-    .NBR_AGGR_W ( magia_tile_pkg::FSYNC_NBR_AGGR_W ),
-    .NBR_ID_W   ( magia_tile_pkg::FSYNC_NBR_ID_W   ),
-    .STALL      ( magia_tile_pkg::FSYNC_STALL      )
-  ) i_fsync_dec (
-    .clk_i          ( sys_clk                                                   ),
-    .rst_ni         ( rst_ni                                                    ),
-    .clear_i        ( fsync_clear                                               ),
-    .xif_issue_if_i ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_FSYNC_IDX] ),
-    .ht_fsync_if_o  ( ht_fsync_if_o                                             ),
-    .hn_fsync_if_o  ( hn_fsync_if_o                                             ),
-    .vt_fsync_if_o  ( vt_fsync_if_o                                             ),
-    .vn_fsync_if_o  ( vn_fsync_if_o                                             ),
-    .done_o         ( fsync_done                                                ),
-    .error_o        ( fsync_error                                               )
+  // Fractal Sync OBI Memory-Mapped Slave (replaces XIF interface)
+  obi_slave_fsync #(
+    .BASE_ADDR    ( magia_tile_pkg::FSYNC_CTRL_ADDR_START ),
+    .AGGR_W       ( magia_tile_pkg::FSYNC_AGGR_W         ),
+    .ID_W         ( magia_tile_pkg::FSYNC_ID_W           ),
+    .NBR_AGGR_W   ( magia_tile_pkg::FSYNC_NBR_AGGR_W     ),
+    .NBR_ID_W     ( magia_tile_pkg::FSYNC_NBR_ID_W       )
+  ) i_fsync_mm (
+    .clk_i          ( sys_clk                            ),
+    .rst_ni         ( rst_ni                             ),
+    .clear_i        ( fsync_clear                        ),
+    .obi_req_i      ( core_mem_data_req[4]               ),
+    .obi_rsp_o      ( core_mem_data_rsp[4]               ),
+    .ht_fsync_if_o  ( ht_fsync_if_o                      ),
+    .hn_fsync_if_o  ( hn_fsync_if_o                      ),
+    .vt_fsync_if_o  ( vt_fsync_if_o                      ),
+    .vn_fsync_if_o  ( vn_fsync_if_o                      ),
+    .done_o         ( fsync_done                         ),
+    .error_o        ( fsync_error                        )
   );
 
 /*******************************************************/
@@ -1308,7 +1306,7 @@ module magia_tile
 
   xif_if2struct i_xif_if2struct (
     .xif_compressed_if_i  ( xif_if.coproc_compressed                                ),
-    .xif_issue_if_i       ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_FPU_IDX] ),
+    .xif_issue_if_i       ( xif_coproc_if.coproc_issue[0]                           ),  // FPU is now index 0
     .xif_commit_if_i      ( xif_if.coproc_commit                                    ),
     .xif_mem_if_o         ( xif_if.coproc_mem                                       ),
     .xif_mem_result_if_i  ( xif_if.coproc_mem_result                                ),
