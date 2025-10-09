@@ -123,6 +123,8 @@ module magia_tile
   logic[magia_pkg::ADDR_W-1:0] tile_redmule_ctrl_end_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_idma_ctrl_start_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_idma_ctrl_end_addr;
+  logic[magia_pkg::ADDR_W-1:0] tile_fsync_ctrl_start_addr;
+  logic[magia_pkg::ADDR_W-1:0] tile_fsync_ctrl_end_addr;
   
   magia_tile_pkg::redmule_data_req_t redmule_data_req;
   magia_tile_pkg::redmule_data_rsp_t redmule_data_rsp;
@@ -138,8 +140,8 @@ module magia_tile
   magia_tile_pkg::core_obi_data_req_t core_obi_data_req;
   magia_tile_pkg::core_obi_data_rsp_t core_obi_data_rsp;
 
-  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_req; // Index 0 -> L2, Index 1 -> L1SPM Index 2 -> RedMulE_ctrl
-  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_rsp; // Index 0 -> L2, Index 1 -> L1SPM Index 2 -> RedMulE_ctrl
+  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_req; // Index 0 -> L2, Index 1 -> L1SPM, Index 2 -> RedMulE_ctrl, Index 3 -> iDMA_ctrl, Index 4 -> FSync_ctrl
+  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_rsp; // Index 0 -> L2, Index 1 -> L1SPM, Index 2 -> RedMulE_ctrl, Index 3 -> iDMA_ctrl, Index 4 -> FSync_ctrl
 
   magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_cut_req; // Index 0 -> L2, Index 1 -> L1SPM
   magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_cut_rsp; // Index 0 -> L2, Index 1 -> L1SPM
@@ -312,6 +314,8 @@ module magia_tile
   assign tile_redmule_ctrl_end_addr   = magia_tile_pkg::REDMULE_CTRL_ADDR_END;
   assign tile_idma_ctrl_start_addr = magia_tile_pkg::IDMA_CTRL_ADDR_START;
   assign tile_idma_ctrl_end_addr   = magia_tile_pkg::IDMA_CTRL_ADDR_END;
+  assign tile_fsync_ctrl_start_addr = magia_tile_pkg::FSYNC_CTRL_ADDR_START;
+  assign tile_fsync_ctrl_end_addr   = magia_tile_pkg::FSYNC_CTRL_ADDR_END;
 
   assign obi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START,    end_addr: magia_tile_pkg::L2_ADDR_END    };
   assign obi_xbar_rule[magia_tile_pkg::L1SPM_IDX]    = '{idx: 32'd1, start_addr: tile_l1_start_addr,               end_addr: tile_l1_end_addr               };
@@ -319,6 +323,7 @@ module magia_tile
   assign obi_xbar_rule[magia_tile_pkg::STACK_IDX]    = '{idx: 32'd1, start_addr: magia_tile_pkg::STACK_ADDR_START, end_addr: magia_tile_pkg::STACK_ADDR_END };
   assign obi_xbar_rule[magia_tile_pkg::REDMULE_CTRL_IDX] = '{idx: 32'd2, start_addr: tile_redmule_ctrl_start_addr, end_addr: tile_redmule_ctrl_end_addr     };
   assign obi_xbar_rule[magia_tile_pkg::IDMA_IDX]     = '{idx: 32'd3, start_addr: tile_idma_ctrl_start_addr,        end_addr: tile_idma_ctrl_end_addr        };
+  assign obi_xbar_rule[magia_tile_pkg::FSYNC_CTRL_IDX] = '{idx: 32'd4, start_addr: tile_fsync_ctrl_start_addr,     end_addr: tile_fsync_ctrl_end_addr       };
 
 
   assign axi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START, end_addr: magia_tile_pkg::L2_ADDR_END };
@@ -368,7 +373,7 @@ module magia_tile
   assign fsync_clear = 1'b0;
 
 
-  assign xif_coproc_rules[magia_tile_pkg::XIF_FSYNC_IDX]   = '{sign_list: '{ default: {magia_tile_pkg::FSYNC_OPCODE, magia_tile_pkg::FSYNC_FUNC3} }};
+
 
   assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_EVT_0] = redmule_evt[0][0];  // Only 1 core supported
   assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_EVT_1] = redmule_evt[0][1];  // Only 1 core supported
@@ -695,7 +700,7 @@ module magia_tile
     .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
     .X_MISA      ( magia_tile_pkg::X_MISA   ),
     .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
-  ) xif_coproc_if[magia_tile_pkg::N_COPROC] (); // Index 0 -> Fractal Sync, Index 1 -> FPU
+  ) xif_coproc_if[magia_tile_pkg::N_COPROC] (); // Index 0 -> FPU 
 
 /*******************************************************/
 /**             Interface Definitions End             **/
@@ -1000,6 +1005,29 @@ module magia_tile
 /*******************************************************/
 /**                 L1 SPM (TCDM) End                 **/
 /*******************************************************/
+/**              Xif Dispatcher Beginning             **/
+/*******************************************************/
+
+  xif_inst_dispatcher #(
+    .N_COPROC        ( magia_tile_pkg::N_COPROC        ),
+    .N_RULES         ( magia_tile_pkg::N_RULES         ),
+    .DEFAULT_IDX     ( magia_tile_pkg::DEFAULT_IDX     ),
+    .OPCODE_OFF      ( magia_tile_pkg::OPCODE_OFF      ),
+    .OPCODE_W        ( magia_tile_pkg::OPCODE_W        ),
+    .xif_inst_rule_t ( magia_tile_pkg::xif_inst_rule_t )
+  ) i_xif_inst_dispatcher (
+    .clk_i           ( sys_clk                 ),
+    .rst_ni          ( rst_ni                  ),
+    .xif_issue_if_i  ( xif_if.coproc_issue     ),
+    .xif_issue_if_o  ( xif_coproc_if.cpu_issue ),
+    .xif_result_if_o ( xif_if.coproc_result    ),
+    .xif_result_if_i ( xif_fpu_if.cpu_result   ),
+    .rules_i         ( '0                      )  // No custom rules - FPU handles all
+  );
+
+/*******************************************************/
+/**                 Xif Dispatcher End                **/
+/*******************************************************/
 /**                   iDMA Beginning                  **/
 /*******************************************************/
 
@@ -1271,51 +1299,32 @@ module magia_tile
   assign timer_events_array[0]   = 2'b00;
   assign other_events_array[0] = {idma_o2a_busy, idma_a2o_busy, idma_o2a_start, idma_a2o_start, idma_o2a_error, idma_a2o_error, fsync_error, fsync_done, 24'b0};  // iDMA status events [31:28]|idma_o2a_error, idma_a2o_error, iDMA error events [27:26]|fsync_error, fsync_done, Fsync events [25:24]                                                        // Reserved [23:0] - SW events are INTERNAL to Event Unit!
 
- 
-  magia_event_unit #(
-    .NB_CORES         ( 1                                          ), // Single core system
-    .NB_SW_EVT        ( 1                                          ), // Minimum 1 SW event to avoid indexing issues (unused but required)
-    .NB_BARR          ( 0                                          ), // No barriers needed with single core
-    .NB_HW_MUT        ( 0                                          ), // No mutexes needed with single core
-    .MUTEX_MSG_W      ( 32                                         ), // Keep default even if unused
-    .DISP_FIFO_DEPTH  ( 0                                          ), // No task dispatcher needed
-    .EVNT_WIDTH       ( 8                                          ), // SOC event width (keep default)
-    .SOC_FIFO_DEPTH   ( 8                                          )  // SOC FIFO depth (keep default)
-  ) i_magia_event_unit (
-    .clk_i            ( sys_clk                                    ),
-    .rst_ni           ( rst_ni                                     ),
-    .test_mode_i      ( test_mode_i                                ),
-
-    // Event inputs - single core arrays
-    .acc_events_i     ( acc_events_array     ),                    // Accelerator events
-    .dma_events_i     ( dma_events_array     ),                    // iDMA completion events  
-    .timer_events_i   ( timer_events_array   ),
-    .other_events_i   ( other_events_array   ),                   // Combined events
-
-    // Core IRQ interface
-    .core_irq_req_o   ( eu_core_irq_req                            ),
-    .core_irq_id_o    ( eu_core_irq_id                             ),
-    .core_irq_ack_i   ( eu_core_irq_ack                            ),
-    .core_irq_ack_id_i( eu_core_irq_ack_id                         ),
-
-    // Core control
-    .core_busy_i      ( core_busy_o                              ),
-    .core_clock_en_o  ( eu_core_clk_en                             ),
-
-    // Debug
-    .dbg_req_i        ( debug_req_i                                ),
-    .core_dbg_req_o   ( eu_core_dbg_req                            ),
-
-    // EU Direct Link Interface - abstract types
-    .eu_direct_req_i      ( eu_direct_req.req                      ),
-    .eu_direct_addr_i     ( eu_direct_req.addr                     ),
-    .eu_direct_wen_i      ( eu_direct_req.wen                      ),
-    .eu_direct_wdata_i    ( eu_direct_req.wdata                    ),
-    .eu_direct_be_i       ( eu_direct_req.be                       ),
-    .eu_direct_gnt_o      ( eu_direct_rsp.gnt                      ),
-    .eu_direct_rvalid_o   ( eu_direct_rsp.rvalid                   ),
-    .eu_direct_rdata_o    ( eu_direct_rsp.rdata                    ),
-    .eu_direct_err_o      ( eu_direct_rsp.err                      )
+  xif_if2struct i_xif_if2struct (
+    .xif_compressed_if_i  ( xif_if.coproc_compressed                                ),
+    .xif_issue_if_i       ( xif_coproc_if.coproc_issue[0]                           ),  // FPU is now index 0
+    .xif_commit_if_i      ( xif_if.coproc_commit                                    ),
+    .xif_mem_if_o         ( xif_if.coproc_mem                                       ),
+    .xif_mem_result_if_i  ( xif_if.coproc_mem_result                                ),
+    .xif_result_if_o      ( xif_fpu_if.coproc_result                                ),
+    .x_compressed_valid_o ( x_compressed_valid                                      ),
+    .x_compressed_ready_i ( x_compressed_ready                                      ),
+    .x_compressed_req_o   ( x_compressed_req                                        ),
+    .x_compressed_resp_i  ( x_compressed_resp                                       ),
+    .x_issue_valid_o      ( x_issue_valid                                           ),
+    .x_issue_ready_i      ( x_issue_ready                                           ),
+    .x_issue_req_o        ( x_issue_req                                             ),
+    .x_issue_resp_i       ( x_issue_resp                                            ),
+    .x_commit_valid_o     ( x_commit_valid                                          ),
+    .x_commit_o           ( x_commit                                                ),
+    .x_mem_valid_i        ( x_mem_valid                                             ),
+    .x_mem_ready_o        ( x_mem_ready                                             ),
+    .x_mem_req_i          ( x_mem_req                                               ),
+    .x_mem_resp_o         ( x_mem_resp                                              ),
+    .x_mem_result_valid_o ( x_mem_result_valid                                      ),
+    .x_mem_result_o       ( x_mem_result                                            ),
+    .x_result_valid_i     ( x_result_valid                                          ),
+    .x_result_ready_o     ( x_result_ready                                          ),
+    .x_result_i           ( x_result                                                )
   );
 
 /*******************************************************/
