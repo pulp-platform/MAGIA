@@ -14,7 +14,8 @@
  * limitations under the License.
  * SPDX-License-Identifier: SHL-0.51
  *
- * Authors: 
+ * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
+  *          Based on idma_ctrl by Victor Isachi
  * 
  * OBI to iDMA Bridge - Memory-mapped control interface for iDMA
  *
@@ -26,10 +27,6 @@ module idma_obi_ctrl_decoder #(
   parameter type idma_fe_reg_req_t = magia_tile_pkg::idma_fe_reg_req_t,
   parameter type idma_fe_reg_rsp_t = magia_tile_pkg::idma_fe_reg_rsp_t
 )(
-  input  logic         clk_i,
-  input  logic         rst_ni,
-  input  logic         test_en_i,
-
   // OBI Slave Interface (CPU access)
   input  obi_req_t     obi_req_i,
   output obi_rsp_t     obi_rsp_o,

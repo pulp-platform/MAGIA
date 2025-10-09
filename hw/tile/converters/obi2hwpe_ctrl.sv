@@ -14,7 +14,8 @@
  * limitations under the License.
  * SPDX-License-Identifier: SHL-0.51
  *
- * Authors: 
+ * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
+ *          
  * 
  * OBI to iDMA Bridge - Memory-mapped control interface for iDMA
  *
