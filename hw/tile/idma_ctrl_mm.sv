@@ -14,7 +14,8 @@
  * limitations under the License.
  * SPDX-License-Identifier: SHL-0.51
  *
- * Authors: 
+ * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
+  *          Based on idma_ctrl by Victor Isachi
  * 
  * iDMA Memory-Mapped Controller
  * 
@@ -153,10 +154,6 @@ module idma_ctrl_mm
 /*******************************************************/
 
   idma_obi_ctrl_decoder i_idma_obi_ctrl_decoder (
-    .clk_i               ( clk_i                   ),
-    .rst_ni              ( rst_ni                  ),
-    .test_en_i           ( test_en_i               ),
-
     .obi_req_i           ( obi_req_i               ),
     .obi_rsp_o           ( obi_rsp_o               ),
 
@@ -166,20 +163,6 @@ module idma_ctrl_mm
     .idma_obi2axi_rsp_i  ( idma_fe_reg_obi2axi_rsp )
   );
 
-/*******************************************************/
-/**              IRQ Logic Implementation            **/
-/*******************************************************/
-
-  // Clock gating for power optimization
-  logic irq_clk_en, irq_clk_g;
-  assign irq_clk_en = a2o_transfer_busy | o2a_transfer_busy;
-  
-  tc_clk_gating i_irq_master_clkgate (
-    .clk_i     ( clk_i       ),
-    .en_i      ( irq_clk_en  ),
-    .test_en_i ( test_en_i   ),
-    .clk_o     ( irq_clk_g   )
-  );
 
   // Clean IRQ pass-through logic - equivalent to idma_ctrl behavior
   assign irq_a2o_start_o = a2o_transfer_start;

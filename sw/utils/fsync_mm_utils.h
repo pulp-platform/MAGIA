@@ -18,12 +18,10 @@
  *          Based on fsync_isa_utils.h by Victor Isachi
  * 
  * MAGIA FractalSync Memory-Mapped Utils
- * WARNING: Make sure to undefine EVENT_UNIT in this file if POLLING in registers mm is desired, otherwise polling mode will not work correctly
  */
 
 #ifndef FSYNC_MM_UTILS_H
 #define FSYNC_MM_UTILS_H
-#define EVENT_UNIT
 
 #include "magia_tile_utils.h"
 
@@ -38,21 +36,17 @@
 
 /* Memory-mapped sync function */
 static inline void fsync_mm(volatile uint32_t id, volatile uint32_t aggregate){
-  volatile char *fsync_base = (volatile char *)(FSYNC_BASE);
+  volatile uint32_t *fsync_base = (volatile uint32_t *)(FSYNC_BASE);
   
-  *(volatile uint32_t *)(fsync_base + FSYNC_MM_AGGR_REG_OFFSET) = aggregate;
-  *(volatile uint32_t *)(fsync_base + FSYNC_MM_ID_REG_OFFSET) = id;
-  *(volatile uint32_t *)(fsync_base + FSYNC_MM_CONTROL_REG_OFFSET) = 1;
+  fsync_base[FSYNC_MM_AGGR_REG_OFFSET/4] = aggregate;
+  fsync_base[FSYNC_MM_ID_REG_OFFSET/4] = id;
+  fsync_base[FSYNC_MM_CONTROL_REG_OFFSET/4] = 1;
   
-#ifndef EVENT_UNIT
+#ifdef STALLING
   // Polling mode - wait for completion
   volatile uint32_t status;
   do {
-    status = *(volatile uint32_t *)(fsync_base + FSYNC_MM_STATUS_REG_OFFSET);
-    if (status & FSYNC_MM_STATUS_BUSY_MASK) {
-      printf("FSYNC_MM still busy...\n");
-      // Still busy, optionally add a small delay here
-    }
+    status = fsync_base[FSYNC_MM_STATUS_REG_OFFSET/4];
   } while (status & FSYNC_MM_STATUS_BUSY_MASK);
 #endif
   // In non-stalling mode, the function returns immediately
