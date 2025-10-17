@@ -37,23 +37,31 @@ module magia_tile_fixture;
 
   floo_req_t                         noc_south_req_i;
   floo_rsp_t                         noc_south_rsp_o;
+  floo_wide_t                        noc_south_wide_i;
   floo_req_t                         noc_south_req_o;
   floo_rsp_t                         noc_south_rsp_i;
+  floo_wide_t                        noc_south_wide_o;
 
   floo_req_t                         noc_east_req_i;
   floo_rsp_t                         noc_east_rsp_o;
+  floo_wide_t                        noc_east_wide_i;
   floo_req_t                         noc_east_req_o;
   floo_rsp_t                         noc_east_rsp_i;
+  floo_wide_t                        noc_east_wide_o;
 
   floo_req_t                         noc_north_req_i;
   floo_rsp_t                         noc_north_rsp_o;
+  floo_wide_t                        noc_north_wide_i;
   floo_req_t                         noc_north_req_o;
   floo_rsp_t                         noc_north_rsp_i;
+  floo_wide_t                        noc_north_wide_o;
 
   floo_req_t                         noc_west_req_i;
   floo_rsp_t                         noc_west_rsp_o;
+  floo_wide_t                        noc_west_wide_i;
   floo_req_t                         noc_west_req_o;
   floo_rsp_t                         noc_west_rsp_i;
+  floo_wide_t                        noc_west_wide_o;
 
   fractal_sync_if                    ht_fsync_if_o[1]();
   fractal_sync_if                    hn_fsync_if_o[1]();
@@ -108,23 +116,31 @@ module magia_tile_fixture;
 
     .noc_south_req_i     ( noc_south_req_i   ),
     .noc_south_rsp_o     ( noc_south_rsp_o   ),
+    .noc_south_wide_i    ( noc_south_wide_i  ),
     .noc_south_req_o     ( noc_south_req_o   ),
     .noc_south_rsp_i     ( noc_south_rsp_i   ),
+    .noc_south_wide_o    ( noc_south_wide_o  ),
 
     .noc_east_req_i      ( noc_east_req_i    ),
     .noc_east_rsp_o      ( noc_east_rsp_o    ),
+    .noc_east_wide_i     ( noc_east_wide_i   ),
     .noc_east_req_o      ( noc_east_req_o    ),
     .noc_east_rsp_i      ( noc_east_rsp_i    ),
+    .noc_east_wide_o     ( noc_east_wide_o   ),
 
     .noc_north_req_i     ( noc_north_req_i   ),
     .noc_north_rsp_o     ( noc_north_rsp_o   ),
+    .noc_north_wide_i    ( noc_north_wide_i  ),
     .noc_north_req_o     ( noc_north_req_o   ),
     .noc_north_rsp_i     ( noc_north_rsp_i   ),
+    .noc_north_wide_o    ( noc_north_wide_o  ),
 
     .noc_west_req_i      ( noc_west_req_i    ),
     .noc_west_rsp_o      ( noc_west_rsp_o    ),
+    .noc_west_wide_i     ( noc_west_wide_i   ),
     .noc_west_req_o      ( noc_west_req_o    ),
     .noc_west_rsp_i      ( noc_west_rsp_i    ),
+    .noc_west_wide_o     ( noc_west_wide_o   ),
 
     .x_id_i              ( 0                 ),
     .y_id_i              ( 0                 ),

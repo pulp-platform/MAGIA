@@ -32,6 +32,8 @@ package magia_pkg;
   localparam int unsigned INSTR_W          = 32;                              // System-wide instruction Width
   localparam int unsigned BYTE_W           = 8;                               // System-wide byte Width
   localparam int unsigned STRB_W           = DATA_W/BYTE_W;                   // System-wide strobe Width
+  localparam int unsigned WIDE_DATA_W      = 256;                             // System-wide wide communication channel Width
+  localparam int unsigned WIDE_STRB_W      = WIDE_DATA_W/BYTE_W;              // System-wide wide communication strobe Width
   localparam int unsigned N_MEM_BANKS      = 32;                              // Number of TCDM banks (1 extra bank for missaligned accesses)
   localparam int unsigned N_WORDS_BANK     = 8192;                            // Number of words per TCDM bank
   localparam int unsigned N_TILES_Y        = 4;                               // Number of Tile rowns
@@ -68,7 +70,8 @@ package magia_pkg;
   `AXI_ALIAS(noc_axi_data, axi_xbar_mst, noc_axi_data_req_t, axi_xbar_mst_req_t, noc_axi_data_rsp_t, axi_xbar_mst_rsp_t)
   `AXI_ALIAS(noc_axi_data, axi_default, noc_axi_data_req_t, axi_default_req_t, noc_axi_data_rsp_t, axi_default_rsp_t)
 
-  `AXI_TYPEDEF_ALL_CT(axi_l2, axi_l2_req_t, axi_l2_rsp_t, logic[ADDR_W-1:0], logic[L2_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[L2_U_W-1:0])
+  `AXI_TYPEDEF_ALL_CT(axi_narrow_l2, axi_narrow_l2_req_t, axi_narrow_l2_rsp_t, logic[ADDR_W-1:0], logic[L2_ID_W-1:0], logic[DATA_W-1:0], logic[STRB_W-1:0], logic[L2_U_W-1:0])
+  `AXI_TYPEDEF_ALL_CT(axi_wide_l2, axi_wide_l2_req_t, axi_wide_l2_rsp_t, logic[ADDR_W-1:0], logic[L2_ID_W-1:0], logic[WIDE_DATA_W-1:0], logic[WIDE_STRB_W-1:0], logic[L2_U_W-1:0])
 
   `FSYNC_TYPEDEF_ALL(h_root_fsync, logic[ROOT_FSYNC_AGGR_W-1:0], logic[ROOT_FSYNC_LVL_W-1:0], logic[ROOT_FSYNC_ID_W-1:0])
   `FSYNC_TYPEDEF_ALL(v_root_fsync, logic[ROOT_FSYNC_AGGR_W-1:0], logic[ROOT_FSYNC_LVL_W-1:0], logic[ROOT_FSYNC_ID_W-1:0])

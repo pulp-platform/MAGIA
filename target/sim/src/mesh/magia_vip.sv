@@ -64,10 +64,13 @@ module magia_vip
 
   output logic                                                wu_wfe,
 
-  input  floo_req_t [magia_pkg::N_TILES_Y-1:0]                l2_noc_req_i,
-  output floo_rsp_t [magia_pkg::N_TILES_Y-1:0]                l2_noc_rsp_o,
-  output floo_req_t [magia_pkg::N_TILES_Y-1:0]                l2_noc_req_o,
-  input  floo_rsp_t [magia_pkg::N_TILES_Y-1:0]                l2_noc_rsp_i
+  input  floo_req_t  [magia_pkg::N_TILES_Y-1:0]               l2_noc_req_i,
+  output floo_rsp_t  [magia_pkg::N_TILES_Y-1:0]               l2_noc_rsp_o,
+  output floo_req_t  [magia_pkg::N_TILES_Y-1:0]               l2_noc_req_o,
+  input  floo_rsp_t  [magia_pkg::N_TILES_Y-1:0]               l2_noc_rsp_i,
+
+  input  floo_wide_t [magia_pkg::N_TILES_Y-1:0]               l2_noc_wide_i,
+  output floo_wide_t [magia_pkg::N_TILES_Y-1:0]               l2_noc_wide_o
 );
 
 /*******************************************************/
@@ -172,7 +175,9 @@ module magia_vip
     .noc_req_i  ( l2_noc_req_i  ),
     .noc_rsp_o  ( l2_noc_rsp_o  ),
     .noc_req_o  ( l2_noc_req_o  ),
-    .noc_rsp_i  ( l2_noc_rsp_i  )
+    .noc_rsp_i  ( l2_noc_rsp_i  ),
+    .noc_wide_i ( l2_noc_wide_i ),
+    .noc_wide_o ( l2_noc_wide_o )
   );
 
 /*******************************************************/
