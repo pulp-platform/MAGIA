@@ -67,10 +67,13 @@ module magia
   input  logic                                  wu_wfe_i,
 
   // Only west-side L2
-  output floo_req_t [N_TILES_Y-1:0]             l2_noc_req_o,
-  input  floo_rsp_t [N_TILES_Y-1:0]             l2_noc_rsp_i,
-  input  floo_req_t [N_TILES_Y-1:0]             l2_noc_req_i,
-  output floo_rsp_t [N_TILES_Y-1:0]             l2_noc_rsp_o
+  output floo_req_t  [N_TILES_Y-1:0]            l2_noc_req_o,
+  input  floo_rsp_t  [N_TILES_Y-1:0]            l2_noc_rsp_i,
+  input  floo_req_t  [N_TILES_Y-1:0]            l2_noc_req_i,
+  output floo_rsp_t  [N_TILES_Y-1:0]            l2_noc_rsp_o,
+
+  input  floo_wide_t [N_TILES_Y-1:0]            l2_noc_wide_i,
+  output floo_wide_t [N_TILES_Y-1:0]            l2_noc_wide_o
 );
 
 /*******************************************************/
@@ -80,14 +83,18 @@ module magia
   logic[31:0] mhartid[N_TILES];
 
   // FlooNoC buses
-  floo_req_t [N_TILES-1:0] tile_south_req_in, tile_south_req_out;
-  floo_rsp_t [N_TILES-1:0] tile_south_rsp_in, tile_south_rsp_out;
-  floo_req_t [N_TILES-1:0] tile_east_req_in, tile_east_req_out;
-  floo_rsp_t [N_TILES-1:0] tile_east_rsp_in, tile_east_rsp_out;
-  floo_req_t [N_TILES-1:0] tile_north_req_in, tile_north_req_out;
-  floo_rsp_t [N_TILES-1:0] tile_north_rsp_in, tile_north_rsp_out;
-  floo_req_t [N_TILES-1:0] tile_west_req_in, tile_west_req_out;
-  floo_rsp_t [N_TILES-1:0] tile_west_rsp_in, tile_west_rsp_out;
+  floo_req_t  [N_TILES-1:0] tile_south_req_in,  tile_south_req_out;
+  floo_rsp_t  [N_TILES-1:0] tile_south_rsp_in,  tile_south_rsp_out;
+  floo_wide_t [N_TILES-1:0] tile_south_wide_in, tile_south_wide_out;
+  floo_req_t  [N_TILES-1:0] tile_east_req_in,   tile_east_req_out;
+  floo_rsp_t  [N_TILES-1:0] tile_east_rsp_in,   tile_east_rsp_out;
+  floo_wide_t [N_TILES-1:0] tile_east_wide_in,  tile_east_wide_out;
+  floo_req_t  [N_TILES-1:0] tile_north_req_in,  tile_north_req_out;
+  floo_rsp_t  [N_TILES-1:0] tile_north_rsp_in,  tile_north_rsp_out;
+  floo_wide_t [N_TILES-1:0] tile_north_wide_in, tile_north_wide_out;
+  floo_req_t  [N_TILES-1:0] tile_west_req_in,   tile_west_req_out;
+  floo_rsp_t  [N_TILES-1:0] tile_west_rsp_in,   tile_west_rsp_out;
+  floo_wide_t [N_TILES-1:0] tile_west_wide_in,  tile_west_wide_out;
 
   magia_tile_pkg::ht_tile_fsync_req_t ht_tile_fsync_req[N_TILES][1]; // Single link CU-FSync interface
   magia_tile_pkg::ht_tile_fsync_rsp_t ht_tile_fsync_rsp[N_TILES][1]; // Single link CU-FSync interface
@@ -168,60 +175,68 @@ module magia
         .CORE_M       (               ),
         .ERROR_CAP    (               )
       ) i_magia_tile (
-        .clk_i                                                   ,
-        .rst_ni                                                  ,
-        .test_mode_i                                             ,
-        .tile_enable_i                                           ,
+        .clk_i                                                     ,
+        .rst_ni                                                    ,
+        .test_mode_i                                               ,
+        .tile_enable_i                                             ,
 
-        .noc_south_req_o     ( tile_south_req_out[i*N_TILES_X+j]),
-        .noc_south_rsp_i     ( tile_south_rsp_in[i*N_TILES_X+j] ),
-        .noc_east_req_o      ( tile_east_req_out[i*N_TILES_X+j] ),
-        .noc_east_rsp_i      ( tile_east_rsp_in[i*N_TILES_X+j]  ),
-        .noc_north_req_o     ( tile_north_req_out[i*N_TILES_X+j]),
-        .noc_north_rsp_i     ( tile_north_rsp_in[i*N_TILES_X+j] ),
-        .noc_west_req_o      ( tile_west_req_out[i*N_TILES_X+j] ),
-        .noc_west_rsp_i      ( tile_west_rsp_in[i*N_TILES_X+j]  ),
+        .noc_south_req_o     ( tile_south_req_out[i*N_TILES_X+j]  ),
+        .noc_south_rsp_i     ( tile_south_rsp_in[i*N_TILES_X+j]   ),
+        .noc_south_wide_o    ( tile_south_wide_out[i*N_TILES_X+j] ),
+        .noc_east_req_o      ( tile_east_req_out[i*N_TILES_X+j]   ),
+        .noc_east_rsp_i      ( tile_east_rsp_in[i*N_TILES_X+j]    ),
+        .noc_east_wide_o     ( tile_east_wide_out[i*N_TILES_X+j]  ),
+        .noc_north_req_o     ( tile_north_req_out[i*N_TILES_X+j]  ),
+        .noc_north_rsp_i     ( tile_north_rsp_in[i*N_TILES_X+j]   ),
+        .noc_north_wide_o    ( tile_north_wide_out[i*N_TILES_X+j] ),
+        .noc_west_req_o      ( tile_west_req_out[i*N_TILES_X+j]   ),
+        .noc_west_rsp_i      ( tile_west_rsp_in[i*N_TILES_X+j]    ),
+        .noc_west_wide_o     ( tile_west_wide_out[i*N_TILES_X+j]  ),
 
-        .noc_south_req_i     ( tile_south_req_in[i*N_TILES_X+j] ),
-        .noc_south_rsp_o     ( tile_south_rsp_out[i*N_TILES_X+j]),
-        .noc_east_req_i      ( tile_east_req_in[i*N_TILES_X+j]  ),
-        .noc_east_rsp_o      ( tile_east_rsp_out[i*N_TILES_X+j] ),
-        .noc_north_req_i     ( tile_north_req_in[i*N_TILES_X+j] ),
-        .noc_north_rsp_o     ( tile_north_rsp_out[i*N_TILES_X+j]),
-        .noc_west_req_i      ( tile_west_req_in[i*N_TILES_X+j]  ),
-        .noc_west_rsp_o      ( tile_west_rsp_out[i*N_TILES_X+j] ),
+        .noc_south_req_i     ( tile_south_req_in[i*N_TILES_X+j]   ),
+        .noc_south_rsp_o     ( tile_south_rsp_out[i*N_TILES_X+j]  ),
+        .noc_south_wide_i    ( tile_south_wide_in[i*N_TILES_X+j]  ),
+        .noc_east_req_i      ( tile_east_req_in[i*N_TILES_X+j]    ),
+        .noc_east_rsp_o      ( tile_east_rsp_out[i*N_TILES_X+j]   ),
+        .noc_east_wide_i     ( tile_east_wide_in[i*N_TILES_X+j]   ),
+        .noc_north_req_i     ( tile_north_req_in[i*N_TILES_X+j]   ),
+        .noc_north_rsp_o     ( tile_north_rsp_out[i*N_TILES_X+j]  ),
+        .noc_north_wide_i    ( tile_north_wide_in[i*N_TILES_X+j]  ),
+        .noc_west_req_i      ( tile_west_req_in[i*N_TILES_X+j]    ),
+        .noc_west_rsp_o      ( tile_west_rsp_out[i*N_TILES_X+j]   ),
+        .noc_west_wide_i     ( tile_west_wide_in[i*N_TILES_X+j]   ),
 
-        .x_id_i              ( j                                ),
-        .y_id_i              ( i                                ),
+        .x_id_i              ( j                                  ),
+        .y_id_i              ( i                                  ),
   
-        .ht_fsync_if_o       ( ht_fsync_if[i*N_TILES_X+j]       ),
-        .hn_fsync_if_o       ( hn_fsync_if[i*N_TILES_X+j]       ),
-        .vt_fsync_if_o       ( vt_fsync_if[i*N_TILES_X+j]       ),
-        .vn_fsync_if_o       ( vn_fsync_if[i*N_TILES_X+j]       ),
+        .ht_fsync_if_o       ( ht_fsync_if[i*N_TILES_X+j]         ),
+        .hn_fsync_if_o       ( hn_fsync_if[i*N_TILES_X+j]         ),
+        .vt_fsync_if_o       ( vt_fsync_if[i*N_TILES_X+j]         ),
+        .vn_fsync_if_o       ( vn_fsync_if[i*N_TILES_X+j]         ),
         
-        .scan_cg_en_i                                            ,
+        .scan_cg_en_i                                              ,
   
-        .boot_addr_i                                             ,
-        .mtvec_addr_i                                            ,
-        .dm_halt_addr_i                                          ,
-        .dm_exception_addr_i                                     ,
-        .mhartid_i           ( mhartid[i*N_TILES_X+j]           ),
-        .mimpid_patch_i                                          ,
+        .boot_addr_i                                               ,
+        .mtvec_addr_i                                              ,
+        .dm_halt_addr_i                                            ,
+        .dm_exception_addr_i                                       ,
+        .mhartid_i           ( mhartid[i*N_TILES_X+j]             ),
+        .mimpid_patch_i                                            ,
   
-        .mcycle_o            ( mcycle_o[i*N_TILES_X+j]          ),
-        .time_i                                                  ,
+        .mcycle_o            ( mcycle_o[i*N_TILES_X+j]            ),
+        .time_i                                                    ,
   
-        .irq_i               ( irq_i[i*N_TILES_X+j]             ),
+        .irq_i               ( irq_i[i*N_TILES_X+j]               ),
   
-        .debug_req_i                                             ,
-        .debug_havereset_o   ( debug_havereset_o[i*N_TILES_X+j] ),
-        .debug_running_o     ( debug_running_o[i*N_TILES_X+j]   ),
-        .debug_halted_o      ( debug_halted_o[i*N_TILES_X+j]    ),
-        .debug_pc_valid_o    ( debug_pc_valid_o[i*N_TILES_X+j]  ),
-        .debug_pc_o          ( debug_pc_o[i*N_TILES_X+j]        ),
+        .debug_req_i                                               ,
+        .debug_havereset_o   ( debug_havereset_o[i*N_TILES_X+j]   ),
+        .debug_running_o     ( debug_running_o[i*N_TILES_X+j]     ),
+        .debug_halted_o      ( debug_halted_o[i*N_TILES_X+j]      ),
+        .debug_pc_valid_o    ( debug_pc_valid_o[i*N_TILES_X+j]    ),
+        .debug_pc_o          ( debug_pc_o[i*N_TILES_X+j]          ),
   
-        .fetch_enable_i                                          ,
-        .core_sleep_o        ( core_sleep_o[i*N_TILES_X+j]      ),
+        .fetch_enable_i                                            ,
+        .core_sleep_o        ( core_sleep_o[i*N_TILES_X+j]        ),
         .wu_wfe_i
       );
   `ifdef CORE_TRACES
@@ -234,95 +249,134 @@ module magia
 
       if (i == 0) begin
         if (j == 0) begin // T-L corner
-          assign tile_north_req_in[i*N_TILES_X+j] = '0;
-          assign tile_north_rsp_in[i*N_TILES_X+j] = '0;
-          assign tile_west_req_in[i*N_TILES_X+j] = l2_noc_req_i[i];
-          assign l2_noc_rsp_o[i] = tile_west_rsp_out[i*N_TILES_X+j];
-          assign l2_noc_req_o[i] = tile_west_req_out[i*N_TILES_X+j];
-          assign tile_west_rsp_in[i*N_TILES_X+j] = l2_noc_rsp_i[i];
-          assign tile_south_req_in[i*N_TILES_X+j] = tile_north_req_out[(i+1)*N_TILES_X+j];
-          assign tile_south_rsp_in[i*N_TILES_X+j] = tile_north_rsp_out[(i+1)*N_TILES_X+j];
-          assign tile_east_req_in[i*N_TILES_X+j] = tile_west_req_out[i*N_TILES_X+j+1];
-          assign tile_east_rsp_in[i*N_TILES_X+j] = tile_west_rsp_out[i*N_TILES_X+j+1];
+          assign tile_north_req_in[i*N_TILES_X+j]  = '0;
+          assign tile_north_rsp_in[i*N_TILES_X+j]  = '0;
+          assign tile_north_wide_in[i*N_TILES_X+j] = '0;
+          assign tile_west_req_in[i*N_TILES_X+j]   = l2_noc_req_i[i];
+          assign tile_west_rsp_in[i*N_TILES_X+j]   = l2_noc_rsp_i[i];
+          assign tile_west_wide_in[i*N_TILES_X+j]  = l2_noc_wide_i[i];
+          assign l2_noc_rsp_o[i]                   = tile_west_rsp_out[i*N_TILES_X+j];
+          assign l2_noc_req_o[i]                   = tile_west_req_out[i*N_TILES_X+j];
+          assign l2_noc_wide_o[i]                  = tile_west_wide_out[i*N_TILES_X+j];
+          assign tile_south_req_in[i*N_TILES_X+j]  = tile_north_req_out[(i+1)*N_TILES_X+j];
+          assign tile_south_rsp_in[i*N_TILES_X+j]  = tile_north_rsp_out[(i+1)*N_TILES_X+j];
+          assign tile_south_wide_in[i*N_TILES_X+j] = tile_north_wide_out[(i+1)*N_TILES_X+j];
+          assign tile_east_req_in[i*N_TILES_X+j]   = tile_west_req_out[i*N_TILES_X+j+1];
+          assign tile_east_rsp_in[i*N_TILES_X+j]   = tile_west_rsp_out[i*N_TILES_X+j+1];
+          assign tile_east_wide_in[i*N_TILES_X+j]  = tile_west_wide_out[i*N_TILES_X+j+1];
         end else if (j == N_TILES_X-1) begin // T-R corner
-          assign tile_north_req_in[i*N_TILES_X+j] = '0;
-          assign tile_north_rsp_in[i*N_TILES_X+j] = '0;
-          assign tile_west_req_in[i*N_TILES_X+j] = tile_east_req_out[i*N_TILES_X+j-1];
-          assign tile_west_rsp_in[i*N_TILES_X+j] = tile_east_rsp_out[i*N_TILES_X+j-1];
-          assign tile_south_req_in[i*N_TILES_X+j] = tile_north_req_out[(i+1)*N_TILES_X+j];
-          assign tile_south_rsp_in[i*N_TILES_X+j] = tile_north_rsp_out[(i+1)*N_TILES_X+j];
-          assign tile_east_req_in[i*N_TILES_X+j] = '0;
-          assign tile_east_rsp_in[i*N_TILES_X+j] = '0;
+          assign tile_north_req_in[i*N_TILES_X+j]  = '0;
+          assign tile_north_rsp_in[i*N_TILES_X+j]  = '0;
+          assign tile_north_wide_in[i*N_TILES_X+j] = '0;
+          assign tile_west_req_in[i*N_TILES_X+j]   = tile_east_req_out[i*N_TILES_X+j-1];
+          assign tile_west_rsp_in[i*N_TILES_X+j]   = tile_east_rsp_out[i*N_TILES_X+j-1];
+          assign tile_west_wide_in[i*N_TILES_X+j]  = tile_east_wide_out[i*N_TILES_X+j-1];
+          assign tile_south_req_in[i*N_TILES_X+j]  = tile_north_req_out[(i+1)*N_TILES_X+j];
+          assign tile_south_rsp_in[i*N_TILES_X+j]  = tile_north_rsp_out[(i+1)*N_TILES_X+j];
+          assign tile_south_wide_in[i*N_TILES_X+j] = tile_north_wide_out[(i+1)*N_TILES_X+j];
+          assign tile_east_req_in[i*N_TILES_X+j]   = '0;
+          assign tile_east_rsp_in[i*N_TILES_X+j]   = '0;
+          assign tile_east_wide_in[i*N_TILES_X+j]  = '0;
         end else if ((j > 0) && (j < (N_TILES_X-1))) begin // First row without corners
-          assign tile_north_req_in[i*N_TILES_X+j] = '0;
-          assign tile_north_rsp_in[i*N_TILES_X+j] = '0;
-          assign tile_west_req_in[i*N_TILES_X+j] = tile_east_req_out[i*N_TILES_X+j-1];
-          assign tile_west_rsp_in[i*N_TILES_X+j] = tile_east_rsp_out[i*N_TILES_X+j-1];
-          assign tile_south_req_in[i*N_TILES_X+j] = tile_north_req_out[(i+1)*N_TILES_X+j];
-          assign tile_south_rsp_in[i*N_TILES_X+j] = tile_north_rsp_out[(i+1)*N_TILES_X+j];
-          assign tile_east_req_in[i*N_TILES_X+j] = tile_west_req_out[i*N_TILES_X+j+1];
-          assign tile_east_rsp_in[i*N_TILES_X+j] = tile_west_rsp_out[i*N_TILES_X+j+1];
+          assign tile_north_req_in[i*N_TILES_X+j]  = '0;
+          assign tile_north_rsp_in[i*N_TILES_X+j]  = '0;
+          assign tile_north_wide_in[i*N_TILES_X+j] = '0;
+          assign tile_west_req_in[i*N_TILES_X+j]   = tile_east_req_out[i*N_TILES_X+j-1];
+          assign tile_west_rsp_in[i*N_TILES_X+j]   = tile_east_rsp_out[i*N_TILES_X+j-1];
+          assign tile_west_wide_in[i*N_TILES_X+j]  = tile_east_wide_out[i*N_TILES_X+j-1];
+          assign tile_south_req_in[i*N_TILES_X+j]  = tile_north_req_out[(i+1)*N_TILES_X+j];
+          assign tile_south_rsp_in[i*N_TILES_X+j]  = tile_north_rsp_out[(i+1)*N_TILES_X+j];
+          assign tile_south_wide_in[i*N_TILES_X+j] = tile_north_wide_out[(i+1)*N_TILES_X+j];
+          assign tile_east_req_in[i*N_TILES_X+j]   = tile_west_req_out[i*N_TILES_X+j+1];
+          assign tile_east_rsp_in[i*N_TILES_X+j]   = tile_west_rsp_out[i*N_TILES_X+j+1];
+          assign tile_east_wide_in[i*N_TILES_X+j]  = tile_west_wide_out[i*N_TILES_X+j+1];
         end
       end else if (i == N_TILES_Y-1) begin
         if (j == 0) begin // B-L corner
-          assign tile_north_req_in[i*N_TILES_X+j] = tile_south_req_out[(i-1)*N_TILES_X+j];
-          assign tile_north_rsp_in[i*N_TILES_X+j] = tile_south_rsp_out[(i-1)*N_TILES_X+j];
-          assign tile_west_req_in[i*N_TILES_X+j] = l2_noc_req_i[i];
-          assign l2_noc_rsp_o[i] = tile_west_rsp_out[i*N_TILES_X+j];
-          assign l2_noc_req_o[i] = tile_west_req_out[i*N_TILES_X+j];
-          assign tile_west_rsp_in[i*N_TILES_X+j] = l2_noc_rsp_i[i];
-          assign tile_south_req_in[i*N_TILES_X+j] = '0;
-          assign tile_south_rsp_in[i*N_TILES_X+j] = '0;
-          assign tile_east_req_in[i*N_TILES_X+j] = tile_west_req_out[i*N_TILES_X+j+1];
-          assign tile_east_rsp_in[i*N_TILES_X+j] = tile_west_rsp_out[i*N_TILES_X+j+1];
+          assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
+          assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
+          assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];
+          assign tile_west_req_in[i*N_TILES_X+j]   = l2_noc_req_i[i];
+          assign tile_west_rsp_in[i*N_TILES_X+j]   = l2_noc_rsp_i[i];
+          assign tile_west_wide_in[i*N_TILES_X+j]  = l2_noc_wide_i[i];
+          assign l2_noc_rsp_o[i]                   = tile_west_rsp_out[i*N_TILES_X+j];
+          assign l2_noc_req_o[i]                   = tile_west_req_out[i*N_TILES_X+j];
+          assign l2_noc_wide_o[i]                  = tile_west_wide_out[i*N_TILES_X+j];
+          assign tile_south_req_in[i*N_TILES_X+j]  = '0;
+          assign tile_south_rsp_in[i*N_TILES_X+j]  = '0;
+          assign tile_south_wide_in[i*N_TILES_X+j] = '0;
+          assign tile_east_req_in[i*N_TILES_X+j]   = tile_west_req_out[i*N_TILES_X+j+1];
+          assign tile_east_rsp_in[i*N_TILES_X+j]   = tile_west_rsp_out[i*N_TILES_X+j+1];
+          assign tile_east_wide_in[i*N_TILES_X+j]  = tile_west_wide_out[i*N_TILES_X+j+1];
         end else if (j == N_TILES_X-1) begin // B-R corner
-          assign tile_north_req_in[i*N_TILES_X+j] = tile_south_req_out[(i-1)*N_TILES_X+j];
-          assign tile_north_rsp_in[i*N_TILES_X+j] = tile_south_rsp_out[(i-1)*N_TILES_X+j];
-          assign tile_west_req_in[i*N_TILES_X+j] = tile_east_req_out[i*N_TILES_X+j-1];
-          assign tile_west_rsp_in[i*N_TILES_X+j] = tile_east_rsp_out[i*N_TILES_X+j-1];
-          assign tile_south_req_in[i*N_TILES_X+j] = '0;
-          assign tile_south_rsp_in[i*N_TILES_X+j] = '0;
-          assign tile_east_req_in[i*N_TILES_X+j] = '0;
-          assign tile_east_rsp_in[i*N_TILES_X+j] = '0;
+          assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
+          assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
+          assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];
+          assign tile_west_req_in[i*N_TILES_X+j]   = tile_east_req_out[i*N_TILES_X+j-1];
+          assign tile_west_rsp_in[i*N_TILES_X+j]   = tile_east_rsp_out[i*N_TILES_X+j-1];
+          assign tile_west_wide_in[i*N_TILES_X+j]  = tile_east_wide_out[i*N_TILES_X+j-1];
+          assign tile_south_req_in[i*N_TILES_X+j]  = '0;
+          assign tile_south_rsp_in[i*N_TILES_X+j]  = '0;
+          assign tile_south_wide_in[i*N_TILES_X+j] = '0;
+          assign tile_east_req_in[i*N_TILES_X+j]   = '0;
+          assign tile_east_rsp_in[i*N_TILES_X+j]   = '0;
+          assign tile_east_wide_in[i*N_TILES_X+j]  = '0;
         end else if ((j > 0) && (j < (N_TILES_X-1))) begin // Last row without corners
-          assign tile_north_req_in[i*N_TILES_X+j] = tile_south_req_out[(i-1)*N_TILES_X+j];
-          assign tile_north_rsp_in[i*N_TILES_X+j] = tile_south_rsp_out[(i-1)*N_TILES_X+j];
-          assign tile_west_req_in[i*N_TILES_X+j] = tile_east_req_out[i*N_TILES_X+j-1];
-          assign tile_west_rsp_in[i*N_TILES_X+j] = tile_east_rsp_out[i*N_TILES_X+j-1];
-          assign tile_south_req_in[i*N_TILES_X+j] = '0;
-          assign tile_south_rsp_in[i*N_TILES_X+j] = '0;
-          assign tile_east_req_in[i*N_TILES_X+j] = tile_west_req_out[i*N_TILES_X+j+1];
-          assign tile_east_rsp_in[i*N_TILES_X+j] = tile_west_rsp_out[i*N_TILES_X+j+1];
+          assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
+          assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
+          assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];
+          assign tile_west_req_in[i*N_TILES_X+j]   = tile_east_req_out[i*N_TILES_X+j-1];
+          assign tile_west_rsp_in[i*N_TILES_X+j]   = tile_east_rsp_out[i*N_TILES_X+j-1];
+          assign tile_west_wide_in[i*N_TILES_X+j]  = tile_east_wide_out[i*N_TILES_X+j-1];
+          assign tile_south_req_in[i*N_TILES_X+j]  = '0;
+          assign tile_south_rsp_in[i*N_TILES_X+j]  = '0;
+          assign tile_south_wide_in[i*N_TILES_X+j] = '0;
+          assign tile_east_req_in[i*N_TILES_X+j]   = tile_west_req_out[i*N_TILES_X+j+1];
+          assign tile_east_rsp_in[i*N_TILES_X+j]   = tile_west_rsp_out[i*N_TILES_X+j+1];
+          assign tile_east_wide_in[i*N_TILES_X+j]  = tile_west_wide_out[i*N_TILES_X+j+1];
         end
       end else if (j == 0 && i != 0 && i != N_TILES_Y-1) begin // First column
-        assign tile_north_req_in[i*N_TILES_X+j] = tile_south_req_out[(i-1)*N_TILES_X+j];
-        assign tile_north_rsp_in[i*N_TILES_X+j] = tile_south_rsp_out[(i-1)*N_TILES_X+j];
-        assign tile_west_req_in[i*N_TILES_X+j] = l2_noc_req_i[i];
-        assign l2_noc_rsp_o[i] = tile_west_rsp_out[i*N_TILES_X+j];
-        assign l2_noc_req_o[i] = tile_west_req_out[i*N_TILES_X+j];
-        assign tile_west_rsp_in[i*N_TILES_X+j] = l2_noc_rsp_i[i];
-        assign tile_south_req_in[i*N_TILES_X+j] = tile_north_req_out[(i+1)*N_TILES_X+j];
-        assign tile_south_rsp_in[i*N_TILES_X+j] = tile_north_rsp_out[(i+1)*N_TILES_X+j];
-        assign tile_east_req_in[i*N_TILES_X+j] = tile_west_req_out[i*N_TILES_X+j+1];
-        assign tile_east_rsp_in[i*N_TILES_X+j] = tile_west_rsp_out[i*N_TILES_X+j+1];
+        assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
+        assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
+        assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];
+        assign tile_west_req_in[i*N_TILES_X+j]   = l2_noc_req_i[i];
+        assign tile_west_rsp_in[i*N_TILES_X+j]   = l2_noc_rsp_i[i];
+        assign tile_west_wide_in[i*N_TILES_X+j]  = l2_noc_wide_i[i];
+        assign l2_noc_rsp_o[i]                   = tile_west_rsp_out[i*N_TILES_X+j];
+        assign l2_noc_req_o[i]                   = tile_west_req_out[i*N_TILES_X+j];
+        assign l2_noc_wide_o[i]                  = tile_west_wide_out[i*N_TILES_X+j];
+        assign tile_south_req_in[i*N_TILES_X+j]  = tile_north_req_out[(i+1)*N_TILES_X+j];
+        assign tile_south_rsp_in[i*N_TILES_X+j]  = tile_north_rsp_out[(i+1)*N_TILES_X+j];
+        assign tile_south_wide_in[i*N_TILES_X+j] = tile_north_wide_out[(i+1)*N_TILES_X+j];
+        assign tile_east_req_in[i*N_TILES_X+j]   = tile_west_req_out[i*N_TILES_X+j+1];
+        assign tile_east_rsp_in[i*N_TILES_X+j]   = tile_west_rsp_out[i*N_TILES_X+j+1];
+        assign tile_east_wide_in[i*N_TILES_X+j]  = tile_west_wide_out[i*N_TILES_X+j+1];
       end else if (j == N_TILES_X-1 && i != 0 && i != N_TILES_Y-1) begin // Last column
-        assign tile_north_req_in[i*N_TILES_X+j] = tile_south_req_out[(i-1)*N_TILES_X+j];
-        assign tile_north_rsp_in[i*N_TILES_X+j] = tile_south_rsp_out[(i-1)*N_TILES_X+j];
-        assign tile_west_req_in[i*N_TILES_X+j] = tile_east_req_out[i*N_TILES_X+j-1];
-        assign tile_west_rsp_in[i*N_TILES_X+j] = tile_east_rsp_out[i*N_TILES_X+j-1];
-        assign tile_south_req_in[i*N_TILES_X+j] = tile_north_req_out[(i+1)*N_TILES_X+j];
-        assign tile_south_rsp_in[i*N_TILES_X+j] = tile_north_rsp_out[(i+1)*N_TILES_X+j];
-        assign tile_east_req_in[i*N_TILES_X+j] = '0;
-        assign tile_east_rsp_in[i*N_TILES_X+j] = '0;
+        assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
+        assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
+        assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];
+        assign tile_west_req_in[i*N_TILES_X+j]   = tile_east_req_out[i*N_TILES_X+j-1];
+        assign tile_west_rsp_in[i*N_TILES_X+j]   = tile_east_rsp_out[i*N_TILES_X+j-1];
+        assign tile_west_wide_in[i*N_TILES_X+j]  = tile_east_wide_out[i*N_TILES_X+j-1];
+        assign tile_south_req_in[i*N_TILES_X+j]  = tile_north_req_out[(i+1)*N_TILES_X+j];
+        assign tile_south_rsp_in[i*N_TILES_X+j]  = tile_north_rsp_out[(i+1)*N_TILES_X+j];
+        assign tile_south_wide_in[i*N_TILES_X+j] = tile_north_wide_out[(i+1)*N_TILES_X+j];
+        assign tile_east_req_in[i*N_TILES_X+j]   = '0;
+        assign tile_east_rsp_in[i*N_TILES_X+j]   = '0;
+        assign tile_east_wide_in[i*N_TILES_X+j]  = '0;
       end else begin // Central tiles
-        assign tile_north_req_in[i*N_TILES_X+j] = tile_south_req_out[(i-1)*N_TILES_X+j];
-        assign tile_north_rsp_in[i*N_TILES_X+j] = tile_south_rsp_out[(i-1)*N_TILES_X+j];
-        assign tile_west_req_in[i*N_TILES_X+j] = tile_east_req_out[i*N_TILES_X+j-1];
-        assign tile_west_rsp_in[i*N_TILES_X+j] = tile_east_rsp_out[i*N_TILES_X+j-1];
-        assign tile_south_req_in[i*N_TILES_X+j] = tile_north_req_out[(i+1)*N_TILES_X+j];
-        assign tile_south_rsp_in[i*N_TILES_X+j] = tile_north_rsp_out[(i+1)*N_TILES_X+j];
-        assign tile_east_req_in[i*N_TILES_X+j] = tile_west_req_out[i*N_TILES_X+j+1];
-        assign tile_east_rsp_in[i*N_TILES_X+j] = tile_west_rsp_out[i*N_TILES_X+j+1];
+        assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
+        assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
+        assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];
+        assign tile_west_req_in[i*N_TILES_X+j]   = tile_east_req_out[i*N_TILES_X+j-1];
+        assign tile_west_rsp_in[i*N_TILES_X+j]   = tile_east_rsp_out[i*N_TILES_X+j-1];
+        assign tile_west_wide_in[i*N_TILES_X+j]  = tile_east_wide_out[i*N_TILES_X+j-1];
+        assign tile_south_req_in[i*N_TILES_X+j]  = tile_north_req_out[(i+1)*N_TILES_X+j];
+        assign tile_south_rsp_in[i*N_TILES_X+j]  = tile_north_rsp_out[(i+1)*N_TILES_X+j];
+        assign tile_south_wide_in[i*N_TILES_X+j] = tile_north_wide_out[(i+1)*N_TILES_X+j];
+        assign tile_east_req_in[i*N_TILES_X+j]   = tile_west_req_out[i*N_TILES_X+j+1];
+        assign tile_east_rsp_in[i*N_TILES_X+j]   = tile_west_rsp_out[i*N_TILES_X+j+1];
+        assign tile_east_wide_in[i*N_TILES_X+j]  = tile_west_wide_out[i*N_TILES_X+j+1];
       end
     end
   end

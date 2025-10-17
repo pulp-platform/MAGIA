@@ -7,7 +7,7 @@
 `include "axi/typedef.svh"
 `include "floo_noc/typedef.svh"
 
-package floo_axi_mesh_16x16_noc_pkg;
+package floo_axi_nw_mesh_16x16_noc_pkg;
 
   import floo_pkg::*;
 
@@ -600,32 +600,53 @@ localparam sam_rule_t[SamNumRules-1:0] Sam = '{
     NumRoutes: 0};
 
 
-  typedef logic[31:0] axi_data_mst_addr_t;
-typedef logic[31:0] axi_data_mst_data_t;
-typedef logic[3:0] axi_data_mst_strb_t;
-typedef logic[1:0] axi_data_mst_id_t;
-typedef logic[0:0] axi_data_mst_user_t;
-`AXI_TYPEDEF_ALL_CT(axi_data_mst,             axi_data_mst_req_t,             axi_data_mst_rsp_t,             axi_data_mst_addr_t,             axi_data_mst_id_t,             axi_data_mst_data_t,             axi_data_mst_strb_t,             axi_data_mst_user_t)
+  typedef logic[31:0] axi_narrow_data_mst_addr_t;
+typedef logic[31:0] axi_narrow_data_mst_data_t;
+typedef logic[3:0] axi_narrow_data_mst_strb_t;
+typedef logic[1:0] axi_narrow_data_mst_id_t;
+typedef logic[0:0] axi_narrow_data_mst_user_t;
+`AXI_TYPEDEF_ALL_CT(axi_narrow_data_mst,             axi_narrow_data_mst_req_t,             axi_narrow_data_mst_rsp_t,             axi_narrow_data_mst_addr_t,             axi_narrow_data_mst_id_t,             axi_narrow_data_mst_data_t,             axi_narrow_data_mst_strb_t,             axi_narrow_data_mst_user_t)
 
 
-  typedef logic[31:0] axi_data_slv_addr_t;
-typedef logic[31:0] axi_data_slv_data_t;
-typedef logic[3:0] axi_data_slv_strb_t;
-typedef logic[3:0] axi_data_slv_id_t;
-typedef logic[0:0] axi_data_slv_user_t;
-`AXI_TYPEDEF_ALL_CT(axi_data_slv,             axi_data_slv_req_t,             axi_data_slv_rsp_t,             axi_data_slv_addr_t,             axi_data_slv_id_t,             axi_data_slv_data_t,             axi_data_slv_strb_t,             axi_data_slv_user_t)
+  typedef logic[31:0] axi_narrow_data_slv_addr_t;
+typedef logic[31:0] axi_narrow_data_slv_data_t;
+typedef logic[3:0] axi_narrow_data_slv_strb_t;
+typedef logic[3:0] axi_narrow_data_slv_id_t;
+typedef logic[0:0] axi_narrow_data_slv_user_t;
+`AXI_TYPEDEF_ALL_CT(axi_narrow_data_slv,             axi_narrow_data_slv_req_t,             axi_narrow_data_slv_rsp_t,             axi_narrow_data_slv_addr_t,             axi_narrow_data_slv_id_t,             axi_narrow_data_slv_data_t,             axi_narrow_data_slv_strb_t,             axi_narrow_data_slv_user_t)
+
+
+  typedef logic[31:0] axi_wide_data_mst_addr_t;
+typedef logic[255:0] axi_wide_data_mst_data_t;
+typedef logic[31:0] axi_wide_data_mst_strb_t;
+typedef logic[1:0] axi_wide_data_mst_id_t;
+typedef logic[0:0] axi_wide_data_mst_user_t;
+`AXI_TYPEDEF_ALL_CT(axi_wide_data_mst,             axi_wide_data_mst_req_t,             axi_wide_data_mst_rsp_t,             axi_wide_data_mst_addr_t,             axi_wide_data_mst_id_t,             axi_wide_data_mst_data_t,             axi_wide_data_mst_strb_t,             axi_wide_data_mst_user_t)
+
+
+  typedef logic[31:0] axi_wide_data_slv_addr_t;
+typedef logic[255:0] axi_wide_data_slv_data_t;
+typedef logic[31:0] axi_wide_data_slv_strb_t;
+typedef logic[1:0] axi_wide_data_slv_id_t;
+typedef logic[0:0] axi_wide_data_slv_user_t;
+`AXI_TYPEDEF_ALL_CT(axi_wide_data_slv,             axi_wide_data_slv_req_t,             axi_wide_data_slv_rsp_t,             axi_wide_data_slv_addr_t,             axi_wide_data_slv_id_t,             axi_wide_data_slv_data_t,             axi_wide_data_slv_strb_t,             axi_wide_data_slv_user_t)
 
 
 
-  `FLOO_TYPEDEF_HDR_T(hdr_t, id_t, id_t, axi_ch_e, rob_idx_t)
-  localparam axi_cfg_t AxiCfg = '{    AddrWidth: 32,
+  `FLOO_TYPEDEF_HDR_T(hdr_t, id_t, id_t, nw_ch_e, rob_idx_t)
+  localparam axi_cfg_t AxiCfgN = '{    AddrWidth: 32,
     DataWidth: 32,
     UserWidth: 1,
     InIdWidth: 4,
     OutIdWidth: 2};
-`FLOO_TYPEDEF_AXI_CHAN_ALL(axi, req, rsp, axi_data_slv, AxiCfg, hdr_t)
+localparam axi_cfg_t AxiCfgW = '{    AddrWidth: 32,
+    DataWidth: 256,
+    UserWidth: 1,
+    InIdWidth: 2,
+    OutIdWidth: 2};
+`FLOO_TYPEDEF_NW_CHAN_ALL(axi, req, rsp, wide,             axi_narrow_data_slv, axi_wide_data_slv, AxiCfgN, AxiCfgW, hdr_t)
 
-`FLOO_TYPEDEF_AXI_LINK_ALL(req, rsp, req, rsp)
+`FLOO_TYPEDEF_NW_LINK_ALL(req, rsp, wide, req, rsp, wide)
 
 
 endpackage
