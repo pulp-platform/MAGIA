@@ -22,7 +22,7 @@ package:
     - "Victor Isachi (victor.isachi@unibo.it)"
 
 dependencies:
-  redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 4f6dbd060ade23c865bca991b51906519094cf0d } # branch: vi/magia
+  redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 496f24545234ddb014da8fe57ef0c98eaa382028 } # branch: vi/magia
   cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: e51af131252027374d083a745ab6727fb9959daa } # branch: vi/redmule_scaleup
   idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: a6b190c7991331432afa9a2899d032bc1b176830 } # branch: vi/redmule_scaleup
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
