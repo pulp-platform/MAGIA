@@ -27,7 +27,7 @@ dependencies:
   redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 944d4a4d45fe05147cfbf7f872af677578f3b15c } # branch: fc/ooo-mux
   cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: a90101211048ba1a16cedbe4db963ab6e12569d7 } # branch: vi/redmule_scaleup
   cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: 37a82d337ba60129c333d104c29e816d0698b53b } 
-  idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: a6b190c7991331432afa9a2899d032bc1b176830 } # branch: vi/redmule_scaleup
+  idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: a6b190c7991331432afa9a2899d032bc1b176830 }
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , version: 3.0.0                                }
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , version: 2.3.0                                }
@@ -41,7 +41,7 @@ dependencies:
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
   fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: fdb619f40f99d769cfceb20ac2117ff8d99e98a3 } # branch: main
-  floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , rev: f4a36265cda8b56faee45692afb20ddfffba6dee } # branch: main
+  floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , version: 0.6.1                                }
   event_unit_flex   : { git: "https://github.com/pulp-platform/event_unit_flex.git"   , rev: 763c3b9977970f656326c70a96debfb2ac0f85b2 } 
 
 export_include_dirs:
@@ -54,7 +54,7 @@ sources:
       CORE_TRACES: ~
     files:
       # NoC
-      - target/sim/src/tile/floo_axi_mesh_1x2_pkg.sv
+      - target/sim/src/tile/floo_axi_nw_mesh_1x2_pkg.sv
       # MAGIA Packages
       - hw/mesh/magia_pkg.sv
       - hw/tile/magia_tile_pkg.sv
@@ -74,6 +74,8 @@ sources:
       - hw/tile/magia_event_unit.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
+      - hw/tile/local_interconnect.sv
+      - hw/tile/idma_xif_inst_decoder.sv
       - hw/tile/xif_inst_dispatcher.sv
       - hw/tile/idma_xif_inst_decoder.sv
       - hw/tile/idma_ctrl.sv
@@ -99,11 +101,11 @@ sources:
       CORE_TRACES: ~
     files:
       # NoC
-      - hw/mesh/noc/floo_axi_mesh_2x2_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_4x4_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_8x8_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_16x16_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_32x32_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_2x2_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_4x4_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_8x8_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_16x16_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_32x32_noc.sv
       # MAGIA Packages
       - hw/mesh/magia_pkg.sv
       - hw/tile/magia_tile_pkg.sv
@@ -124,6 +126,8 @@ sources:
       - hw/tile/magia_event_unit.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
+      - hw/tile/local_interconnect.sv
+      - hw/tile/idma_xif_inst_decoder.sv
       - hw/tile/xif_inst_dispatcher.sv
       - hw/tile/idma_xif_inst_decoder.sv
       - hw/tile/idma_ctrl.sv
@@ -173,6 +177,8 @@ sources:
       - hw/tile/magia_event_unit.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
+      - hw/tile/local_interconnect.sv
+      - hw/tile/idma_xif_inst_decoder.sv
       - hw/tile/xif_inst_dispatcher.sv
       - hw/tile/idma_xif_inst_decoder.sv
       - hw/tile/idma_ctrl.sv
@@ -185,11 +191,11 @@ sources:
       - hw/tile/magia_redmule_wrap.sv
       - hw/tile/magia_tile.sv
       # MAGIA
-      - hw/mesh/noc/floo_axi_mesh_2x2_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_4x4_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_8x8_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_16x16_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_32x32_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_2x2_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_4x4_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_8x8_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_16x16_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_32x32_noc.sv
       - hw/mesh/magia.sv
       # Tech
       - pd/sourcecode/tc_sram.sv

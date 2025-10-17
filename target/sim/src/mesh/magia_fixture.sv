@@ -61,10 +61,13 @@ module magia_fixture;
 
   logic                                                wu_wfe;
 
-  floo_req_t [magia_pkg::N_TILES_Y-1:0]               l2_noc_req_o;
-  floo_rsp_t [magia_pkg::N_TILES_Y-1:0]               l2_noc_rsp_i;
-  floo_req_t [magia_pkg::N_TILES_Y-1:0]               l2_noc_req_i;
-  floo_rsp_t [magia_pkg::N_TILES_Y-1:0]               l2_noc_rsp_o;
+  floo_req_t  [magia_pkg::N_TILES_Y-1:0]              l2_noc_req_o;
+  floo_rsp_t  [magia_pkg::N_TILES_Y-1:0]              l2_noc_rsp_i;
+  floo_req_t  [magia_pkg::N_TILES_Y-1:0]              l2_noc_req_i;
+  floo_rsp_t  [magia_pkg::N_TILES_Y-1:0]              l2_noc_rsp_o;
+
+  floo_wide_t [magia_pkg::N_TILES_Y-1:0]              l2_noc_wide_o;
+  floo_wide_t [magia_pkg::N_TILES_Y-1:0]              l2_noc_wide_i;
 
 /*******************************************************/
 /**           Internal Signal Definitions End         **/
@@ -115,7 +118,9 @@ module magia_fixture;
     .l2_noc_req_i        ( l2_noc_req_o      ),
     .l2_noc_rsp_o        ( l2_noc_rsp_i      ),
     .l2_noc_req_o        ( l2_noc_req_i      ),
-    .l2_noc_rsp_i        ( l2_noc_rsp_o      )
+    .l2_noc_rsp_i        ( l2_noc_rsp_o      ),
+    .l2_noc_wide_i       ( l2_noc_wide_o     ),
+    .l2_noc_wide_o       ( l2_noc_wide_i     )
   );
 
 /*******************************************************/
