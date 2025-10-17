@@ -36,25 +36,33 @@ module magia_tile_vip
   output logic                              test_mode,
   output logic                              tile_enable,
 
-  output  floo_req_t                         noc_south_req_i,
-  input   floo_rsp_t                         noc_south_rsp_o,
-  input   floo_req_t                         noc_south_req_o,
-  output  floo_rsp_t                         noc_south_rsp_i,
+  output floo_req_t                         noc_south_req_i,
+  input  floo_rsp_t                         noc_south_rsp_o,
+  output floo_wide_t                        noc_south_wide_i,
+  input  floo_req_t                         noc_south_req_o,
+  output floo_rsp_t                         noc_south_rsp_i,
+  input  floo_wide_t                        noc_south_wide_o,
 
   output floo_req_t                         noc_east_req_i,
   input  floo_rsp_t                         noc_east_rsp_o,
+  output floo_wide_t                        noc_east_wide_i,
   input  floo_req_t                         noc_east_req_o,
   output floo_rsp_t                         noc_east_rsp_i,
+  input  floo_wide_t                        noc_east_wide_o,
 
   output floo_req_t                         noc_north_req_i,
   input  floo_rsp_t                         noc_north_rsp_o,
+  output floo_wide_t                        noc_north_wide_i,
   input  floo_req_t                         noc_north_req_o,
   output floo_rsp_t                         noc_north_rsp_i,
+  input  floo_wide_t                        noc_north_wide_o,
 
   output floo_req_t                         noc_west_req_i,
   input  floo_rsp_t                         noc_west_rsp_o,
+  output floo_wide_t                        noc_west_wide_i,
   input  floo_req_t                         noc_west_req_o,
   output floo_rsp_t                         noc_west_rsp_i,
+  input  floo_wide_t                        noc_west_wide_o,
 
   fractal_sync_if.slv_port                  ht_fsync_if_o[1],
   fractal_sync_if.slv_port                  hn_fsync_if_o[1],
@@ -184,16 +192,18 @@ module magia_tile_vip
 /*******************************************************/
 
   magia_l2_mem_wrapper #(
-    .NumPorts   ( 1                       ),
-    .ApplDelay  ( CLK_PERIOD * T_APPL     ),
-    .AcqDelay   ( CLK_PERIOD * T_TEST     )
+    .NumPorts   ( 1                   ),
+    .ApplDelay  ( CLK_PERIOD * T_APPL ),
+    .AcqDelay   ( CLK_PERIOD * T_TEST )
   ) i_l2_mem  (
     .clk_i      ( clk             ),
     .rst_ni     ( rst_n           ),
     .noc_req_i  ( noc_west_req_o  ),
     .noc_rsp_o  ( noc_west_rsp_i  ),
     .noc_req_o  ( noc_west_req_i  ),
-    .noc_rsp_i  ( noc_west_rsp_o  )
+    .noc_rsp_i  ( noc_west_rsp_o  ),
+    .noc_wide_o ( noc_west_wide_i ),
+    .noc_wide_i ( noc_west_wide_o )
   );
 
 /*******************************************************/
