@@ -105,7 +105,7 @@ int main(void) {
   printf("Testing concurrent RedMulE and IDMA operations...\n");
   
   // Initialize Event Unit BEFORE launching operations
-  eu_multi_init(1, 1, 1, 0); // Enable RedMulE, IDMA A2O, IDMA O2A, disable FSync
+  eu_multi_init(1, 1, 1, 0, USE_WFE); // Enable RedMulE, IDMA A2O, IDMA O2A, disable FSync
   
   // Launch RedMulE operation
   printf("Launching RedMulE operation...\n");
