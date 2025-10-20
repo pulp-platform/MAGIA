@@ -15,7 +15,7 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- *          Based on tile_test.c by Victor Isachi
+ *         Based on tile_test.c by Victor Isachi
  * 
  * MAGIA Tile Test - Event Unit WFE API Version
  * Uses event_unit_utils.h for Event Unit control and WFE/polling
@@ -45,7 +45,7 @@
 
 #define VERBOSE (0)
 
-#define USE_WFE (1)
+#define USE_WFE (0)
 
 #define WAIT_CYCLES (10)
 
@@ -191,7 +191,7 @@ int main(void) {
               M_SIZE, N_SIZE, K_SIZE, (uint8_t)gemm_ops, (uint8_t)Float16);
 
   // Initialize Event Unit for RedMulE
-  eu_redmule_init();
+  eu_redmule_init(USE_WFE);
 
   printf("Testing matrix multiplication with RedMulE...\n");
   hwpe_trigger_job();

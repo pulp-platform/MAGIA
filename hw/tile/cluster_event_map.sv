@@ -14,6 +14,9 @@
  * limitations under the License.
  * SPDX-License-Identifier: SHL-0.51
  *
+ * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
+ *          
+
  * Simple cluster event mapping module for MAGIA project
  * This module maps various event types to the final cluster event outputs
 */
