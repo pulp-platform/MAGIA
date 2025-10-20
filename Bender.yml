@@ -39,6 +39,7 @@ dependencies:
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
   fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: 7eb581d5e39f18498d30607263a000f444b4b63e } # branch: main
   floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , rev: f4a36265cda8b56faee45692afb20ddfffba6dee } # branch: main
+  event_unit_flex   : { git: "https://github.com/pulp-platform/event_unit_flex.git"  , rev: master } # master branch
 
 export_include_dirs:
   - hw/include
@@ -55,6 +56,9 @@ sources:
       - hw/mesh/magia_pkg.sv
       - hw/tile/magia_tile_pkg.sv
       # MAGIA Tile
+      - hw/include/xbar_periph_bus_if.sv         
+      - hw/tile/cluster_event_map.sv             
+      - hw/tile/magia_event_unit.sv              
       - hw/tile/converters/data2obi.sv
       - hw/tile/converters/obi2data.sv
       - hw/tile/converters/instr2obi.sv
@@ -99,6 +103,9 @@ sources:
       - hw/tile/magia_tile_pkg.sv
       - hw/mesh/noc/magia_noc_pkg.sv
       # MAGIA Tile
+      - hw/include/xbar_periph_bus_if.sv  
+      - hw/tile/cluster_event_map.sv      
+      - hw/tile/magia_event_unit.sv       
       - hw/tile/converters/data2obi.sv
       - hw/tile/converters/obi2data.sv
       - hw/tile/converters/instr2obi.sv
@@ -136,6 +143,9 @@ sources:
       - hw/tile/magia_tile_pkg.sv
       - hw/mesh/noc/magia_noc_pkg.sv
       # MAGIA Tile
+      - hw/include/xbar_periph_bus_if.sv         
+      - hw/tile/cluster_event_map.sv             
+      - hw/tile/magia_event_unit.sv             
       - hw/tile/converters/data2obi.sv
       - hw/tile/converters/obi2data.sv
       - hw/tile/converters/instr2obi.sv

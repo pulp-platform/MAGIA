@@ -130,6 +130,8 @@ module magia_tile
   logic[magia_pkg::ADDR_W-1:0] tile_idma_ctrl_end_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_fsync_ctrl_start_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_fsync_ctrl_end_addr;
+  logic[magia_pkg::ADDR_W-1:0] tile_event_unit_start_addr;
+  logic[magia_pkg::ADDR_W-1:0] tile_event_unit_end_addr;
   
   magia_tile_pkg::redmule_data_req_t redmule_data_req;
   magia_tile_pkg::redmule_data_rsp_t redmule_data_rsp;
@@ -276,6 +278,12 @@ module magia_tile
   logic idma_o2a_done;
   logic idma_o2a_error;
 
+  // Event arrays for Event Unit (need proper 2D array structure)
+  logic [0:0] [3:0] acc_events_array;
+  logic [0:0] [1:0] dma_events_array;
+  logic [0:0] [1:0] timer_events_array;
+  logic [0:0][31:0] other_events_array;
+
   // FlooNoC connections between NI and router
   floo_req_t [4:0] floo_router_req_in;
   floo_rsp_t [4:0] floo_router_rsp_in;
@@ -302,6 +310,14 @@ module magia_tile
   logic                           x_result_ready;
   fpu_ss_pkg::x_result_t          x_result;
 
+  // Event Unit signals - Corrected for single-core array interface
+  logic [0:0]                         eu_core_irq_req;    // [0:0] array for single core  
+  logic [0:0][magia_tile_pkg::EVENT_UNIT_IRQ_WIDTH-1:0] eu_core_irq_id;     // [0:0][4:0] array
+  logic [0:0]                         eu_core_irq_ack;    // [0:0] array
+  logic [0:0][magia_tile_pkg::EVENT_UNIT_IRQ_WIDTH-1:0] eu_core_irq_ack_id; // [0:0][4:0] array
+  logic [0:0]                         eu_core_clk_en;     // [0:0] array
+  logic [0:0]                         eu_core_dbg_req;    // [0:0] array
+
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
 /*******************************************************/
@@ -318,6 +334,8 @@ module magia_tile
   assign tile_idma_ctrl_end_addr   = magia_tile_pkg::IDMA_CTRL_ADDR_END;
   assign tile_fsync_ctrl_start_addr = magia_tile_pkg::FSYNC_CTRL_ADDR_START;
   assign tile_fsync_ctrl_end_addr   = magia_tile_pkg::FSYNC_CTRL_ADDR_END;
+  assign tile_event_unit_start_addr = magia_tile_pkg::EVENT_UNIT_ADDR_START;
+  assign tile_event_unit_end_addr   = magia_tile_pkg::EVENT_UNIT_ADDR_END;
 
   assign obi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START,    end_addr: magia_tile_pkg::L2_ADDR_END    };
   assign obi_xbar_rule[magia_tile_pkg::L1SPM_IDX]    = '{idx: 32'd1, start_addr: tile_l1_start_addr,               end_addr: tile_l1_end_addr               };
@@ -326,6 +344,7 @@ module magia_tile
   assign obi_xbar_rule[magia_tile_pkg::REDMULE_CTRL_IDX] = '{idx: 32'd2, start_addr: tile_redmule_ctrl_start_addr, end_addr: tile_redmule_ctrl_end_addr     };
   assign obi_xbar_rule[magia_tile_pkg::IDMA_IDX]     = '{idx: 32'd3, start_addr: tile_idma_ctrl_start_addr,        end_addr: tile_idma_ctrl_end_addr        };
   assign obi_xbar_rule[magia_tile_pkg::FSYNC_CTRL_IDX] = '{idx: 32'd4, start_addr: tile_fsync_ctrl_start_addr,     end_addr: tile_fsync_ctrl_end_addr       };
+  assign obi_xbar_rule[magia_tile_pkg::EVENT_UNIT_IDX] = '{idx: 32'd5, start_addr: tile_event_unit_start_addr,     end_addr: tile_event_unit_end_addr       };
 
 
   assign axi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START, end_addr: magia_tile_pkg::L2_ADDR_END };
@@ -374,31 +393,19 @@ module magia_tile
 
   assign fsync_clear = 1'b0;
 
+  // Event Unit provides unified interrupt management
+  // External interrupts must be mapped to bit 11 (MEIE - Machine External Interrupt Enable)
+  assign irq[magia_pkg::N_IRQ-1:12] = '0;   // Clear all high IRQs
+  assign irq[11] = eu_core_irq_req[0];      // Event Unit IRQ mapped to external interrupt (bit 11)
+  assign irq[10:8] = '0;                    // Clear IRQs 8-10
+  assign irq[7] = 1'b0;                     // Timer interrupt (unused)
+  assign irq[6:4] = '0;                     // Clear IRQs 4-6
+  assign irq[3] = 1'b0;                     // Software interrupt (unused)
+  assign irq[2:0] = '0;                     // Clear IRQs 0-2
 
+  assign eu_core_irq_ack[0] = 1'b0;     // Disable auto-ack to prevent IRQ loops
+  assign eu_core_irq_ack_id[0] = 5'b0;  // Clear ack ID - software must handle ack via register writes
 
-
-  assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_EVT_0] = redmule_evt[0][0];  // Only 1 core supported
-  assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_EVT_1] = redmule_evt[0][1];  // Only 1 core supported
-  assign irq[magia_tile_pkg::IRQ_IDX_A2O_ERROR]     = idma_a2o_error;    // AXI2OBI transfer error
-  assign irq[magia_tile_pkg::IRQ_IDX_O2A_ERROR]     = idma_o2a_error;    // OBI2AXI transfer error
-  assign irq[magia_tile_pkg::IRQ_IDX_A2O_DONE]      = idma_a2o_done;     // AXI2OBI transfer completed
-  assign irq[magia_tile_pkg::IRQ_IDX_O2A_DONE]      = idma_o2a_done;     // OBI2AXI transfer completed
-  assign irq[magia_tile_pkg::IRQ_IDX_A2O_START]     = idma_a2o_start;    // AXI2OBI transfer started
-  assign irq[magia_tile_pkg::IRQ_IDX_O2A_START]     = idma_o2a_start;    // OBI2AXI transfer started
-  assign irq[magia_tile_pkg::IRQ_IDX_A2O_BUSY]      = idma_a2o_busy;     // AXI2OBI transfer busy
-  assign irq[magia_tile_pkg::IRQ_IDX_O2A_BUSY]      = idma_o2a_busy;     // OBI2AXI transfer busy
-  assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_BUSY]  = redmule_busy;
-  assign irq[magia_tile_pkg::IRQ_IDX_FSYNC_DONE]    = fsync_done;
-  assign irq[magia_tile_pkg::IRQ_IDX_FSYNC_ERROR]   = fsync_error;
-  assign irq[magia_pkg::N_IRQ-magia_tile_pkg::IRQ_USED-1:16]   
-                                                    = irq_i[magia_pkg::N_IRQ-magia_tile_pkg::IRQ_USED-1:16];
-  assign irq[15:12]                                 = '0;
-  assign irq[11]                                    = irq_i[11];
-  assign irq[10:8]                                  = '0;
-  assign irq[7]                                     = irq_i[7];
-  assign irq[6:4]                                   = '0;
-  assign irq[3]                                     = irq_i[3];
-  assign irq[2:0]                                   = '0;
 
   // CLIC unused
   assign clic_irq       = 1'b0;
@@ -827,7 +834,7 @@ module magia_tile
     // Special control signals
     .fetch_enable_i                                ,
     .core_sleep_o                                  ,
-    .wu_wfe_i            
+    .wu_wfe_i                          ( eu_core_irq_req[0] ) // Connect EU IRQ to WFE wake-up
   );
 
 /*******************************************************/
@@ -1268,6 +1275,67 @@ module magia_tile
 
 /*******************************************************/
 /**                Fractal Sync Out End               **/
+/*******************************************************/
+/**                 Event Unit Beginning              **/
+/*******************************************************/
+
+  // Event array assignments for proper 2D array structure
+  assign acc_events_array[0]     = {redmule_evt[0][1], redmule_evt[0][0], redmule_busy, 1'b0};
+  assign dma_events_array[0]     = {idma_o2a_done, idma_a2o_done};
+  assign timer_events_array[0]   = 2'b00;
+  assign other_events_array[0] = {idma_o2a_busy, idma_a2o_busy, idma_o2a_start, idma_a2o_start,   // iDMA status events [31:28]
+                                    idma_o2a_error, idma_a2o_error,                                  // iDMA error events [27:26] 
+                                    fsync_error, fsync_done,                                        // Fsync events [25:24]
+                                    24'b0};                                                         // Reserved [23:0] - SW events are INTERNAL to Event Unit!
+
+  // MAGIA Event Unit - Optimized for single core interrupt management
+  // Configuration rationale for single-core system:
+  // - NB_SW_EVT=0: No software events, using only external hardware events
+  // - NB_BARR=0: No barriers needed (single core, no synchronization required)
+  // - NB_HW_MUT=0: No mutexes needed (single core, no contention)
+  // - DISP_FIFO_DEPTH=0: No task dispatcher (single core, no work distribution)
+  // Result: Minimal resource usage while preserving interrupt prioritization and management
+  magia_event_unit #(
+    .NB_CORES         ( 1                                          ), // Single core system
+    .NB_SW_EVT        ( 1                                          ), // Minimum 1 SW event to avoid indexing issues (unused but required)
+    .NB_BARR          ( 0                                          ), // No barriers needed with single core
+    .NB_HW_MUT        ( 0                                          ), // No mutexes needed with single core  
+    .MUTEX_MSG_W      ( 32                                         ), // Keep default even if unused
+    .DISP_FIFO_DEPTH  ( 0                                          ), // No task dispatcher needed
+    .EVNT_WIDTH       ( 8                                          ), // SOC event width (keep default)
+    .SOC_FIFO_DEPTH   ( 8                                          )  // SOC FIFO depth (keep default)
+  ) i_magia_event_unit (
+    .clk_i            ( sys_clk                                    ),
+    .rst_ni           ( rst_ni                                     ),
+    .test_mode_i      ( test_mode_i                                ),
+
+    // Event inputs - single core arrays
+    .acc_events_i     ( acc_events_array     ),                    // Accelerator events
+    .dma_events_i     ( dma_events_array     ),                    // iDMA completion events  
+    .timer_events_i   ( timer_events_array   ),
+    .other_events_i   ( other_events_array   ),                   // Combined events
+
+    // Core IRQ interface
+    .core_irq_req_o   ( eu_core_irq_req                            ),
+    .core_irq_id_o    ( eu_core_irq_id                             ),
+    .core_irq_ack_i   ( eu_core_irq_ack                            ),
+    .core_irq_ack_id_i( eu_core_irq_ack_id                         ),
+
+    // Core control
+    .core_busy_i      ( ~core_sleep_o                              ),
+    .core_clock_en_o  ( eu_core_clk_en                             ),
+
+    // Debug
+    .dbg_req_i        ( debug_req_i                                ),
+    .core_dbg_req_o   ( eu_core_dbg_req                            ),
+
+    // OBI Interface - Direct Connection
+    .obi_req_i        ( core_mem_data_req[5]                       ),
+    .obi_rsp_o        ( core_mem_data_rsp[5]                       )
+  );
+
+/*******************************************************/
+/**                    Event Unit End                 **/
 /*******************************************************/
 /**           Floating-Point Unit Beginning           **/
 /*******************************************************/

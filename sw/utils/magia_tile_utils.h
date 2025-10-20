@@ -36,8 +36,10 @@
 #define IDMA_END       (0x000006FF)
 #define FSYNC_BASE     (0x00000700)
 #define FSYNC_END      (0x000007FF)
-#define RESERVED_START (0x00000800)
-#define RESERVED_END   (0x0000FFFF)
+#define EVENT_UNIT_BASE (0x00000800)
+#define EVENT_UNIT_END  (0x000017FF)  // Expanded from 256B to 4KB for full EU register map
+#define RESERVED_START (0x00001800)   // Adjusted to start after expanded Event Unit
+#define RESERVED_END   (0x0000FFFF)   // Reserved space reduced from 62.5KB to 58.5KB
 #define STACK_START    (0x00010000)
 #define STACK_END      (0x0001FFFF)
 #define L1_BASE        (0x00020000)
@@ -50,19 +52,8 @@
 #define PASS_EXIT_CODE    (0xAAAA)
 #define FAIL_EXIT_CODE    (0xFFFF)
 
-#define IRQ_REDMULE_EVT_0 (31)
-#define IRQ_REDMULE_EVT_1 (30)
-#define IRQ_A2O_ERROR     (29)
-#define IRQ_O2A_ERROR     (28)
-#define IRQ_A2O_DONE      (27)
-#define IRQ_O2A_DONE      (26)
-#define IRQ_A2O_START     (25)
-#define IRQ_O2A_START     (24)
-#define IRQ_A2O_BUSY      (23)
-#define IRQ_O2A_BUSY      (22)
-#define IRQ_REDMULE_BUSY  (21)
-#define IRQ_FSYNC_DONE    (20)
-#define IRQ_FSYNC_ERROR   (19)
+// Individual IRQ indices removed - Event Unit provides unified interrupt management
+// Use Event Unit API (event_unit_utils.h) for event handling
 
 #define mmio64(x) (*(volatile uint64_t *)(x))
 #define mmio32(x) (*(volatile uint32_t *)(x))

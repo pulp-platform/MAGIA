@@ -33,21 +33,8 @@ package magia_tile_pkg;
 
   `include "../include/alias.svh"
 
-  // IRQ constraints
-  localparam int unsigned IRQ_IDX_REDMULE_EVT_0 = 31;
-  localparam int unsigned IRQ_IDX_REDMULE_EVT_1 = 30;
-  localparam int unsigned IRQ_IDX_A2O_ERROR     = 29;
-  localparam int unsigned IRQ_IDX_O2A_ERROR     = 28;
-  localparam int unsigned IRQ_IDX_A2O_DONE      = 27;
-  localparam int unsigned IRQ_IDX_O2A_DONE      = 26;
-  localparam int unsigned IRQ_IDX_A2O_START     = 25;
-  localparam int unsigned IRQ_IDX_O2A_START     = 24;
-  localparam int unsigned IRQ_IDX_A2O_BUSY      = 23;
-  localparam int unsigned IRQ_IDX_O2A_BUSY      = 22;
-  localparam int unsigned IRQ_IDX_REDMULE_BUSY  = 21;
-  localparam int unsigned IRQ_IDX_FSYNC_DONE    = 20;
-  localparam int unsigned IRQ_IDX_FSYNC_ERROR   = 19;
-  localparam int unsigned IRQ_USED              = 13;
+  // IRQ constraints - Event Unit provides unified interrupt management
+  // Individual IRQ indices no longer needed as Event Unit handles all events internally
 
   // Address map
   
@@ -60,8 +47,11 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_START    = IDMA_CTRL_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_SIZE          = 32'h0000_0100; //256B
   localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_END      = FSYNC_CTRL_ADDR_START + FSYNC_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START      = FSYNC_CTRL_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE            = 32'h0000_FB00; //62.75KiB
+  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_START    = FSYNC_CTRL_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_SIZE          = 32'h0000_1000; //4KB - Expanded for full EU register map
+  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_END      = EVENT_UNIT_ADDR_START + EVENT_UNIT_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START      = EVENT_UNIT_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE            = 32'h0000_E800; //58KB - Reduced to accommodate expanded Event Unit
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END        = RESERVED_ADDR_START + RESERVED_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START         = RESERVED_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE               = 32'h0001_0000;
@@ -118,6 +108,9 @@ package magia_tile_pkg;
   parameter bit          CLIC_EN         = 1'b0;                                        // Specifies whether Smclic, Smclicshv and Smclicconfig are supported
   parameter int unsigned CLIC_ID_W       = 1;                                           // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
 
+  // Parameters used by Event Unit
+  parameter int unsigned EVENT_UNIT_IRQ_WIDTH = 5;                                      // Width of Event Unit IRQ ID signals (supports up to 32 different event types)
+
   // Parameters used by RedMulE
   parameter int unsigned REDMULE_DW   = DWH;                                            // RedMulE Data Width
   parameter int unsigned REDMULE_ID_W = magia_pkg::ID_W + 
@@ -134,10 +127,10 @@ package magia_tile_pkg;
   parameter int unsigned RID_WIDTH    = 1;                                              // Width of the rid   signal (response channel identifier, see OBI documentation)
   parameter int unsigned MID_WIDTH    = 1;                                              // Width of the mid   signal (manager identifier, see OBI documentation)
   parameter int unsigned OBI_ID_WIDTH = 1;                                              // Width of the id - configuration
-  parameter int unsigned N_SBR        = 5;                                              // Number of slaves (HCI, AXI XBAR, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl)
+  parameter int unsigned N_SBR        = 6;                                              // Number of slaves (HCI, AXI XBAR, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl, Event_Unit)
   parameter int unsigned N_MGR        = 2;                                              // Number of masters (Core, AXI XBAR)
   parameter int unsigned N_MAX_TRAN   = 1;                                              // Number of maximum outstanding transactions
-  parameter int unsigned N_ADDR_RULE  = 7;                                              // Number of address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl)
+  parameter int unsigned N_ADDR_RULE  = 8;                                              // Number of address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl, Event_Unit)
   localparam int unsigned N_BIT_SBR   = $clog2(N_SBR);                                  // Number of bits required to identify each slave
 
   // Parameters used by AXI
@@ -371,6 +364,7 @@ package magia_tile_pkg;
   } core_cache_instr_rsp_t;
 
   typedef enum logic[2:0]{
+    EVENT_UNIT_IDX   = 7,
     FSYNC_CTRL_IDX   = 6,
     IDMA_IDX         = 5,
     REDMULE_CTRL_IDX = 4,
