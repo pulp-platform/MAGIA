@@ -37,8 +37,10 @@
 #define IDMA_END       (0x000006FF)
 #define FSYNC_BASE     (0x00000700)
 #define FSYNC_END      (0x000007FF)
-#define RESERVED_START (0x00000800)
-#define RESERVED_END   (0x0000FFFF)
+#define EVENT_UNIT_BASE (0x00000800)
+#define EVENT_UNIT_END  (0x000017FF)  // Expanded from 256B to 4KB for full EU register map
+#define RESERVED_START (0x00001800)   // Adjusted to start after expanded Event Unit
+#define RESERVED_END   (0x0000FFFF)   // Reserved space reduced from 62.5KB to 58.5KB
 #define STACK_START    (0x00010000)
 #define STACK_END      (0x0001FFFF)
 #define L1_BASE        (0x00020000)

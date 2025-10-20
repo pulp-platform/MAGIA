@@ -33,6 +33,8 @@
 
 #define USE_WFE (1)
 
+//#define STALLING
+
 int main(void) {
   uint32_t aggregates[NUM_HARTS];
   uint32_t ids[NUM_HARTS];
@@ -70,12 +72,14 @@ int main(void) {
 
   fsync_mm(ids[get_hartid()], aggregates[get_hartid()]);
 
+#ifndef STALLING
   if (USE_WFE) {
     eu_fsync_wait_completion(EU_WAIT_MODE_WFE);
     printf("Detected WFE...\n");
   } else {
     eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
   }
+#endif
 
   sentinel_instr_id();
 #endif
@@ -88,13 +92,14 @@ int main(void) {
 
   fsync_mm_hnbr();
 
+#ifndef STALLING
   if (USE_WFE) {
     eu_fsync_wait_completion(EU_WAIT_MODE_WFE);
     printf("Detected WFE...\n");
   } else {
     eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
   }
-
+#endif
 
   sentinel_instr_id();
   printf("[FractalSync MM] Horizontal neighbor test ending\n");
@@ -107,13 +112,14 @@ int main(void) {
 
   fsync_mm_hring();
 
+#ifndef STALLING
   if (USE_WFE) {
     eu_fsync_wait_completion(EU_WAIT_MODE_WFE);
     printf("Detected WFE...\n");
   } else {
     eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
   }
-
+#endif
 
   sentinel_instr_id();
   printf("[FractalSync MM] Horizontal ring neighbor test ending\n");
@@ -126,12 +132,14 @@ int main(void) {
 
   fsync_mm_vnbr();
 
+#ifndef STALLING
   if (USE_WFE) {
     eu_fsync_wait_completion(EU_WAIT_MODE_WFE);
     printf("Detected WFE...\n");
   } else {
     eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
   }
+#endif
 
   sentinel_instr_id();
   printf("[FractalSync MM] Vertical neighbor test ending\n");
@@ -144,12 +152,14 @@ int main(void) {
 
   fsync_mm_vring();
 
+#ifndef STALLING
   if (USE_WFE) {
     eu_fsync_wait_completion(EU_WAIT_MODE_WFE);
     printf("Detected WFE...\n");
   } else {
     eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
   }
+#endif
 
   sentinel_instr_id();
   printf("[FractalSync MM] Vertical ring neighbor test ending\n");
@@ -162,12 +172,14 @@ int main(void) {
 
   fsync_mm_rows();
 
+#ifndef STALLING
   if (USE_WFE) {
     eu_fsync_wait_completion(EU_WAIT_MODE_WFE);
     printf("Detected WFE...\n");
   } else {
     eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
   }
+#endif
 
   sentinel_instr_id();
   printf("[FractalSync MM] Row test ending\n");
@@ -180,12 +192,14 @@ int main(void) {
 
   fsync_mm_cols();
 
+#ifndef STALLING
   if (USE_WFE) {
     eu_fsync_wait_completion(EU_WAIT_MODE_WFE);
     printf("Detected WFE...\n");
   } else {
     eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
   }
+#endif
 
   sentinel_instr_id();
   printf("[FractalSync MM] Column test ending\n");
@@ -198,12 +212,14 @@ int main(void) {
 
   fsync_mm_global();
 
+#ifndef STALLING
   if (USE_WFE) {
     eu_fsync_wait_completion(EU_WAIT_MODE_WFE);
     printf("Detected WFE...\n");
   } else {
     eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
   }
+#endif
 
   sentinel_instr_id();
   printf("[FractalSync MM] Global test ending\n");
