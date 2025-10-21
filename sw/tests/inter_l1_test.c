@@ -52,8 +52,8 @@ int main() {
   if (get_hartid() == 0) {
     for (int i = 0; i < NUM_HARTS; i++)
       if (error[i]) total_errors++;
-    if (total_errors) { /*h_pprintf("TEST FAILED!!"); pprintln;*/ printf("TEST FAILED!!"); }
-    else              { /*h_pprintf("TEST PASSED!!"); pprintln;*/ printf("TEST PASSED!!"); }
+    if (total_errors) { /*h_pprintf("TEST FAILED!!"); pprintln;*/ printf("TEST FAILED!!\n"); }
+    else              { /*h_pprintf("TEST PASSED!!"); pprintln;*/ printf("TEST PASSED!!\n"); }
   } else wait_nop(SETTLE_CYCLE);         
 
   return total_errors;
