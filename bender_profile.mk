@@ -27,4 +27,5 @@ profile_targs += -t magia_dv
 
 profile_defs += -D PROFILE_SENTINEL
 profile_defs += -D PROFILE_SYNC
+profile_defs += -D SEQUENTIAL_IRQ
 # profile_defs += -D PROFILE_DETAILED

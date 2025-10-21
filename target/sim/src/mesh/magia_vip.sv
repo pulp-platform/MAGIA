@@ -642,5 +642,50 @@ module magia_vip
 /*******************************************************/
 /**              Instruction Monitor End              **/
 /*******************************************************/
+/**            IRQ Sequentializer Beginning           **/
+/*******************************************************/
+
+`ifdef SEQUENTIAL_IRQ
+  typedef enum {CMP_IRQ, CMI_IRQ, CMO_IRQ} irq_e;
+  for (genvar i = 0; i < magia_tb_pkg::N_TILES_Y; i++) begin: gen_tile_irq_sequentializer_y
+    for (genvar j = 0; j < magia_tb_pkg::N_TILES_X; j++) begin: gen_tile_irq_sequentializer_x
+      irq_e pending_irqs[$];
+      irq_e pending_irq;
+      logic cmp_irq;
+      logic cmi_irq;
+      logic cmo_irq;
+      logic core_sleep;
+
+      assign cmp_irq = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.redmule_evt[0][0];
+      assign cmi_irq = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.idma_axi2obi_done;
+      assign cmo_irq = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.idma_obi2axi_done;
+      assign core_sleep = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.core_sleep_o;
+
+      always @(posedge clk) begin: irq_samping_driving_logic
+        force i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.irq_i[31] = 1'b0;
+        force i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.irq_i[27] = 1'b0;
+        force i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.irq_i[26] = 1'b0;
+
+        if (cmp_irq)
+          pending_irqs.push_back(CMP_IRQ);
+        if (cmi_irq)
+          pending_irqs.push_back(CMI_IRQ);
+        if (cmo_irq)
+          pending_irqs.push_back(CMO_IRQ);
+
+        if (core_sleep && (pending_irqs.size() > 0)) begin
+          pending_irq = pending_irqs.pop_front();
+          if      (pending_irq == CMP_IRQ) force i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.irq_i[31] = 1'b1;
+          else if (pending_irq == CMI_IRQ) force i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.irq_i[27] = 1'b1;
+          else if (pending_irq == CMO_IRQ) force i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.irq_i[26] = 1'b1;
+        end
+      end
+    end
+  end
+`endif
+
+/*******************************************************/
+/**               IRQ Sequentializer End              **/
+/*******************************************************/
 
 endmodule: magia_vip
