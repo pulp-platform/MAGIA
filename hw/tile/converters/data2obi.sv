@@ -34,11 +34,11 @@ module data2obi_req
   assign obi_req_o.a.aid                = 'b0;
   assign obi_req_o.a.a_optional.auser   = 'b0;
   assign obi_req_o.a.a_optional.wuser   = 'b0;
-  assign obi_req_o.a.a_optional.atop    = data_req_i.atop;
-  assign obi_req_o.a.a_optional.memtype = data_req_i.memtype;
+  assign obi_req_o.a.a_optional.atop    = 6'b0;           
+  assign obi_req_o.a.a_optional.memtype = 2'b0;          
   assign obi_req_o.a.a_optional.mid     = 'b0;
-  assign obi_req_o.a.a_optional.prot    = data_req_i.prot;
-  assign obi_req_o.a.a_optional.dbg     = data_req_i.dbg;
+  assign obi_req_o.a.a_optional.prot    = 3'b0;         
+  assign obi_req_o.a.a_optional.dbg     = 1'b0;        
   assign obi_req_o.a.a_optional.achk    = 'b0;
 
 endmodule: data2obi_req

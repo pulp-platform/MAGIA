@@ -58,43 +58,44 @@ import magia_tile_pkg::*;
   input  logic [NB_CORES-1:0]       dbg_req_i,
   output logic [NB_CORES-1:0]       core_dbg_req_o,
 
-  // OBI slave connection
-  input  core_obi_data_req_t        obi_req_i,
-  output core_obi_data_rsp_t        obi_rsp_o
+  // EU Direct Link interface (for WFE control - only interface now)
+  input  logic                      eu_direct_req_i,
+  input  logic [31:0]               eu_direct_addr_i,
+  input  logic                      eu_direct_wen_i,
+  input  logic [31:0]               eu_direct_wdata_i,
+  input  logic [3:0]                eu_direct_be_i,
+  output logic                      eu_direct_gnt_o,
+  output logic                      eu_direct_rvalid_o,
+  output logic [31:0]               eu_direct_rdata_o
 );
 
-  // Create internal interface instance - only speriph_slave
-  XBAR_PERIPH_BUS #(.ID_WIDTH(NB_CORES+1)) speriph_slave();
-
-  // Create dummy eu_direct_link interfaces (tied off, not used)
+  // Create internal interface instances - only eu_direct_link now
   XBAR_PERIPH_BUS #(.ID_WIDTH(NB_CORES+1)) eu_direct_link[NB_CORES-1:0]();
+  XBAR_PERIPH_BUS #(.ID_WIDTH(NB_CORES+1)) speriph_slave();  // Tied off
 
   // Internal signals
   logic soc_periph_evt_ready_internal;
   
-  // Simple OBI to XBAR_PERIPH_BUS conversion - all accesses via speriph_slave
-  assign speriph_slave.req   = obi_req_i.req;
-  assign speriph_slave.add   = obi_req_i.a.addr;
-  assign speriph_slave.wen   = ~obi_req_i.a.we;       // OBI: we=1→write, XBAR: wen=0→write
-  assign speriph_slave.wdata = obi_req_i.a.wdata;
-  assign speriph_slave.be    = obi_req_i.a.be;
-  assign speriph_slave.id    = '0;                    // Use zero ID with correct width
+  // EU Direct Link interface - Core 0 gets direct access for WFE control
+  assign eu_direct_link[0].req   = eu_direct_req_i;
+  assign eu_direct_link[0].add   = eu_direct_addr_i;
+  assign eu_direct_link[0].wen   = eu_direct_wen_i;
+  assign eu_direct_link[0].wdata = eu_direct_wdata_i;
+  assign eu_direct_link[0].be    = eu_direct_be_i;
+  assign eu_direct_link[0].id    = '0;
 
-  // Direct response mapping - no mux needed
-  assign obi_rsp_o.gnt         = speriph_slave.gnt;
-  assign obi_rsp_o.rvalid      = speriph_slave.r_valid;
-  assign obi_rsp_o.r.rdata     = speriph_slave.r_rdata;
-  assign obi_rsp_o.r.err       = 1'b0;  // No errors for now
+  // Response mapping for EU direct link  
+  assign eu_direct_gnt_o    = eu_direct_link[0].gnt;
+  assign eu_direct_rvalid_o = eu_direct_link[0].r_valid;
+  assign eu_direct_rdata_o  = eu_direct_link[0].r_rdata;
 
-  // Tie off eu_direct_link interfaces (not used - all accesses via speriph_slave)
-  for (genvar i = 0; i < NB_CORES; i++) begin : gen_tie_off_direct_link
-    assign eu_direct_link[i].req     = 1'b0;
-    assign eu_direct_link[i].add     = '0;
-    assign eu_direct_link[i].wen     = 1'b1;  // idle state
-    assign eu_direct_link[i].wdata   = '0;
-    assign eu_direct_link[i].be      = '0;
-    assign eu_direct_link[i].id      = '0;
-  end
+  // Tie off speriph_slave (not used anymore)
+  assign speriph_slave.req   = 1'b0;
+  assign speriph_slave.add   = '0;
+  assign speriph_slave.wen   = 1'b1;
+  assign speriph_slave.wdata = '0;
+  assign speriph_slave.be    = '0;
+  assign speriph_slave.id    = '0;
 
 
 
