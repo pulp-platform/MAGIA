@@ -240,15 +240,27 @@ module magia_tile
   logic sys_clk;
   logic sys_clk_en;
 
-  // Core clock gating signals
-  logic core_clk;           // Clock gated per il core
-  logic core_clk_en;        // Enable dal tile (sempre attivo)
-
   // Core output signals
   logic core_busy_o;
+  logic [5:0] backup_mcause_o;
+  logic [31:0] backup_mepc_o;
+  logic [31:0] backup_mscratch_o;
+  logic [23:0] backup_mtvec_o;
+  logic [6:0] backup_mstatus_o;
+  logic [31:0] backup_branch_addr_o;
+  logic        backup_branch_o;
+  logic [31:0] backup_program_counter_if_o;
+  logic [31:0] backup_program_counter_o;
+  logic [31:0] regfile_wdata_b_o;
+  logic [5:0]  regfile_waddr_b_o;
+  logic        regfile_we_b_o;
+  logic [31:0] regfile_wdata_a_o;
+  logic [5:0]  regfile_waddr_a_o;
+  logic        regfile_we_a_o;
+  logic        debug_mode_o;
   logic        sec_lvl_o;
   logic [14:0] apu_master_flags_o;
-  logic [magia_tile_pkg::WAPUTYPE-1:0]  apu_master_type_o; // Use parameter for correct width
+  logic [6:0]  apu_master_type_o;
   logic [5:0]  apu_master_op_o;
   logic [95:0] apu_master_operands_o;
   logic        apu_master_ready_o;
@@ -308,14 +320,6 @@ module magia_tile
   logic [0:0]                         eu_core_clk_en;     // [0:0] array
   logic [0:0]                         eu_core_dbg_req;    // [0:0] array
 
-  // Event Unit signals - Corrected for single-core array interface
-  logic [0:0]                         eu_core_irq_req;    // [0:0] array for single core  
-  logic [0:0][magia_tile_pkg::EVENT_UNIT_IRQ_WIDTH-1:0] eu_core_irq_id;     // [0:0][4:0] array
-  logic [0:0]                         eu_core_irq_ack;    // [0:0] array
-  logic [0:0][magia_tile_pkg::EVENT_UNIT_IRQ_WIDTH-1:0] eu_core_irq_ack_id; // [0:0][4:0] array
-  logic [0:0]                         eu_core_clk_en;     // [0:0] array
-  logic [0:0]                         eu_core_dbg_req;    // [0:0] array
-
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
 /*******************************************************/
@@ -342,7 +346,6 @@ module magia_tile
   assign obi_xbar_rule[magia_tile_pkg::REDMULE_CTRL_IDX] = '{idx: 32'd2, start_addr: tile_redmule_ctrl_start_addr, end_addr: tile_redmule_ctrl_end_addr     };
   assign obi_xbar_rule[magia_tile_pkg::IDMA_IDX]     = '{idx: 32'd3, start_addr: tile_idma_ctrl_start_addr,        end_addr: tile_idma_ctrl_end_addr        };
   assign obi_xbar_rule[magia_tile_pkg::FSYNC_CTRL_IDX] = '{idx: 32'd4, start_addr: tile_fsync_ctrl_start_addr,     end_addr: tile_fsync_ctrl_end_addr       };
-  assign obi_xbar_rule[magia_tile_pkg::EVENT_UNIT_IDX] = '{idx: 32'd5, start_addr: tile_event_unit_start_addr,     end_addr: tile_event_unit_end_addr       };
 
 
   assign axi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START, end_addr: magia_tile_pkg::L2_ADDR_END };
@@ -400,22 +403,6 @@ module magia_tile
   assign irq[6:4] = '0;                     // Clear IRQs 4-6
   assign irq[3] = 1'b0;                     // Software interrupt (unused)
   assign irq[2:0] = '0;                     // Clear IRQs 0-2
-
-  assign eu_core_irq_ack[0] = 1'b0;     // Disable auto-ack to prevent IRQ loops
-  assign eu_core_irq_ack_id[0] = 5'b0;  // Clear ack ID - software must handle ack via register writes
-
-
-  // CLIC unused
-  assign clic_irq       = 1'b0;
-  assign clic_irq_id    = '0;
-  assign clic_irq_level = '0;
-  assign clic_irq_priv  = '0;
-  assign clic_irq_shv   = 1'b0;
-
-  assign enable_prefetching = 1'b0;
-  assign flush_valid[0]     = fencei_flush_req; // Single port i$
-  assign fencei_flush_ack   = flush_ready[0];   // Signle port i$
-
 
 
 /*******************************************************/
@@ -677,38 +664,6 @@ module magia_tile
     .clk( sys_clk )
   );
 
-
-
-  cv32e40x_if_xif #(
-    .X_NUM_RS    ( magia_tile_pkg::X_NUM_RS ),
-    .X_ID_WIDTH  ( magia_tile_pkg::X_ID_W   ),
-    .X_MEM_WIDTH ( magia_tile_pkg::X_MEM_W  ),
-    .X_RFR_WIDTH ( magia_tile_pkg::X_RFR_W  ),
-    .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
-    .X_MISA      ( magia_tile_pkg::X_MISA   ),
-    .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
-  ) xif_fpu_if ();
-  
-  cv32e40x_if_xif #(
-    .X_NUM_RS    ( magia_tile_pkg::X_NUM_RS ),
-    .X_ID_WIDTH  ( magia_tile_pkg::X_ID_W   ),
-    .X_MEM_WIDTH ( magia_tile_pkg::X_MEM_W  ),
-    .X_RFR_WIDTH ( magia_tile_pkg::X_RFR_W  ),
-    .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
-    .X_MISA      ( magia_tile_pkg::X_MISA   ),
-    .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
-  ) xif_if ();
-
-  cv32e40x_if_xif #(
-    .X_NUM_RS    ( magia_tile_pkg::X_NUM_RS ),
-    .X_ID_WIDTH  ( magia_tile_pkg::X_ID_W   ),
-    .X_MEM_WIDTH ( magia_tile_pkg::X_MEM_W  ),
-    .X_RFR_WIDTH ( magia_tile_pkg::X_RFR_W  ),
-    .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
-    .X_MISA      ( magia_tile_pkg::X_MISA   ),
-    .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
-  ) xif_coproc_if[magia_tile_pkg::N_COPROC] (); // Index 0 -> FPU 
-
 /*******************************************************/
 /**             Interface Definitions End             **/
 /*******************************************************/
@@ -764,29 +719,31 @@ module magia_tile
 
   // flex-v core with integrated FPU and tracer
   riscv_core #(
-    .N_EXT_PERF_COUNTERS ( magia_tile_pkg::N_EXT_PERF_COUNTERS ),
-    .INSTR_RDATA_WIDTH   ( magia_tile_pkg::INSTR_RDATA_WIDTH   ),
-    .PULP_SECURE         ( magia_tile_pkg::PULP_SECURE         ),
-    .N_PMP_ENTRIES       ( magia_tile_pkg::N_PMP_ENTRIES       ),
-    .USE_PMP             ( magia_tile_pkg::USE_PMP             ),
-    .PULP_CLUSTER        ( magia_tile_pkg::PULP_CLUSTER        ),
-    .FPU                 ( magia_tile_pkg::FPU                 ),
-    .Zfinx               ( magia_tile_pkg::ZFINX               ),
-    .FP_DIVSQRT          ( magia_tile_pkg::FP_DIVSQRT          ),
-    .SHARED_FP           ( magia_tile_pkg::SHARED_FP           ),
-    .SHARED_DSP_MULT     ( magia_tile_pkg::SHARED_DSP_MULT     ),
-    .SHARED_INT_MULT     ( magia_tile_pkg::SHARED_INT_MULT     ),
-    .SHARED_INT_DIV      ( magia_tile_pkg::SHARED_INT_DIV      ),
-    .SHARED_FP_DIVSQRT   ( magia_tile_pkg::SHARED_FP_DIVSQRT   ),
-    .WAPUTYPE            ( magia_tile_pkg::WAPUTYPE            ),
-    .APU_NARGS_CPU       ( magia_tile_pkg::APU_NARGS_CPU       ),
-    .APU_WOP_CPU         ( magia_tile_pkg::APU_WOP_CPU         ),
-    .APU_NDSFLAGS_CPU    ( magia_tile_pkg::APU_NDSFLAGS_CPU    ),
-    .APU_NUSFLAGS_CPU    ( magia_tile_pkg::APU_NUSFLAGS_CPU    ),
-    .DM_HaltAddress      ( magia_tile_pkg::DM_HALT_ADDR        )
-  ) i_cv32e40p_core (
+    .N_EXT_PERF_COUNTERS ( magia_tile_pkg::FLEX_V_N_EXT_PERF_COUNTERS ),
+    .INSTR_RDATA_WIDTH   ( magia_tile_pkg::FLEX_V_INSTR_RDATA_WIDTH   ),
+    .PULP_SECURE         ( magia_tile_pkg::FLEX_V_PULP_SECURE         ),
+    .N_PMP_ENTRIES       ( magia_tile_pkg::FLEX_V_N_PMP_ENTRIES       ),
+    .USE_PMP             ( magia_tile_pkg::FLEX_V_USE_PMP             ),
+    .PULP_CLUSTER        ( magia_tile_pkg::FLEX_V_PULP_CLUSTER        ),
+    .FPU                 ( magia_tile_pkg::FLEX_V_FPU                 ),
+    .Zfinx               ( magia_tile_pkg::FLEX_V_ZFINX               ),
+    .FP_DIVSQRT          ( magia_tile_pkg::FLEX_V_FP_DIVSQRT          ),
+    .SHARED_FP           ( magia_tile_pkg::FLEX_V_SHARED_FP           ),
+    .SHARED_DSP_MULT     ( magia_tile_pkg::FLEX_V_SHARED_DSP_MULT     ),
+    .SHARED_INT_MULT     ( magia_tile_pkg::FLEX_V_SHARED_INT_MULT     ),
+    .SHARED_INT_DIV      ( magia_tile_pkg::FLEX_V_SHARED_INT_DIV      ),
+    .SHARED_FP_DIVSQRT   ( magia_tile_pkg::FLEX_V_SHARED_FP_DIVSQRT   ),
+    .WAPUTYPE            ( magia_tile_pkg::FLEX_V_WAPUTYPE            ),
+    .APU_NARGS_CPU       ( magia_tile_pkg::FLEX_V_APU_NARGS_CPU       ),
+    .APU_WOP_CPU         ( magia_tile_pkg::FLEX_V_APU_WOP_CPU         ),
+    .APU_NDSFLAGS_CPU    ( magia_tile_pkg::FLEX_V_APU_NDSFLAGS_CPU    ),
+    .APU_NUSFLAGS_CPU    ( magia_tile_pkg::FLEX_V_APU_NUSFLAGS_CPU    ),
+    .DM_HaltAddress      ( magia_tile_pkg::FLEX_V_DM_HALT_ADDR        ),
+    .CORE_ID             ( magia_tile_pkg::FLEX_V_CORE_ID             ),
+    .N_HWLP              ( magia_tile_pkg::FLEX_V_N_HWLP              )
+  ) i_flex_v_core (
     // Clock and Reset
-    .clk_i                  ( core_clk                 ),  // Use gated clock for core
+    .clk_i                  ( sys_clk                  ),
     .rst_ni                 ( rst_ni                   ),
     
     // Clock enable and test mode
@@ -798,11 +755,7 @@ module magia_tile
     
     // Boot configuration
     .boot_addr_i            ( boot_addr_i              ),
-
-    // Cluster/Core IDs
-    .cluster_id_i           ( mhartid_i[9:4]          ), 
-    .core_id_i              ( mhartid_i[3:0]          ),
-
+    
     // Instruction memory interface
     .instr_req_o            ( core_instr_req.req       ),
     .instr_gnt_i            ( core_instr_rsp.gnt       ),
@@ -819,30 +772,9 @@ module magia_tile
     .data_wdata_o           ( core_data_req.wdata      ),
     .data_we_o              ( core_data_req.we         ),
     .data_rdata_i           ( core_data_rsp.rdata      ),
-
-    // APU interface
-    .apu_master_req_o       ( apu_master_req_o        ),
-    .apu_master_ready_o     ( apu_master_ready_o      ),
-    .apu_master_gnt_i       ( '0                      ),
-    
-    .apu_master_operands_o  ( apu_master_operands_o   ),
-    .apu_master_op_o        ( apu_master_op_o         ),
-    .apu_master_type_o      ( apu_master_type_o       ),
-    .apu_master_flags_o     ( apu_master_flags_o      ),
-
-    .apu_master_valid_i     ( '0                      ),
-    .apu_master_result_i    ( '0                      ),
-    .apu_master_flags_i     ( '0                      ),
     
     // Interrupts
-    .irq_i                  ( eu_core_irq_req[0]       ),
-    .irq_id_i               ( '0                      ), 
-    .irq_ack_o              ( eu_core_irq_ack[0]       ),
-    .irq_id_o               ( eu_core_irq_ack_id[0]    ),
-    .irq_sec_i              ( '0                      ),
-
-    // Security level
-    .sec_lvl_o              ( sec_lvl_o               ),
+    .irq_i                  ( irq                      ),
     
     // Debug interface
     .debug_req_i            ( debug_req_i              ),
@@ -851,11 +783,82 @@ module magia_tile
     .fetch_enable_i         ( fetch_enable_i           ),
     .core_busy_o            ( core_busy_o              ),
     
+    // Event Unit IRQ acknowledgment
+    .irq_ack_o              ( eu_core_irq_ack[0]       ),
+    .irq_id_o               ( eu_core_irq_ack_id[0]    ),
 
-    // Special control signals
-    .fetch_enable_i                                ,
-    .core_sleep_o                                  ,
-    .wu_wfe_i                          ( eu_core_irq_req[0] ) // Connect EU IRQ to WFE wake-up
+    // Recovery interface
+    .recovery_mcause_i      ( '0                       ),
+    .recovery_mepc_i        ( '0                       ),
+    .recovery_mscratch_i    ( '0                       ),
+    .recovery_mtvec_i       ( '0                       ),
+    .recovery_mstatus_i     ( '0                       ),
+    .recovery_branch_addr_i ( '0                       ),
+    .recovery_branch_i      ( '0                       ),
+    .recovery_program_counter_i ( '0                  ),
+    .pc_recover_i           ( '0                       ),
+
+    // Backup outputs
+    .backup_mcause_o        ( backup_mcause_o         ),
+    .backup_mepc_o          ( backup_mepc_o           ),
+    .backup_mscratch_o      ( backup_mscratch_o       ),
+    .backup_mtvec_o         ( backup_mtvec_o          ),
+    .backup_mstatus_o       ( backup_mstatus_o        ),
+    .backup_branch_addr_o   ( backup_branch_addr_o    ),
+    .backup_branch_o        ( backup_branch_o         ),
+    .backup_program_counter_if_o ( backup_program_counter_if_o ),
+    .backup_program_counter_o ( backup_program_counter_o ),
+
+    // Register file interface
+    .regfile_wdata_b_o      ( regfile_wdata_b_o       ),
+    .regfile_waddr_b_o      ( regfile_waddr_b_o       ),
+    .regfile_we_b_o         ( regfile_we_b_o          ),
+    .regfile_wdata_a_o      ( regfile_wdata_a_o       ),
+    .regfile_waddr_a_o      ( regfile_waddr_a_o       ),
+    .regfile_we_a_o         ( regfile_we_a_o          ),
+    .regfile_we_b_i         ( '0                      ),
+    .regfile_wdata_b_i      ( '0                      ),
+    .regfile_waddr_b_i      ( '0                      ),
+    .regfile_we_a_i         ( '0                      ),
+    .regfile_wdata_a_i      ( '0                      ),
+    .regfile_waddr_a_i      ( '0                      ),
+
+    // Recovery control
+    .recover_i              ( '0                      ),
+
+    // Performance counters
+    .ext_perf_counters_i    ( '0                      ),
+
+    // Debug outputs
+    .debug_mode_o           ( debug_mode_o            ),
+    .debug_resume_i         ( '0                      ),
+
+    // Security level
+    .sec_lvl_o              ( sec_lvl_o               ),
+    .irq_sec_i              ( '0                      ),
+    .irq_id_i               ( '0                      ),
+
+    // APU interface
+    .apu_master_flags_i     ( '0                      ),
+    .apu_master_result_i    ( '0                      ),
+    .apu_master_valid_i     ( '0                      ),
+    .apu_master_flags_o     ( apu_master_flags_o      ),
+    .apu_master_type_o      ( apu_master_type_o       ),
+    .apu_master_op_o        ( apu_master_op_o         ),
+    .apu_master_operands_o  ( apu_master_operands_o   ),
+    .apu_master_gnt_i       ( '0                      ),
+    .apu_master_ready_o     ( apu_master_ready_o      ),
+    .apu_master_req_o       ( apu_master_req_o        ),
+
+    // Data unaligned
+    .data_unaligned_o       ( data_unaligned_o        ),
+
+    // Cluster/Core IDs
+    .cluster_id_i           ( '0                      ),
+    .core_id_i              ( '0                      ),
+
+    // Setback
+    .setback_i              ( '0                      )
   );
 
   assign core_sleep_o = !core_busy_o;
@@ -1013,29 +1016,6 @@ module magia_tile
 
 /*******************************************************/
 /**                 L1 SPM (TCDM) End                 **/
-/*******************************************************/
-/**              Xif Dispatcher Beginning             **/
-/*******************************************************/
-
-  xif_inst_dispatcher #(
-    .N_COPROC        ( magia_tile_pkg::N_COPROC        ),
-    .N_RULES         ( magia_tile_pkg::N_RULES         ),
-    .DEFAULT_IDX     ( magia_tile_pkg::DEFAULT_IDX     ),
-    .OPCODE_OFF      ( magia_tile_pkg::OPCODE_OFF      ),
-    .OPCODE_W        ( magia_tile_pkg::OPCODE_W        ),
-    .xif_inst_rule_t ( magia_tile_pkg::xif_inst_rule_t )
-  ) i_xif_inst_dispatcher (
-    .clk_i           ( sys_clk                 ),
-    .rst_ni          ( rst_ni                  ),
-    .xif_issue_if_i  ( xif_if.coproc_issue     ),
-    .xif_issue_if_o  ( xif_coproc_if.cpu_issue ),
-    .xif_result_if_o ( xif_if.coproc_result    ),
-    .xif_result_if_i ( xif_fpu_if.cpu_result   ),
-    .rules_i         ( '0                      )  // No custom rules - FPU handles all
-  );
-
-/*******************************************************/
-/**                 Xif Dispatcher End                **/
 /*******************************************************/
 /**                   iDMA Beginning                  **/
 /*******************************************************/
@@ -1311,18 +1291,12 @@ module magia_tile
                                     fsync_error, fsync_done,                                        // Fsync events [25:24]
                                     24'b0};                                                         // Reserved [23:0] - SW events are INTERNAL to Event Unit!
 
-  // MAGIA Event Unit - Optimized for single core interrupt management
-  // Configuration rationale for single-core system:
-  // - NB_SW_EVT=0: No software events, using only external hardware events
-  // - NB_BARR=0: No barriers needed (single core, no synchronization required)
-  // - NB_HW_MUT=0: No mutexes needed (single core, no contention)
-  // - DISP_FIFO_DEPTH=0: No task dispatcher (single core, no work distribution)
-  // Result: Minimal resource usage while preserving interrupt prioritization and management
+ 
   magia_event_unit #(
     .NB_CORES         ( 1                                          ), // Single core system
     .NB_SW_EVT        ( 1                                          ), // Minimum 1 SW event to avoid indexing issues (unused but required)
     .NB_BARR          ( 0                                          ), // No barriers needed with single core
-    .NB_HW_MUT        ( 0                                          ), // No mutexes needed with single core  
+    .NB_HW_MUT        ( 0                                          ), // No mutexes needed with single core
     .MUTEX_MSG_W      ( 32                                         ), // Keep default even if unused
     .DISP_FIFO_DEPTH  ( 0                                          ), // No task dispatcher needed
     .EVNT_WIDTH       ( 8                                          ), // SOC event width (keep default)
@@ -1345,77 +1319,26 @@ module magia_tile
     .core_irq_ack_id_i( eu_core_irq_ack_id                         ),
 
     // Core control
-    .core_busy_i      ( ~core_sleep_o                              ),
+    .core_busy_i      ( core_busy_o                              ),
     .core_clock_en_o  ( eu_core_clk_en                             ),
 
     // Debug
     .dbg_req_i        ( debug_req_i                                ),
     .core_dbg_req_o   ( eu_core_dbg_req                            ),
 
-    // OBI Interface - Direct Connection
-    .obi_req_i        ( core_mem_data_req[5]                       ),
-    .obi_rsp_o        ( core_mem_data_rsp[5]                       )
+    // EU Direct Link Interface - Only interface for Event Unit access
+    .eu_direct_req_i      ( eu_direct_req.req                      ),
+    .eu_direct_addr_i     ( eu_direct_req.addr                     ),
+    .eu_direct_wen_i      ( eu_direct_req.wen                      ),
+    .eu_direct_wdata_i    ( eu_direct_req.wdata                    ),
+    .eu_direct_be_i       ( eu_direct_req.be                       ),
+    .eu_direct_gnt_o      ( eu_direct_rsp.gnt                      ),
+    .eu_direct_rvalid_o   ( eu_direct_rsp.rvalid                   ),
+    .eu_direct_rdata_o    ( eu_direct_rsp.rdata                    )
   );
 
 /*******************************************************/
 /**                    Event Unit End                 **/
-/*******************************************************/
-/**           Floating-Point Unit Beginning           **/
-/*******************************************************/
-
-  // Event array assignments for proper 2D array structure
-  assign acc_events_array[0]     = {redmule_evt[0][1], redmule_evt[0][0], redmule_busy, 1'b0};
-  assign dma_events_array[0]     = {idma_o2a_done, idma_a2o_done};
-  assign timer_events_array[0]   = 2'b00;
-  assign other_events_array[0] = {idma_o2a_busy, idma_a2o_busy, idma_o2a_start, idma_a2o_start, idma_o2a_error, idma_a2o_error, fsync_error, fsync_done, 24'b0};  // iDMA status events [31:28]|idma_o2a_error, idma_a2o_error, iDMA error events [27:26]|fsync_error, fsync_done, Fsync events [25:24]                                                        // Reserved [23:0] - SW events are INTERNAL to Event Unit!
-
-  xif_if2struct i_xif_if2struct (
-    .xif_compressed_if_i  ( xif_if.coproc_compressed                                ),
-    .xif_issue_if_i       ( xif_coproc_if.coproc_issue[0]                           ),  // FPU is now index 0
-    .xif_commit_if_i      ( xif_if.coproc_commit                                    ),
-    .xif_mem_if_o         ( xif_if.coproc_mem                                       ),
-    .xif_mem_result_if_i  ( xif_if.coproc_mem_result                                ),
-    .xif_result_if_o      ( xif_fpu_if.coproc_result                                ),
-    .x_compressed_valid_o ( x_compressed_valid                                      ),
-    .x_compressed_ready_i ( x_compressed_ready                                      ),
-    .x_compressed_req_o   ( x_compressed_req                                        ),
-    .x_compressed_resp_i  ( x_compressed_resp                                       ),
-    .x_issue_valid_o      ( x_issue_valid                                           ),
-    .x_issue_ready_i      ( x_issue_ready                                           ),
-    .x_issue_req_o        ( x_issue_req                                             ),
-    .x_issue_resp_i       ( x_issue_resp                                            ),
-    .x_commit_valid_o     ( x_commit_valid                                          ),
-    .x_commit_o           ( x_commit                                                ),
-    .x_mem_valid_i        ( x_mem_valid                                             ),
-    .x_mem_ready_o        ( x_mem_ready                                             ),
-    .x_mem_req_i          ( x_mem_req                                               ),
-    .x_mem_resp_o         ( x_mem_resp                                              ),
-    .x_mem_result_valid_o ( x_mem_result_valid                                      ),
-    .x_mem_result_o       ( x_mem_result                                            ),
-    .x_result_valid_i     ( x_result_valid                                          ),
-    .x_result_ready_o     ( x_result_ready                                          ),
-    .x_result_i           ( x_result                                                )
-  );
-
-/*******************************************************/
-/**                    Event Unit End                 **/
-/*******************************************************/
-/**               Clock Gating Monitor                **/
-/*******************************************************/
-
-`ifndef SYNTHESIS
-  // Monitor per clock enable dal Event Unit
-  always @(negedge core_clk_en) begin
-    $display("[CG_MONITOR] @%0t: CLOCK GATING ACTIVE (core_clk_en=0)", $time);
-  end
-  
-  always @(posedge core_clk_en) begin
-    $display("[CG_MONITOR] @%0t: CLOCK GATING INACTIVE (core_clk_en=1)", $time);
-  end
-`endif
-
-/*******************************************************/
-/**            Clock Gating Monitor End               **/
 /*******************************************************/
 
 endmodule: magia_tile
