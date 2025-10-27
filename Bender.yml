@@ -23,14 +23,12 @@ package:
 
 dependencies:
   redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 9a1aa14be0b23f0ade84bab57e7e434397ac9876 } # branch: vi/scale_up
-  cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: a90101211048ba1a16cedbe4db963ab6e12569d7 } # branch: vi/redmule_scaleup
+  flex_v            : { git: "https://github.com/pulp-platform/flex-v.git"            , rev: e9355c2f6ec4c105abdff39489e5d1be93bc4374 } # astral-v1.1 
   idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: a6b190c7991331432afa9a2899d032bc1b176830 } # branch: vi/redmule_scaleup
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: c35d5b0886ab549fb9144c3c14a4682112330e21 } # branch: yt/reqrsp
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 5a48a854573fca5bbabc1cfd4110fa4530a50ed7 } # branch: vi/redmule_scaleup
   cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , rev: 917ecbf908bdaa22c5713bbcff277d142506bb16 } # branch: michaero/astral
-  fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
-  fpu_ss            : { git: "https://github.com/pulp-platform/fpu_ss.git"            , rev: 8e2eff774d9d38a1e17a46bd56a0936dac9522f0 } # branch: vi/bender_manifest
   obi               : { git: "https://github.com/pulp-platform/obi.git"               , version: 0.1.6                                }
   axi               : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: 0.4.4                                }
@@ -39,7 +37,7 @@ dependencies:
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
   fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: fdb619f40f99d769cfceb20ac2117ff8d99e98a3 } # branch: main
   floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , rev: f4a36265cda8b56faee45692afb20ddfffba6dee } # branch: main
-  event_unit_flex   : { git: "https://github.com/pulp-platform/event_unit_flex.git"  , rev: master } # master branch
+  event_unit_flex   : { git: "https://github.com/pulp-platform/event_unit_flex.git"  , rev: 763c3b9977970f656326c70a96debfb2ac0f85b2 } # latest commit
 
 export_include_dirs:
   - hw/include
@@ -67,18 +65,14 @@ sources:
       - hw/tile/converters/cache2instr.sv
       - hw/tile/converters/obi2hci.sv
       - hw/tile/converters/hci2obi.sv
-      - hw/tile/converters/xif_if2struct.sv
       - hw/tile/converters/obi2hwpe_ctrl.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
-      - hw/tile/idma_xif_inst_decoder.sv
-      - hw/tile/xif_inst_dispatcher.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
-      - hw/tile/idma_ctrl.sv
       - hw/tile/idma_obi_ctrl_decoder.sv
       - hw/tile/idma_ctrl_mm.sv
       - hw/tile/obi_slave_fsync.sv
-      - hw/tile/fractal_sync_xif_inst_decoder.sv
+      - hw/tile/core_data_demux_eu_direct.sv
       - hw/tile/magia_tile.sv
       # MAGIA DV
       - target/sim/src/tile/magia_tile_tb_pkg.sv
@@ -87,6 +81,10 @@ sources:
       - target/sim/src/tile/magia_tile_vip.sv
       - target/sim/src/tile/magia_tile_fixture.sv
       - target/sim/src/tile/magia_tile_tb.sv
+  # Flex-V tracer (conditionally included when TRACE_EXECUTION is enabled)
+  - target: all(magia_dv, standalone_tile, trace_execution)
+    files:
+      - .bender/git/checkouts/flex_v-9a847e412b261f38/rtl/riscv_tracer.sv
   # MAGIA
   - target: all(magia_dv, not(standalone_tile))
     defines:
@@ -114,17 +112,14 @@ sources:
       - hw/tile/converters/cache2instr.sv
       - hw/tile/converters/obi2hci.sv
       - hw/tile/converters/hci2obi.sv
-      - hw/tile/converters/xif_if2struct.sv
       - hw/tile/converters/obi2hwpe_ctrl.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
-      - hw/tile/idma_xif_inst_decoder.sv
-      - hw/tile/xif_inst_dispatcher.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
-      - hw/tile/idma_ctrl.sv
       - hw/tile/idma_obi_ctrl_decoder.sv
+      - hw/tile/idma_ctrl_mm.sv
       - hw/tile/obi_slave_fsync.sv
-      - hw/tile/fractal_sync_xif_inst_decoder.sv
+      - hw/tile/core_data_demux_eu_direct.sv
       - hw/tile/magia_tile.sv
       # MAGIA
       - hw/mesh/magia.sv
@@ -135,6 +130,10 @@ sources:
       - target/sim/src/mesh/magia_vip.sv
       - target/sim/src/mesh/magia_fixture.sv
       - target/sim/src/mesh/magia_tb.sv
+  # Flex-V tracer (conditionally included when TRACE_EXECUTION is enabled)
+  - target: all(magia_dv, not(standalone_tile), trace_execution)
+    files:
+      - .bender/git/checkouts/flex_v-9a847e412b261f38/rtl/riscv_tracer.sv
 
   - target: all(not(magia_dv), asic)
     files:
@@ -160,17 +159,13 @@ sources:
       - hw/tile/converters/cache2instr.sv
       - hw/tile/converters/obi2hci.sv
       - hw/tile/converters/hci2obi.sv
-      - hw/tile/converters/xif_if2struct.sv
       - hw/tile/converters/obi2hwpe_ctrl.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
-      - hw/tile/idma_xif_inst_decoder.sv
-      - hw/tile/xif_inst_dispatcher.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
-      - hw/tile/idma_ctrl.sv
       - hw/tile/idma_obi_ctrl_decoder.sv
       - hw/tile/obi_slave_fsync.sv
-      - hw/tile/fractal_sync_xif_inst_decoder.sv
+      - hw/tile/core_data_demux_eu_direct.sv
       - hw/tile/magia_tile.sv
       # MAGIA
       - hw/mesh/noc/floo_axi_mesh_2x2_noc.sv
