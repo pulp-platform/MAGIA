@@ -243,7 +243,7 @@ end
 
 `ifdef PROFILE_DETAILED
   bit[31:0] curr_instr; 
-  assign curr_instr = i_magia_tile.i_cv32e40x_core.core_i.if_stage_i.if_id_pipe_o.instr.bus_resp.rdata;
+  assign curr_instr = i_magia_tile.i_flex_v_core.id_stage_i.instr_rdata_i;
   always @(curr_instr) begin: instr_reporter
     if (curr_instr == 32'h50500013) $display("[TB] detected sentinel instruction at time %0dns", time_var);
   end
@@ -255,8 +255,8 @@ end
   time start_sentinel[$];
   time end_sentinel[$];
   time sentinel_latency;
-  assign curr_instr_wb = i_magia_tile.i_cv32e40x_core.core_i.wb_stage_i.ex_wb_pipe_i.instr_valid ?
-  i_magia_tile.i_cv32e40x_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
+  assign curr_instr_wb = i_magia_tile.i_flex_v_core.wb_valid ?
+  i_magia_tile.i_flex_v_core.regfile_wdata : '0;
   always @(curr_instr_wb) begin: instr_wb_reporter
     if (curr_instr_wb == 32'h5AA00013) begin
       start_sentinel.push_back($time);
