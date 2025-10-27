@@ -94,22 +94,38 @@ package magia_tile_pkg;
   localparam int unsigned SWH    = DWH/BWH;                                             // Strobe Width for HWPE Interconnect
   localparam int unsigned WDH    = DWH/WWH;                                             // Number of words per data for HWPE Interconnect
 
-  // Parameters used by the core
-  parameter bit          X_EXT_EN        = 1;                                           // Enable eXtension Interface (X) support, see eXtension Interface        
-  parameter int unsigned X_NUM_RS        = 3;                                           // Number of register file read ports that can be used by the eXtension interface
-  parameter int unsigned X_ID_W          = 4;                                           // Identification width for the eXtension interface
-  parameter int unsigned X_MEM_W         = 32;                                          // Memory access width for loads/stores via the eXtension interface
-  parameter int unsigned X_RFR_W         = 32;                                          // Register file read access width for the eXtension interface
-  parameter int unsigned X_RFW_W         = 32;                                          // Register file write access width for the eXtension interface
-  parameter bit[31:0]    X_MISA          = 32'h20;                                      // MISA extensions implemented on the eXtension interface, see Machine ISA (misa). X_MISA can only be used to set a subset of the following: {P, V, F, M}
-  parameter bit[1 :0]    X_ECS_XS        = 2'b0;                                        // Default value for mstatus.XS if X_EXT = 1, see Machine Status (mstatus)
-  parameter bit[31:0]    DM_REGION_START = 32'hF0000000;                                // Start address of Debug Module region, see Debug & Trigger
-  parameter bit[31:0]    DM_REGION_END   = 32'hF0003FFF;                                // End address of Debug Module region, see Debug & Trigger
-  parameter bit          CLIC_EN         = 1'b0;                                        // Specifies whether Smclic, Smclicshv and Smclicconfig are supported
-  parameter int unsigned CLIC_ID_W       = 1;                                           // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
-
   // Parameters used by Event Unit
   parameter int unsigned EVENT_UNIT_IRQ_WIDTH = 5;                                      // Width of Event Unit IRQ ID signals (supports up to 32 different event types)
+
+  // Parameters used by flex-v core
+  parameter int unsigned FLEX_V_N_EXT_PERF_COUNTERS = 0;                               // Number of external performance counters
+  parameter int unsigned FLEX_V_INSTR_RDATA_WIDTH   = 32;                              // Instruction data width  
+  parameter bit          FLEX_V_PULP_SECURE         = 1'b0;                            // PULP security features
+  parameter int unsigned FLEX_V_N_PMP_ENTRIES       = 16;                              // Number of PMP entries
+  parameter bit          FLEX_V_USE_PMP             = 1'b1;                            // Enable PMP
+  parameter bit          FLEX_V_PULP_CLUSTER        = 1'b1;                            // PULP cluster mode
+  parameter bit          FLEX_V_FPU                 = 1'b1;                            // Enable FPU (main feature)
+  parameter bit          FLEX_V_ZFINX               = 1'b0;                            // Zfinx extension (integer FP in GPR) - Must be 0 for standard FPU
+  parameter bit          FLEX_V_FP_DIVSQRT          = 1'b1;                            // FP division and square root
+  parameter bit          FLEX_V_SHARED_FP           = 1'b0;                            // Shared FP unit
+  parameter bit          FLEX_V_SHARED_DSP_MULT     = 1'b0;                            // Shared DSP multiplier
+  parameter bit          FLEX_V_SHARED_INT_MULT     = 1'b0;                            // Shared integer multiplier
+  parameter bit          FLEX_V_SHARED_INT_DIV      = 1'b0;                            // Shared integer divider
+  parameter bit          FLEX_V_SHARED_FP_DIVSQRT   = 1'b0;                            // Shared FP div/sqrt
+  parameter int unsigned FLEX_V_WAPUTYPE            = 0;                               // APU type width
+  parameter int unsigned FLEX_V_APU_NARGS_CPU       = 3;                               // APU number of arguments
+  parameter int unsigned FLEX_V_APU_WOP_CPU         = 6;                               // APU operation width
+  parameter int unsigned FLEX_V_APU_NDSFLAGS_CPU    = 15;                              // APU data side flags
+  parameter int unsigned FLEX_V_APU_NUSFLAGS_CPU    = 5;                               // APU user side flags
+  parameter logic [31:0] FLEX_V_DM_HALT_ADDR        = 32'h1A110800;                    // Debug module halt address  
+  parameter int unsigned FLEX_V_CORE_ID             = 0;                               // Core ID
+  parameter int unsigned FLEX_V_N_HWLP              = 2;                               // Number of hardware loops  // RISC-V instruction field parameters (previously defined in CV32E40X core)
+  parameter int unsigned X_NUM_RS   = 2;                                                // Number of register file read ports (R-type instructions have 2 source operands)
+  parameter int unsigned OPCODE_W   = 7;                                                // Opcode field width (7 bits)
+  parameter int unsigned FUNC3_W    = 3;                                                // FUNC3 field width (3 bits)
+  parameter int unsigned OPCODE_OFF = 0;                                                // Opcode field offset (bits 6:0)
+  parameter int unsigned FUNC3_OFF  = 12;                                               // FUNC3 field offset (bits 14:12)
+  parameter int unsigned CLIC_ID_W  = 5;                                                // CLIC interrupt ID width (5 bits for 32 interrupts)
 
   // Parameters used by RedMulE
   parameter int unsigned REDMULE_DW   = DWH;                                            // RedMulE Data Width
@@ -127,10 +143,10 @@ package magia_tile_pkg;
   parameter int unsigned RID_WIDTH    = 1;                                              // Width of the rid   signal (response channel identifier, see OBI documentation)
   parameter int unsigned MID_WIDTH    = 1;                                              // Width of the mid   signal (manager identifier, see OBI documentation)
   parameter int unsigned OBI_ID_WIDTH = 1;                                              // Width of the id - configuration
-  parameter int unsigned N_SBR        = 6;                                              // Number of slaves (HCI, AXI XBAR, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl, Event_Unit)
+  parameter int unsigned N_SBR        = 5;                                              // Number of slaves (HCI, AXI XBAR, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl) - Event_Unit now via eu_direct_link
   parameter int unsigned N_MGR        = 2;                                              // Number of masters (Core, AXI XBAR)
   parameter int unsigned N_MAX_TRAN   = 1;                                              // Number of maximum outstanding transactions
-  parameter int unsigned N_ADDR_RULE  = 8;                                              // Number of address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl, Event_Unit)
+  parameter int unsigned N_ADDR_RULE  = 7;                                              // Number of address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl) - Event_Unit now via eu_direct_link
   localparam int unsigned N_BIT_SBR   = $clog2(N_SBR);                                  // Number of bits required to identify each slave
 
   // Parameters used by AXI
@@ -171,22 +187,6 @@ package magia_tile_pkg;
     AXI2OBI = 1'b0,
     OBI2AXI = 1'b1
   } idma_transfer_ch_e;                                                                 // iDMA type of transfer channel
-
-  // Parameters used by the Xif Instruction Dispatcher
-  parameter int unsigned N_COPROC         = 1;                                          // Only FPU (FractalSync moved to memory-mapped)
-  parameter int unsigned N_RULES          = 0;                                          // No custom Xif instructions needed
-  parameter int unsigned N_FSYNC_SIGN     = 0;                                          // FractalSync no longer uses XIF
-  parameter int unsigned N_SIGN           = 0;                                          // No opcodes for custom instructions
-  typedef enum logic[1:0]{
-    XIF_FPU_IDX     = 2'b00
-  } xif_inst_dispatch_idx_e;
-  parameter int unsigned DEFAULT_IDX      = XIF_FPU_IDX;                                // FPU handles all instructions
-  parameter int unsigned OPCODE_W         = 7;                                          // ISA OPCODE Width
-  parameter int unsigned OPCODE_OFF       = 0;                                          // ISA OPCODE Offset
-  parameter int unsigned FUNC3_W          = 3;                                          // ISA FUNC3 Width
-  parameter int unsigned FUNC3_OFF        = 12;                                         // ISA FUNC3 Offset
-  parameter int unsigned SIGN_W           = OPCODE_W + FUNC3_W;                         // Width of the instruction signiture
-  parameter bit          PRIORITY         = 0;                                          // Indicates that the dispatcher should rout the instruction to only 1 coprocessor (with highest priority)
 
   // Parameters used by the iDMA instruction decoder
   parameter int unsigned DMA_INSTR_W              = magia_pkg::INSTR_W;                 // iDMA Decoder instruction width
@@ -281,31 +281,6 @@ package magia_tile_pkg;
   parameter int unsigned FILL_AW        = magia_pkg::ADDR_W;                            // i$ Fill interface address width. Same as FILL_AW; >= 1.
   parameter int unsigned FILL_DW        = magia_pkg::DATA_W;                            // i$ Fill interface data width. Power of two; >= 8.
   
-  // Parameters used by the FPU
-  parameter bit                             FPU_ZFINX          = 0;                     // FPU use Zfinx extension instead of the F ISA extention
-  parameter int unsigned                    FPU_BUFFER_DEPTH   = 8;                     // FPU FIFO depth that buffers instructions coming from core
-  parameter bit                             FPU_BUFFER_FT      = 0;                     // FPU FIFO fall through that buffers instructions coming from core
-  parameter bit                             FPU_OOO            = 1;                     // FPU enable out-of-order execution
-  parameter bit                             FPU_FWD            = 1;                     // FPU enable forwarding from output to input of FPnew
-  parameter bit                             FPU_DIVSQRT        = 0;                     // FPU disable FPnew T-head-based DivSqrt unit (supported only for FP32 unit)
-  parameter fpnew_pkg::fpu_features_t       FPU_FEATURES       = '{
-    Width:         32,
-    EnableVectors: 1'b0,
-    EnableNanBox:  1'b1,
-    FpFmtMask:     6'b100000,
-    IntFmtMask:    4'b0010
-  };                                                                                    // FPU features: support only for FP32 and INT32
-  parameter fpnew_pkg::fpu_implementation_t FPU_IMPLEMENTATION = '{
-    PipeRegs:   '{default: 2},
-    UnitTypes:  '{'{default: fpnew_pkg::PARALLEL},
-                  '{default: fpnew_pkg::MERGED},
-                  '{default: fpnew_pkg::PARALLEL},
-                  '{default: fpnew_pkg::MERGED},
-                  '{default: fpnew_pkg::DISABLED}
-                },
-    PipeConfig: fpnew_pkg::DISTRIBUTED
-  };                                                                                    // FPU implementation
-  
   typedef struct packed {
     int unsigned                 idx;
     logic[magia_pkg::ADDR_W-1:0] start_addr;
@@ -335,11 +310,7 @@ package magia_tile_pkg;
   typedef struct packed {
     logic                        req;
     logic[magia_pkg::ADDR_W-1:0] addr;
-    logic[5                  :0] atop;
     logic[3                  :0] be;
-    logic[1                  :0] memtype;
-    logic[2                  :0] prot;
-    logic                        dbg;
     logic[magia_pkg::DATA_W-1:0] wdata;
     logic                        we;
   } core_data_req_t;
@@ -349,8 +320,22 @@ package magia_tile_pkg;
     logic                        rvalid;
     logic[magia_pkg::DATA_W-1:0] rdata;
     logic                        err;
-    logic                        exokay;
   } core_data_rsp_t;
+
+  // EU Direct Link interface types
+  typedef struct packed {
+    logic                        req;
+    logic[magia_pkg::ADDR_W-1:0] addr;
+    logic                        wen;      // Write enable negated (EU convention)
+    logic[magia_pkg::DATA_W-1:0] wdata;
+    logic[3                  :0] be;
+  } eu_direct_req_t;
+
+  typedef struct packed {
+    logic                        gnt;
+    logic                        rvalid;
+    logic[magia_pkg::DATA_W-1:0] rdata;
+  } eu_direct_rsp_t;
 
   typedef struct packed {
     logic[NR_FETCH_PORTS-1:0]               req;
@@ -365,7 +350,6 @@ package magia_tile_pkg;
   } core_cache_instr_rsp_t;
 
   typedef enum logic[2:0]{
-    EVENT_UNIT_IDX   = 7,
     FSYNC_CTRL_IDX   = 6,
     IDMA_IDX         = 5,
     REDMULE_CTRL_IDX = 4,
@@ -381,10 +365,6 @@ package magia_tile_pkg;
     AXI_CORE_DATA_IDX  = 1,
     AXI_CORE_INSTR_IDX = 0
   } axi_xbar_idx_e;
-
-  typedef struct packed {
-    logic[N_SIGN-1:0][SIGN_W-1:0] sign_list;
-  } xif_inst_rule_t;
 
   typedef logic[iDMA_AddrWidth-1:0] idma_addr_t;
 

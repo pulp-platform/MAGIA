@@ -43,7 +43,7 @@
 
 #define VERBOSE (0)
 
-#define IRQ_EN
+//#define IRQ_EN
 
 #define WAIT_CYCLES (10)
 
