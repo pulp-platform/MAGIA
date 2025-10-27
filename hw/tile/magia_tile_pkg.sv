@@ -98,37 +98,35 @@ package magia_tile_pkg;
   // Parameters used by Event Unit
   parameter int unsigned EVENT_UNIT_IRQ_WIDTH = 5;                                      // Width of Event Unit IRQ ID signals (supports up to 32 different event types)
 
-  // Parameters used by cv32e40p core
-  parameter int unsigned N_EXT_PERF_COUNTERS = 0;                               // Number of external performance counters
-  parameter int unsigned INSTR_RDATA_WIDTH   = 32;                              // Instruction data width  
-  parameter bit          PULP_SECURE         = 1'b0;                            // PULP security features
-  parameter int unsigned N_PMP_ENTRIES       = 16;                              // Number of PMP entries
-  parameter bit          USE_PMP             = 1'b1;                            // Enable PMP
-  parameter bit          PULP_CLUSTER        = 1'b1;                            // PULP cluster mode
-  parameter bit          FPU                 = 1'b1;                            // Enable FPU (main feature)
-  parameter bit          ZFINX               = 1'b0;                            // Zfinx extension (integer FP in GPR) - Must be 0 for standard FPU
-  parameter bit          FP_DIVSQRT          = 1'b1;                            // FP division and square root
-  parameter bit          SHARED_FP           = 1'b0;                            // Shared FP unit
-  parameter bit          SHARED_DSP_MULT     = 1'b0;                            // Shared DSP multiplier
-  parameter bit          SHARED_INT_MULT     = 1'b0;                            // Shared integer multiplier
-  parameter bit          SHARED_INT_DIV      = 1'b0;                            // Shared integer divider
-  parameter bit          SHARED_FP_DIVSQRT   = 1'b0;                            // Shared FP div/sqrt
-  parameter int unsigned WAPUTYPE            = 0;                               // APU type width
-  parameter int unsigned APU_NARGS_CPU       = 3;                               // APU number of arguments
-  parameter int unsigned APU_WOP_CPU         = 6;                               // APU operation width
-  parameter int unsigned APU_NDSFLAGS_CPU    = 15;                              // APU data side flags
-  parameter int unsigned APU_NUSFLAGS_CPU    = 5;                               // APU user side flags
-  parameter logic [31:0] DM_HALT_ADDR        = 32'h1A110800;                    // Debug module halt address  
-                          
+  // Parameters used by flex-v core
+  parameter int unsigned FLEX_V_N_EXT_PERF_COUNTERS = 0;                               // Number of external performance counters
+  parameter int unsigned FLEX_V_INSTR_RDATA_WIDTH   = 32;                              // Instruction data width  
+  parameter bit          FLEX_V_PULP_SECURE         = 1'b0;                            // PULP security features
+  parameter int unsigned FLEX_V_N_PMP_ENTRIES       = 16;                              // Number of PMP entries
+  parameter bit          FLEX_V_USE_PMP             = 1'b1;                            // Enable PMP
+  parameter bit          FLEX_V_PULP_CLUSTER        = 1'b1;                            // PULP cluster mode
+  parameter bit          FLEX_V_FPU                 = 1'b1;                            // Enable FPU (main feature)
+  parameter bit          FLEX_V_ZFINX               = 1'b0;                            // Zfinx extension (integer FP in GPR) - Must be 0 for standard FPU
+  parameter bit          FLEX_V_FP_DIVSQRT          = 1'b1;                            // FP division and square root
+  parameter bit          FLEX_V_SHARED_FP           = 1'b0;                            // Shared FP unit
+  parameter bit          FLEX_V_SHARED_DSP_MULT     = 1'b0;                            // Shared DSP multiplier
+  parameter bit          FLEX_V_SHARED_INT_MULT     = 1'b0;                            // Shared integer multiplier
+  parameter bit          FLEX_V_SHARED_INT_DIV      = 1'b0;                            // Shared integer divider
+  parameter bit          FLEX_V_SHARED_FP_DIVSQRT   = 1'b0;                            // Shared FP div/sqrt
+  parameter int unsigned FLEX_V_WAPUTYPE            = 0;                               // APU type width
+  parameter int unsigned FLEX_V_APU_NARGS_CPU       = 3;                               // APU number of arguments
+  parameter int unsigned FLEX_V_APU_WOP_CPU         = 6;                               // APU operation width
+  parameter int unsigned FLEX_V_APU_NDSFLAGS_CPU    = 15;                              // APU data side flags
+  parameter int unsigned FLEX_V_APU_NUSFLAGS_CPU    = 5;                               // APU user side flags
+  parameter logic [31:0] FLEX_V_DM_HALT_ADDR        = 32'h1A110800;                    // Debug module halt address  
+  parameter int unsigned FLEX_V_CORE_ID             = 0;                               // Core ID
+  parameter int unsigned FLEX_V_N_HWLP              = 2;                               // Number of hardware loops  // RISC-V instruction field parameters (previously defined in CV32E40X core)
   parameter int unsigned X_NUM_RS   = 2;                                                // Number of register file read ports (R-type instructions have 2 source operands)
   parameter int unsigned OPCODE_W   = 7;                                                // Opcode field width (7 bits)
   parameter int unsigned FUNC3_W    = 3;                                                // FUNC3 field width (3 bits)
   parameter int unsigned OPCODE_OFF = 0;                                                // Opcode field offset (bits 6:0)
   parameter int unsigned FUNC3_OFF  = 12;                                               // FUNC3 field offset (bits 14:12)
   parameter int unsigned CLIC_ID_W  = 5;                                                // CLIC interrupt ID width (5 bits for 32 interrupts)
-
-  // Parameters used by Event Unit
-  parameter int unsigned EVENT_UNIT_IRQ_WIDTH = 5;                                      // Width of Event Unit IRQ ID signals (supports up to 32 different event types)
 
   // Parameters used by RedMulE
   parameter int unsigned REDMULE_DW   = DWH;                                            // RedMulE Data Width
@@ -146,10 +144,10 @@ package magia_tile_pkg;
   parameter int unsigned RID_WIDTH    = 1;                                              // Width of the rid   signal (response channel identifier, see OBI documentation)
   parameter int unsigned MID_WIDTH    = 1;                                              // Width of the mid   signal (manager identifier, see OBI documentation)
   parameter int unsigned OBI_ID_WIDTH = 1;                                              // Width of the id - configuration
-  parameter int unsigned N_SBR        = 6;                                              // Number of slaves (HCI, AXI XBAR, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl, Event_Unit)
+  parameter int unsigned N_SBR        = 5;                                              // Number of slaves (HCI, AXI XBAR, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl) - Event_Unit now via eu_direct_link
   parameter int unsigned N_MGR        = 2;                                              // Number of masters (Core, AXI XBAR)
   parameter int unsigned N_MAX_TRAN   = 1;                                              // Number of maximum outstanding transactions
-  parameter int unsigned N_ADDR_RULE  = 8;                                              // Number of address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl, Event_Unit)
+  parameter int unsigned N_ADDR_RULE  = 7;                                              // Number of address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl) - Event_Unit now via eu_direct_link
   localparam int unsigned N_BIT_SBR   = $clog2(N_SBR);                                  // Number of bits required to identify each slave
 
   // Parameters used by AXI
@@ -190,22 +188,6 @@ package magia_tile_pkg;
     AXI2OBI = 1'b0,
     OBI2AXI = 1'b1
   } idma_transfer_ch_e;                                                                 // iDMA type of transfer channel
-
-  // Parameters used by the Xif Instruction Dispatcher
-  parameter int unsigned N_COPROC         = 1;                                          // Only FPU (FractalSync moved to memory-mapped)
-  parameter int unsigned N_RULES          = 0;                                          // No custom Xif instructions needed
-  parameter int unsigned N_FSYNC_SIGN     = 0;                                          // FractalSync no longer uses XIF
-  parameter int unsigned N_SIGN           = 0;                                          // No opcodes for custom instructions
-  typedef enum logic[1:0]{
-    XIF_FPU_IDX     = 2'b00
-  } xif_inst_dispatch_idx_e;
-  parameter int unsigned DEFAULT_IDX      = XIF_FPU_IDX;                                // FPU handles all instructions
-  parameter int unsigned OPCODE_W         = 7;                                          // ISA OPCODE Width
-  parameter int unsigned OPCODE_OFF       = 0;                                          // ISA OPCODE Offset
-  parameter int unsigned FUNC3_W          = 3;                                          // ISA FUNC3 Width
-  parameter int unsigned FUNC3_OFF        = 12;                                         // ISA FUNC3 Offset
-  parameter int unsigned SIGN_W           = OPCODE_W + FUNC3_W;                         // Width of the instruction signiture
-  parameter bit          PRIORITY         = 0;                                          // Indicates that the dispatcher should rout the instruction to only 1 coprocessor (with highest priority)
 
   // Parameters used by the iDMA instruction decoder
   parameter int unsigned DMA_INSTR_W              = magia_pkg::INSTR_W;                 // iDMA Decoder instruction width
@@ -354,7 +336,6 @@ package magia_tile_pkg;
     logic                        gnt;
     logic                        rvalid;
     logic[magia_pkg::DATA_W-1:0] rdata;
-    logic                        err;       // Error signal (r_opc from XBAR_PERIPH_BUS)
   } eu_direct_rsp_t;
 
   typedef struct packed {
@@ -370,7 +351,6 @@ package magia_tile_pkg;
   } core_cache_instr_rsp_t;
 
   typedef enum logic[2:0]{
-    EVENT_UNIT_IDX   = 7,
     FSYNC_CTRL_IDX   = 6,
     IDMA_IDX         = 5,
     REDMULE_CTRL_IDX = 4,
