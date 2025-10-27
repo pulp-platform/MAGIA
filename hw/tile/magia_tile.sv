@@ -27,8 +27,6 @@ module magia_tile
   import magia_pkg::*;
   import redmule_pkg::*;
   import hci_package::*;
-  import cv32e40x_pkg::*;
-  import fpu_ss_pkg::*;
   import snitch_icache_pkg::*;
   import idma_pkg::*;
   import obi_pkg::*;
@@ -45,10 +43,6 @@ module magia_tile
   parameter int unsigned          N_WORDS_BANK             = magia_pkg::N_WORDS_BANK,        // Number of words per memory bank      
 
   // Parameters used by the core
-  parameter cv32e40x_pkg::rv32_e  CORE_ISA                 = cv32e40x_pkg::RV32I,            // RV32I (default) 32 registers in the RF - RV32E 16 registers in the RF
-  parameter cv32e40x_pkg::a_ext_e CORE_A                   = cv32e40x_pkg::A,                // Atomic Istruction (A) support (dafault: full support)
-  parameter cv32e40x_pkg::b_ext_e CORE_B                   = cv32e40x_pkg::ZBA_ZBB_ZBC_ZBS,  // Bit Manipulation support (dafault: full support)
-  parameter cv32e40x_pkg::m_ext_e CORE_M                   = cv32e40x_pkg::M,                // Multiply and Divide support (dafault: full support)
 
   // Parameters used by the iDMA
   parameter idma_pkg::error_cap_e ERROR_CAP                = idma_pkg::NO_ERROR_HANDLING     // Error handaling capability of the iDMA
@@ -245,6 +239,33 @@ module magia_tile
   logic sys_clk;
   logic sys_clk_en;
 
+  // Core output signals
+  logic core_busy_o;
+  logic [5:0] backup_mcause_o;
+  logic [31:0] backup_mepc_o;
+  logic [31:0] backup_mscratch_o;
+  logic [23:0] backup_mtvec_o;
+  logic [6:0] backup_mstatus_o;
+  logic [31:0] backup_branch_addr_o;
+  logic        backup_branch_o;
+  logic [31:0] backup_program_counter_if_o;
+  logic [31:0] backup_program_counter_o;
+  logic [31:0] regfile_wdata_b_o;
+  logic [5:0]  regfile_waddr_b_o;
+  logic        regfile_we_b_o;
+  logic [31:0] regfile_wdata_a_o;
+  logic [5:0]  regfile_waddr_a_o;
+  logic        regfile_we_a_o;
+  logic        debug_mode_o;
+  logic        sec_lvl_o;
+  logic [14:0] apu_master_flags_o;
+  logic [6:0]  apu_master_type_o;
+  logic [5:0]  apu_master_op_o;
+  logic [95:0] apu_master_operands_o;
+  logic        apu_master_ready_o;
+  logic        apu_master_req_o;
+  logic        data_unaligned_o;
+
   logic[magia_pkg::N_IRQ-1:0]            irq;
   logic                                  redmule_busy;
   logic[magia_tile_pkg::N_CORE-1:0][1:0] redmule_evt;
@@ -290,28 +311,6 @@ module magia_tile
   floo_req_t [4:0] floo_router_req_out;
   floo_rsp_t [4:0] floo_router_rsp_out;
 
-  id_t floo_id;
-  
-  logic                           x_compressed_valid;
-  logic                           x_compressed_ready;
-  fpu_ss_pkg::x_compressed_req_t  x_compressed_req;
-  fpu_ss_pkg::x_compressed_resp_t x_compressed_resp;
-  logic                           x_issue_valid;
-  logic                           x_issue_ready;
-  fpu_ss_pkg::x_issue_req_t       x_issue_req;
-  fpu_ss_pkg::x_issue_resp_t      x_issue_resp;
-  logic                           x_commit_valid;
-  fpu_ss_pkg::x_commit_t          x_commit;
-  logic                           x_mem_valid;
-  logic                           x_mem_ready;
-  fpu_ss_pkg::x_mem_req_t         x_mem_req;
-  fpu_ss_pkg::x_mem_resp_t        x_mem_resp;
-  logic                           x_mem_result_valid;
-  fpu_ss_pkg::x_mem_result_t      x_mem_result;
-  logic                           x_result_valid;
-  logic                           x_result_ready;
-  fpu_ss_pkg::x_result_t          x_result;
-
   // Event Unit signals - Corrected for single-core array interface
   logic [0:0]                         eu_core_irq_req;    // [0:0] array for single core  
   logic [0:0][magia_tile_pkg::EVENT_UNIT_IRQ_WIDTH-1:0] eu_core_irq_id;     // [0:0][4:0] array
@@ -346,7 +345,6 @@ module magia_tile
   assign obi_xbar_rule[magia_tile_pkg::REDMULE_CTRL_IDX] = '{idx: 32'd2, start_addr: tile_redmule_ctrl_start_addr, end_addr: tile_redmule_ctrl_end_addr     };
   assign obi_xbar_rule[magia_tile_pkg::IDMA_IDX]     = '{idx: 32'd3, start_addr: tile_idma_ctrl_start_addr,        end_addr: tile_idma_ctrl_end_addr        };
   assign obi_xbar_rule[magia_tile_pkg::FSYNC_CTRL_IDX] = '{idx: 32'd4, start_addr: tile_fsync_ctrl_start_addr,     end_addr: tile_fsync_ctrl_end_addr       };
-  assign obi_xbar_rule[magia_tile_pkg::EVENT_UNIT_IDX] = '{idx: 32'd5, start_addr: tile_event_unit_start_addr,     end_addr: tile_event_unit_end_addr       };
 
 
   assign axi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START, end_addr: magia_tile_pkg::L2_ADDR_END };
@@ -405,39 +403,48 @@ module magia_tile
   assign irq[3] = 1'b0;                     // Software interrupt (unused)
   assign irq[2:0] = '0;                     // Clear IRQs 0-2
 
-  assign eu_core_irq_ack[0] = 1'b0;     // Disable auto-ack to prevent IRQ loops
-  assign eu_core_irq_ack_id[0] = 5'b0;  // Clear ack ID - software must handle ack via register writes
-
-
-  // CLIC unused
-  assign clic_irq       = 1'b0;
-  assign clic_irq_id    = '0;
-  assign clic_irq_level = '0;
-  assign clic_irq_priv  = '0;
-  assign clic_irq_shv   = 1'b0;
-
-  assign enable_prefetching = 1'b0;
-  assign flush_valid[0]     = fencei_flush_req; // Single port i$
-  assign fencei_flush_ack   = flush_ready[0];   // Signle port i$
-
-
 
   assign floo_id = '{x: (x_id_i+1), y: y_id_i, port_id: 0};
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
 /*******************************************************/
-/**             Type Conversions Beginning            **/
+/**             Core Data Demux & Type Conversions   **/
 /*******************************************************/
 
+  // Core data demux signals
+  magia_tile_pkg::core_data_req_t core_data_req_to_xbar;
+  magia_tile_pkg::core_data_rsp_t core_data_rsp_from_xbar;
+  magia_tile_pkg::eu_direct_req_t eu_direct_req;
+  magia_tile_pkg::eu_direct_rsp_t eu_direct_rsp;
+
+  // Core data demux: splits requests between regular crossbar and EU direct link
+  core_data_demux_eu_direct i_core_data_demux_eu_direct (
+    .clk_i              ( sys_clk                 ),
+    .rst_ni             ( rst_ni                  ),
+    
+    // Core interface
+    .core_data_req_i    ( core_data_req           ),
+    .core_data_rsp_o    ( core_data_rsp           ),
+    
+    // Regular crossbar interface
+    .xbar_data_req_o    ( core_data_req_to_xbar   ),
+    .xbar_data_rsp_i    ( core_data_rsp_from_xbar ),
+    
+    // EU direct link interface
+    .eu_direct_req_o    ( eu_direct_req           ),
+    .eu_direct_rsp_i    ( eu_direct_rsp           )
+  );
+
+  // Convert core data interface to OBI for crossbar
   data2obi_req i_core_data2obi_req (
-    .data_req_i ( core_data_req     ),
-    .obi_req_o  ( core_obi_data_req )
+    .data_req_i ( core_data_req_to_xbar ),
+    .obi_req_o  ( core_obi_data_req     )
   );
 
   obi2data_rsp i_core_obi2data_rsp (
-    .obi_rsp_i  ( core_obi_data_rsp ),
-    .data_rsp_o ( core_data_rsp     )
+    .obi_rsp_i  ( core_obi_data_rsp         ),
+    .data_rsp_o ( core_data_rsp_from_xbar   )
   );
   
   obi2hci_req #(
@@ -647,38 +654,6 @@ module magia_tile
     .clk( sys_clk )
   );
 
-
-
-  cv32e40x_if_xif #(
-    .X_NUM_RS    ( magia_tile_pkg::X_NUM_RS ),
-    .X_ID_WIDTH  ( magia_tile_pkg::X_ID_W   ),
-    .X_MEM_WIDTH ( magia_tile_pkg::X_MEM_W  ),
-    .X_RFR_WIDTH ( magia_tile_pkg::X_RFR_W  ),
-    .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
-    .X_MISA      ( magia_tile_pkg::X_MISA   ),
-    .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
-  ) xif_fpu_if ();
-  
-  cv32e40x_if_xif #(
-    .X_NUM_RS    ( magia_tile_pkg::X_NUM_RS ),
-    .X_ID_WIDTH  ( magia_tile_pkg::X_ID_W   ),
-    .X_MEM_WIDTH ( magia_tile_pkg::X_MEM_W  ),
-    .X_RFR_WIDTH ( magia_tile_pkg::X_RFR_W  ),
-    .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
-    .X_MISA      ( magia_tile_pkg::X_MISA   ),
-    .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
-  ) xif_if ();
-
-  cv32e40x_if_xif #(
-    .X_NUM_RS    ( magia_tile_pkg::X_NUM_RS ),
-    .X_ID_WIDTH  ( magia_tile_pkg::X_ID_W   ),
-    .X_MEM_WIDTH ( magia_tile_pkg::X_MEM_W  ),
-    .X_RFR_WIDTH ( magia_tile_pkg::X_RFR_W  ),
-    .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
-    .X_MISA      ( magia_tile_pkg::X_MISA   ),
-    .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
-  ) xif_coproc_if[magia_tile_pkg::N_COPROC] (); // Index 0 -> FPU 
-
 /*******************************************************/
 /**             Interface Definitions End             **/
 /*******************************************************/
@@ -732,114 +707,151 @@ module magia_tile
 /**                   Core Beginning                  **/
 /*******************************************************/
 
-  // Documentation of cv32e40x_core's design parameters and interface is available at:
-  // https://docs.openhwgroup.org/projects/cv32e40x-user-manual/en/latest/integration.html#core-integration
-
-`ifndef CORE_TRACES
-  cv32e40x_core #(
-`else
-  cv32e40x_wrapper #(
-`endif
-    .RV32             ( CORE_ISA                        ),
-    .A_EXT            ( CORE_A                          ),
-    .B_EXT            ( CORE_B                          ),
-    .M_EXT            ( CORE_M                          ),
-    .X_EXT            ( magia_tile_pkg::X_EXT_EN        ),    // Support for eXtension Interface (X) 
-    .X_NUM_RS         ( magia_tile_pkg::X_NUM_RS        ),    // RF read ports that can be used by the eXtension interface
-    .X_ID_WIDTH       ( magia_tile_pkg::X_ID_W          ),    // ID width of eXtension interface
-    .X_MEM_WIDTH      ( magia_tile_pkg::X_MEM_W         ),    // MEM width for loads/stores of eXtension interface
-    .X_RFR_WIDTH      ( magia_tile_pkg::X_RFR_W         ),    // RF read width of eXtension interface
-    .X_RFW_WIDTH      ( magia_tile_pkg::X_RFW_W         ),    // RF write width of eXtension interface
-    .X_MISA           ( magia_tile_pkg::X_MISA          ),    // MISA extensions implemented on the eXtension interface
-    .X_ECS_XS         ( magia_tile_pkg::X_ECS_XS        ),    // Default value for mstatus.XS if X_EXT = 1
-    .NUM_MHPMCOUNTERS ( 1                               ),    // 1 MHPMCOUNTER performance counter
-    .DEBUG            ( 1                               ),    // Enable debug support
-    .DM_REGION_START  ( magia_tile_pkg::DM_REGION_START ),    // Start address of Debug Module region
-    .DM_REGION_END    ( magia_tile_pkg::DM_REGION_END   ),    // End address of Debug Module region
-    .DBG_NUM_TRIGGERS ( 1                               ),    // 1 debug trigger
-    .PMA_NUM_REGIONS  ( 0                               ),    // No PMA (Physical Memory Attribution) regions 
-    .PMA_CFG          (                                 ),    // No array of PMA configurations
-    .CLIC             ( magia_tile_pkg::CLIC_EN         ),    // Support for Smclic, Smclicshv and Smclicconfig
-    .CLIC_ID_WIDTH    ( magia_tile_pkg::CLIC_ID_W       )     // Width of clic_irq_id_i and clic_irq_id_o
-  ) i_cv32e40x_core (
-    // Clock and reset
-    .clk_i               ( sys_clk                ),
-    .rst_ni              ( rst_ni                 ),
-    .scan_cg_en_i                                  ,
-
-    // Configuration
-    .boot_addr_i                                   ,  // instead of exposing these outside the tile, they could be managed with a configuration ROM/RAM
-    .mtvec_addr_i                                  ,  // instead of exposing these outside the tile, they could be managed with a configuration ROM/RAM
-    .dm_halt_addr_i                                ,  // instead of exposing these outside the tile, they could be managed with a configuration ROM/RAM
-    .dm_exception_addr_i                           ,  // instead of exposing these outside the tile, they could be managed with a configuration ROM/RAM
-    .mhartid_i                                     ,  // instead of exposing these outside the tile, they could be managed with a configuration ROM/RAM
-    .mimpid_patch_i                                ,  // instead of exposing these outside the tile, they could be managed with a configuration ROM/RAM
-
+  // flex-v core with integrated FPU and tracer
+  riscv_core #(
+    .N_EXT_PERF_COUNTERS ( magia_tile_pkg::FLEX_V_N_EXT_PERF_COUNTERS ),
+    .INSTR_RDATA_WIDTH   ( magia_tile_pkg::FLEX_V_INSTR_RDATA_WIDTH   ),
+    .PULP_SECURE         ( magia_tile_pkg::FLEX_V_PULP_SECURE         ),
+    .N_PMP_ENTRIES       ( magia_tile_pkg::FLEX_V_N_PMP_ENTRIES       ),
+    .USE_PMP             ( magia_tile_pkg::FLEX_V_USE_PMP             ),
+    .PULP_CLUSTER        ( magia_tile_pkg::FLEX_V_PULP_CLUSTER        ),
+    .FPU                 ( magia_tile_pkg::FLEX_V_FPU                 ),
+    .Zfinx               ( magia_tile_pkg::FLEX_V_ZFINX               ),
+    .FP_DIVSQRT          ( magia_tile_pkg::FLEX_V_FP_DIVSQRT          ),
+    .SHARED_FP           ( magia_tile_pkg::FLEX_V_SHARED_FP           ),
+    .SHARED_DSP_MULT     ( magia_tile_pkg::FLEX_V_SHARED_DSP_MULT     ),
+    .SHARED_INT_MULT     ( magia_tile_pkg::FLEX_V_SHARED_INT_MULT     ),
+    .SHARED_INT_DIV      ( magia_tile_pkg::FLEX_V_SHARED_INT_DIV      ),
+    .SHARED_FP_DIVSQRT   ( magia_tile_pkg::FLEX_V_SHARED_FP_DIVSQRT   ),
+    .WAPUTYPE            ( magia_tile_pkg::FLEX_V_WAPUTYPE            ),
+    .APU_NARGS_CPU       ( magia_tile_pkg::FLEX_V_APU_NARGS_CPU       ),
+    .APU_WOP_CPU         ( magia_tile_pkg::FLEX_V_APU_WOP_CPU         ),
+    .APU_NDSFLAGS_CPU    ( magia_tile_pkg::FLEX_V_APU_NDSFLAGS_CPU    ),
+    .APU_NUSFLAGS_CPU    ( magia_tile_pkg::FLEX_V_APU_NUSFLAGS_CPU    ),
+    .DM_HaltAddress      ( magia_tile_pkg::FLEX_V_DM_HALT_ADDR        ),
+    .CORE_ID             ( magia_tile_pkg::FLEX_V_CORE_ID             ),
+    .N_HWLP              ( magia_tile_pkg::FLEX_V_N_HWLP              )
+  ) i_flex_v_core (
+    // Clock and Reset
+    .clk_i                  ( sys_clk                  ),
+    .rst_ni                 ( rst_ni                   ),
+    
+    // Clock enable and test mode
+    .clock_en_i             ( sys_clk_en               ),
+    .test_en_i              ( test_mode_i              ),
+    
+    // Floating-point register file disable (for Zfinx)
+    .fregfile_disable_i     ( 1'b0                     ), // FPU enabled, use dedicated FP regfile
+    
+    // Boot configuration
+    .boot_addr_i            ( boot_addr_i              ),
+    
     // Instruction memory interface
-    .instr_req_o         ( core_instr_req.req     ),
-    .instr_gnt_i         ( core_instr_rsp.gnt     ),
-    .instr_addr_o        ( core_instr_req.addr    ),
-    .instr_memtype_o     ( core_instr_req.memtype ),
-    .instr_prot_o        ( core_instr_req.prot    ),
-    .instr_dbg_o         ( core_instr_req.dbg     ),
-    .instr_rvalid_i      ( core_instr_rsp.rvalid  ),
-    .instr_rdata_i       ( core_instr_rsp.rdata   ),
-    .instr_err_i         ( core_instr_rsp.err     ),
-
-    // Data memory interface
-    .data_req_o          ( core_data_req.req      ),
-    .data_gnt_i          ( core_data_rsp.gnt      ),
-    .data_addr_o         ( core_data_req.addr     ),
-    .data_atop_o         ( core_data_req.atop     ),
-    .data_be_o           ( core_data_req.be       ),
-    .data_memtype_o      ( core_data_req.memtype  ),
-    .data_prot_o         ( core_data_req.prot     ),
-    .data_dbg_o          ( core_data_req.dbg      ),
-    .data_wdata_o        ( core_data_req.wdata    ),
-    .data_we_o           ( core_data_req.we       ),
-    .data_rvalid_i       ( core_data_rsp.rvalid   ),
-    .data_rdata_i        ( core_data_rsp.rdata    ),
-    .data_err_i          ( core_data_rsp.err      ),
-    .data_exokay_i       ( core_data_rsp.exokay   ),
-
-    // Cycle, Time
-    .mcycle_o                                      ,
-    .time_i                                        ,
-
-    // eXtension interface
-    .xif_compressed_if   ( xif_if.cpu_compressed  ),
-    .xif_issue_if        ( xif_if.cpu_issue       ),
-    .xif_commit_if       ( xif_if.cpu_commit      ),
-    .xif_mem_if          ( xif_if.cpu_mem         ),
-    .xif_mem_result_if   ( xif_if.cpu_mem_result  ),
-    .xif_result_if       ( xif_if.cpu_result      ),
-
-     // Interrupt interface
-    .irq_i               ( irq                    ),
-
-    .clic_irq_i          ( clic_irq               ),
-    .clic_irq_id_i       ( clic_irq_id            ),
-    .clic_irq_level_i    ( clic_irq_level         ),
-    .clic_irq_priv_i     ( clic_irq_priv          ),
-    .clic_irq_shv_i      ( clic_irq_shv           ),
-
-    // Fence.i flush handshake
-    .fencei_flush_req_o  ( fencei_flush_req       ), 
-    .fencei_flush_ack_i  ( fencei_flush_ack       ),
-
+    .instr_req_o            ( core_instr_req.req       ),
+    .instr_gnt_i            ( core_instr_rsp.gnt       ),
+    .instr_rvalid_i         ( core_instr_rsp.rvalid    ),
+    .instr_addr_o           ( core_instr_req.addr      ),
+    .instr_rdata_i          ( core_instr_rsp.rdata     ),
+    
+    // Data memory interface  
+    .data_req_o             ( core_data_req.req        ),
+    .data_gnt_i             ( core_data_rsp.gnt        ),
+    .data_rvalid_i          ( core_data_rsp.rvalid     ),
+    .data_addr_o            ( core_data_req.addr       ),
+    .data_be_o              ( core_data_req.be         ),
+    .data_wdata_o           ( core_data_req.wdata      ),
+    .data_we_o              ( core_data_req.we         ),
+    .data_rdata_i           ( core_data_rsp.rdata      ),
+    
+    // Interrupts
+    .irq_i                  ( irq                      ),
+    
     // Debug interface
-    .debug_req_i                                   ,
-    .debug_havereset_o                             ,
-    .debug_running_o                               ,
-    .debug_halted_o                                ,
-    .debug_pc_valid_o                              ,
-    .debug_pc_o                                    ,
+    .debug_req_i            ( debug_req_i              ),
+    
+    // CPU control
+    .fetch_enable_i         ( fetch_enable_i           ),
+    .core_busy_o            ( core_busy_o              ),
+    
+    // Event Unit IRQ acknowledgment
+    .irq_ack_o              ( eu_core_irq_ack[0]       ),
+    .irq_id_o               ( eu_core_irq_ack_id[0]    ),
 
-    // Special control signals
-    .fetch_enable_i                                ,
-    .core_sleep_o                                  ,
-    .wu_wfe_i                          ( eu_core_irq_req[0] ) // Connect EU IRQ to WFE wake-up
+    // Recovery interface
+    .recovery_mcause_i      ( '0                       ),
+    .recovery_mepc_i        ( '0                       ),
+    .recovery_mscratch_i    ( '0                       ),
+    .recovery_mtvec_i       ( '0                       ),
+    .recovery_mstatus_i     ( '0                       ),
+    .recovery_branch_addr_i ( '0                       ),
+    .recovery_branch_i      ( '0                       ),
+    .recovery_program_counter_i ( '0                  ),
+    .pc_recover_i           ( '0                       ),
+
+    // Backup outputs
+    .backup_mcause_o        ( backup_mcause_o         ),
+    .backup_mepc_o          ( backup_mepc_o           ),
+    .backup_mscratch_o      ( backup_mscratch_o       ),
+    .backup_mtvec_o         ( backup_mtvec_o          ),
+    .backup_mstatus_o       ( backup_mstatus_o        ),
+    .backup_branch_addr_o   ( backup_branch_addr_o    ),
+    .backup_branch_o        ( backup_branch_o         ),
+    .backup_program_counter_if_o ( backup_program_counter_if_o ),
+    .backup_program_counter_o ( backup_program_counter_o ),
+
+    // Register file interface
+    .regfile_wdata_b_o      ( regfile_wdata_b_o       ),
+    .regfile_waddr_b_o      ( regfile_waddr_b_o       ),
+    .regfile_we_b_o         ( regfile_we_b_o          ),
+    .regfile_wdata_a_o      ( regfile_wdata_a_o       ),
+    .regfile_waddr_a_o      ( regfile_waddr_a_o       ),
+    .regfile_we_a_o         ( regfile_we_a_o          ),
+    .regfile_we_b_i         ( '0                      ),
+    .regfile_wdata_b_i      ( '0                      ),
+    .regfile_waddr_b_i      ( '0                      ),
+    .regfile_we_a_i         ( '0                      ),
+    .regfile_wdata_a_i      ( '0                      ),
+    .regfile_waddr_a_i      ( '0                      ),
+
+    // Recovery control
+    .recover_i              ( '0                      ),
+
+    // Performance counters
+    .ext_perf_counters_i    ( '0                      ),
+
+    // Debug outputs
+    .debug_mode_o           ( debug_mode_o            ),
+    .debug_resume_i         ( '0                      ),
+
+    // Security level
+    .sec_lvl_o              ( sec_lvl_o               ),
+    .irq_sec_i              ( '0                      ),
+    .irq_id_i               ( '0                      ),
+
+    // APU interface
+    .apu_master_flags_i     ( '0                      ),
+    .apu_master_result_i    ( '0                      ),
+    .apu_master_valid_i     ( '0                      ),
+    .apu_master_flags_o     ( apu_master_flags_o      ),
+    .apu_master_type_o      ( apu_master_type_o       ),
+    .apu_master_op_o        ( apu_master_op_o         ),
+    .apu_master_operands_o  ( apu_master_operands_o   ),
+    .apu_master_gnt_i       ( '0                      ),
+    .apu_master_ready_o     ( apu_master_ready_o      ),
+    .apu_master_req_o       ( apu_master_req_o        ),
+
+    // Data unaligned
+    .data_unaligned_o       ( data_unaligned_o        ),
+
+    // Cluster/Core IDs
+    .cluster_id_i           ( '0                      ),
+    .core_id_i              ( '0                      ),
+
+    // Setback
+    .setback_i              ( '0                      )
   );
+
+  assign core_sleep_o = !core_busy_o;
 
 /*******************************************************/
 /**                      Core End                     **/
@@ -994,29 +1006,6 @@ module magia_tile
 
 /*******************************************************/
 /**                 L1 SPM (TCDM) End                 **/
-/*******************************************************/
-/**              Xif Dispatcher Beginning             **/
-/*******************************************************/
-
-  xif_inst_dispatcher #(
-    .N_COPROC        ( magia_tile_pkg::N_COPROC        ),
-    .N_RULES         ( magia_tile_pkg::N_RULES         ),
-    .DEFAULT_IDX     ( magia_tile_pkg::DEFAULT_IDX     ),
-    .OPCODE_OFF      ( magia_tile_pkg::OPCODE_OFF      ),
-    .OPCODE_W        ( magia_tile_pkg::OPCODE_W        ),
-    .xif_inst_rule_t ( magia_tile_pkg::xif_inst_rule_t )
-  ) i_xif_inst_dispatcher (
-    .clk_i           ( sys_clk                 ),
-    .rst_ni          ( rst_ni                  ),
-    .xif_issue_if_i  ( xif_if.coproc_issue     ),
-    .xif_issue_if_o  ( xif_coproc_if.cpu_issue ),
-    .xif_result_if_o ( xif_if.coproc_result    ),
-    .xif_result_if_i ( xif_fpu_if.cpu_result   ),
-    .rules_i         ( '0                      )  // No custom rules - FPU handles all
-  );
-
-/*******************************************************/
-/**                 Xif Dispatcher End                **/
 /*******************************************************/
 /**                   iDMA Beginning                  **/
 /*******************************************************/
@@ -1292,18 +1281,12 @@ module magia_tile
                                     fsync_error, fsync_done,                                        // Fsync events [25:24]
                                     24'b0};                                                         // Reserved [23:0] - SW events are INTERNAL to Event Unit!
 
-  // MAGIA Event Unit - Optimized for single core interrupt management
-  // Configuration rationale for single-core system:
-  // - NB_SW_EVT=0: No software events, using only external hardware events
-  // - NB_BARR=0: No barriers needed (single core, no synchronization required)
-  // - NB_HW_MUT=0: No mutexes needed (single core, no contention)
-  // - DISP_FIFO_DEPTH=0: No task dispatcher (single core, no work distribution)
-  // Result: Minimal resource usage while preserving interrupt prioritization and management
+ 
   magia_event_unit #(
     .NB_CORES         ( 1                                          ), // Single core system
     .NB_SW_EVT        ( 1                                          ), // Minimum 1 SW event to avoid indexing issues (unused but required)
     .NB_BARR          ( 0                                          ), // No barriers needed with single core
-    .NB_HW_MUT        ( 0                                          ), // No mutexes needed with single core  
+    .NB_HW_MUT        ( 0                                          ), // No mutexes needed with single core
     .MUTEX_MSG_W      ( 32                                         ), // Keep default even if unused
     .DISP_FIFO_DEPTH  ( 0                                          ), // No task dispatcher needed
     .EVNT_WIDTH       ( 8                                          ), // SOC event width (keep default)
@@ -1326,87 +1309,26 @@ module magia_tile
     .core_irq_ack_id_i( eu_core_irq_ack_id                         ),
 
     // Core control
-    .core_busy_i      ( ~core_sleep_o                              ),
+    .core_busy_i      ( core_busy_o                              ),
     .core_clock_en_o  ( eu_core_clk_en                             ),
 
     // Debug
     .dbg_req_i        ( debug_req_i                                ),
     .core_dbg_req_o   ( eu_core_dbg_req                            ),
 
-    // OBI Interface - Direct Connection
-    .obi_req_i        ( core_mem_data_req[5]                       ),
-    .obi_rsp_o        ( core_mem_data_rsp[5]                       )
+    // EU Direct Link Interface - Only interface for Event Unit access
+    .eu_direct_req_i      ( eu_direct_req.req                      ),
+    .eu_direct_addr_i     ( eu_direct_req.addr                     ),
+    .eu_direct_wen_i      ( eu_direct_req.wen                      ),
+    .eu_direct_wdata_i    ( eu_direct_req.wdata                    ),
+    .eu_direct_be_i       ( eu_direct_req.be                       ),
+    .eu_direct_gnt_o      ( eu_direct_rsp.gnt                      ),
+    .eu_direct_rvalid_o   ( eu_direct_rsp.rvalid                   ),
+    .eu_direct_rdata_o    ( eu_direct_rsp.rdata                    )
   );
 
 /*******************************************************/
 /**                    Event Unit End                 **/
-/*******************************************************/
-/**           Floating-Point Unit Beginning           **/
-/*******************************************************/
-
-  fpu_ss #(
-    .PULP_ZFINX                ( magia_tile_pkg::FPU_ZFINX          ),
-    .INPUT_BUFFER_DEPTH        ( magia_tile_pkg::FPU_BUFFER_DEPTH   ),
-    .INPUT_BUFFER_FALL_THROUGH ( magia_tile_pkg::FPU_BUFFER_FT      ),
-    .OUT_OF_ORDER              ( magia_tile_pkg::FPU_OOO            ),
-    .FORWARDING                ( magia_tile_pkg::FPU_FWD            ),
-    .PulpDivsqrt               ( magia_tile_pkg::FPU_DIVSQRT        ),
-    .FPU_FEATURES              ( magia_tile_pkg::FPU_FEATURES       ),
-    .FPU_IMPLEMENTATION        ( magia_tile_pkg::FPU_IMPLEMENTATION )
-  ) i_fpu (
-    .clk_i                ( sys_clk            ),
-    .rst_ni               ( rst_ni             ),
-    .x_compressed_valid_i ( x_compressed_valid ),
-    .x_compressed_ready_o ( x_compressed_ready ),
-    .x_compressed_req_i   ( x_compressed_req   ),
-    .x_compressed_resp_o  ( x_compressed_resp  ),
-    .x_issue_valid_i      ( x_issue_valid      ),
-    .x_issue_ready_o      ( x_issue_ready      ),
-    .x_issue_req_i        ( x_issue_req        ),
-    .x_issue_resp_o       ( x_issue_resp       ),
-    .x_commit_valid_i     ( x_commit_valid     ),
-    .x_commit_i           ( x_commit           ),
-    .x_mem_valid_o        ( x_mem_valid        ),
-    .x_mem_ready_i        ( x_mem_ready        ),
-    .x_mem_req_o          ( x_mem_req          ),
-    .x_mem_resp_i         ( x_mem_resp         ),
-    .x_mem_result_valid_i ( x_mem_result_valid ),
-    .x_mem_result_i       ( x_mem_result       ),
-    .x_result_valid_o     ( x_result_valid     ),
-    .x_result_ready_i     ( x_result_ready     ),
-    .x_result_o           ( x_result           )
-  );
-
-  xif_if2struct i_xif_if2struct (
-    .xif_compressed_if_i  ( xif_if.coproc_compressed                                ),
-    .xif_issue_if_i       ( xif_coproc_if.coproc_issue[0]                           ),  // FPU is now index 0
-    .xif_commit_if_i      ( xif_if.coproc_commit                                    ),
-    .xif_mem_if_o         ( xif_if.coproc_mem                                       ),
-    .xif_mem_result_if_i  ( xif_if.coproc_mem_result                                ),
-    .xif_result_if_o      ( xif_fpu_if.coproc_result                                ),
-    .x_compressed_valid_o ( x_compressed_valid                                      ),
-    .x_compressed_ready_i ( x_compressed_ready                                      ),
-    .x_compressed_req_o   ( x_compressed_req                                        ),
-    .x_compressed_resp_i  ( x_compressed_resp                                       ),
-    .x_issue_valid_o      ( x_issue_valid                                           ),
-    .x_issue_ready_i      ( x_issue_ready                                           ),
-    .x_issue_req_o        ( x_issue_req                                             ),
-    .x_issue_resp_i       ( x_issue_resp                                            ),
-    .x_commit_valid_o     ( x_commit_valid                                          ),
-    .x_commit_o           ( x_commit                                                ),
-    .x_mem_valid_i        ( x_mem_valid                                             ),
-    .x_mem_ready_o        ( x_mem_ready                                             ),
-    .x_mem_req_i          ( x_mem_req                                               ),
-    .x_mem_resp_o         ( x_mem_resp                                              ),
-    .x_mem_result_valid_o ( x_mem_result_valid                                      ),
-    .x_mem_result_o       ( x_mem_result                                            ),
-    .x_result_valid_i     ( x_result_valid                                          ),
-    .x_result_ready_o     ( x_result_ready                                          ),
-    .x_result_i           ( x_result                                                )
-  );
-
-/*******************************************************/
-/**              Floating-Point Unit End              **/
 /*******************************************************/
 
 endmodule: magia_tile
