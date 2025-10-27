@@ -490,7 +490,7 @@ module magia_vip
       for (int unsigned i = 0; i < n_pairs; i++) begin
         automatic int unsigned src_idx;
         automatic int unsigned dst_idx;
-        if (i%(magia_tb_pkg::N_TILES_Y/2)) begin
+        if (i/magia_tb_pkg::N_TILES_X) begin
           src_idx = i%magia_tb_pkg::N_TILES_X + 2*(i/magia_tb_pkg::N_TILES_X)*magia_tb_pkg::N_TILES_X;
           dst_idx = i%magia_tb_pkg::N_TILES_X + 2*(i/magia_tb_pkg::N_TILES_X)*magia_tb_pkg::N_TILES_X - magia_tb_pkg::N_TILES_X;
         end else begin
@@ -814,8 +814,8 @@ module magia_vip
             automatic int unsigned dst_y;
             automatic int unsigned dst_x;
             if (k%(magia_tb_pkg::N_TILES_X/2)) begin
-              src_idx = 2*k;
-              dst_idx = 2*k-1;
+              src_idx = 2*k-1;
+              dst_idx = 2*k;
             end else begin
               src_idx = 2*k;
               dst_idx = 2*k-1 + magia_tb_pkg::N_TILES_X;
@@ -839,9 +839,9 @@ module magia_vip
             automatic int unsigned src_x;
             automatic int unsigned dst_y;
             automatic int unsigned dst_x;
-            if (i%(magia_tb_pkg::N_TILES_Y/2)) begin
-              src_idx = k%magia_tb_pkg::N_TILES_X + 2*(k/magia_tb_pkg::N_TILES_X)*magia_tb_pkg::N_TILES_X;
-              dst_idx = k%magia_tb_pkg::N_TILES_X + 2*(k/magia_tb_pkg::N_TILES_X)*magia_tb_pkg::N_TILES_X - magia_tb_pkg::N_TILES_X;
+            if (k/magia_tb_pkg::N_TILES_X) begin
+              src_idx = k%magia_tb_pkg::N_TILES_X + 2*(k/magia_tb_pkg::N_TILES_X)*magia_tb_pkg::N_TILES_X - magia_tb_pkg::N_TILES_X;
+              dst_idx = k%magia_tb_pkg::N_TILES_X + 2*(k/magia_tb_pkg::N_TILES_X)*magia_tb_pkg::N_TILES_X;
             end else begin
               src_idx = k%magia_tb_pkg::N_TILES_X + 2*(k/magia_tb_pkg::N_TILES_X)*magia_tb_pkg::N_TILES_X;
               dst_idx = k%magia_tb_pkg::N_TILES_X + 2*(k/magia_tb_pkg::N_TILES_X)*magia_tb_pkg::N_TILES_X - magia_tb_pkg::N_TILES_X + magia_tb_pkg::N_TILES;
@@ -970,7 +970,7 @@ module magia_vip
       for (int unsigned i = 0; i < n_pairs; i++) begin
         automatic int unsigned src_idx;
         automatic int unsigned dst_idx;
-        if (i%(magia_tb_pkg::N_TILES_Y/2)) begin
+        if (i/magia_tb_pkg::N_TILES_X) begin
           src_idx = i%magia_tb_pkg::N_TILES_X + 2*(i/magia_tb_pkg::N_TILES_X)*magia_tb_pkg::N_TILES_X;
           dst_idx = i%magia_tb_pkg::N_TILES_X + 2*(i/magia_tb_pkg::N_TILES_X)*magia_tb_pkg::N_TILES_X - magia_tb_pkg::N_TILES_X;
         end else begin
