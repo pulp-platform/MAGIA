@@ -241,25 +241,9 @@ module magia_tile
 
   // Core output signals
   logic core_busy_o;
-  logic [5:0] backup_mcause_o;
-  logic [31:0] backup_mepc_o;
-  logic [31:0] backup_mscratch_o;
-  logic [23:0] backup_mtvec_o;
-  logic [6:0] backup_mstatus_o;
-  logic [31:0] backup_branch_addr_o;
-  logic        backup_branch_o;
-  logic [31:0] backup_program_counter_if_o;
-  logic [31:0] backup_program_counter_o;
-  logic [31:0] regfile_wdata_b_o;
-  logic [5:0]  regfile_waddr_b_o;
-  logic        regfile_we_b_o;
-  logic [31:0] regfile_wdata_a_o;
-  logic [5:0]  regfile_waddr_a_o;
-  logic        regfile_we_a_o;
-  logic        debug_mode_o;
   logic        sec_lvl_o;
   logic [14:0] apu_master_flags_o;
-  logic [6:0]  apu_master_type_o;
+  logic [magia_tile_pkg::FLEX_V_WAPUTYPE-1:0]  apu_master_type_o; // Use parameter for correct width
   logic [5:0]  apu_master_op_o;
   logic [95:0] apu_master_operands_o;
   logic        apu_master_ready_o;
@@ -764,7 +748,7 @@ module magia_tile
     .data_rdata_i           ( core_data_rsp.rdata      ),
     
     // Interrupts
-    .irq_i                  ( irq                      ),
+    .irq_i                  ( eu_core_irq_req[0]       ), // Flex-V expects single bit IRQ
     
     // Debug interface
     .debug_req_i            ( debug_req_i              ),
@@ -777,51 +761,8 @@ module magia_tile
     .irq_ack_o              ( eu_core_irq_ack[0]       ),
     .irq_id_o               ( eu_core_irq_ack_id[0]    ),
 
-    // Recovery interface
-    .recovery_mcause_i      ( '0                       ),
-    .recovery_mepc_i        ( '0                       ),
-    .recovery_mscratch_i    ( '0                       ),
-    .recovery_mtvec_i       ( '0                       ),
-    .recovery_mstatus_i     ( '0                       ),
-    .recovery_branch_addr_i ( '0                       ),
-    .recovery_branch_i      ( '0                       ),
-    .recovery_program_counter_i ( '0                  ),
-    .pc_recover_i           ( '0                       ),
-
-    // Backup outputs
-    .backup_mcause_o        ( backup_mcause_o         ),
-    .backup_mepc_o          ( backup_mepc_o           ),
-    .backup_mscratch_o      ( backup_mscratch_o       ),
-    .backup_mtvec_o         ( backup_mtvec_o          ),
-    .backup_mstatus_o       ( backup_mstatus_o        ),
-    .backup_branch_addr_o   ( backup_branch_addr_o    ),
-    .backup_branch_o        ( backup_branch_o         ),
-    .backup_program_counter_if_o ( backup_program_counter_if_o ),
-    .backup_program_counter_o ( backup_program_counter_o ),
-
-    // Register file interface
-    .regfile_wdata_b_o      ( regfile_wdata_b_o       ),
-    .regfile_waddr_b_o      ( regfile_waddr_b_o       ),
-    .regfile_we_b_o         ( regfile_we_b_o          ),
-    .regfile_wdata_a_o      ( regfile_wdata_a_o       ),
-    .regfile_waddr_a_o      ( regfile_waddr_a_o       ),
-    .regfile_we_a_o         ( regfile_we_a_o          ),
-    .regfile_we_b_i         ( '0                      ),
-    .regfile_wdata_b_i      ( '0                      ),
-    .regfile_waddr_b_i      ( '0                      ),
-    .regfile_we_a_i         ( '0                      ),
-    .regfile_wdata_a_i      ( '0                      ),
-    .regfile_waddr_a_i      ( '0                      ),
-
-    // Recovery control
-    .recover_i              ( '0                      ),
-
     // Performance counters
     .ext_perf_counters_i    ( '0                      ),
-
-    // Debug outputs
-    .debug_mode_o           ( debug_mode_o            ),
-    .debug_resume_i         ( '0                      ),
 
     // Security level
     .sec_lvl_o              ( sec_lvl_o               ),
@@ -833,7 +774,7 @@ module magia_tile
     .apu_master_result_i    ( '0                      ),
     .apu_master_valid_i     ( '0                      ),
     .apu_master_flags_o     ( apu_master_flags_o      ),
-    .apu_master_type_o      ( apu_master_type_o       ),
+    .apu_master_type_o      (                         ), // Unconnected - WAPUTYPE=0
     .apu_master_op_o        ( apu_master_op_o         ),
     .apu_master_operands_o  ( apu_master_operands_o   ),
     .apu_master_gnt_i       ( '0                      ),
@@ -844,11 +785,8 @@ module magia_tile
     .data_unaligned_o       ( data_unaligned_o        ),
 
     // Cluster/Core IDs
-    .cluster_id_i           ( '0                      ),
-    .core_id_i              ( '0                      ),
-
-    // Setback
-    .setback_i              ( '0                      )
+    .cluster_id_i           ( mhartid_i[9:4]          ), // Use 6 bits for cluster_id (Flex-V requirement)
+    .core_id_i              ( mhartid_i[3:0]          ) // Use 4 bits for core_id (latest Flex-V requirement)
   );
 
   assign core_sleep_o = !core_busy_o;
