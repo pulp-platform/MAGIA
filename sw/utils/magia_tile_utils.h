@@ -150,7 +150,7 @@ static inline uint32_t get_timel(){
 
 static inline uint32_t get_timeh(){
     uint32_t timeh;
-    // RI5CY doesn't have separate timeh, return 0
+    // Flex-V doesn't have separate timeh, return 0
     asm volatile("csrr %0, timeh"
                  :"=r"(timeh):);
     return timeh;
