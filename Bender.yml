@@ -23,7 +23,7 @@ package:
 
 dependencies:
   redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 9a1aa14be0b23f0ade84bab57e7e434397ac9876 } # branch: vi/scale_up
-  flex_v            : { git: "https://github.com/pulp-platform/flex-v.git"            , rev: e9355c2f6ec4c105abdff39489e5d1be93bc4374 } # astral-v1.1 
+  flex_v            : { git: "https://github.com/pulp-platform/flex-v.git"            , rev: ee840dbfbd4174e2814b4f10edcdeff5e883ccf8 } # latest main branch 
   idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: a6b190c7991331432afa9a2899d032bc1b176830 } # branch: vi/redmule_scaleup
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: c35d5b0886ab549fb9144c3c14a4682112330e21 } # branch: yt/reqrsp
