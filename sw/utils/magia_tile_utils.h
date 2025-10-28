@@ -110,16 +110,18 @@ static inline void sentinel_end(){
 }
 
 static inline void ccount_en(){
-    asm volatile("csrrci zero, 0x320, 0x1" ::);
+    uint32_t pcmr = 1;
+    asm volatile("csrw 0x7e1, %0" ::"r"(pcmr));
 }
 
 static inline void ccount_dis(){
-    asm volatile("csrrsi zero, 0x320, 0x1" ::);
+    uint32_t pcmr = 0;
+    asm volatile("csrw 0x7e1, %0" ::"r"(pcmr));
 }
 
 static inline uint32_t get_cyclel(){
     uint32_t cyclel;
-    asm volatile("csrr %0, cycle"
+    asm volatile("csrr %0, 0x780"
                  :"=r"(cyclel):);
     return cyclel;
 }
@@ -140,13 +142,14 @@ uint32_t get_cycle(){
 
 static inline uint32_t get_timel(){
     uint32_t timel;
-    asm volatile("csrr %0, time"
+    asm volatile("csrr %0, 0x781"
                  :"=r"(timel):);
     return timel;
 }
 
 static inline uint32_t get_timeh(){
     uint32_t timeh;
+    // Flex-V doesn't have separate timeh, return 0
     asm volatile("csrr %0, timeh"
                  :"=r"(timeh):);
     return timeh;
@@ -157,6 +160,92 @@ uint32_t get_time(){
     uint32_t timeh = get_timeh();
     if (timeh) return 0;
     return timel;
+}
+
+static inline uint32_t get_mhartid(){
+    uint32_t mhartid;
+    asm volatile("csrr %0, mhartid"
+                 :"=r"(mhartid):);
+    return mhartid;
+}
+
+static inline uint32_t get_cluster_id(){
+    // In MAGIA: cluster_id comes from bits [9:4] of mhartid (to match hardware mapping)
+    uint32_t mhartid = get_mhartid();
+    return (mhartid >> 4) & 0x3F; // Extract mhartid[9:4] - 6 bits for cluster_id
+}
+
+static inline uint32_t get_core_id(){
+    // In MAGIA: core_id comes from lower 4 bits of mhartid (tile/hart ID)
+    uint32_t mhartid = get_mhartid();
+    return mhartid & 0xF; // Extract mhartid[3:0] - 4 bits for core_id
+}
+
+static inline uint32_t get_tile_id(){
+    // In MAGIA: tile ID = hart ID (full mhartid value)
+    return get_mhartid();
+}
+
+// Additional Flex-V CSR access functions based on CSR table
+static inline uint32_t get_mstatus(){
+    uint32_t mstatus;
+    asm volatile("csrr %0, 0x300" :"=r"(mstatus):); // MSTATUS (0x300)
+    return mstatus;
+}
+
+static inline void set_mstatus(uint32_t value){
+    asm volatile("csrw 0x300, %0" ::"r"(value)); // MSTATUS (0x300)
+}
+
+static inline uint32_t get_mtvec(){
+    uint32_t mtvec;
+    asm volatile("csrr %0, 0x305" :"=r"(mtvec):); // MTVEC (0x305)
+    return mtvec;
+}
+
+static inline void set_mtvec(uint32_t value){
+    asm volatile("csrw 0x305, %0" ::"r"(value)); // MTVEC (0x305)
+}
+
+static inline uint32_t get_mepc(){
+    uint32_t mepc;
+    asm volatile("csrr %0, 0x341" :"=r"(mepc):); // MEPC (0x341)
+    return mepc;
+}
+
+static inline void set_mepc(uint32_t value){
+    asm volatile("csrw 0x341, %0" ::"r"(value)); // MEPC (0x341)
+}
+
+static inline uint32_t get_mcause(){
+    uint32_t mcause;
+    asm volatile("csrr %0, 0x342" :"=r"(mcause):); // MCAUSE (0x342)
+    return mcause;
+}
+
+static inline uint32_t get_privlv(){
+    uint32_t privlv;
+    asm volatile("csrr %0, 0xc10" :"=r"(privlv):); // PRIVLV (0xC10)
+    return privlv;
+}
+
+static inline uint32_t get_uhartid(){
+    uint32_t uhartid;
+    asm volatile("csrr %0, 0x014" :"=r"(uhartid):); // UHARTID (0x014)
+    return uhartid;
+}
+
+// Flex-V performance counter control
+static inline void perf_counter_enable(){
+    uint32_t pcer = 3; // Enable cycles (bit 0) and instruction count (bit 1)
+    uint32_t pcmr = 1; // Enable global performance counter
+    asm volatile("csrw 0x7e0, %0" ::"r"(pcer)); // PCER_MACHINE (0x7E0)
+    asm volatile("csrw 0x7e1, %0" ::"r"(pcmr)); // PCMR_MACHINE (0x7E1)
+}
+
+static inline void perf_counter_disable(){
+    uint32_t pcmr = 0; // Disable global performance counter
+    asm volatile("csrw 0x7e1, %0" ::"r"(pcmr)); // PCMR_MACHINE (0x7E1)
 }
 
 #endif /*MAGIA_TILE_UTILS_H*/
