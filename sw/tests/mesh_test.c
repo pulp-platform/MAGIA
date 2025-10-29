@@ -313,5 +313,5 @@ int main(void) {
   else
     exit_code[get_hartid()] = PASS_EXIT_CODE;
 
-  return exit_code;
+  return exit_code[get_hartid()];
 }
