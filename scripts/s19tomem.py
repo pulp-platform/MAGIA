@@ -19,15 +19,15 @@ import numpy as np
 import sys
 
 # Instructions start at 0xcc00_0000
-# Data starts at 0xcc01_0000
+# Data starts at 0xcc10_0000
 # Stack starts at 0x0001_0000
 # We only keep last 2 bytes so memory will be filled with no offset.
 # The CPU will also reference it as to not have any offset.
 MEM_START  = 0xcc000000
 INSTR_SIZE = 0x8000
 INSTR_END  = MEM_START + INSTR_SIZE
-DATA_BASE  = MEM_START + 0x10000
-DATA_SIZE  = 0x30000
+DATA_BASE  = MEM_START + 0x100000
+DATA_SIZE  = 0xf00000
 DATA_END   = DATA_BASE + DATA_SIZE
 STACK_BASE = 0x10000
 STACK_SIZE = 0x10000
@@ -80,16 +80,18 @@ for l in s.split():
         instr_mem[int(rel_imem_addr) + 6] = whhl
         instr_mem[int(rel_imem_addr) + 7] = whhh
 
-s = ""
-s += "@%08x\n" % MEM_START
+f = open(instr_txt, "w")
+s = "@%08x\n" % MEM_START
+f.write(s)
 for m in instr_mem:
-    s += "%02x\n" % m
-with open(instr_txt, "w") as f:
+    s = "%02x\n" % m
     f.write(s)
+f.close()
 
-s = ""
-s += "@%08x\n" % DATA_BASE
+f = open(data_txt, "w")
+s = "@%08x\n" % DATA_BASE
+f.write(s)
 for m in data_mem:
-    s += "%02x\n" % m
-with open(data_txt, "w") as f:
-    f.write(s.rstrip('\n'))
+    s = "%02x\n" % m
+    f.write(s)
+f.close()
