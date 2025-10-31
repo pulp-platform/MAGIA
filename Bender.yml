@@ -34,7 +34,7 @@ dependencies:
   obi               : { git: "https://github.com/pulp-platform/obi.git"               , version: 0.1.7                                }
   axi               : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: 0.4.4                                }
-  safety_island     : { git: "https://github.com/pulp-platform/safety_island.git"     , rev: 2273db6c780ab7c582feaf0c9645ad644c35aa11 } # branch: vi/redmule_scaleup
+  axi_obi           : { git: "https://github.com/pulp-platform/axi_obi.git"           , rev: 84f21a6524bedcf17a569a62ac01b8a5610819c8 } # branch: main
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
   fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: 7eb581d5e39f18498d30607263a000f444b4b63e } # branch: main
