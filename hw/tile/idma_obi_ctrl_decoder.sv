@@ -21,7 +21,10 @@
  *
  */
 
-module idma_obi_ctrl_decoder #(
+module idma_obi_ctrl_decoder
+  import magia_tile_pkg::*;
+  import magia_pkg::*;
+ #(
   parameter type obi_req_t = magia_tile_pkg::core_obi_data_req_t,
   parameter type obi_rsp_t = magia_tile_pkg::core_obi_data_rsp_t,
   parameter type idma_fe_reg_req_t = magia_tile_pkg::idma_fe_reg_req_t,
@@ -43,24 +46,27 @@ module idma_obi_ctrl_decoder #(
 /**       Internal Signal Definitions Beginning       **/
 /*******************************************************/
 
-  // Address decode parameters - NEW: use bit 8 instead of bit 25 for direction
+  // Address decode parameters - use parametric base address and size
+  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_BASE_ADDR = magia_tile_pkg::IDMA_CTRL_ADDR_START;
+  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_SIZE      = magia_tile_pkg::IDMA_CTRL_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_END_ADDR  = magia_tile_pkg::IDMA_CTRL_ADDR_END;
+  
   localparam int unsigned ADDR_WIDTH = 32;
-  localparam int unsigned DIRECTION_W = 1;                                   // Direction field width (1 bit)
-  localparam int unsigned DIRECTION_OFF = 8;                                 // Direction field offset (bit 8, not bit 25)
+  localparam int unsigned DIRECTION_OFFSET = 12'h200;  // +0x200 for direction change
   
     // Register offset definitions based on official reg32_3d spec
   localparam logic [11:0] IDMA_CONFIG_OFFSET = 12'h0;
-  // Status registers (multireg count=16, base=0x4)
+ 
   localparam logic [11:0] IDMA_STATUS_0_OFFSET = 12'h4;
   localparam logic [11:0] IDMA_STATUS_1_OFFSET = 12'h8;
   localparam logic [11:0] IDMA_STATUS_2_OFFSET = 12'hc;
   localparam logic [11:0] IDMA_STATUS_3_OFFSET = 12'h10;
-  // Next ID registers (multireg count=16, base=0x44) 
+  
   localparam logic [11:0] IDMA_NEXT_ID_0_OFFSET = 12'h44;
   localparam logic [11:0] IDMA_NEXT_ID_1_OFFSET = 12'h48;
-  // Done ID registers (multireg count=16, base=0x84)
+  
   localparam logic [11:0] IDMA_DONE_ID_0_OFFSET = 12'h84;
-  // Configuration registers with skipto addresses
+ 
   localparam logic [11:0] IDMA_DST_ADDR_LOW_OFFSET = 12'hd0;
   localparam logic [11:0] IDMA_SRC_ADDR_LOW_OFFSET = 12'hd8;
   localparam logic [11:0] IDMA_LENGTH_LOW_OFFSET = 12'he0;
@@ -74,6 +80,7 @@ module idma_obi_ctrl_decoder #(
   logic direction; // Direction of the iDMA channel: 0 -> AXI2OBI; 1 -> OBI2AXI  
   logic [11:0] reg_offset;
   logic is_valid_access;
+  logic is_address_in_range;
   
   idma_fe_reg_req_t selected_idma_req;
   idma_fe_reg_rsp_t selected_idma_rsp;
@@ -84,12 +91,19 @@ module idma_obi_ctrl_decoder #(
 /**            Address Decoding Beginning             **/
 /*******************************************************/
 
-  // Address decoding - NEW: use bit 8 for direction, mask out direction bit from offset
-  assign direction = obi_req_i.a.addr[DIRECTION_OFF];  // Extract bit 8 for direction
-  assign reg_offset = (obi_req_i.a.addr[11:0] - magia_tile_pkg::IDMA_CTRL_ADDR_START[11:0]) & 12'hEFF;  // Subtract base, then mask bit 8
+  // Address range validation - check if address is within iDMA control space
+  assign is_address_in_range = (obi_req_i.a.addr >= IDMA_BASE_ADDR) && 
+                               (obi_req_i.a.addr <= IDMA_END_ADDR);
+
+  // Address decoding - check if address is in OBI2AXI range (+0x200 offset)
+  assign direction = (obi_req_i.a.addr >= (IDMA_BASE_ADDR + DIRECTION_OFFSET)) ? 1'b1 : 1'b0;
+  assign reg_offset = direction ? 
+                      (obi_req_i.a.addr[11:0] - IDMA_BASE_ADDR[11:0] - DIRECTION_OFFSET[11:0]) : 
+                      (obi_req_i.a.addr[11:0] - IDMA_BASE_ADDR[11:0]);
   
-  // Validate access to known register offsets according to official reg32_3d spec
-  assign is_valid_access = (reg_offset == IDMA_CONFIG_OFFSET) ||
+  // Validate access: must be in address range AND at known register offset
+  assign is_valid_access = is_address_in_range && (
+                          (reg_offset == IDMA_CONFIG_OFFSET) ||
                           // Status registers (multireg 0x4-0x40, step 4)
                           ((reg_offset >= 12'h4) && (reg_offset <= 12'h40) && ((reg_offset & 12'h3) == 12'h0)) ||
                           // Next ID registers (multireg 0x44-0x80, step 4)
@@ -105,7 +119,8 @@ module idma_obi_ctrl_decoder #(
                           (reg_offset == IDMA_REPS_2_LOW_OFFSET) ||
                           (reg_offset == IDMA_DST_STRIDE_3_LOW_OFFSET) ||
                           (reg_offset == IDMA_SRC_STRIDE_3_LOW_OFFSET) ||
-                          (reg_offset == IDMA_REPS_3_LOW_OFFSET);
+                          (reg_offset == IDMA_REPS_3_LOW_OFFSET)
+                          );
 
 /*******************************************************/
 /**               Address Decoding End                **/
