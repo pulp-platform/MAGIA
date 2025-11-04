@@ -18,7 +18,8 @@
  *          Based on fsync_test.c by Victor Isachi
  * 
  * MAGIA FractalSync Memory-Mapped Synchronization Test
- * WARNING: //STALLING MODE = POLLING, //NONSTALLING = WFI currently not working for race conditions
+ * WARNING: //STALLING = POLLING, //NONSTALLING = WFI not working in this new version of the tile with event unit
+ * WARNING: Make sure to undefine EVENT_UNIT in fsync_mm_utils.h, otherwise test will proceed without correctly waiting for sync completion
  */
 
 #include "magia_tile_utils.h"
