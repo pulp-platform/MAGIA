@@ -239,11 +239,15 @@ module magia_tile
   logic sys_clk;
   logic sys_clk_en;
 
+  // Core clock gating signals
+  logic core_clk;           // Clock gated per il core
+  logic core_clk_en;        // Enable dal tile (sempre attivo)
+
   // Core output signals
   logic core_busy_o;
   logic        sec_lvl_o;
   logic [14:0] apu_master_flags_o;
-  logic [magia_tile_pkg::FLEX_V_WAPUTYPE-1:0]  apu_master_type_o; // Use parameter for correct width
+  logic [magia_tile_pkg::WAPUTYPE-1:0]  apu_master_type_o; // Use parameter for correct width
   logic [5:0]  apu_master_op_o;
   logic [95:0] apu_master_operands_o;
   logic        apu_master_ready_o;
@@ -586,6 +590,17 @@ module magia_tile
     .clk_o     ( sys_clk     )
   );
 
+  // Core clock gating controlled by Event Unit
+  assign core_clk_en = eu_core_clk_en[0];  // Event Unit controls core clock
+       
+  
+  tc_clk_gating core_clock_gating (
+    .clk_i     ( sys_clk     ),
+    .en_i      ( core_clk_en ),
+    .test_en_i ( test_mode_i ),
+    .clk_o     ( core_clk    )
+  );
+
 /*******************************************************/
 /**                  Clock gating End                 **/
 /*******************************************************/
@@ -693,31 +708,29 @@ module magia_tile
 
   // flex-v core with integrated FPU and tracer
   riscv_core #(
-    .N_EXT_PERF_COUNTERS ( magia_tile_pkg::FLEX_V_N_EXT_PERF_COUNTERS ),
-    .INSTR_RDATA_WIDTH   ( magia_tile_pkg::FLEX_V_INSTR_RDATA_WIDTH   ),
-    .PULP_SECURE         ( magia_tile_pkg::FLEX_V_PULP_SECURE         ),
-    .N_PMP_ENTRIES       ( magia_tile_pkg::FLEX_V_N_PMP_ENTRIES       ),
-    .USE_PMP             ( magia_tile_pkg::FLEX_V_USE_PMP             ),
-    .PULP_CLUSTER        ( magia_tile_pkg::FLEX_V_PULP_CLUSTER        ),
-    .FPU                 ( magia_tile_pkg::FLEX_V_FPU                 ),
-    .Zfinx               ( magia_tile_pkg::FLEX_V_ZFINX               ),
-    .FP_DIVSQRT          ( magia_tile_pkg::FLEX_V_FP_DIVSQRT          ),
-    .SHARED_FP           ( magia_tile_pkg::FLEX_V_SHARED_FP           ),
-    .SHARED_DSP_MULT     ( magia_tile_pkg::FLEX_V_SHARED_DSP_MULT     ),
-    .SHARED_INT_MULT     ( magia_tile_pkg::FLEX_V_SHARED_INT_MULT     ),
-    .SHARED_INT_DIV      ( magia_tile_pkg::FLEX_V_SHARED_INT_DIV      ),
-    .SHARED_FP_DIVSQRT   ( magia_tile_pkg::FLEX_V_SHARED_FP_DIVSQRT   ),
-    .WAPUTYPE            ( magia_tile_pkg::FLEX_V_WAPUTYPE            ),
-    .APU_NARGS_CPU       ( magia_tile_pkg::FLEX_V_APU_NARGS_CPU       ),
-    .APU_WOP_CPU         ( magia_tile_pkg::FLEX_V_APU_WOP_CPU         ),
-    .APU_NDSFLAGS_CPU    ( magia_tile_pkg::FLEX_V_APU_NDSFLAGS_CPU    ),
-    .APU_NUSFLAGS_CPU    ( magia_tile_pkg::FLEX_V_APU_NUSFLAGS_CPU    ),
-    .DM_HaltAddress      ( magia_tile_pkg::FLEX_V_DM_HALT_ADDR        ),
-    .CORE_ID             ( magia_tile_pkg::FLEX_V_CORE_ID             ),
-    .N_HWLP              ( magia_tile_pkg::FLEX_V_N_HWLP              )
-  ) i_flex_v_core (
+    .N_EXT_PERF_COUNTERS ( magia_tile_pkg::N_EXT_PERF_COUNTERS ),
+    .INSTR_RDATA_WIDTH   ( magia_tile_pkg::INSTR_RDATA_WIDTH   ),
+    .PULP_SECURE         ( magia_tile_pkg::PULP_SECURE         ),
+    .N_PMP_ENTRIES       ( magia_tile_pkg::N_PMP_ENTRIES       ),
+    .USE_PMP             ( magia_tile_pkg::USE_PMP             ),
+    .PULP_CLUSTER        ( magia_tile_pkg::PULP_CLUSTER        ),
+    .FPU                 ( magia_tile_pkg::FPU                 ),
+    .Zfinx               ( magia_tile_pkg::ZFINX               ),
+    .FP_DIVSQRT          ( magia_tile_pkg::FP_DIVSQRT          ),
+    .SHARED_FP           ( magia_tile_pkg::SHARED_FP           ),
+    .SHARED_DSP_MULT     ( magia_tile_pkg::SHARED_DSP_MULT     ),
+    .SHARED_INT_MULT     ( magia_tile_pkg::SHARED_INT_MULT     ),
+    .SHARED_INT_DIV      ( magia_tile_pkg::SHARED_INT_DIV      ),
+    .SHARED_FP_DIVSQRT   ( magia_tile_pkg::SHARED_FP_DIVSQRT   ),
+    .WAPUTYPE            ( magia_tile_pkg::WAPUTYPE            ),
+    .APU_NARGS_CPU       ( magia_tile_pkg::APU_NARGS_CPU       ),
+    .APU_WOP_CPU         ( magia_tile_pkg::APU_WOP_CPU         ),
+    .APU_NDSFLAGS_CPU    ( magia_tile_pkg::APU_NDSFLAGS_CPU    ),
+    .APU_NUSFLAGS_CPU    ( magia_tile_pkg::APU_NUSFLAGS_CPU    ),
+    .DM_HaltAddress      ( magia_tile_pkg::DM_HALT_ADDR        )
+  ) i_cv32e40p_core (
     // Clock and Reset
-    .clk_i                  ( sys_clk                  ),
+    .clk_i                  ( core_clk                 ),  // Use gated clock for core
     .rst_ni                 ( rst_ni                   ),
     
     // Clock enable and test mode
@@ -729,7 +742,11 @@ module magia_tile
     
     // Boot configuration
     .boot_addr_i            ( boot_addr_i              ),
-    
+
+    // Cluster/Core IDs
+    .cluster_id_i           ( mhartid_i[9:4]          ), 
+    .core_id_i              ( mhartid_i[3:0]          ),
+
     // Instruction memory interface
     .instr_req_o            ( core_instr_req.req       ),
     .instr_gnt_i            ( core_instr_rsp.gnt       ),
@@ -746,9 +763,30 @@ module magia_tile
     .data_wdata_o           ( core_data_req.wdata      ),
     .data_we_o              ( core_data_req.we         ),
     .data_rdata_i           ( core_data_rsp.rdata      ),
+
+    // APU interface
+    .apu_master_req_o       ( apu_master_req_o        ),
+    .apu_master_ready_o     ( apu_master_ready_o      ),
+    .apu_master_gnt_i       ( '0                      ),
+    
+    .apu_master_operands_o  ( apu_master_operands_o   ),
+    .apu_master_op_o        ( apu_master_op_o         ),
+    .apu_master_type_o      ( apu_master_type_o       ),
+    .apu_master_flags_o     ( apu_master_flags_o      ),
+
+    .apu_master_valid_i     ( '0                      ),
+    .apu_master_result_i    ( '0                      ),
+    .apu_master_flags_i     ( '0                      ),
     
     // Interrupts
-    .irq_i                  ( eu_core_irq_req[0]       ), // Flex-V expects single bit IRQ
+    .irq_i                  ( eu_core_irq_req[0]       ),
+    .irq_id_i               ( '0                      ), 
+    .irq_ack_o              ( eu_core_irq_ack[0]       ),
+    .irq_id_o               ( eu_core_irq_ack_id[0]    ),
+    .irq_sec_i              ( '0                      ),
+
+    // Security level
+    .sec_lvl_o              ( sec_lvl_o               ),
     
     // Debug interface
     .debug_req_i            ( debug_req_i              ),
@@ -757,36 +795,9 @@ module magia_tile
     .fetch_enable_i         ( fetch_enable_i           ),
     .core_busy_o            ( core_busy_o              ),
     
-    // Event Unit IRQ acknowledgment
-    .irq_ack_o              ( eu_core_irq_ack[0]       ),
-    .irq_id_o               ( eu_core_irq_ack_id[0]    ),
 
     // Performance counters
-    .ext_perf_counters_i    ( '0                      ),
-
-    // Security level
-    .sec_lvl_o              ( sec_lvl_o               ),
-    .irq_sec_i              ( '0                      ),
-    .irq_id_i               ( '0                      ),
-
-    // APU interface
-    .apu_master_flags_i     ( '0                      ),
-    .apu_master_result_i    ( '0                      ),
-    .apu_master_valid_i     ( '0                      ),
-    .apu_master_flags_o     ( apu_master_flags_o      ),
-    .apu_master_type_o      (                         ), // Unconnected - WAPUTYPE=0
-    .apu_master_op_o        ( apu_master_op_o         ),
-    .apu_master_operands_o  ( apu_master_operands_o   ),
-    .apu_master_gnt_i       ( '0                      ),
-    .apu_master_ready_o     ( apu_master_ready_o      ),
-    .apu_master_req_o       ( apu_master_req_o        ),
-
-    // Data unaligned
-    .data_unaligned_o       ( data_unaligned_o        ),
-
-    // Cluster/Core IDs
-    .cluster_id_i           ( mhartid_i[9:4]          ), // Use 6 bits for cluster_id (Flex-V requirement)
-    .core_id_i              ( mhartid_i[3:0]          ) // Use 4 bits for core_id (latest Flex-V requirement)
+    .ext_perf_counters_i    ( '0                      )
   );
 
   assign core_sleep_o = !core_busy_o;
@@ -1214,10 +1225,7 @@ module magia_tile
   assign acc_events_array[0]     = {redmule_evt[0][1], redmule_evt[0][0], redmule_busy, 1'b0};
   assign dma_events_array[0]     = {idma_o2a_done, idma_a2o_done};
   assign timer_events_array[0]   = 2'b00;
-  assign other_events_array[0] = {idma_o2a_busy, idma_a2o_busy, idma_o2a_start, idma_a2o_start,   // iDMA status events [31:28]
-                                    idma_o2a_error, idma_a2o_error,                                  // iDMA error events [27:26] 
-                                    fsync_error, fsync_done,                                        // Fsync events [25:24]
-                                    24'b0};                                                         // Reserved [23:0] - SW events are INTERNAL to Event Unit!
+  assign other_events_array[0] = {idma_o2a_busy, idma_a2o_busy, idma_o2a_start, idma_a2o_start, idma_o2a_error, idma_a2o_error, fsync_error, fsync_done, 24'b0};  // iDMA status events [31:28]|idma_o2a_error, idma_a2o_error, iDMA error events [27:26]|fsync_error, fsync_done, Fsync events [25:24]                                                        // Reserved [23:0] - SW events are INTERNAL to Event Unit!
 
  
   magia_event_unit #(
@@ -1254,7 +1262,7 @@ module magia_tile
     .dbg_req_i        ( debug_req_i                                ),
     .core_dbg_req_o   ( eu_core_dbg_req                            ),
 
-    // EU Direct Link Interface - Only interface for Event Unit access
+    // EU Direct Link Interface - abstract types
     .eu_direct_req_i      ( eu_direct_req.req                      ),
     .eu_direct_addr_i     ( eu_direct_req.addr                     ),
     .eu_direct_wen_i      ( eu_direct_req.wen                      ),
@@ -1262,11 +1270,29 @@ module magia_tile
     .eu_direct_be_i       ( eu_direct_req.be                       ),
     .eu_direct_gnt_o      ( eu_direct_rsp.gnt                      ),
     .eu_direct_rvalid_o   ( eu_direct_rsp.rvalid                   ),
-    .eu_direct_rdata_o    ( eu_direct_rsp.rdata                    )
+    .eu_direct_rdata_o    ( eu_direct_rsp.rdata                    ),
+    .eu_direct_err_o      ( eu_direct_rsp.err                      )
   );
 
 /*******************************************************/
 /**                    Event Unit End                 **/
+/*******************************************************/
+/**               Clock Gating Monitor                **/
+/*******************************************************/
+
+`ifndef SYNTHESIS
+  // Monitor per clock enable dal Event Unit
+  always @(negedge core_clk_en) begin
+    $display("[CG_MONITOR] @%0t: CLOCK GATING ACTIVE (core_clk_en=0)", $time);
+  end
+  
+  always @(posedge core_clk_en) begin
+    $display("[CG_MONITOR] @%0t: CLOCK GATING INACTIVE (core_clk_en=1)", $time);
+  end
+`endif
+
+/*******************************************************/
+/**            Clock Gating Monitor End               **/
 /*******************************************************/
 
 endmodule: magia_tile

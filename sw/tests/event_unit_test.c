@@ -53,7 +53,7 @@
 
 #define VERBOSE (1)
 
-#define USE_WFE (0)
+#define USE_WFE (1)
 
 #define WAIT_CYCLES (10)
 
