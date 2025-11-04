@@ -58,7 +58,7 @@ import magia_tile_pkg::*;
   input  logic [NB_CORES-1:0]       dbg_req_i,
   output logic [NB_CORES-1:0]       core_dbg_req_o,
 
-  // EU Direct Link interface (for WFE control - only interface now)
+  // EU Direct Link interface 
   input  logic                      eu_direct_req_i,
   input  logic [31:0]               eu_direct_addr_i,
   input  logic                      eu_direct_wen_i,
@@ -66,17 +66,19 @@ import magia_tile_pkg::*;
   input  logic [3:0]                eu_direct_be_i,
   output logic                      eu_direct_gnt_o,
   output logic                      eu_direct_rvalid_o,
-  output logic [31:0]               eu_direct_rdata_o
+  output logic [31:0]               eu_direct_rdata_o,
+  output logic                      eu_direct_err_o
 );
 
-  // Create internal interface instances - only eu_direct_link now
+  // Create internal interface instances
   XBAR_PERIPH_BUS #(.ID_WIDTH(NB_CORES+1)) eu_direct_link[NB_CORES-1:0]();
   XBAR_PERIPH_BUS #(.ID_WIDTH(NB_CORES+1)) speriph_slave();  // Tied off
 
   // Internal signals
   logic soc_periph_evt_ready_internal;
   
-  // EU Direct Link interface - Core 0 gets direct access for WFE control
+  // Convert abstract eu_direct interface to XBAR_PERIPH_BUS
+  // eu_direct_addr_i already contains relative offset (subtracted by demux)
   assign eu_direct_link[0].req   = eu_direct_req_i;
   assign eu_direct_link[0].add   = eu_direct_addr_i;
   assign eu_direct_link[0].wen   = eu_direct_wen_i;
@@ -84,10 +86,12 @@ import magia_tile_pkg::*;
   assign eu_direct_link[0].be    = eu_direct_be_i;
   assign eu_direct_link[0].id    = '0;
 
-  // Response mapping for EU direct link  
+  // Convert XBAR_PERIPH_BUS response to abstract interface
+  // Event Unit handles all power management and grant logic internally
   assign eu_direct_gnt_o    = eu_direct_link[0].gnt;
   assign eu_direct_rvalid_o = eu_direct_link[0].r_valid;
   assign eu_direct_rdata_o  = eu_direct_link[0].r_rdata;
+  assign eu_direct_err_o    = eu_direct_link[0].r_opc;  // r_opc: 0=OK, 1=ERROR
 
   // Tie off speriph_slave (not used anymore)
   assign speriph_slave.req   = 1'b0;
