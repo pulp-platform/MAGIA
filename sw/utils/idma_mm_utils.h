@@ -28,16 +28,15 @@
 
 // Register definitions and low-level access functions
 
-// iDMA Memory-Mapped Register Base Address
-// Based on bridge decode: direction=0 (AXI2OBI) at 0x600, direction=1 (OBI2AXI) at 0x500
-#define IDMA_MM_BASE_AXI2OBI (IDMA_BASE + 0x100)  // 0x600 - L2 to L1
-#define IDMA_MM_BASE_OBI2AXI (IDMA_BASE)          // 0x500 - L1 to L2
+// iDMA Memory-Mapped Register Base Addresses
+#define IDMA_MM_DIRECTION_OFFSET (0x200)
+#define IDMA_MM_BASE_AXI2OBI (IDMA_BASE)                      // direction=0, L2 to L1
+#define IDMA_MM_BASE_OBI2AXI (IDMA_BASE + IDMA_MM_DIRECTION_OFFSET) // direction=1, L1 to L2
 
-// Register Offsets (32-bit aligned)
 #define IDMA_CONF_OFFSET          (0x00)
-#define IDMA_STATUS_OFFSET        (0x04)  // Multi-register array starting at 0x04
-#define IDMA_NEXT_ID_OFFSET       (0x44)  // Multi-register array starting at 0x44
-#define IDMA_DONE_ID_OFFSET       (0x84)  // Multi-register array starting at 0x84
+#define IDMA_STATUS_OFFSET        (0x04)  
+#define IDMA_NEXT_ID_OFFSET       (0x44)  
+#define IDMA_DONE_ID_OFFSET       (0x84)  
 #define IDMA_DST_ADDR_LOW_OFFSET  (0xD0)
 #define IDMA_SRC_ADDR_LOW_OFFSET  (0xD8)
 #define IDMA_LENGTH_LOW_OFFSET    (0xE0)

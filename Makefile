@@ -33,7 +33,7 @@ BENDER_DIR     ?= .
 ISA            ?= riscv
 ARCH           ?= rv
 XLEN           ?= 32
-XTEN           ?= imafc
+XTEN           ?= imafcxpulpv2
 ABI            ?= ilp
 XABI           ?= f
 
@@ -203,13 +203,13 @@ include bender_synth.mk
 include bender_profile.mk
 
 bender_defs += -D COREV_ASSERT_OFF
-bender_defs += -D VERILATOR  # Disable Flex-V assertions
+bender_defs += -D VERILATOR  # Disable assertions
 
 bender_targs += -t rtl
 bender_targs += -t test
-bender_targs += -t cv32e40p_exclude_tracer
-# Enable flex-v tracer specifically
-bender_targs += -t trace_execution
+bender_targs += -t cv32e40p_include_tracer
+
+
 # Targets needed to avoid error even though the module is not used
 bender_targs += -t snitch_cluster
 bender_targs += -t idma_test
@@ -231,7 +231,7 @@ else
 endif
 WAVES        := $(mkfile_path)/wave.do
 bender_targs += -t redmule_hwpe
-bender_targs += -t cv32e40p_bhv
+
 
 update-ips:
 	$(BENDER) update

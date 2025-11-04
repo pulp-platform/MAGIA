@@ -23,7 +23,7 @@ package:
 
 dependencies:
   redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 9a1aa14be0b23f0ade84bab57e7e434397ac9876 } # branch: vi/scale_up
-  flex_v            : { git: "https://github.com/pulp-platform/flex-v.git"            , rev: ee840dbfbd4174e2814b4f10edcdeff5e883ccf8 } # latest main branch 
+  cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: 8d58109ab61e1fb6c9dcbafefb8f3a56ee596427 } 
   idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: a6b190c7991331432afa9a2899d032bc1b176830 } # branch: vi/redmule_scaleup
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: c35d5b0886ab549fb9144c3c14a4682112330e21 } # branch: yt/reqrsp
@@ -32,12 +32,12 @@ dependencies:
   obi               : { git: "https://github.com/pulp-platform/obi.git"               , version: 0.1.6                                }
   axi               : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: 0.4.4                                }
-  safety_island     : { git: "https://github.com/pulp-platform/safety_island.git"     , rev: 2273db6c780ab7c582feaf0c9645ad644c35aa11 } # branch: vi/redmule_scaleup
+  axi_obi           : { git: "https://github.com/pulp-platform/axi_obi.git"           , rev: 84f21a6524bedcf17a569a62ac01b8a5610819c8 }
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
   fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: 7eb581d5e39f18498d30607263a000f444b4b63e } # branch: main
   floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , rev: f4a36265cda8b56faee45692afb20ddfffba6dee } # branch: main
-  event_unit_flex   : { git: "https://github.com/pulp-platform/event_unit_flex.git"  , rev: 763c3b9977970f656326c70a96debfb2ac0f85b2 } # latest commit
+  event_unit_flex   : { git: "https://github.com/pulp-platform/event_unit_flex.git"   , rev: 763c3b9977970f656326c70a96debfb2ac0f85b2 } 
 
 export_include_dirs:
   - hw/include
@@ -81,10 +81,6 @@ sources:
       - target/sim/src/tile/magia_tile_vip.sv
       - target/sim/src/tile/magia_tile_fixture.sv
       - target/sim/src/tile/magia_tile_tb.sv
-  # Flex-V tracer (conditionally included when TRACE_EXECUTION is enabled)
-  - target: all(magia_dv, standalone_tile, trace_execution)
-    files:
-      - .bender/git/checkouts/flex_v-9a847e412b261f38/rtl/riscv_tracer.sv
   # MAGIA
   - target: all(magia_dv, not(standalone_tile))
     defines:
@@ -130,11 +126,6 @@ sources:
       - target/sim/src/mesh/magia_vip.sv
       - target/sim/src/mesh/magia_fixture.sv
       - target/sim/src/mesh/magia_tb.sv
-  # Flex-V tracer (conditionally included when TRACE_EXECUTION is enabled)
-  - target: all(magia_dv, not(standalone_tile), trace_execution)
-    files:
-      - .bender/git/checkouts/flex_v-9a847e412b261f38/rtl/riscv_tracer.sv
-
   - target: all(not(magia_dv), asic)
     files:
       # MAGIA Packages
@@ -158,6 +149,7 @@ sources:
       - hw/tile/l1_spm.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
       - hw/tile/idma_obi_ctrl_decoder.sv
+      - hw/tile/idma_ctrl_mm.sv
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/core_data_demux_eu_direct.sv
       - hw/tile/magia_tile.sv
