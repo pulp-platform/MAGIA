@@ -25,7 +25,7 @@ module obi_slave_fsync
   import magia_tile_pkg::*;
   import magia_pkg::*;
 #(
-  parameter logic [ADDR_W-1:0] BASE_ADDR    = 32'h0000_0700,  // Base address for FSYNC registers
+  parameter logic [ADDR_W-1:0] BASE_ADDR    = magia_tile_pkg::FSYNC_CTRL_ADDR_START,
   parameter int unsigned       AGGR_W       = magia_tile_pkg::FSYNC_AGGR_W,
   parameter int unsigned       ID_W         = magia_tile_pkg::FSYNC_ID_W,
   parameter int unsigned       NBR_AGGR_W   = magia_tile_pkg::FSYNC_NBR_AGGR_W,
@@ -133,6 +133,11 @@ module obi_slave_fsync
       obi_rsp_o.gnt = 1'b1;
       obi_rsp_o.rvalid = 1'b1;
       clk_reg_en = 1'b1;  // Enable clock for OBI register access
+      
+      // OBI protocol: assign response ID and optional fields
+      obi_rsp_o.r.rid = obi_req_i.a.aid;
+      obi_rsp_o.r.r_optional = '0;
+      obi_rsp_o.r.err = 1'b0;
       
       if (obi_req_i.a.we) begin
         // Write operation
