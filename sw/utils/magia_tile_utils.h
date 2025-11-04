@@ -25,25 +25,26 @@
 #include <stdint.h>
 #include "tinyprintf.h"
 
+
 #define NUM_L1_BANKS (32)
 #define WORDS_BANK   (8192)
 #define BITS_WORD    (32)
 #define BITS_BYTE    (8)
 
-#define REDMULE_BASE   (0x00000100)
-#define REDMULE_END    (0x000004FF)
-#define IDMA_BASE      (0x00000500)
-#define IDMA_END       (0x000006FF)
-#define FSYNC_BASE     (0x00000700)
-#define FSYNC_END      (0x000007FF)
-#define EVENT_UNIT_BASE (0x00000800)
-#define EVENT_UNIT_END  (0x000017FF)  // Expanded from 256B to 4KB for full EU register map
-#define RESERVED_START (0x00001800)   // Adjusted to start after expanded Event Unit
-#define RESERVED_END   (0x0000FFFF)   // Reserved space reduced from 62.5KB to 58.5KB
+#define REDMULE_BASE   (0x00000000)
+#define REDMULE_END    (0x000000FF)
+#define IDMA_BASE      (0x00000100)
+#define IDMA_END       (0x000004FF)
+#define FSYNC_BASE     (0x00000500)
+#define FSYNC_END      (0x000005FF)
+#define EVENT_UNIT_BASE (0x00000600)
+#define EVENT_UNIT_END  (0x000015FF)
+#define RESERVED_START (0x00001600)   
+#define RESERVED_END   (0x0000FFFF)   
 #define STACK_START    (0x00010000)
 #define STACK_END      (0x0001FFFF)
 #define L1_BASE        (0x00020000)
-#define L1_SIZE        (0x000E0000)
+#define L1_SIZE        (0x000DFFFF)
 #define L1_TILE_OFFSET (0x00100000)
 #define L2_BASE        (0xCC000000)
 #define TEST_END_ADDR  (0xCC030000)
@@ -149,7 +150,7 @@ static inline uint32_t get_timel(){
 
 static inline uint32_t get_timeh(){
     uint32_t timeh;
-    // Flex-V doesn't have separate timeh, return 0
+    // RI5CY doesn't have separate timeh, return 0
     asm volatile("csrr %0, timeh"
                  :"=r"(timeh):);
     return timeh;

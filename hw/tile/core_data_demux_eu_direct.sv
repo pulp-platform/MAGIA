@@ -16,7 +16,7 @@
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
  * 
- * Core Data Demux: EU Direct Link
+ * Core Data Demux EU Direct Link
  * 
  * This module implements a demux that splits core data requests between:
  * - Regular crossbar for general memory/peripheral access
@@ -26,11 +26,12 @@
  * - EVENT_UNIT_ADDR_START to EVENT_UNIT_ADDR_END -> EU direct link
  * - All other addresses -> Regular crossbar
  * 
- * Uses mostly combinatorial logic with minimal sequential logic for response routing.
+ * Uses abstract eu_direct_req_t/rsp_t types for flexibility.
  */
 
 module core_data_demux_eu_direct 
   import magia_tile_pkg::*;
+  import magia_pkg::*;
 #(
   parameter logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_START = magia_tile_pkg::EVENT_UNIT_ADDR_START,
   parameter logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_END   = magia_tile_pkg::EVENT_UNIT_ADDR_END
@@ -46,10 +47,12 @@ module core_data_demux_eu_direct
   output magia_tile_pkg::core_data_req_t xbar_data_req_o,
   input  magia_tile_pkg::core_data_rsp_t xbar_data_rsp_i,
 
-  // EU direct link interface (for Event Unit low-latency access)
+  // EU direct link interface (abstract types)
   output magia_tile_pkg::eu_direct_req_t eu_direct_req_o,
   input  magia_tile_pkg::eu_direct_rsp_t eu_direct_rsp_i
 );
+
+  enum logic {XBAR, EU} request_destination;
 
   // Address range detection for EU direct access (pure combinatorial)
   logic use_eu_direct;
@@ -58,9 +61,17 @@ module core_data_demux_eu_direct
                         (core_data_req_i.addr >= EVENT_UNIT_ADDR_START) &&
                         (core_data_req_i.addr <= EVENT_UNIT_ADDR_END);
 
+  // Update response destination based on request
+  always_ff @(posedge clk_i, negedge rst_ni) begin : _UPDATE_RESPONSE_DESTINATION_
+    if (!rst_ni) begin
+      request_destination <= XBAR;
+    end else begin
+      if (core_data_req_i.req) begin
+        request_destination <= use_eu_direct ? EU : XBAR;
+      end
+    end
+  end
 
-
-  // Request routing (pure combinatorial)
   // To regular crossbar
   assign xbar_data_req_o.req   = core_data_req_i.req && !use_eu_direct;
   assign xbar_data_req_o.addr  = core_data_req_i.addr;
@@ -68,23 +79,32 @@ module core_data_demux_eu_direct
   assign xbar_data_req_o.wdata = core_data_req_i.wdata;
   assign xbar_data_req_o.we    = core_data_req_i.we;
 
-  // To EU direct link
+  // To EU direct link (abstract interface)
+  // Pass relative offset to Event Unit (subtract base address)
+  // Event Unit expects offset within its address space [9:0], not absolute address
   assign eu_direct_req_o.req   = core_data_req_i.req && use_eu_direct;
-  assign eu_direct_req_o.addr  = core_data_req_i.addr;
+  assign eu_direct_req_o.addr  = core_data_req_i.addr - EVENT_UNIT_ADDR_START;
   assign eu_direct_req_o.wen   = ~core_data_req_i.we;  // EU expects wen (write enable negated)
   assign eu_direct_req_o.wdata = core_data_req_i.wdata;
   assign eu_direct_req_o.be    = core_data_req_i.be;
 
-  // Response routing - all combinatorial for consistent timing
-  // No sequential logic needed since we use current request for all responses
+  // Response routing - uses stored destination
+  always_comb begin : _HANDLE_RESP_
+    case (request_destination)
+      XBAR: begin
+        core_data_rsp_o.rvalid = xbar_data_rsp_i.rvalid;
+        core_data_rsp_o.rdata  = xbar_data_rsp_i.rdata;
+        core_data_rsp_o.err    = xbar_data_rsp_i.err;
+      end
+      EU: begin
+        core_data_rsp_o.rvalid = eu_direct_rsp_i.rvalid;
+        core_data_rsp_o.rdata  = eu_direct_rsp_i.rdata;
+        core_data_rsp_o.err    = eu_direct_rsp_i.err;
+      end
+    endcase
+  end
 
-  // Response multiplexing (combinatorial)
-  // FIXED: Use the same signal for both gnt and rvalid to ensure consistency
-  assign core_data_rsp_o.gnt    = use_eu_direct ? eu_direct_rsp_i.gnt : xbar_data_rsp_i.gnt;
-  assign core_data_rsp_o.rvalid = use_eu_direct ? eu_direct_rsp_i.rvalid : xbar_data_rsp_i.rvalid;
-  assign core_data_rsp_o.rdata  = use_eu_direct ? eu_direct_rsp_i.rdata : xbar_data_rsp_i.rdata;
-  assign core_data_rsp_o.err    = use_eu_direct ? 1'b0 : xbar_data_rsp_i.err;  // EU direct never errors
-
-  
+  // GNT is combinatorial
+  assign core_data_rsp_o.gnt = use_eu_direct ? eu_direct_rsp_i.gnt : xbar_data_rsp_i.gnt;
 
 endmodule
