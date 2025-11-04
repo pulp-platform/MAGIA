@@ -39,30 +39,30 @@ package magia_tile_pkg;
 
   // Address map
   
-  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START  = 32'h0000_0100;
-  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_SIZE        = 32'h0000_0400; //1KB
+  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START  = 32'h0000_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_SIZE        = 32'h0000_00FF; 
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_END    = REDMULE_CTRL_ADDR_START + REDMULE_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_START     = REDMULE_CTRL_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_SIZE           = 32'h0000_0200; //512B
+  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_START     = REDMULE_CTRL_ADDR_END + 1;
+  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_SIZE           = 32'h0000_03FF;
   localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_END       = IDMA_CTRL_ADDR_START + IDMA_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_START    = IDMA_CTRL_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_SIZE          = 32'h0000_0100; //256B
+  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_START    = IDMA_CTRL_ADDR_END + 1;
+  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_SIZE          = 32'h0000_00FF; 
   localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_END      = FSYNC_CTRL_ADDR_START + FSYNC_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_START    = FSYNC_CTRL_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_SIZE          = 32'h0000_1000; //4KB - Expanded for full EU register map
+  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_START    = FSYNC_CTRL_ADDR_END + 1;
+  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_SIZE          = 32'h0000_0FFF; 
   localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_END      = EVENT_UNIT_ADDR_START + EVENT_UNIT_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START      = EVENT_UNIT_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE            = 32'h0000_E800; //58KB - Reduced to accommodate expanded Event Unit
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START      = EVENT_UNIT_ADDR_END + 1;
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE            = 32'h0000_E9FF; // Calculated to make RESERVED_END = 0x0000FFFF
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END        = RESERVED_ADDR_START + RESERVED_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START         = RESERVED_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE               = 32'h0001_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START         = RESERVED_ADDR_END + 1;
+  localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE               = 32'h0000_FFFF;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_END           = STACK_ADDR_START + STACK_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_START            = STACK_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] L1_SIZE                  = 32'h000E_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_START            = STACK_ADDR_END + 1;
+  localparam logic [magia_pkg::ADDR_W-1:0] L1_SIZE                  = 32'h000D_FFFF;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_END              = L1_ADDR_START + L1_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_TILE_OFFSET           = 32'h0010_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_START            = 32'hC000_0000;
-  localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                  = 32'h4000_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                  = 32'h3FFF_FFFF;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_END              = L2_ADDR_START + L2_SIZE;
 
   // Parameters used by the HCI
@@ -98,29 +98,28 @@ package magia_tile_pkg;
   // Parameters used by Event Unit
   parameter int unsigned EVENT_UNIT_IRQ_WIDTH = 5;                                      // Width of Event Unit IRQ ID signals (supports up to 32 different event types)
 
-  // Parameters used by flex-v core
-  parameter int unsigned FLEX_V_N_EXT_PERF_COUNTERS = 0;                               // Number of external performance counters
-  parameter int unsigned FLEX_V_INSTR_RDATA_WIDTH   = 32;                              // Instruction data width  
-  parameter bit          FLEX_V_PULP_SECURE         = 1'b0;                            // PULP security features
-  parameter int unsigned FLEX_V_N_PMP_ENTRIES       = 16;                              // Number of PMP entries
-  parameter bit          FLEX_V_USE_PMP             = 1'b1;                            // Enable PMP
-  parameter bit          FLEX_V_PULP_CLUSTER        = 1'b1;                            // PULP cluster mode
-  parameter bit          FLEX_V_FPU                 = 1'b1;                            // Enable FPU (main feature)
-  parameter bit          FLEX_V_ZFINX               = 1'b0;                            // Zfinx extension (integer FP in GPR) - Must be 0 for standard FPU
-  parameter bit          FLEX_V_FP_DIVSQRT          = 1'b1;                            // FP division and square root
-  parameter bit          FLEX_V_SHARED_FP           = 1'b0;                            // Shared FP unit
-  parameter bit          FLEX_V_SHARED_DSP_MULT     = 1'b0;                            // Shared DSP multiplier
-  parameter bit          FLEX_V_SHARED_INT_MULT     = 1'b0;                            // Shared integer multiplier
-  parameter bit          FLEX_V_SHARED_INT_DIV      = 1'b0;                            // Shared integer divider
-  parameter bit          FLEX_V_SHARED_FP_DIVSQRT   = 1'b0;                            // Shared FP div/sqrt
-  parameter int unsigned FLEX_V_WAPUTYPE            = 0;                               // APU type width
-  parameter int unsigned FLEX_V_APU_NARGS_CPU       = 3;                               // APU number of arguments
-  parameter int unsigned FLEX_V_APU_WOP_CPU         = 6;                               // APU operation width
-  parameter int unsigned FLEX_V_APU_NDSFLAGS_CPU    = 15;                              // APU data side flags
-  parameter int unsigned FLEX_V_APU_NUSFLAGS_CPU    = 5;                               // APU user side flags
-  parameter logic [31:0] FLEX_V_DM_HALT_ADDR        = 32'h1A110800;                    // Debug module halt address  
-  parameter int unsigned FLEX_V_CORE_ID             = 0;                               // Core ID
-  parameter int unsigned FLEX_V_N_HWLP              = 2;                               // Number of hardware loops  // RISC-V instruction field parameters (previously defined in CV32E40X core)
+  // Parameters used by cv32e40p core
+  parameter int unsigned N_EXT_PERF_COUNTERS = 0;                               // Number of external performance counters
+  parameter int unsigned INSTR_RDATA_WIDTH   = 32;                              // Instruction data width  
+  parameter bit          PULP_SECURE         = 1'b0;                            // PULP security features
+  parameter int unsigned N_PMP_ENTRIES       = 16;                              // Number of PMP entries
+  parameter bit          USE_PMP             = 1'b1;                            // Enable PMP
+  parameter bit          PULP_CLUSTER        = 1'b1;                            // PULP cluster mode
+  parameter bit          FPU                 = 1'b1;                            // Enable FPU (main feature)
+  parameter bit          ZFINX               = 1'b0;                            // Zfinx extension (integer FP in GPR) - Must be 0 for standard FPU
+  parameter bit          FP_DIVSQRT          = 1'b1;                            // FP division and square root
+  parameter bit          SHARED_FP           = 1'b0;                            // Shared FP unit
+  parameter bit          SHARED_DSP_MULT     = 1'b0;                            // Shared DSP multiplier
+  parameter bit          SHARED_INT_MULT     = 1'b0;                            // Shared integer multiplier
+  parameter bit          SHARED_INT_DIV      = 1'b0;                            // Shared integer divider
+  parameter bit          SHARED_FP_DIVSQRT   = 1'b0;                            // Shared FP div/sqrt
+  parameter int unsigned WAPUTYPE            = 0;                               // APU type width
+  parameter int unsigned APU_NARGS_CPU       = 3;                               // APU number of arguments
+  parameter int unsigned APU_WOP_CPU         = 6;                               // APU operation width
+  parameter int unsigned APU_NDSFLAGS_CPU    = 15;                              // APU data side flags
+  parameter int unsigned APU_NUSFLAGS_CPU    = 5;                               // APU user side flags
+  parameter logic [31:0] DM_HALT_ADDR        = 32'h1A110800;                    // Debug module halt address  
+                          
   parameter int unsigned X_NUM_RS   = 2;                                                // Number of register file read ports (R-type instructions have 2 source operands)
   parameter int unsigned OPCODE_W   = 7;                                                // Opcode field width (7 bits)
   parameter int unsigned FUNC3_W    = 3;                                                // FUNC3 field width (3 bits)
@@ -336,6 +335,7 @@ package magia_tile_pkg;
     logic                        gnt;
     logic                        rvalid;
     logic[magia_pkg::DATA_W-1:0] rdata;
+    logic                        err;       // Error signal (r_opc from XBAR_PERIPH_BUS)
   } eu_direct_rsp_t;
 
   typedef struct packed {
