@@ -44,7 +44,6 @@
 
 #define NUM_LEVELS (31-__builtin_clz(NUM_HARTS))
 
-//#define STALLING
 
 #define CACHE_HEAT_CYCLES (3)
 
@@ -84,14 +83,14 @@ int main(void) {
 
       fsync_mm(ids, aggregates);
 
-#ifndef STALLING
+
       if (USE_WFE) {
         eu_fsync_wait_completion(EU_WAIT_MODE_WFE);
         printf("Detected WFE...\n");
       } else {
         eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
       }
-#endif
+
 
       // Instruction immediately following synchronization: indicates end of the synchronization region
       sentinel_end();
@@ -119,14 +118,12 @@ int main(void) {
 
     fsync_mm_global();
 
-#ifndef STALLING
     if (USE_WFE) {
       eu_fsync_wait_completion(EU_WAIT_MODE_WFE);
       printf("Detected WFE...\n");
     } else {
       eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
     }
-#endif
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
     sentinel_end();
@@ -155,14 +152,12 @@ int main(void) {
 
     fsync_mm_hnbr();
 
-#ifndef STALLING
     if (USE_WFE) {
       eu_fsync_wait_completion(EU_WAIT_MODE_WFE);
       printf("Detected WFE...\n");
     } else {
       eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
     }
-#endif
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
     sentinel_end();
@@ -191,14 +186,12 @@ int main(void) {
 
     fsync_mm_vnbr();
 
-#ifndef STALLING
     if (USE_WFE) {
       eu_fsync_wait_completion(EU_WAIT_MODE_WFE);
       printf("Detected WFE...\n");
     } else {
       eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
     }
-#endif
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
     sentinel_end();
@@ -233,14 +226,12 @@ int main(void) {
 
     fsync_mm_hring();
 
-#ifndef STALLING
     if (USE_WFE) {
       eu_fsync_wait_completion(EU_WAIT_MODE_WFE);
       printf("Detected WFE...\n");
     } else {
       eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
     }
-#endif
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
     sentinel_end();
@@ -275,14 +266,12 @@ int main(void) {
 
     fsync_mm_vring();
 
-#ifndef STALLING
     if (USE_WFE) {
       eu_fsync_wait_completion(EU_WAIT_MODE_WFE);
       printf("Detected WFE...\n");
     } else {
       eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
     }
-#endif
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
     sentinel_end();
@@ -312,14 +301,12 @@ int main(void) {
 
     fsync_mm_rows();
 
-#ifndef STALLING
     if (USE_WFE) {
       eu_fsync_wait_completion(EU_WAIT_MODE_WFE);
       printf("Detected WFE...\n");
     } else {
       eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
     }
-#endif
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
     sentinel_end();
@@ -349,14 +336,12 @@ int main(void) {
 
     fsync_mm_cols();
 
-#ifndef STALLING
     if (USE_WFE) {
       eu_fsync_wait_completion(EU_WAIT_MODE_WFE);
       printf("Detected WFE...\n");
     } else {
       eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
     }
-#endif
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
     sentinel_end();

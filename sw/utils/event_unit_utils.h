@@ -49,19 +49,38 @@
 #define EU_CORE_EVENT_WAIT           (EU_BASE + 0x38)
 #define EU_CORE_EVENT_WAIT_CLEAR     (EU_BASE + 0x3C)
 
+// Hardware mutex registers (0x04 * mutex_id offset)
+#define EU_CORE_HW_MUTEX             (EU_BASE + 0x0C0)         // R/W: HW mutex management
+
+// Hardware barrier registers (0x20 * barr_id offset)
+#define HW_BARR_TRIGGER_MASK         (EU_BASE + 0x400)         // R/W: Barrier trigger mask
+#define HW_BARR_STATUS               (EU_BASE + 0x404)         // R: Barrier status
+#define HW_BARR_TARGET_MASK          (EU_BASE + 0x40C)         // R/W: Barrier target mask
+#define HW_BARR_TRIGGER              (EU_BASE + 0x410)         // W: Manual barrier trigger
+#define HW_BARR_TRIGGER_SELF         (EU_BASE + 0x414)         // R: Automatic trigger
+#define HW_BARR_TRIGGER_WAIT         (EU_BASE + 0x418)         // R: Trigger + sleep
+#define HW_BARR_TRIGGER_WAIT_CLEAR   (EU_BASE + 0x41C)         // R: Trigger + sleep + clear
+
+// Software event trigger registers (0x04 * sw_event_id offset)
+#define EU_CORE_TRIGG_SW_EVENT       (EU_BASE + 0x600)         // W: Generate SW event
+#define EU_CORE_TRIGG_SW_EVENT_WAIT  (EU_BASE + 0x640)         // R: Generate event + sleep
+#define EU_CORE_TRIGG_SW_EVENT_WAIT_CLEAR (EU_BASE + 0x680)    // R: Generate event + sleep + clear
+
+// SoC event FIFO register
+#define EU_CORE_CURRENT_EVENT        (EU_BASE + 0x700)         // R: SoC event FIFO
+
 // Event bit mapping
 #define EU_DMA_EVT_0_BIT             2
 #define EU_DMA_EVT_1_BIT             3
 #define EU_TIMER_EVT_0_BIT           4
 #define EU_TIMER_EVT_1_BIT           5
-#define EU_ACC_EVT_0_BIT             8
-#define EU_ACC_EVT_1_BIT             9
-#define EU_ACC_EVT_2_BIT             10
-#define EU_ACC_EVT_3_BIT             11
 
-// RedMulE events (accelerator events [11:8])
-#define EU_REDMULE_BUSY_BIT          9
-#define EU_REDMULE_DONE_BIT          10
+#define EU_REDMULE_UNUSED_BIT        8   
+#define EU_REDMULE_BUSY_BIT          9   
+#define EU_REDMULE_DONE_BIT          10  
+#define EU_REDMULE_EVT1_BIT          11  
+
+// RedMulE event masks
 #define EU_REDMULE_DONE_MASK         (1 << EU_REDMULE_DONE_BIT)
 #define EU_REDMULE_BUSY_MASK         (1 << EU_REDMULE_BUSY_BIT)
 #define EU_REDMULE_ALL_MASK          0x0F00
@@ -74,10 +93,14 @@
 #define EU_IDMA_ALL_DONE_MASK        (EU_IDMA_A2O_DONE_MASK | EU_IDMA_O2A_DONE_MASK)
 #define EU_IDMA_A2O_ERROR_BIT        26
 #define EU_IDMA_O2A_ERROR_BIT        27
+#define EU_IDMA_A2O_START_BIT        28
+#define EU_IDMA_O2A_START_BIT        29
 #define EU_IDMA_A2O_BUSY_BIT         30
 #define EU_IDMA_O2A_BUSY_BIT         31
 #define EU_IDMA_A2O_ERROR_MASK       (1 << EU_IDMA_A2O_ERROR_BIT)
 #define EU_IDMA_O2A_ERROR_MASK       (1 << EU_IDMA_O2A_ERROR_BIT)
+#define EU_IDMA_A2O_START_MASK       (1 << EU_IDMA_A2O_START_BIT)
+#define EU_IDMA_O2A_START_MASK       (1 << EU_IDMA_O2A_START_BIT)
 #define EU_IDMA_A2O_BUSY_MASK        (1 << EU_IDMA_A2O_BUSY_BIT)
 #define EU_IDMA_O2A_BUSY_MASK        (1 << EU_IDMA_O2A_BUSY_BIT)
 
@@ -168,7 +191,10 @@ static inline uint32_t eu_wait_events_polling(uint32_t event_mask, uint32_t time
     uint32_t detected_events;
     do {
         detected_events = eu_check_events(event_mask);
-        if (detected_events) return detected_events;
+        if (detected_events){
+            eu_clear_events(detected_events);
+            return detected_events;
+        }
         wait_nop(10);
         cycles += 10;
     } while (timeout_cycles == 0 || cycles < timeout_cycles);
@@ -177,7 +203,6 @@ static inline uint32_t eu_wait_events_polling(uint32_t event_mask, uint32_t time
 
 // WFE mode: blocking sleep with p.elw
 static inline uint32_t eu_wait_events_wfe(uint32_t event_mask) {
-    // CRITICAL: Set event mask BEFORE p.elw so Event Unit knows when to wake us
     mmio32(EU_CORE_MASK) = event_mask;
     return evt_read32(EU_BASE, EU_CORE_EVENT_WAIT_CLEAR - EU_BASE);
 }
@@ -210,10 +235,9 @@ static inline unsigned int eu_evt_maskWaitAndClr(unsigned int evtMask) {
 // REDMULE FUNCTIONS
 //=============================================================================
 
-static inline void eu_redmule_init(uint32_t enable_irq) {
+static inline void eu_redmule_init(void) {
     eu_clear_events(0xFFFFFFFF);
-    eu_enable_events(EU_REDMULE_DONE_MASK);  // Solo DONE, non BUSY/ERROR
-    if (enable_irq) eu_enable_irq(EU_REDMULE_DONE_MASK);
+    eu_enable_events(EU_REDMULE_DONE_MASK);
 }
 
 static inline uint32_t eu_redmule_wait_completion(eu_wait_mode_t mode) {
@@ -232,10 +256,9 @@ static inline uint32_t eu_redmule_is_done(void) {
 // IDMA FUNCTIONS
 //=============================================================================
 
-static inline void eu_idma_init(uint32_t enable_irq) {
+static inline void eu_idma_init(void) {
     eu_clear_events(0xFFFFFFFF);
     eu_enable_events(EU_IDMA_ALL_DONE_MASK);
-    if (enable_irq) eu_enable_irq(EU_IDMA_ALL_DONE_MASK);
 }
 
 static inline uint32_t eu_idma_wait_completion(eu_wait_mode_t mode) {
@@ -281,10 +304,9 @@ static inline uint32_t eu_idma_has_error(void) {
 // FSYNC FUNCTIONS
 //=============================================================================
 
-static inline void eu_fsync_init(uint32_t enable_irq) {
+static inline void eu_fsync_init(void) {
     eu_clear_events(0xFFFFFFFF);
     eu_enable_events(EU_FSYNC_ALL_MASK);
-    if (enable_irq) eu_enable_irq(EU_FSYNC_DONE_MASK);
 }
 
 static inline uint32_t eu_fsync_wait_completion(eu_wait_mode_t mode) {
@@ -304,42 +326,24 @@ static inline uint32_t eu_fsync_has_error(void) {
 //=============================================================================
 
 static inline void eu_multi_init(uint32_t redmule_en, uint32_t idma_a2o_en, 
-                                 uint32_t idma_o2a_en, uint32_t fsync_en, 
-                                 uint32_t enable_irq) {
+                                 uint32_t idma_o2a_en, uint32_t fsync_en) {
     eu_clear_events(0xFFFFFFFF);
     uint32_t event_mask = 0;
-    uint32_t irq_mask = 0;
     
     if (redmule_en) {
         event_mask |= EU_REDMULE_ALL_MASK;
-        if (enable_irq) irq_mask |= EU_REDMULE_DONE_MASK;
     }
     if (idma_a2o_en) {
         event_mask |= EU_IDMA_A2O_DONE_MASK;
-        if (enable_irq) irq_mask |= EU_IDMA_A2O_DONE_MASK;
     }
     if (idma_o2a_en) {
         event_mask |= EU_IDMA_O2A_DONE_MASK;
-        if (enable_irq) irq_mask |= EU_IDMA_O2A_DONE_MASK;
     }
     if (fsync_en) {
         event_mask |= EU_FSYNC_ALL_MASK;
-        if (enable_irq) irq_mask |= EU_FSYNC_DONE_MASK;
     }
     
     if (event_mask) eu_enable_events(event_mask);
-    if (irq_mask) eu_enable_irq(irq_mask);
-}
-
-static inline uint32_t eu_multi_wait_any(uint32_t wait_redmule, uint32_t wait_idma_a2o, 
-                                         uint32_t wait_idma_o2a, uint32_t wait_fsync, 
-                                         eu_wait_mode_t mode) {
-    uint32_t wait_mask = 0;
-    if (wait_redmule) wait_mask |= EU_REDMULE_DONE_MASK;
-    if (wait_idma_a2o) wait_mask |= EU_IDMA_A2O_DONE_MASK;
-    if (wait_idma_o2a) wait_mask |= EU_IDMA_O2A_DONE_MASK;
-    if (wait_fsync) wait_mask |= EU_FSYNC_DONE_MASK;
-    return eu_wait_events(wait_mask, mode, 1000000);
 }
 
 static inline uint32_t eu_multi_wait_all(uint32_t wait_redmule, uint32_t wait_idma_a2o, 
@@ -350,23 +354,26 @@ static inline uint32_t eu_multi_wait_all(uint32_t wait_redmule, uint32_t wait_id
     if (wait_idma_a2o) required_mask |= EU_IDMA_A2O_DONE_MASK;
     if (wait_idma_o2a) required_mask |= EU_IDMA_O2A_DONE_MASK;
     if (wait_fsync) required_mask |= EU_FSYNC_DONE_MASK;
-    
+
+    eu_enable_events(required_mask);
+
     if (mode == EU_WAIT_MODE_WFE) {
         uint32_t accumulated = 0;
         while ((accumulated & required_mask) != required_mask) {
-            uint32_t missing = required_mask & ~accumulated;
-            accumulated |= eu_wait_events(missing, EU_WAIT_MODE_WFE, 0);
+            uint32_t new_events = evt_read32(EU_BASE, EU_CORE_EVENT_WAIT_CLEAR - EU_BASE);
+            accumulated |= new_events;
         }
         return accumulated;
     } else {
         uint32_t timeout = 1000000;
         uint32_t cycles = 0;
-        while (cycles < timeout) {
-            uint32_t detected = eu_wait_events(required_mask, mode, 100);
-            if ((detected & required_mask) == required_mask) return detected;
-            cycles += 100;
+        uint32_t accumulated = 0;
+        while (cycles < timeout && (accumulated & required_mask) != required_mask) {
+            accumulated |= eu_check_events(required_mask);
+            wait_nop(10);
+            cycles += 10;
         }
-        return 0;
+        return accumulated;
     }
 }
 
