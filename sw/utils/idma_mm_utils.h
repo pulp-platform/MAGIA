@@ -26,7 +26,9 @@
 #include <stdint.h>
 #include "magia_tile_utils.h"
 
-// Register definitions and low-level access functions
+//=============================================================================
+// Register Definitions and Constants
+//=============================================================================
 
 // iDMA Memory-Mapped Register Base Addresses
 #define IDMA_MM_DIRECTION_OFFSET (0x200)
@@ -101,11 +103,10 @@ typedef unsigned int dma_ext_t;
 // Configuration macros
 #define IDMA_DEFAULT_CONFIG 0x0
 
-// Low-level register access functions
+//=============================================================================
+// Low-Level Register Access Functions
+//=============================================================================
 
-/**
- * @brief Configure iDMA with specified settings for a specific direction
- */
 static inline void idma_mm_conf_dir(uint32_t is_l1_to_l2, uint32_t decouple_aw, uint32_t decouple_rw,
                                     uint32_t src_reduce_len, uint32_t dst_reduce_len,
                                     uint32_t src_max_llen, uint32_t dst_max_llen,
@@ -124,93 +125,71 @@ static inline void idma_mm_conf_dir(uint32_t is_l1_to_l2, uint32_t decouple_aw, 
     mmio32(IDMA_CONF_ADDR(is_l1_to_l2)) = conf_val;
 }
 
-/**
- * @brief Configure iDMA with default settings for standard 3D transfers
- */
 static inline void idma_mm_conf_default_dir(uint32_t is_l1_to_l2) {
-    idma_mm_conf_dir(is_l1_to_l2, 0, 0, 0, 0, 0, 0, 3); // enable_nd = 3 for 3D extension
+    idma_mm_conf_dir(is_l1_to_l2, 0, 0, 0, 0, 0, 0, 3);
 }
 
-/**
- * @brief Check if iDMA channel is busy
- */
-static inline uint32_t idma_mm_is_busy_dir(uint32_t is_l1_to_l2, uint32_t channel_id) {
-    if (channel_id >= 16) return 0;
-    uint32_t status = mmio32(IDMA_STATUS_ADDR(is_l1_to_l2, channel_id));
+static inline uint32_t idma_mm_is_busy_dir(uint32_t is_l1_to_l2, uint32_t stream_id) {
+    if (stream_id >= 16) return 0;
+    uint32_t status = mmio32(IDMA_STATUS_ADDR(is_l1_to_l2, stream_id));
     return (status & IDMA_STATUS_BUSY_MASK) ? 1 : 0;
 }
 
-/**
- * @brief Get the next transfer ID and launch transfer
- */
-static inline uint32_t idma_mm_start_transfer_dir(uint32_t is_l1_to_l2, uint32_t channel_id) {
-    if (channel_id >= 16) return 0;
-    uint32_t transfer_id = mmio32(IDMA_NEXT_ID_ADDR(is_l1_to_l2, channel_id));
+static inline uint32_t idma_mm_start_transfer_dir(uint32_t is_l1_to_l2, uint32_t stream_id) {
+    if (stream_id >= 16) return 0;
+    uint32_t transfer_id = mmio32(IDMA_NEXT_ID_ADDR(is_l1_to_l2, stream_id));
     return transfer_id;
 }
 
-/**
- * @brief Get ID of finished transaction
- */
-static inline uint32_t idma_mm_get_done_id_dir(uint32_t is_l1_to_l2, uint32_t channel_id) {
-    if (channel_id >= 16) return 0;
-    return mmio32(IDMA_DONE_ID_ADDR(is_l1_to_l2, channel_id));
+static inline uint32_t idma_mm_get_done_id_dir(uint32_t is_l1_to_l2, uint32_t stream_id) {
+    if (stream_id >= 16) return 0;
+    return mmio32(IDMA_DONE_ID_ADDR(is_l1_to_l2, stream_id));
 }
 
-/**
- * @brief Set destination and source addresses and transfer length
- */
 static inline void idma_mm_set_addr_len_dir(uint32_t is_l1_to_l2, uint32_t dst_addr, uint32_t src_addr, uint32_t length) {
     mmio32(IDMA_DST_ADDR_LOW_ADDR(is_l1_to_l2)) = dst_addr;
     mmio32(IDMA_SRC_ADDR_LOW_ADDR(is_l1_to_l2)) = src_addr;
     mmio32(IDMA_LENGTH_LOW_ADDR(is_l1_to_l2)) = length;
 }
 
-/**
- * @brief Set 2D transfer parameters (dimension 2)
- */
 static inline void idma_mm_set_2d_params_dir(uint32_t is_l1_to_l2, uint32_t dst_stride_2, uint32_t src_stride_2, uint32_t reps_2) {
     mmio32(IDMA_DST_STRIDE_2_LOW_ADDR(is_l1_to_l2)) = dst_stride_2;
     mmio32(IDMA_SRC_STRIDE_2_LOW_ADDR(is_l1_to_l2)) = src_stride_2;
     mmio32(IDMA_REPS_2_LOW_ADDR(is_l1_to_l2)) = reps_2;
 }
 
-/**
- * @brief Set 3D transfer parameters (dimension 3)
- */
 static inline void idma_mm_set_3d_params_dir(uint32_t is_l1_to_l2, uint32_t dst_stride_3, uint32_t src_stride_3, uint32_t reps_3) {
     mmio32(IDMA_DST_STRIDE_3_LOW_ADDR(is_l1_to_l2)) = dst_stride_3;
     mmio32(IDMA_SRC_STRIDE_3_LOW_ADDR(is_l1_to_l2)) = src_stride_3;
     mmio32(IDMA_REPS_3_LOW_ADDR(is_l1_to_l2)) = reps_3;
 }
 
-/**
- * @brief Wait for a transfer to complete
- */
 static inline uint32_t idma_mm_wait_for_completion(uint32_t direction, uint32_t transfer_id) {
     if (transfer_id == 0) return 0;
     
     uint32_t is_l1_to_l2 = (direction == IDMA_DIR_L1_TO_L2) ? 1 : 0;
-    uint32_t channel_id = 0;
+    uint32_t stream_id = 0;
     uint32_t timeout = 1000000;
     
     while (timeout-- > 0) {
-        uint32_t is_busy = idma_mm_is_busy_dir(is_l1_to_l2, channel_id);
+        uint32_t is_busy = idma_mm_is_busy_dir(is_l1_to_l2, stream_id);
         
         if (!is_busy) {
-            uint32_t done_id = idma_mm_get_done_id_dir(is_l1_to_l2, channel_id);
+            uint32_t done_id = idma_mm_get_done_id_dir(is_l1_to_l2, stream_id);
             if (done_id == transfer_id) {
-                return 1; // Success
+                return 1;
             }
         }
         
         wait_nop(10);
     }
     
-    return 0; // Timeout
+    return 0;
 }
 
-// High-level DMA API functions
+//=============================================================================
+// High-Level DMA API - 1D Transfers
+//=============================================================================
 
 // Forward declarations
 static inline int idma_L1ToL2(unsigned int src, unsigned int dst, unsigned short size);
@@ -223,7 +202,6 @@ static inline int idma_L2ToL1_2d(unsigned int src, unsigned int dst, unsigned sh
 static inline int idma_L1ToL1_2d(unsigned int src, unsigned int dst, unsigned short size,
                                  unsigned int src_stride, unsigned int dst_stride, unsigned int num_reps);
 
-// Memory transfer with completion detection
 static inline int dma_memcpy(dma_ext_t ext, unsigned int loc, unsigned short size, int ext2loc) {
   if (ext2loc)
     return idma_L2ToL1(ext, loc, size);
@@ -231,17 +209,14 @@ static inline int dma_memcpy(dma_ext_t ext, unsigned int loc, unsigned short siz
     return idma_L1ToL2(loc, ext, size);
 }
 
-// L1 to L2 memory transfer
 static inline int dma_l1ToExt(dma_ext_t ext, unsigned int loc, unsigned short size) {
   return idma_L1ToL2(loc, ext, size);
 }
 
-// L2 to L1 memory transfer
 static inline int dma_extToL1(unsigned int loc, dma_ext_t ext, unsigned short size) {
   return idma_L2ToL1(ext, loc, size);
 }
 
-// Arbitrary memory transfer
 static inline int idma_memcpy(unsigned int src, unsigned int dst, unsigned int size, 
                               idma_prot_t src_prot, idma_prot_t dst_prot) {
   if (src_prot == IDMA_PROT_OBI && dst_prot == IDMA_PROT_AXI) {
@@ -251,10 +226,9 @@ static inline int idma_memcpy(unsigned int src, unsigned int dst, unsigned int s
   } else if (src_prot == IDMA_PROT_OBI && dst_prot == IDMA_PROT_OBI) {
     return idma_L1ToL1(src, dst, size);
   }
-  return 0; // Unsupported combination
+  return 0;
 }
 
-// L1 to L2 transfer
 static inline int idma_L1ToL2(unsigned int src, unsigned int dst, unsigned short size) {
   idma_mm_conf_default_dir(1);
   idma_mm_set_addr_len_dir(1, dst, src, size);
@@ -263,7 +237,6 @@ static inline int idma_L1ToL2(unsigned int src, unsigned int dst, unsigned short
   return idma_mm_start_transfer_dir(1, 0);
 }
 
-// L2 to L1 transfer
 static inline int idma_L2ToL1(unsigned int src, unsigned int dst, unsigned short size) {
   idma_mm_conf_default_dir(0);
   idma_mm_set_addr_len_dir(0, dst, src, size);
@@ -272,16 +245,29 @@ static inline int idma_L2ToL1(unsigned int src, unsigned int dst, unsigned short
   return idma_mm_start_transfer_dir(0, 0);
 }
 
-// L1 to L1 transfer
-static inline int idma_L1ToL1(unsigned int src, unsigned int dst, unsigned short size) {
-  idma_mm_conf_default_dir(0);
-  idma_mm_set_addr_len_dir(0, dst, src, size);
+// L1-to-L1 transfers: Remote to Local (PULL)
+static inline int idma_L1ToL1_pull(unsigned int remote_src, unsigned int local_dst, unsigned short size) {
+  idma_mm_conf_default_dir(0);  // AXI2OBI: read from remote (AXI), write to local (OBI)
+  idma_mm_set_addr_len_dir(0, local_dst, remote_src, size);
   idma_mm_set_2d_params_dir(0, 0, 0, 1);
   idma_mm_set_3d_params_dir(0, 0, 0, 1);
   return idma_mm_start_transfer_dir(0, 0);
 }
 
-// 2-dimensional memory transfer
+// L1-to-L1 transfers: Local to Remote (PUSH)
+static inline int idma_L1ToL1_push(unsigned int local_src, unsigned int remote_dst, unsigned short size) {
+  idma_mm_conf_default_dir(1);  // OBI2AXI: read from local (OBI), write to remote (AXI)
+  idma_mm_set_addr_len_dir(1, remote_dst, local_src, size);
+  idma_mm_set_2d_params_dir(1, 0, 0, 1);
+  idma_mm_set_3d_params_dir(1, 0, 0, 1);
+  return idma_mm_start_transfer_dir(1, 0);
+}
+
+
+//=============================================================================
+// High-Level DMA API - 2D Transfers
+//=============================================================================
+
 static inline int idma_memcpy_2d(unsigned int src, unsigned int dst, unsigned int size,
                                  unsigned int src_stride, unsigned int dst_stride, 
                                  unsigned int num_reps, idma_prot_t src_prot, idma_prot_t dst_prot) {
@@ -295,7 +281,6 @@ static inline int idma_memcpy_2d(unsigned int src, unsigned int dst, unsigned in
   return 0;
 }
 
-// L1 to L2 2D transfer
 static inline int idma_L1ToL2_2d(unsigned int src, unsigned int dst, unsigned short size,
                                  unsigned int src_stride, unsigned int dst_stride, unsigned int num_reps) {
   idma_mm_conf_default_dir(1);
@@ -305,7 +290,6 @@ static inline int idma_L1ToL2_2d(unsigned int src, unsigned int dst, unsigned sh
   return idma_mm_start_transfer_dir(1, 0);
 }
 
-// L2 to L1 2D transfer
 static inline int idma_L2ToL1_2d(unsigned int src, unsigned int dst, unsigned short size,
                                  unsigned int src_stride, unsigned int dst_stride, unsigned int num_reps) {
   idma_mm_conf_default_dir(0);
@@ -315,17 +299,36 @@ static inline int idma_L2ToL1_2d(unsigned int src, unsigned int dst, unsigned sh
   return idma_mm_start_transfer_dir(0, 0);
 }
 
-// L1 to L1 2D transfer
-static inline int idma_L1ToL1_2d(unsigned int src, unsigned int dst, unsigned short size,
-                                 unsigned int src_stride, unsigned int dst_stride, unsigned int num_reps) {
-  idma_mm_conf_default_dir(0);
-  idma_mm_set_addr_len_dir(0, dst, src, size);
+// L1-to-L1 2D transfers: Remote to Local (PULL)
+static inline int idma_L1ToL1_pull_2d(unsigned int remote_src, unsigned int local_dst, unsigned short size,
+                                      unsigned int src_stride, unsigned int dst_stride, unsigned int num_reps) {
+  idma_mm_conf_default_dir(0);  // AXI2OBI
+  idma_mm_set_addr_len_dir(0, local_dst, remote_src, size);
   idma_mm_set_2d_params_dir(0, dst_stride, src_stride, num_reps);
   idma_mm_set_3d_params_dir(0, 0, 0, 1);
   return idma_mm_start_transfer_dir(0, 0);
 }
 
-// Check if transfer is complete
+// L1-to-L1 2D transfers: Local to Remote (PUSH)
+static inline int idma_L1ToL1_push_2d(unsigned int local_src, unsigned int remote_dst, unsigned short size,
+                                      unsigned int src_stride, unsigned int dst_stride, unsigned int num_reps) {
+  idma_mm_conf_default_dir(1);  // OBI2AXI
+  idma_mm_set_addr_len_dir(1, remote_dst, local_src, size);
+  idma_mm_set_2d_params_dir(1, dst_stride, src_stride, num_reps);
+  idma_mm_set_3d_params_dir(1, 0, 0, 1);
+  return idma_mm_start_transfer_dir(1, 0);
+}
+
+// Legacy L1-to-L1 2D function (assumes remote->local for backward compatibility)
+static inline int idma_L1ToL1_2d(unsigned int src, unsigned int dst, unsigned short size,
+                                 unsigned int src_stride, unsigned int dst_stride, unsigned int num_reps) {
+  return idma_L1ToL1_pull_2d(src, dst, size, src_stride, dst_stride, num_reps);
+}
+
+//=============================================================================
+// Status and Wait Functions
+//=============================================================================
+
 static inline unsigned int idma_tx_cplt(unsigned int dma_tx_id) {
   uint32_t done_id_axi2obi = idma_mm_get_done_id_dir(0, 0);
   uint32_t done_id_obi2axi = idma_mm_get_done_id_dir(1, 0);
@@ -333,36 +336,20 @@ static inline unsigned int idma_tx_cplt(unsigned int dma_tx_id) {
   return (done_id_axi2obi == dma_tx_id) || (done_id_obi2axi == dma_tx_id);
 }
 
-// Return DMA status
 static inline unsigned int dma_status() {
   return idma_mm_is_busy_dir(0, 0) || idma_mm_is_busy_dir(1, 0);
 }
 
-// DMA wait for specific transfer
 static inline void dma_wait(unsigned int dma_tx_id) {
-#ifdef IRQ_EN
   while(!idma_tx_cplt(dma_tx_id)) {
-    asm volatile("wfi" ::: "memory");
-  }
-#else
-  while(!idma_tx_cplt(dma_tx_id)) {
-    // Busy wait with nop delay
     wait_nop(1);
   }
-#endif
 }
 
-// DMA barrier - wait for all transfers to complete
 static inline void dma_barrier() {
-#ifdef IRQ_EN
-  while(dma_status()) {
-    asm volatile("wfi" ::: "memory");
-  }
-#else
   while(dma_status()) {
     wait_nop(1);
   }
-#endif
 }
 
 #endif /*IDMA_MM_UTILS_H*/
