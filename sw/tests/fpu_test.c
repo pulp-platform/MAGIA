@@ -39,23 +39,23 @@ inline uint32_t f_add(volatile uint32_t op_a, volatile uint32_t op_b){
 }
 
 int main(void) {
-  // uint32_t exit_code;
+  uint32_t exit_code;
   
-  // volatile float a, b, c;
-  // a = A_VAL;
-  // b = B_VAL;
-  // c = a+b;
+  volatile float a, b, c;
+  a = A_VAL;
+  b = B_VAL;
+  c = a+b;
 
-  // if (abs_diff(c, C_EXP) > FP_TH){
-  //   exit_code = FAIL_EXIT_CODE;
-  //   printf("Test FAILED\n");
-  // }else{
-  //   exit_code = PASS_EXIT_CODE;
-  //   printf("Test PASSED\n");
-  // }
+  if (abs_diff(c, C_EXP) > FP_TH){
+     exit_code = FAIL_EXIT_CODE;
+     printf("Test FAILED\n");
+   }else{
+     exit_code = PASS_EXIT_CODE;
+     printf("Test PASSED\n");
+   }
 
-  // mmio16(TEST_END_ADDR) = exit_code;
-
+  mmio16(TEST_END_ADDR) = exit_code;
+/*
   uint32_t a, b, c;
   a = 0x414570A4; // Binary for 12.34f
   b = 0x42631EB8; // Binary for 56.78f
@@ -63,6 +63,6 @@ int main(void) {
   printf("Float operation result: 0x%0x [expected: 0x428A3D71(69.12f)]\n", c);
 
   mmio16(TEST_END_ADDR) = DEFAULT_EXIT_CODE;
-
+*/
   return 0;
 }
