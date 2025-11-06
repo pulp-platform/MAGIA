@@ -100,7 +100,7 @@ int main(void) {
               M_SIZE, N_SIZE, K_SIZE, (uint8_t)gemm_ops, (uint8_t)Float16);
 
   // Initialize Event Unit for RedMulE
-  eu_redmule_init(USE_WFE);
+  eu_redmule_init();
 
   // Wait for end of computation
   printf("Testing matrix multiplication with RedMulE...\n");
