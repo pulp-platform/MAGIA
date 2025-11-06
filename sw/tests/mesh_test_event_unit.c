@@ -55,7 +55,7 @@
 
 #define DIFF_TH (0x0011)
 
-#define USE_WFE (0)
+#define USE_WFE (1)
 
 void idma_mv_in_pure_eu(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uint32_t dst_address) {
   uint32_t dst_addr;
