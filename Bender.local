@@ -1,9 +1,9 @@
 overrides:
   fpnew              : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: a8e0cba6dd50f357ece73c2c955d96efc3c6c315 }
   hci                : { git: "https://github.com/pulp-platform/hci.git"               , rev: 5a48a854573fca5bbabc1cfd4110fa4530a50ed7 }
-  cv32e40p           : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: 8d58109ab61e1fb6c9dcbafefb8f3a56ee596427 }
+  cv32e40p           : { git: "https://github.com/luca24balboni/cv32e40p.git"          , rev: 37a82d337ba60129c333d104c29e816d0698b53b }
   cv32e40x           : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: e51af131252027374d083a745ab6727fb9959daa }
-  axi                : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
+  axi                : { git: "https://github.com/pulp-platform/axi.git"               , version:  0.39.5                              }
   register_interface : { git: "https://github.com/pulp-platform/register_interface.git", rev: e25b36670ff7aab3402f40efcc2b11ee0f31cf19 }
   idma               : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: c12caf59bb482fe44b27361f6924ad346b2d22fe }
   tech_cells_generic : { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.13                               }
