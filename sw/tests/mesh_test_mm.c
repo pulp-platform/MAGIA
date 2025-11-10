@@ -220,13 +220,5 @@ int main(void) {
   }
   printf("Finished test with %0d error(s)\n", num_errors[get_hartid()]);
 
-  uint32_t exit_code[NUM_HARTS];
-  if(num_errors[get_hartid()])
-    exit_code[get_hartid()] = FAIL_EXIT_CODE;
-  else
-    exit_code[get_hartid()] = PASS_EXIT_CODE;
-
-  mmio16(TEST_END_ADDR + get_hartid()*2) = exit_code[get_hartid()] - get_hartid();
-
-  return 0;
+  return num_errors[get_hartid()];
 }

@@ -158,11 +158,6 @@ void idma_mv_out_pure_eu(unsigned int x_dim, unsigned int y_dim, uint32_t src_ad
 }
 
 int main(void) {
-  // Execute test ONLY on tile 0
-  if (get_hartid() != 0) {
-    mmio16(TEST_END_ADDR + get_hartid()*2) = PASS_EXIT_CODE - get_hartid();
-    return 0;
-  }
 
   // X
   printf("Initializing X through iDMA...\n");
@@ -214,9 +209,6 @@ int main(void) {
 
   printf("Verifying results...\n");
   
-  // Debug: print first few values
-  printf("DEBUG: First z_oup values: 0x%0x 0x%0x 0x%0x 0x%0x\n", z_oup[0], z_oup[1], z_oup[2], z_oup[3]);
-  
   unsigned int num_errors[NUM_HARTS];
   num_errors[get_hartid()] = 0;
 
@@ -232,19 +224,5 @@ int main(void) {
   }
   printf("Finished test with %0d error(s)\n", num_errors[get_hartid()]);
 
-  uint32_t exit_code[NUM_HARTS];
-  if(num_errors[get_hartid()])
-    exit_code[get_hartid()] = FAIL_EXIT_CODE;
-  else
-    exit_code[get_hartid()] = PASS_EXIT_CODE;
-
-  mmio16(TEST_END_ADDR + get_hartid()*2) = exit_code[get_hartid()] - get_hartid();
-
-  if (num_errors[get_hartid()] == 0) {
-    printf("TEST PASSED (EXCELLENT)\n");
-  } else {
-    printf("TEST FAILED - %d errors detected\n", num_errors[get_hartid()]);
-  }
-
-  return 0;
+  return num_errors[get_hartid()];
 }
