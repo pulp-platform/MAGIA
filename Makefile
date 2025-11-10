@@ -34,7 +34,7 @@ BENDER_DIR     ?= .
 ISA            ?= riscv
 ARCH           ?= rv
 XLEN           ?= 32
-XTEN           ?= imfc
+XTEN           ?= imfcxpulpv2
 ABI            ?= ilp
 XABI           ?= f
 
@@ -203,8 +203,6 @@ include bender_sim.mk
 include bender_synth.mk
 include bender_profile.mk
 
-bender_defs += -D COREV_ASSERT_OFF
-bender_defs += -D VERILATOR  # Disable assertions
 
 bender_targs += -t rtl
 bender_targs += -t test
