@@ -203,7 +203,7 @@ static inline uint32_t eu_wait_events_polling(uint32_t event_mask, uint32_t time
 
 // WFE mode: blocking sleep with p.elw
 static inline uint32_t eu_wait_events_wfe(uint32_t event_mask) {
-    mmio32(EU_CORE_MASK) = event_mask;
+    eu_enable_events(event_mask);
     return evt_read32(EU_BASE, EU_CORE_EVENT_WAIT_CLEAR - EU_BASE);
 }
 
