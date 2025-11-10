@@ -52,22 +52,31 @@ module core_data_demux_eu_direct
   input  magia_tile_pkg::eu_direct_rsp_t eu_direct_rsp_i
 );
 
-  enum logic {XBAR, EU} request_destination;
+  enum logic {XBAR, EU} request_destination, request_destination_next;
 
   // Address range detection for EU direct access (pure combinatorial)
   logic use_eu_direct;
+  logic request_granted;
   
   assign use_eu_direct = core_data_req_i.req && 
                         (core_data_req_i.addr >= EVENT_UNIT_ADDR_START) &&
                         (core_data_req_i.addr <= EVENT_UNIT_ADDR_END);
 
-  // Update response destination based on request
+  // Grant occurs when request is accepted by the selected path
+  assign request_granted = core_data_req_i.req && core_data_rsp_o.gnt;
+
+  // Determine next destination when a request is granted
+  assign request_destination_next = use_eu_direct ? EU : XBAR;
+
+  // Update response destination based on GRANTED request
+  // CRITICAL FIX: Only update when request is actually granted to ensure
+  // response destination matches the path that will provide the response
   always_ff @(posedge clk_i, negedge rst_ni) begin : _UPDATE_RESPONSE_DESTINATION_
     if (!rst_ni) begin
       request_destination <= XBAR;
     end else begin
-      if (core_data_req_i.req) begin
-        request_destination <= use_eu_direct ? EU : XBAR;
+      if (request_granted) begin
+        request_destination <= request_destination_next;
       end
     end
   end
