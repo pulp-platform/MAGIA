@@ -15,6 +15,7 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
+  *         Luca Balboni <luca.balboni10@studio.unibo.it>
  * 
  * MAGIA Tile
  */
