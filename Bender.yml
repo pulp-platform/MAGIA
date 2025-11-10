@@ -20,6 +20,7 @@ package:
   name: magia
   authors:
     - "Victor Isachi (victor.isachi@unibo.it)"
+    - "Luca Balboni (luca.balboni10@studio.unibo.it)"
 
 dependencies:
   redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 9a1aa14be0b23f0ade84bab57e7e434397ac9876 } # branch: vi/scale_up
