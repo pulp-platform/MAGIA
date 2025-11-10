@@ -17,12 +17,15 @@
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
  *         Based on mesh_test.c by Victor Isachi
  * 
- * MAGIA Mesh Test - Pure Event Unit API Version
+ * MAGIA Mesh Test - Pure Event Unit API Version (FIXED)
  * Uses ONLY event_unit_utils for WFE/polling 
  * 
  * Configuration:
  * - Set USE_WFE to 1 for WFE (Wait-For-Event) mode
  * - Set USE_WFE to 0 for Event Unit polling mode
+ * 
+ * FIXED VERSION: Uses local variables instead of global arrays
+ * to avoid triggering hardware bug in core_data_demux_eu_direct
  */
 
 #include "magia_tile_utils.h"
@@ -39,9 +42,9 @@
 #define X_BASE (L1_BASE + 0x00012048)
 #define W_BASE (L1_BASE + 0x00016048)
 #define Y_BASE (L1_BASE + 0x0001A048)
-#define Z_BASE (L2_BASE + 0x00042000) // Note: for a large number of tiles (e.g. 64x64 mesh) we might exceed memory range of L2
-#define V_BASE (L2_BASE + 0x00046000) // Note: for a large number of tiles (e.g. 64x64 mesh) we might exceed memory range of L2
-#define T_BASE (L2_BASE + 0x0004A000) // Note: for a large number of tiles (e.g. 64x64 mesh) we might exceed memory range of L2
+#define Z_BASE (L2_BASE + 0x00042000)
+#define V_BASE (L2_BASE + 0x00046000)
+#define T_BASE (L2_BASE + 0x0004A000)
 
 #define MHARTID_OFFSET (0x00010000)
 
@@ -74,7 +77,7 @@ void idma_mv_in_pure_eu(unsigned int x_dim, unsigned int y_dim, uint16_t src_dat
 
   dst_addr = (uint32_t)dst_address;
   src_addr = (uint32_t)(T_BASE + get_hartid()*MHARTID_OFFSET);
-  len      = (uint32_t)(x_dim*y_dim*2); // 2 Bytes per element
+  len      = (uint32_t)(x_dim*y_dim*2);
 #if VERBOSE > 10
   printf("dst_addr: 0x%0x\n", dst_addr);
   printf("src_addr: 0x%0x\n", src_addr);
@@ -83,19 +86,18 @@ void idma_mv_in_pure_eu(unsigned int x_dim, unsigned int y_dim, uint16_t src_dat
 
   idma_L2ToL1(src_addr, dst_addr, len);
 
-  // Clear Event Unit and ensure A2O mask is enabled
   eu_clear_events(0xFFFFFFFF);
   eu_enable_events(EU_IDMA_A2O_DONE_MASK);
 
-  // Use PURE Event Unit
   eu_wait_mode_t wait_mode = USE_WFE ? EU_WAIT_MODE_WFE : EU_WAIT_MODE_POLLING;
-  
-  // Use direction-specific wait for L2->L1 (A2O, direction = 0)
   eu_idma_wait_direction_completion(0, wait_mode);
 
 #if VERBOSE > 100
   for (int i = 0; i < x_dim*y_dim; i++){
-    printf("DST[0x%0x]: 0x%0x\n", dst_addr + 2*i, mmio16(dst_addr + 2*i));
+    uint32_t addr = dst_addr + 2*i;
+    volatile uint16_t *ptr = (volatile uint16_t *)addr;
+    uint16_t val = *ptr;
+    printf("DST[0x%0x]: 0x%0x\n", addr, val);
   }
 #endif
 
@@ -103,9 +105,13 @@ void idma_mv_in_pure_eu(unsigned int x_dim, unsigned int y_dim, uint16_t src_dat
   unsigned int num_errors;
   num_errors = 0;
   for (int i = 0; i < x_dim*y_dim; i++) {
-    if (mmio16(dst_addr + 2*i) != src_data[i]) {
+    uint32_t addr = dst_addr + 2*i;
+    volatile uint16_t *ptr = (volatile uint16_t *)addr;
+    uint16_t dst_val = *ptr;
+    uint16_t src_val = src_data[i];
+    if (dst_val != src_val) {
       num_errors++;
-      printf("DST[0x%0x]: 0x%0x != SRC[%0d]: 0x%0x\n", dst_addr + 2*i, mmio16(dst_addr + 2*i), i, src_data[i]);
+      printf("DST[0x%0x]: 0x%0x != SRC[%0d]: 0x%0x\n", addr, dst_val, i, src_val);
     }
   }
   printf("Detected %0d error(s) in the transfer...\n", num_errors);
@@ -119,7 +125,7 @@ void idma_mv_out_pure_eu(unsigned int x_dim, unsigned int y_dim, uint32_t src_ad
 
   dst_addr = (uint32_t)dst_address;
   src_addr = (uint32_t)src_address;
-  len      = (uint32_t)(x_dim*y_dim*2); // 2 Bytes per element
+  len      = (uint32_t)(x_dim*y_dim*2);
 #if VERBOSE > 10
   printf("dst_addr: 0x%0x\n", dst_addr);
   printf("src_addr: 0x%0x\n", src_addr);
@@ -128,19 +134,18 @@ void idma_mv_out_pure_eu(unsigned int x_dim, unsigned int y_dim, uint32_t src_ad
 
   idma_L1ToL2(src_addr, dst_addr, len);
 
-  // Clear Event Unit and ensure O2A mask is enabled
   eu_clear_events(0xFFFFFFFF);
   eu_enable_events(EU_IDMA_O2A_DONE_MASK);
 
-  // Use PURE Event Unit
   eu_wait_mode_t wait_mode = USE_WFE ? EU_WAIT_MODE_WFE : EU_WAIT_MODE_POLLING;
-  
-  // Use direction-specific wait for L1->L2 (O2A, direction = 1)
   eu_idma_wait_direction_completion(1, wait_mode);
 
 #if VERBOSE > 100
   for (int i = 0; i < x_dim*y_dim; i++){
-    printf("DST[0x%0x]: 0x%0x\n", dst_addr + 2*i, mmio16(dst_addr + 2*i));
+    uint32_t addr = dst_addr + 2*i;
+    volatile uint16_t *ptr = (volatile uint16_t *)addr;
+    uint16_t val = *ptr;
+    printf("DST[0x%0x]: 0x%0x\n", addr, val);
   }
 #endif
 
@@ -148,9 +153,15 @@ void idma_mv_out_pure_eu(unsigned int x_dim, unsigned int y_dim, uint32_t src_ad
   unsigned int num_errors;
   num_errors = 0;
   for (int i = 0; i < x_dim*y_dim; i++) {
-    if (mmio16(dst_addr + 2*i) != mmio16(src_addr + 2*i)) {
+    uint32_t dst_addr_i = dst_addr + 2*i;
+    uint32_t src_addr_i = src_addr + 2*i;
+    volatile uint16_t *dst_ptr = (volatile uint16_t *)dst_addr_i;
+    volatile uint16_t *src_ptr = (volatile uint16_t *)src_addr_i;
+    uint16_t dst_val = *dst_ptr;
+    uint16_t src_val = *src_ptr;
+    if (dst_val != src_val) {
       num_errors++;
-      printf("DST[0x%0x]: 0x%0x != SRC[%0d]: 0x%0x\n", dst_addr + 2*i, mmio16(dst_addr + 2*i), i, mmio16(src_addr + 2*i));
+      printf("DST[0x%0x]: 0x%0x != SRC[0x%0x]: 0x%0x\n", dst_addr_i, dst_val, src_addr_i, src_val);
     }
   }
   printf("Detected %0d error(s) in the transfer...\n", num_errors);
@@ -158,12 +169,6 @@ void idma_mv_out_pure_eu(unsigned int x_dim, unsigned int y_dim, uint32_t src_ad
 }
 
 int main(void) {
-  // Execute test ONLY on tile 0
-  if (get_hartid() != 0) {
-    mmio16(TEST_END_ADDR + get_hartid()*2) = PASS_EXIT_CODE - get_hartid();
-    return 0;
-  }
-
   // X
   printf("Initializing X through iDMA...\n");
   idma_mv_in_pure_eu(M_SIZE, N_SIZE, x_inp, (X_BASE + get_hartid()*L1_TILE_OFFSET));
@@ -184,7 +189,6 @@ int main(void) {
 
   printf("Testing matrix multiplication with RedMulE...\n");
 
-  // Initialize and configure RedMulE using MM approach
   hwpe_cg_enable();
   hwpe_soft_clear();
 
@@ -199,14 +203,10 @@ int main(void) {
 
   hwpe_trigger_job();
 
-  // Clear Event Unit and ensure RedMulE mask is enabled
   eu_clear_events(0xFFFFFFFF);
   eu_enable_events(EU_REDMULE_DONE_MASK);
 
-  // Use PURE Event Unit
   eu_wait_mode_t wait_mode = USE_WFE ? EU_WAIT_MODE_WFE : EU_WAIT_MODE_POLLING;
-  
-  // Wait for HWPE completion
   eu_redmule_wait_completion(wait_mode);
 
   printf("Moving results through iDMA...\n");
@@ -214,36 +214,39 @@ int main(void) {
 
   printf("Verifying results...\n");
   
-  // Debug: print first few values
-  printf("DEBUG: First z_oup values: 0x%0x 0x%0x 0x%0x 0x%0x\n", z_oup[0], z_oup[1], z_oup[2], z_oup[3]);
-  
-  unsigned int num_errors[NUM_HARTS];
-  num_errors[get_hartid()] = 0;
+  // ✅ FIX: Use purely local variables instead of global arrays
+  unsigned int num_errors = 0;
 
-  volatile uint16_t computed[NUM_HARTS], expected[NUM_HARTS], diff[NUM_HARTS];
   for(int i = 0; i < M_SIZE*K_SIZE; i++){
-    computed[get_hartid()] = mmio16(V_BASE + get_hartid()*MHARTID_OFFSET + 2*i);
-    expected[get_hartid()] = z_oup[i];
-    diff[get_hartid()] = (computed[get_hartid()] > expected[get_hartid()]) ? (computed[get_hartid()] - expected[get_hartid()]) : (expected[get_hartid()] - computed[get_hartid()]);
-    if(diff[get_hartid()] > DIFF_TH){
-      num_errors[get_hartid()]++;
-      printf("**ERROR**: V[0x%0x](=0x%0x) != Z[%0d](=0x%0x)\n", V_BASE + get_hartid()*MHARTID_OFFSET + 2*i, computed[get_hartid()], i, expected[get_hartid()]);
+    uint32_t addr = V_BASE + get_hartid()*MHARTID_OFFSET + 2*i;
+    volatile uint16_t *ptr = (volatile uint16_t *)addr;
+    
+    // ✅ FIX: Local variables - compiler keeps them in registers
+    uint16_t comp_val = *ptr;
+    uint16_t exp_val = z_oup[i];
+    uint16_t diff_val = (comp_val > exp_val) ? (comp_val - exp_val) : (exp_val - comp_val);
+    
+    if(diff_val > DIFF_TH){
+      num_errors++;
+      printf("**ERROR**: V[0x%0x](=0x%0x) != Z[%0d](=0x%0x) diff=0x%0x\n", 
+             addr, comp_val, i, exp_val, diff_val);
     }
   }
-  printf("Finished test with %0d error(s)\n", num_errors[get_hartid()]);
+  
+  printf("Finished test with %0d error(s)\n", num_errors);
 
-  uint32_t exit_code[NUM_HARTS];
-  if(num_errors[get_hartid()])
-    exit_code[get_hartid()] = FAIL_EXIT_CODE;
+  uint32_t exit_code;
+  if(num_errors)
+    exit_code = FAIL_EXIT_CODE;
   else
-    exit_code[get_hartid()] = PASS_EXIT_CODE;
+    exit_code = PASS_EXIT_CODE;
 
-  mmio16(TEST_END_ADDR + get_hartid()*2) = exit_code[get_hartid()] - get_hartid();
+  mmio16(TEST_END_ADDR + get_hartid()*2) = exit_code - get_hartid();
 
-  if (num_errors[get_hartid()] == 0) {
+  if (num_errors == 0) {
     printf("TEST PASSED (EXCELLENT)\n");
   } else {
-    printf("TEST FAILED - %d errors detected\n", num_errors[get_hartid()]);
+    printf("TEST FAILED - %d errors detected\n", num_errors);
   }
 
   return 0;
