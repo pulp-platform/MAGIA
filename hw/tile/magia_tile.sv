@@ -1276,22 +1276,5 @@ module magia_tile
 /*******************************************************/
 /**                    Event Unit End                 **/
 /*******************************************************/
-/**               Clock Gating Monitor                **/
-/*******************************************************/
-
-`ifndef SYNTHESIS
-  // Monitor per clock enable dal Event Unit
-  always @(negedge core_clk_en) begin
-    $display("[CG_MONITOR] @%0t: CLOCK GATING ACTIVE (core_clk_en=0)", $time);
-  end
-  
-  always @(posedge core_clk_en) begin
-    $display("[CG_MONITOR] @%0t: CLOCK GATING INACTIVE (core_clk_en=1)", $time);
-  end
-`endif
-
-/*******************************************************/
-/**            Clock Gating Monitor End               **/
-/*******************************************************/
 
 endmodule: magia_tile
