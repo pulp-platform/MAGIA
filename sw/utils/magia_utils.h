@@ -54,6 +54,45 @@ static inline void amo_increment(volatile uint32_t addr, volatile uint32_t amnt)
     asm volatile("amoadd.w x0, %1, (%0)" ::"r"(addr), "r"(amnt):"memory");
 }
 
+static inline void bsem_wait(volatile uint32_t *sem_addr){
+    asm volatile("1:\n\t"
+                 "lr.w.aq t0, (%0)\n\t"
+                 "beqz t0, 1b\n\t"
+                 "sc.w t0, zero, (%0)\n\t"
+                 "bnez t0, 1b\n\t"
+                 :
+                 :"r"(sem_addr)
+                 :"t0", "memory");
+}
+
+static inline void bsem_signal(volatile uint32_t *sem_addr){
+    asm volatile("li t1, 1\n\t"
+                 "amoswap.w.rl t0, t1, 0(%0)\n\t"
+                 :
+                 :"r"(sem_addr)
+                 :"t1", "t0", "memory");
+}
+
+static inline void csem_wait(volatile uint32_t *sem_addr){
+    asm volatile("1:\n\t"
+                 "lr.w.aq t0, (%0)\n\t"
+                 "beqz t0, 1b\n\t"
+                 "addi t0, t0, -1\n\t"
+                 "sc.w t1, t0, (%0)\n\t"
+                 "bnez t1, 1b\n\t"
+                 :
+                 :"r"(sem_addr)
+                 :"t0", "t1", "memory");
+}
+
+static inline void csem_signal(volatile uint32_t *sem_addr){
+    asm volatile("li t1, 1\n\t"
+                 "amoadd.w.rl t0, t1, 0(%0)\n\t"
+                 :
+                 :"r"(sem_addr)
+                 :"t1", "t0", "memory");
+}
+
 char* utoa(unsigned int value, unsigned int base, char* result) {
     if (base < 2 || base > 16){
         *result = '\0'; 
