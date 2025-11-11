@@ -224,7 +224,7 @@ module magia
         .core_sleep_o        ( core_sleep_o[i*N_TILES_X+j]      ),
         .wu_wfe_i
       );
-  // Note: flex-v tracer generates its own filename: trace_core_{cluster_id}_{core_id}.log
+  // Note: cv32e40p tracer generates its own filename: trace_core_{cluster_id}_{core_id}.log
 
       if (i == 0) begin
         if (j == 0) begin // T-L corner
