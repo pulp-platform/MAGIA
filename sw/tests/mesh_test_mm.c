@@ -51,16 +51,10 @@
 
 #define CONCURRENT
 
-//#define IRQ_EN
-
 void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uint32_t dst_address){
   uint32_t dst_addr;
   uint32_t src_addr;
   uint32_t len;
-
-#ifdef IRQ_EN
-  irq_en(1<<IRQ_A2O_DONE);
-#endif
 
   for (int i = 0; i < x_dim*y_dim; i++)
     mmio16(T_BASE + get_hartid()*MHARTID_OFFSET + 2*i) = src_data[i];
@@ -76,12 +70,7 @@ void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uin
 
   uint32_t transfer_id = idma_L2ToL1(src_addr, dst_addr, len);
 
-#ifdef IRQ_EN
-  asm volatile("wfi" ::: "memory");
-  printf("Detected IRQ...\n");
-#else
   dma_wait(transfer_id);
-#endif
 
 #if VERBOSE > 100
   for (int i = 0; i < x_dim*y_dim; i++){
@@ -107,10 +96,6 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
   uint32_t src_addr;
   uint32_t len;
 
-#ifdef IRQ_EN
-  irq_en(1<<IRQ_O2A_DONE);
-#endif
-
   dst_addr = (uint32_t)dst_address;
   src_addr = (uint32_t)src_address;
   len      = (uint32_t)(x_dim*y_dim*2); // 2 Bytes per element
@@ -122,12 +107,7 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
 
   uint32_t transfer_id = idma_L1ToL2(src_addr, dst_addr, len);
 
-#ifdef IRQ_EN
-  asm volatile("wfi" ::: "memory");
-  printf("Detected IRQ...\n");
-#else
   dma_wait(transfer_id);
-#endif
 
 #if VERBOSE > 100
   for (int i = 0; i < x_dim*y_dim; i++){
@@ -149,11 +129,6 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
 }
 
 int main(void) {
-  // Execute test ONLY on tile 0
-  if (get_hartid() != 0) {
-    mmio16(TEST_END_ADDR + get_hartid()*2) = PASS_EXIT_CODE - get_hartid();
-    return 0;
-  }
   // X
   printf("Initializing X through iDMA...\n");
   idma_mv_in(M_SIZE, N_SIZE, x_inp, (X_BASE + get_hartid()*L1_TILE_OFFSET));
@@ -187,18 +162,10 @@ int main(void) {
               (unsigned int)(Y_BASE + get_hartid()*L1_TILE_OFFSET), 
               M_SIZE, N_SIZE, K_SIZE, (uint8_t)gemm_ops, (uint8_t)Float16);
 
-#ifdef IRQ_EN
-  irq_en(1<<IRQ_REDMULE_EVT_0);
-#endif
-
   hwpe_trigger_job();
 
   // Wait for HWPE completion
   hwpe_wait_for_completion();
-
-#ifdef IRQ_EN
-  printf("Detected IRQ...\n");
-#endif
 
   printf("Moving results through iDMA...\n");
   idma_mv_out(M_SIZE, K_SIZE, Y_BASE + get_hartid()*L1_TILE_OFFSET, V_BASE + get_hartid()*MHARTID_OFFSET);

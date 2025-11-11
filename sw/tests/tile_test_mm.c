@@ -48,16 +48,11 @@
 
 #define CONCURRENT
 
-//#define IRQ_EN
 
 void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uint32_t dst_address){
   uint32_t dst_addr;
   uint32_t src_addr;
   uint32_t len;
-
-#ifdef IRQ_EN
-  irq_en(1<<IRQ_A2O_DONE);
-#endif
 
   for (int i = 0; i < x_dim*y_dim; i++)
     mmio16(T_BASE + 2*i) = src_data[i];
@@ -73,12 +68,7 @@ void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uin
 
   uint32_t transfer_id = idma_L2ToL1(src_addr, dst_addr, len);
 
-#ifdef IRQ_EN
-  asm volatile("wfi" ::: "memory");
-  printf("Detected IRQ...\n");
-#else
   dma_wait(transfer_id);
-#endif
 
 #if VERBOSE > 100
   for (int i = 0; i < x_dim*y_dim; i++)
@@ -103,10 +93,6 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
   uint32_t src_addr;
   uint32_t len;
 
-#ifdef IRQ_EN
-  irq_en(1<<IRQ_O2A_DONE);
-#endif
-
   dst_addr = (uint32_t)dst_address;
   src_addr = (uint32_t)src_address;
   len      = (uint32_t)(x_dim*y_dim*2); // 2 Bytes per element
@@ -118,12 +104,7 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
 
   uint32_t transfer_id = idma_L1ToL2(src_addr, dst_addr, len);
 
-#ifdef IRQ_EN
-  asm volatile("wfi" ::: "memory");
-  printf("Detected IRQ...\n");
-#else
   dma_wait(transfer_id);
-#endif
 
 #if VERBOSE > 100
   for (int i = 0; i < x_dim*y_dim; i++)
@@ -182,19 +163,11 @@ int main(void) {
   redmule_cfg((unsigned int)X_BASE, (unsigned int)W_BASE, (unsigned int)Y_BASE, 
               M_SIZE, N_SIZE, K_SIZE, (uint8_t)gemm_ops, (uint8_t)Float16);
 
-#ifdef IRQ_EN
-  irq_en(1<<IRQ_REDMULE_EVT_0);
-#endif
-
   printf("Testing matrix multiplication with RedMulE...\n");
   hwpe_trigger_job();
 
   // Wait for HWPE completion
   hwpe_wait_for_completion();
-
-#ifdef IRQ_EN
-  printf("Detected IRQ...\n");
-#endif
 
   printf("Moving results through iDMA...\n");
   idma_mv_out(M_SIZE, K_SIZE, Y_BASE, V_BASE);

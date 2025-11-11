@@ -29,15 +29,11 @@
 
 #define VERBOSE (0)
 
-#define STALLING
 
 int main(void) {
   uint32_t aggregates[NUM_HARTS];
   uint32_t ids[NUM_HARTS];
 
-#ifndef STALLING
-  irq_en(1<<IRQ_FSYNC_DONE);
-#endif
 
 #if NUM_HARTS == 16
   /// Custom 4x4 synch.
@@ -65,11 +61,6 @@ int main(void) {
 
   fsync_mm(ids[get_hartid()], aggregates[get_hartid()]);
 
-#ifndef STALLING
-  asm volatile("wfi" ::: "memory");
-  // h_pprintf("Detected IRQ...\n");
-  printf("Detected IRQ...\n");
-#endif
 
   sentinel_instr_id();
 #endif
@@ -77,11 +68,6 @@ int main(void) {
   printf("[FractalSync MM] Horizontal neighbor test starting\n");
   fsync_mm_hnbr();
 
-#ifndef STALLING
-  asm volatile("wfi" ::: "memory");
-  // h_pprintf("Detected IRQ...\n");
-  printf("Detected IRQ...\n");
-#endif
 
   sentinel_instr_id();
   printf("[FractalSync MM] Horizontal neighbor test ending\n");
@@ -89,11 +75,6 @@ int main(void) {
   printf("[FractalSync MM] Horizontal ring neighbor test starting\n");
   fsync_mm_hring();
 
-#ifndef STALLING
-  asm volatile("wfi" ::: "memory");
-  // h_pprintf("Detected IRQ...\n");
-  printf("Detected IRQ...\n");
-#endif
 
   sentinel_instr_id();
   printf("[FractalSync MM] Horizontal ring neighbor test ending\n");
@@ -101,11 +82,6 @@ int main(void) {
   printf("[FractalSync MM] Vertical neighbor test starting\n");
   fsync_mm_vnbr();
 
-#ifndef STALLING
-  asm volatile("wfi" ::: "memory");
-  // h_pprintf("Detected IRQ...\n");
-  printf("Detected IRQ...\n");
-#endif
 
   sentinel_instr_id();
   printf("[FractalSync MM] Vertical neighbor test ending\n");
@@ -113,11 +89,6 @@ int main(void) {
   printf("[FractalSync MM] Vertical ring neighbor test starting\n");
   fsync_mm_vring();
 
-#ifndef STALLING
-  asm volatile("wfi" ::: "memory");
-  // h_pprintf("Detected IRQ...\n");
-  printf("Detected IRQ...\n");
-#endif
 
   sentinel_instr_id();
   printf("[FractalSync MM] Vertical ring neighbor test ending\n");
@@ -125,11 +96,6 @@ int main(void) {
   printf("[FractalSync MM] Row test starting\n");
   fsync_mm_rows();
 
-#ifndef STALLING
-  asm volatile("wfi" ::: "memory");
-  // h_pprintf("Detected IRQ...\n");
-  printf("Detected IRQ...\n");
-#endif
 
   sentinel_instr_id();
   printf("[FractalSync MM] Row test ending\n");
@@ -137,23 +103,12 @@ int main(void) {
   printf("[FractalSync MM] Column test starting\n");
   fsync_mm_cols();
 
-#ifndef STALLING
-  asm volatile("wfi" ::: "memory");
-  // h_pprintf("Detected IRQ...\n");
-  printf("Detected IRQ...\n");
-#endif
-
   sentinel_instr_id();
   printf("[FractalSync MM] Column test ending\n");
 
   printf("[FractalSync MM] Global test starting\n");
   fsync_mm_global();
 
-#ifndef STALLING
-  asm volatile("wfi" ::: "memory");
-  // h_pprintf("Detected IRQ...\n");
-  printf("Detected IRQ...\n");
-#endif
 
   sentinel_instr_id();
   printf("[FractalSync MM] Global test ending\n");
