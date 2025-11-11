@@ -26,7 +26,6 @@
  * - EVENT_UNIT_ADDR_START to EVENT_UNIT_ADDR_END -> EU direct link
  * - All other addresses -> Regular crossbar
  * 
- * Uses abstract eu_direct_req_t/rsp_t types for flexibility.
  */
 
 module core_data_demux_eu_direct 
@@ -69,8 +68,6 @@ module core_data_demux_eu_direct
   assign request_destination_next = use_eu_direct ? EU : XBAR;
 
   // Update response destination based on GRANTED request
-  // CRITICAL FIX: Only update when request is actually granted to ensure
-  // response destination matches the path that will provide the response
   always_ff @(posedge clk_i, negedge rst_ni) begin : _UPDATE_RESPONSE_DESTINATION_
     if (!rst_ni) begin
       request_destination <= XBAR;

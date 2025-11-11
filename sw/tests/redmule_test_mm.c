@@ -43,8 +43,6 @@
 
 #define VERBOSE (0)
 
-//#define IRQ_EN
-
 #define WAIT_CYCLES (10)
 
 #define DIFF_TH (0x0011)
@@ -99,12 +97,6 @@ int main(void) {
   redmule_cfg((unsigned int)X_BASE, (unsigned int)W_BASE, (unsigned int)Y_BASE, 
               M_SIZE, N_SIZE, K_SIZE, (uint8_t)gemm_ops, (uint8_t)Float16);
 
-#ifdef IRQ_EN
-  // Enable IRQs
-  uint32_t irq_mask = (1 << IRQ_REDMULE_EVT_0) | (1 << IRQ_REDMULE_EVT_1);
-  irq_en(irq_mask);
-#endif
-
   // Wait for end of computation
   printf("Testing matrix multiplication with RedMulE...\n");
   hwpe_trigger_job();
@@ -112,9 +104,6 @@ int main(void) {
   // Wait for HWPE completion
   hwpe_wait_for_completion();
   
-#ifdef IRQ_EN
-  printf("Detected IRQ...\n");
-#endif
   printf("Verifying results...\n");
 
   // Disable RedMulE

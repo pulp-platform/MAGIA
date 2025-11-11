@@ -35,8 +35,6 @@
 
 #define VERBOSE (0)
 
-//#define IRQ_EN
-
 #define WAIT_CYCLES (10)
 
 #define CONCURRENT
@@ -60,12 +58,6 @@ int main(void) {
 #if VERBOSE > 100
   for (int i = 0; i < M_SIZE*N_SIZE; i++)
     printf("Z[%8x]: 0x%4x\n", Z_BASE + 2*i, mmio16(Z_BASE + 2*i));
-#endif
-
-#ifdef IRQ_EN
-  // Enable IRQs
-  uint32_t index = (1<<IRQ_A2O_DONE) | (1<<IRQ_O2A_DONE);
-  irq_en(index);
 #endif
 
   dst_addr = (uint32_t)X_BASE;
@@ -97,13 +89,9 @@ int main(void) {
 
   uint32_t transfer_id_1 = idma_L2ToL1(src_addr, dst_addr, len);
   printf("iDMA moving data from L2 to L1...\n");
-#ifdef IRQ_EN
-  asm volatile("wfi" ::: "memory");
-  printf("Detected IRQ...\n");
-#else
+
   // Use polling to wait for completion
   dma_wait(transfer_id_1);
-#endif
 
   dst_addr = (uint32_t)W_BASE;
   src_addr = (uint32_t)X_BASE;
@@ -135,13 +123,9 @@ int main(void) {
   uint32_t transfer_id_2 = idma_L1ToL2(src_addr, dst_addr, len);
 
   printf("iDMA moving data from L1 to L2...\n");
-#ifdef IRQ_EN
-  asm volatile("wfi" ::: "memory");
-  printf("Detected IRQ...\n");
-#else
+
   // Use polling to wait for completion
   dma_wait(transfer_id_2);
-#endif
 
 #ifdef CONCURRENT
   // Setup concurrent transfer L2->L1 to Y_BASE
@@ -159,23 +143,15 @@ int main(void) {
   uint32_t transfer_id_a2o = idma_L2ToL1(src_addr, dst_addr, len); // Start AXI2OBI (L2->L1)
 
   printf("iDMA moving concurrently data from L1 to L2 and from L2 to L1...\n");
-#ifdef IRQ_EN
-  asm volatile("wfi" ::: "memory");
-  printf("Detected IRQ...\n");
-#else
+
   // Use polling to wait for both transfers completion
   dma_wait(transfer_id_o2a);
   dma_wait(transfer_id_a2o);
-#endif
 #else
   // Single transfer mode
-#ifdef IRQ_EN
-  asm volatile("wfi" ::: "memory");
-  printf("Detected IRQ...\n");
-#else
+
   // Use polling to wait for completion
   dma_wait(transfer_id_2);
-#endif
 #endif
 
   printf("Verifying results...\n");
