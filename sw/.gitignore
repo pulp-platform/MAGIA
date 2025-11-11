@@ -1,9 +1,0 @@
-modelsim.ini
-sw/tests/*/work
-tests/*/build/
-tests/*/work/
-tests/*/modelsim.ini
-tests/*/transcript
-tests/*/*.log
-tests/*/trace_*.log
-tests/*/core_*_traces.log
