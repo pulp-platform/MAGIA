@@ -15,7 +15,7 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- *         Based on tile_test.c by Victor Isachi
+ *          Based on tile_test.c by Victor Isachi
  * 
  * MAGIA Tile Test - Memory Mapped Version
  */
