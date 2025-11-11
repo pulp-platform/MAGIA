@@ -39,7 +39,7 @@ package magia_tile_pkg;
 
   // Address map
   
-  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START  = 32'h0000_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START  = 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_SIZE        = 32'h0000_00FF; 
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_END    = REDMULE_CTRL_ADDR_START + REDMULE_CTRL_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_START     = REDMULE_CTRL_ADDR_END + 1;
@@ -52,7 +52,7 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_SIZE          = 32'h0000_0FFF; 
   localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_END      = EVENT_UNIT_ADDR_START + EVENT_UNIT_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START      = EVENT_UNIT_ADDR_END + 1;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE            = 32'h0000_E9FF; // Calculated to make RESERVED_END = 0x0000FFFF
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE            = 32'h0000_E8FF; // Calculated to make RESERVED_END = 0x0000FFFF
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END        = RESERVED_ADDR_START + RESERVED_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START         = RESERVED_ADDR_END + 1;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE               = 32'h0000_FFFF;
