@@ -159,7 +159,7 @@ module magia_tile_fixture;
     .core_sleep_o        ( core_sleep        ),
     .wu_wfe_i            ( wu_wfe            )
   );
-  // Note: flex-v tracer generates its own filename: trace_core_{cluster_id}_{core_id}.log
+  // Note: cv32e40p tracer generates its own filename: trace_core_{cluster_id}_{core_id}.log
 
 /*******************************************************/
 /**                      DUT End                      **/
