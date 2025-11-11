@@ -1,4 +1,7 @@
+modelsim.ini
+sw/tests/*/work
 tests/*/build/
+tests/*/work/
 tests/*/modelsim.ini
 tests/*/transcript
 tests/*/*.log
