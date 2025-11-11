@@ -8,3 +8,5 @@ synth-ips.log
 build-hw.log
 profile-ips.log
 magia_venv/
+modelsim.ini
+sw/tests/*/
