@@ -27,29 +27,34 @@
 
 int main() {
   uint32_t error[NUM_HARTS];
-  uint32_t total_errors;
+  uint32_t total_errors = 0;
+
+  // Initialize error array
+  for(int i = 0; i < NUM_HARTS; i++) {
+    error[i] = 0;
+  }
 
   // Write the tiles ID to different L1 memory locations in other tiles
   for(int i = 0; i < NUM_HARTS; i++) {
-    if(get_hartid() != i) {
-      *(volatile int*) (L1_BASE + i*L1_TILE_OFFSET + MEM_OFFSET + get_hartid()*4) = (int) get_hartid();
+    if(get_mhartid() != i) {
+      *(volatile int*) (L1_BASE + i*L1_TILE_OFFSET + MEM_OFFSET + get_mhartid()*4) = (int) get_mhartid();
     }
   }
 
   // Read back the values
   for (int i = 0; i < NUM_HARTS; i++) {
-    if(get_hartid() != i) {
-      if (*(volatile int *) (L1_BASE + i*L1_TILE_OFFSET + MEM_OFFSET + get_hartid()*4) != get_hartid()) {
+    if(get_mhartid() != i) {
+      if (*(volatile int *) (L1_BASE + i*L1_TILE_OFFSET + MEM_OFFSET + get_mhartid()*4) != get_mhartid()) {
         // h_pprintf("Read wrong value, expected "); pprintf(ds(get_hartid())); pprintln;
-        printf("Read wrong value, expected %0d\n", get_hartid());
-        error[get_hartid()]++;
+        printf("Read wrong value, expected %0d\n", get_mhartid());
+        error[get_mhartid()]++;
       }
     }
   }
 
   wait_nop(SETTLE_CYCLE);
 
-  if (get_hartid() == 0) {
+  if (get_mhartid() == 0) {
     for (int i = 0; i < NUM_HARTS; i++)
       if (error[i]) total_errors++;
     if (total_errors) { /*h_pprintf("TEST FAILED!!"); pprintln;*/ printf("TEST FAILED!!"); }

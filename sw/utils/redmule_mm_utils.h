@@ -106,9 +106,6 @@ static inline void hwpe_cg_disable() {
 }
 
 static inline void hwpe_wait_for_completion() {
-#ifdef IRQ_EN
-  asm volatile ("wfi" : : : "memory");  // Wait For Interrupt
-#else
   // Polling-based completion detection
   unsigned int status;
   unsigned int poll_count = 0;
@@ -129,7 +126,6 @@ static inline void hwpe_wait_for_completion() {
     }
     
   } while (1);
-#endif
 }
 
 /* RedMulE Configuration Function */
