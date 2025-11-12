@@ -232,6 +232,8 @@ bender_targs += -t cv32e40x_bhv
 
 # pd repo init
 
+.PHONY: clean-pd init-pd
+
 MAGIA_PD ?= ssh://git@compute.eees.dei.unibo.it:22222/rfiorani/magia-gf12-pd.git
 MAGIA_PD_DIR ?= pd
 MAGIA_PD_COMMIT ?= main
@@ -240,6 +242,9 @@ init-pd:
 	git clone $(MAGIA_PD) $(MAGIA_PD_DIR)
 	cd $(MAGIA_PD_DIR) && git checkout $(MAGIA_PD_COMMIT)
 	$(MAKE) init-tech
+
+clean-pd:
+	rm -rf $(MAGIA_PD_DIR)
 
 -include pd/pd.mk
 
