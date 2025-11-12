@@ -148,7 +148,7 @@ IDMA_ADD_IDS ?= rw_axi_rw_obi
 FLOONOC_ROOT ?= $(shell $(BENDER) path floo_noc)
 
 # Setup python3 venv and install dependencies
-BASE_PYTHON ?= python
+BASE_PYTHON ?= python3
 
 .PHONY: python_venv python_deps
 
@@ -231,8 +231,15 @@ WAVES        := ./wave.do
 bender_targs += -t redmule_complex
 bender_targs += -t cv32e40x_bhv
 
+# pd repo init
+
+MAGIA_PD ?= ssh://git@compute.eees.dei.unibo.it:22222/rfiorani/magia-gf12-pd.git
+MAGIA_PD_DIR ?= pd
+MAGIA_PD_COMMIT ?= main
+
 init-pd:
-	git clone ssh://git@compute.eees.dei.unibo.it:22222/rfiorani/magia-gf12-pd.git pd
+	git clone $(MAGIA_PD) $(MAGIA_PD_DIR)
+	cd $(MAGIA_PD_DIR) && git checkout $(MAGIA_PD_COMMIT)
 	$(MAKE) init-tech
 
 -include pd/pd.mk
