@@ -990,7 +990,9 @@ module magia_tile
     .mgr_port_obi_a_optional_t ( magia_tile_pkg::core_data_obi_a_optional_t ),
     .mgr_port_obi_r_optional_t ( magia_tile_pkg::core_data_obi_r_optional_t ),
     .LrScEnable                (                                            ),
-    .RegisterAmo               (                                            )
+    .RegisterAmo               (                                            ),
+    .RiscvWordWidth            (                                            ),
+    .NumTxns                   (                                            )
   ) i_obi_atomics (
     .clk_i          ( sys_clk                                      ),
     .rst_ni         ( rst_ni                                       ),
