@@ -286,6 +286,7 @@ package magia_tile_pkg;
   // Parameters used by the FPU
   parameter bit                             FPU_ZFINX          = 0;                     // FPU use Zfinx extension instead of the F ISA extention
   parameter int unsigned                    FPU_BUFFER_DEPTH   = 8;                     // FPU FIFO depth that buffers instructions coming from core
+  parameter bit                             FPU_BUFFER_FT      = 0;                     // FPU FIFO fall through that buffers instructions coming from core
   parameter bit                             FPU_OOO            = 1;                     // FPU enable out-of-order execution
   parameter bit                             FPU_FWD            = 1;                     // FPU enable forwarding from output to input of FPnew
   parameter bit                             FPU_DIVSQRT        = 0;                     // FPU disable FPnew T-head-based DivSqrt unit (supported only for FP32 unit)
@@ -297,14 +298,14 @@ package magia_tile_pkg;
     IntFmtMask:    4'b0010
   };                                                                                    // FPU features: support only for FP32 and INT32
   parameter fpnew_pkg::fpu_implementation_t FPU_IMPLEMENTATION = '{
-    PipeRegs:   '{default: 1},
+    PipeRegs:   '{default: 2},
     UnitTypes:  '{'{default: fpnew_pkg::PARALLEL},
                   '{default: fpnew_pkg::MERGED},
                   '{default: fpnew_pkg::PARALLEL},
                   '{default: fpnew_pkg::MERGED},
                   '{default: fpnew_pkg::DISABLED}
                 },
-    PipeConfig: fpnew_pkg::BEFORE
+    PipeConfig: fpnew_pkg::DISTRIBUTED
   };                                                                                    // FPU implementation
   
   typedef struct packed {
@@ -393,6 +394,7 @@ package magia_tile_pkg;
 
   localparam obi_pkg::obi_optional_cfg_t obi_amo_optional_cfg = obi_pkg::obi_all_optional_config(AUSER_WIDTH, WUSER_WIDTH, RUSER_WIDTH, MID_WIDTH, ACHK_WIDTH, RCHK_WIDTH);
   localparam obi_pkg::obi_cfg_t          obi_amo_cfg          = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, OBI_ID_WIDTH, obi_amo_optional_cfg);
+  localparam bit                         RegisterAmo          = 1;
   
   `OBI_TYPEDEF_ALL_A_OPTIONAL(core_data_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
   `OBI_TYPEDEF_ALL_R_OPTIONAL(core_data_obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
