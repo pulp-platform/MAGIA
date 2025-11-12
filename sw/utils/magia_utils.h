@@ -74,15 +74,14 @@ static inline void bsem_signal(volatile uint32_t *sem_addr){
 }
 
 static inline void csem_wait(volatile uint32_t *sem_addr){
-    asm volatile("1:\n\t"
-                 "lr.w.aq t0, (%0)\n\t"
+    asm volatile("li t1, -1\n\t"
+                 "1:\n\t"
+                 "lw t0, 0(%0)\n\t"
                  "beqz t0, 1b\n\t"
-                 "addi t0, t0, -1\n\t"
-                 "sc.w t1, t0, (%0)\n\t"
-                 "bnez t1, 1b\n\t"
+                 "amoadd.w.aq t0, t1, 0(%0)\n\t"
                  :
                  :"r"(sem_addr)
-                 :"t0", "t1", "memory");
+                 :"t1", "t0", "memory");
 }
 
 static inline void csem_signal(volatile uint32_t *sem_addr){
