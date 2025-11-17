@@ -30,7 +30,7 @@ dependencies:
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: c35d5b0886ab549fb9144c3c14a4682112330e21 } # branch: yt/reqrsp
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 5a48a854573fca5bbabc1cfd4110fa4530a50ed7 } # branch: vi/redmule_scaleup
   cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , rev: 917ecbf908bdaa22c5713bbcff277d142506bb16 } # branch: michaero/astral
-  obi               : { git: "https://github.com/pulp-platform/obi.git"               , rev: d2c8a6ae018b29cd9ed04c552aba83f47f453cb5 }                         
+  obi               : { git: "https://github.com/pulp-platform/obi.git"               , rev: d40c169ad9e9fa475c07e5e29c2217c55c52c0e7 }                         
   axi               : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: 0.4.4                                }
   axi_obi           : { git: "https://github.com/pulp-platform/axi_obi.git"           , rev: 84f21a6524bedcf17a569a62ac01b8a5610819c8 }
