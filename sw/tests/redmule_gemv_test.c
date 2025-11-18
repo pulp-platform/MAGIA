@@ -28,11 +28,13 @@
 #include "w_input_gemv.h"
 #include "y_input_gemv.h"
 #include "z_output_gemv.h"
+#include "id_mat_gemv.h"
 
 #define X_BASE (L1_BASE + 0x00012048)
 #define W_BASE (L1_BASE + 0x00016048)
 #define Y_BASE (L1_BASE + 0x0001A048)
 #define Z_BASE (L1_BASE + 0x0001E048)
+#define I_BASE (L1_BASE + 0x00022048)
 
 #define M_SIZE (1)
 #define N_SIZE (64)
@@ -85,6 +87,15 @@ int main(void) {
     asm volatile("wfi" ::: "memory");
     printf("Moved Z (golden) in...\n");
 
+    // Move I in
+    printf("Moving I in...\n");
+    idma_set_addr_len_in(I_BASE, id_mat, N_SIZE*K_SIZE*2);
+    idma_set_std2_rep2_in(0, 0, 1);
+    idma_set_std3_rep3_in(0, 0, 1);
+    idma_start_in();
+    asm volatile("wfi" ::: "memory");
+    printf("Moved I in...\n");
+
     printf("Testing matrix-vector multiplication with RedMulE...\n");
     printf("Workload C = AxB sizes: A %0dx%0d vector, B %0dx%0d matrix and C %0dx%0d matrix\n", M_SIZE, N_SIZE, N_SIZE, K_SIZE, M_SIZE, K_SIZE);
 
@@ -106,6 +117,21 @@ int main(void) {
       }
     }
     printf("Finished test with %0d errors\n", num_errors);
+
+    // sentinel_start();
+    // for (int i = 0; i < M_SIZE*K_SIZE; i++){
+    //   mmio16(Y_BASE + 2*i) += mmio16(Z_BASE + 2*i);
+    // }
+    // sentinel_end();
+    sentinel_start();
+    redmule_marith(Y_BASE, I_BASE, Z_BASE);
+    asm volatile("wfi" ::: "memory");
+    sentinel_end();
+    printf("Reduce finished...\n");
+    printf("Final Result:\n");
+    for (int i = 0; i < M_SIZE*K_SIZE; i++){
+      printf("0x%4x\n", mmio16(Y_BASE + 2*i));
+    }
   }
 
   return num_errors;
