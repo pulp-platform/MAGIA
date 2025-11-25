@@ -234,7 +234,7 @@ bender_targs += -t cv32e40x_bhv
 
 .PHONY: clean-pd init-pd
 
-MAGIA_PD ?= ssh://git@compute.eees.dei.unibo.it:22222/rfiorani/magia-gf12-pd.git
+MAGIA_PD ?= ssh://git@compute.eees.dei.unibo.it:22222/rfiorani/fusion-tsmc7.git
 MAGIA_PD_DIR ?= pd
 MAGIA_PD_COMMIT ?= main
 
