@@ -828,7 +828,7 @@ module magia_tile
     .mgr_port_rsp_i ( core_l1_data_amo_rsp                         )
   );
 
-  for (genvar i = 0; i < magia_tile_pkg::N_MGR; i++) begin: gen_obi_xbar_sbr_cut
+  for (genvar i = 1; i < magia_tile_pkg::N_MGR; i++) begin: gen_obi_xbar_sbr_cut
     obi_cut #(
       .ObiCfg       ( magia_tile_pkg::obi_amo_cfg            ),
       .obi_a_chan_t ( magia_tile_pkg::core_data_obi_a_chan_t ),
@@ -844,6 +844,9 @@ module magia_tile
       .mgr_port_rsp_i ( obi_xbar_slv_cut_rsp[i] )
     );
    end
+
+   assign obi_xbar_slv_cut_req[0] = obi_xbar_slv_req[0];
+   assign obi_xbar_slv_rsp[0]     = obi_xbar_slv_cut_rsp[0];
   
   obi_xbar #(
     .SbrPortObiCfg      ( magia_tile_pkg::obi_amo_cfg            ),
