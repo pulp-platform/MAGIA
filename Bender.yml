@@ -123,6 +123,8 @@ sources:
       - target/sim/src/mesh/magia_tb.sv
 
   - target: all(not(magia_dv), asic)
+    include_dirs:
+      - pd/sourcecode/include
     files:
       # NoC
       - hw/mesh/noc/floo_axi_mesh_2x2_noc.sv
@@ -160,5 +162,6 @@ sources:
       - hw/mesh/noc/floo_axi_mesh_32x32_noc.sv
       - hw/mesh/magia.sv
       # Tech
-      - pd/sourcecode/tc_sram.sv
+      - pd/sourcecode/tsmc7_pkg.sv
       - pd/sourcecode/tc_clk.sv
+      - pd/sourcecode/tc_sram.sv
