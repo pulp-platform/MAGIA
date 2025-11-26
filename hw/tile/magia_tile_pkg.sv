@@ -170,7 +170,7 @@ package magia_tile_pkg;
   } idma_transfer_ch_e;                                                                 // iDMA type of transfer channel
 
   // Parameters used by the Xif Instruction Dispatcher
-  parameter int unsigned N_COPROC         = 4;                                          // RedMulE, iDMA, Fractal Sync and FPU
+  parameter int unsigned N_COPROC         = 3;                                          // RedMulE, iDMA, Fractal Sync and FPU
   parameter int unsigned N_RULES          = N_COPROC-1;                                 // RedMulE, iDMA and Fractal Sync all have custom Xif instructions but not FPU
   parameter int unsigned N_REDMULE_SIGN   = 9;                                          // Number of signitures (= {opcode, func3}) in the programming model of RedMulE
   parameter int unsigned N_IDMA_SIGN      = 5;                                          // Number of signitures (= {opcode, func3}) in the programming model of the iDMA decoder
@@ -179,8 +179,8 @@ package magia_tile_pkg;
   typedef enum logic[1:0]{
     XIF_REDMULE_IDX = 2'b00,
     XIF_IDMA_IDX    = 2'b01,
-    XIF_FSYNC_IDX   = 2'b10,
-    XIF_FPU_IDX     = 2'b11
+//    XIF_FSYNC_IDX   = 2'b10,
+    XIF_FPU_IDX     = 2'b10
   } xif_inst_dispatch_idx_e;
   parameter int unsigned DEFAULT_IDX      = XIF_FPU_IDX;                                // FPU will handle the instructions by default
   parameter int unsigned OPCODE_W         = 7;                                          // ISA OPCODE Width

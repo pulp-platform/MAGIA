@@ -89,19 +89,19 @@ module magia
   floo_req_t [N_TILES-1:0] tile_west_req_in, tile_west_req_out;
   floo_rsp_t [N_TILES-1:0] tile_west_rsp_in, tile_west_rsp_out;
 
-  magia_tile_pkg::ht_tile_fsync_req_t ht_tile_fsync_req[N_TILES][1]; // Single link CU-FSync interface
-  magia_tile_pkg::ht_tile_fsync_rsp_t ht_tile_fsync_rsp[N_TILES][1]; // Single link CU-FSync interface
-  magia_tile_pkg::hn_tile_fsync_req_t hn_tile_fsync_req[N_TILES];
-  magia_tile_pkg::hn_tile_fsync_rsp_t hn_tile_fsync_rsp[N_TILES];
-  magia_tile_pkg::vt_tile_fsync_req_t vt_tile_fsync_req[N_TILES][1]; // Single link CU-FSync interface
-  magia_tile_pkg::vt_tile_fsync_rsp_t vt_tile_fsync_rsp[N_TILES][1]; // Single link CU-FSync interface
-  magia_tile_pkg::vn_tile_fsync_req_t vn_tile_fsync_req[N_TILES];
-  magia_tile_pkg::vn_tile_fsync_rsp_t vn_tile_fsync_rsp[N_TILES];
+  // magia_tile_pkg::ht_tile_fsync_req_t ht_tile_fsync_req[N_TILES][1]; // Single link CU-FSync interface
+  // magia_tile_pkg::ht_tile_fsync_rsp_t ht_tile_fsync_rsp[N_TILES][1]; // Single link CU-FSync interface
+  // magia_tile_pkg::hn_tile_fsync_req_t hn_tile_fsync_req[N_TILES];
+  // magia_tile_pkg::hn_tile_fsync_rsp_t hn_tile_fsync_rsp[N_TILES];
+  // magia_tile_pkg::vt_tile_fsync_req_t vt_tile_fsync_req[N_TILES][1]; // Single link CU-FSync interface
+  // magia_tile_pkg::vt_tile_fsync_rsp_t vt_tile_fsync_rsp[N_TILES][1]; // Single link CU-FSync interface
+  // magia_tile_pkg::vn_tile_fsync_req_t vn_tile_fsync_req[N_TILES];
+  // magia_tile_pkg::vn_tile_fsync_rsp_t vn_tile_fsync_rsp[N_TILES];
 
-  magia_pkg::h_root_fsync_req_t h_root_fsync_req[1][1]; // Single node, single link root node out interface
-  magia_pkg::h_root_fsync_rsp_t h_root_fsync_rsp[1][1]; // Single node, single link root node out interface
-  magia_pkg::v_root_fsync_req_t v_root_fsync_req[1][1]; // Single node, single link root node out interface
-  magia_pkg::v_root_fsync_rsp_t v_root_fsync_rsp[1][1]; // Single node, single link root node out interface
+  // magia_pkg::h_root_fsync_req_t h_root_fsync_req[1][1]; // Single node, single link root node out interface
+  // magia_pkg::h_root_fsync_rsp_t h_root_fsync_rsp[1][1]; // Single node, single link root node out interface
+  // magia_pkg::v_root_fsync_req_t v_root_fsync_req[1][1]; // Single node, single link root node out interface
+  // magia_pkg::v_root_fsync_rsp_t v_root_fsync_rsp[1][1]; // Single node, single link root node out interface
 
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
@@ -109,10 +109,10 @@ module magia
 /**           Interface Definitions Beginning         **/
 /*******************************************************/
 
-  fractal_sync_if #(.AGGR_WIDTH(TILE_FSYNC_AGGR_W),                .LVL_WIDTH(TILE_FSYNC_LVL_W),                .ID_WIDTH(TILE_FSYNC_ID_W))                ht_fsync_if[N_TILES]();
-  fractal_sync_if #(.AGGR_WIDTH(magia_tile_pkg::FSYNC_NBR_AGGR_W), .LVL_WIDTH(magia_tile_pkg::FSYNC_NBR_LVL_W), .ID_WIDTH(magia_tile_pkg::FSYNC_NBR_ID_W)) hn_fsync_if[N_TILES]();
-  fractal_sync_if #(.AGGR_WIDTH(TILE_FSYNC_AGGR_W),                .LVL_WIDTH(TILE_FSYNC_LVL_W),                .ID_WIDTH(TILE_FSYNC_ID_W))                vt_fsync_if[N_TILES]();
-  fractal_sync_if #(.AGGR_WIDTH(magia_tile_pkg::FSYNC_NBR_AGGR_W), .LVL_WIDTH(magia_tile_pkg::FSYNC_NBR_LVL_W), .ID_WIDTH(magia_tile_pkg::FSYNC_NBR_ID_W)) vn_fsync_if[N_TILES]();
+  // fractal_sync_if #(.AGGR_WIDTH(TILE_FSYNC_AGGR_W),                .LVL_WIDTH(TILE_FSYNC_LVL_W),                .ID_WIDTH(TILE_FSYNC_ID_W))                ht_fsync_if[N_TILES]();
+  // fractal_sync_if #(.AGGR_WIDTH(magia_tile_pkg::FSYNC_NBR_AGGR_W), .LVL_WIDTH(magia_tile_pkg::FSYNC_NBR_LVL_W), .ID_WIDTH(magia_tile_pkg::FSYNC_NBR_ID_W)) hn_fsync_if[N_TILES]();
+  // fractal_sync_if #(.AGGR_WIDTH(TILE_FSYNC_AGGR_W),                .LVL_WIDTH(TILE_FSYNC_LVL_W),                .ID_WIDTH(TILE_FSYNC_ID_W))                vt_fsync_if[N_TILES]();
+  // fractal_sync_if #(.AGGR_WIDTH(magia_tile_pkg::FSYNC_NBR_AGGR_W), .LVL_WIDTH(magia_tile_pkg::FSYNC_NBR_LVL_W), .ID_WIDTH(magia_tile_pkg::FSYNC_NBR_ID_W)) vn_fsync_if[N_TILES]();
 
 /*******************************************************/
 /**             Interface Definitions End             **/
@@ -120,16 +120,16 @@ module magia
 /**          Interface Assignments Beginning          **/
 /*******************************************************/
 
-  for (genvar i = 0; i < N_TILES; i++) begin: gen_fsync_if_assign
-    `FSYNC_ASSIGN_I2S_REQ(ht_fsync_if[i],          ht_tile_fsync_req[i][0])
-    `FSYNC_ASSIGN_S2I_RSP(ht_tile_fsync_rsp[i][0], ht_fsync_if[i])
-    `FSYNC_ASSIGN_I2S_REQ(hn_fsync_if[i],          hn_tile_fsync_req[i])
-    `FSYNC_ASSIGN_S2I_RSP(hn_tile_fsync_rsp[i],    hn_fsync_if[i])
-    `FSYNC_ASSIGN_I2S_REQ(vt_fsync_if[i],          vt_tile_fsync_req[i][0])
-    `FSYNC_ASSIGN_S2I_RSP(vt_tile_fsync_rsp[i][0], vt_fsync_if[i])
-    `FSYNC_ASSIGN_I2S_REQ(vn_fsync_if[i],          vn_tile_fsync_req[i])
-    `FSYNC_ASSIGN_S2I_RSP(vn_tile_fsync_rsp[i],    vn_fsync_if[i])
-  end
+  // for (genvar i = 0; i < N_TILES; i++) begin: gen_fsync_if_assign
+  //   `FSYNC_ASSIGN_I2S_REQ(ht_fsync_if[i],          ht_tile_fsync_req[i][0])
+  //   `FSYNC_ASSIGN_S2I_RSP(ht_tile_fsync_rsp[i][0], ht_fsync_if[i])
+  //   `FSYNC_ASSIGN_I2S_REQ(hn_fsync_if[i],          hn_tile_fsync_req[i])
+  //   `FSYNC_ASSIGN_S2I_RSP(hn_tile_fsync_rsp[i],    hn_fsync_if[i])
+  //   `FSYNC_ASSIGN_I2S_REQ(vt_fsync_if[i],          vt_tile_fsync_req[i][0])
+  //   `FSYNC_ASSIGN_S2I_RSP(vt_tile_fsync_rsp[i][0], vt_fsync_if[i])
+  //   `FSYNC_ASSIGN_I2S_REQ(vn_fsync_if[i],          vn_tile_fsync_req[i])
+  //   `FSYNC_ASSIGN_S2I_RSP(vn_tile_fsync_rsp[i],    vn_fsync_if[i])
+  // end
 
 /*******************************************************/
 /**             Interface Assignments End             **/
@@ -141,14 +141,14 @@ module magia
     assign mhartid[i] = i;
   end
 
-  assign h_root_fsync_rsp[0][0].wake    = 1'b0;
-  assign h_root_fsync_rsp[0][0].sig.lvl = '0;
-  assign h_root_fsync_rsp[0][0].sig.id  = '0;
-  assign h_root_fsync_rsp[0][0].error   = 1'b0;
-  assign v_root_fsync_rsp[0][0].wake    = 1'b0;
-  assign v_root_fsync_rsp[0][0].sig.lvl = '0;
-  assign v_root_fsync_rsp[0][0].sig.id  = '0;
-  assign v_root_fsync_rsp[0][0].error   = 1'b0;
+  // assign h_root_fsync_rsp[0][0].wake    = 1'b0;
+  // assign h_root_fsync_rsp[0][0].sig.lvl = '0;
+  // assign h_root_fsync_rsp[0][0].sig.id  = '0;
+  // assign h_root_fsync_rsp[0][0].error   = 1'b0;
+  // assign v_root_fsync_rsp[0][0].wake    = 1'b0;
+  // assign v_root_fsync_rsp[0][0].sig.lvl = '0;
+  // assign v_root_fsync_rsp[0][0].sig.id  = '0;
+  // assign v_root_fsync_rsp[0][0].error   = 1'b0;
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -194,10 +194,10 @@ module magia
         .x_id_i              ( j                                ),
         .y_id_i              ( i                                ),
   
-        .ht_fsync_if_o       ( ht_fsync_if[i*N_TILES_X+j]       ),
-        .hn_fsync_if_o       ( hn_fsync_if[i*N_TILES_X+j]       ),
-        .vt_fsync_if_o       ( vt_fsync_if[i*N_TILES_X+j]       ),
-        .vn_fsync_if_o       ( vn_fsync_if[i*N_TILES_X+j]       ),
+        // .ht_fsync_if_o       ( ht_fsync_if[i*N_TILES_X+j]       ),
+        // .hn_fsync_if_o       ( hn_fsync_if[i*N_TILES_X+j]       ),
+        // .vt_fsync_if_o       ( vt_fsync_if[i*N_TILES_X+j]       ),
+        // .vn_fsync_if_o       ( vn_fsync_if[i*N_TILES_X+j]       ),
         
         .scan_cg_en_i                                            ,
   
@@ -330,92 +330,92 @@ module magia
 /**           FractalSync Network Beginning           **/
 /*******************************************************/
 
-  if ((N_TILES_Y == 2) && (N_TILES_X == 2)) begin: gen_2x2_fsync
-    fractal_sync_2x2 i_mesh_fsync (
-      .clk_i                                  ,
-      .rst_ni                                 ,
-      .h_1d_fsync_req_i  ( ht_tile_fsync_req ),
-      .h_1d_fsync_rsp_o  ( ht_tile_fsync_rsp ),
-      .v_1d_fsync_req_i  ( vt_tile_fsync_req ),
-      .v_1d_fsync_rsp_o  ( vt_tile_fsync_rsp ),
-      .h_nbr_fsycn_req_i ( hn_tile_fsync_req ),
-      .h_nbr_fsycn_rsp_o ( hn_tile_fsync_rsp ),
-      .v_nbr_fsycn_req_i ( vn_tile_fsync_req ),
-      .v_nbr_fsycn_rsp_o ( vn_tile_fsync_rsp ),
-      .h_2d_fsync_req_o  ( h_root_fsync_req  ),
-      .h_2d_fsync_rsp_i  ( h_root_fsync_rsp  ),
-      .v_2d_fsync_req_o  ( v_root_fsync_req  ),
-      .v_2d_fsync_rsp_i  ( v_root_fsync_rsp  )
-    );
-  end else if ((N_TILES_Y == 4) && (N_TILES_X == 4)) begin: gen_4x4_fsync
-    fractal_sync_4x4 i_mesh_fsync (
-      .clk_i                                  ,
-      .rst_ni                                 ,
-      .h_1d_fsync_req_i  ( ht_tile_fsync_req ),
-      .h_1d_fsync_rsp_o  ( ht_tile_fsync_rsp ),
-      .v_1d_fsync_req_i  ( vt_tile_fsync_req ),
-      .v_1d_fsync_rsp_o  ( vt_tile_fsync_rsp ),
-      .h_nbr_fsycn_req_i ( hn_tile_fsync_req ),
-      .h_nbr_fsycn_rsp_o ( hn_tile_fsync_rsp ),
-      .v_nbr_fsycn_req_i ( vn_tile_fsync_req ),
-      .v_nbr_fsycn_rsp_o ( vn_tile_fsync_rsp ),
-      .h_2d_fsync_req_o  ( h_root_fsync_req  ),
-      .h_2d_fsync_rsp_i  ( h_root_fsync_rsp  ),
-      .v_2d_fsync_req_o  ( v_root_fsync_req  ),
-      .v_2d_fsync_rsp_i  ( v_root_fsync_rsp  )
-    );
-  end else if ((N_TILES_Y == 8) && (N_TILES_X == 8)) begin: gen_8x8_fsync
-    fractal_sync_8x8 i_mesh_fsync (
-      .clk_i                                  ,
-      .rst_ni                                 ,
-      .h_1d_fsync_req_i  ( ht_tile_fsync_req ),
-      .h_1d_fsync_rsp_o  ( ht_tile_fsync_rsp ),
-      .v_1d_fsync_req_i  ( vt_tile_fsync_req ),
-      .v_1d_fsync_rsp_o  ( vt_tile_fsync_rsp ),
-      .h_nbr_fsycn_req_i ( hn_tile_fsync_req ),
-      .h_nbr_fsycn_rsp_o ( hn_tile_fsync_rsp ),
-      .v_nbr_fsycn_req_i ( vn_tile_fsync_req ),
-      .v_nbr_fsycn_rsp_o ( vn_tile_fsync_rsp ),
-      .h_2d_fsync_req_o  ( h_root_fsync_req  ),
-      .h_2d_fsync_rsp_i  ( h_root_fsync_rsp  ),
-      .v_2d_fsync_req_o  ( v_root_fsync_req  ),
-      .v_2d_fsync_rsp_i  ( v_root_fsync_rsp  )
-    );
-  end else if ((N_TILES_Y == 16) && (N_TILES_X == 16)) begin: gen_16x16_fsync
-    fractal_sync_16x16 i_mesh_fsync (
-      .clk_i                                  ,
-      .rst_ni                                 ,
-      .h_1d_fsync_req_i  ( ht_tile_fsync_req ),
-      .h_1d_fsync_rsp_o  ( ht_tile_fsync_rsp ),
-      .v_1d_fsync_req_i  ( vt_tile_fsync_req ),
-      .v_1d_fsync_rsp_o  ( vt_tile_fsync_rsp ),
-      .h_nbr_fsycn_req_i ( hn_tile_fsync_req ),
-      .h_nbr_fsycn_rsp_o ( hn_tile_fsync_rsp ),
-      .v_nbr_fsycn_req_i ( vn_tile_fsync_req ),
-      .v_nbr_fsycn_rsp_o ( vn_tile_fsync_rsp ),
-      .h_2d_fsync_req_o  ( h_root_fsync_req  ),
-      .h_2d_fsync_rsp_i  ( h_root_fsync_rsp  ),
-      .v_2d_fsync_req_o  ( v_root_fsync_req  ),
-      .v_2d_fsync_rsp_i  ( v_root_fsync_rsp  )
-    );
-  end else if ((N_TILES_Y == 32) && (N_TILES_X == 32)) begin: gen_32x32_fsync
-    fractal_sync_32x32 i_mesh_fsync (
-      .clk_i                                  ,
-      .rst_ni                                 ,
-      .h_1d_fsync_req_i  ( ht_tile_fsync_req ),
-      .h_1d_fsync_rsp_o  ( ht_tile_fsync_rsp ),
-      .v_1d_fsync_req_i  ( vt_tile_fsync_req ),
-      .v_1d_fsync_rsp_o  ( vt_tile_fsync_rsp ),
-      .h_nbr_fsycn_req_i ( hn_tile_fsync_req ),
-      .h_nbr_fsycn_rsp_o ( hn_tile_fsync_rsp ),
-      .v_nbr_fsycn_req_i ( vn_tile_fsync_req ),
-      .v_nbr_fsycn_rsp_o ( vn_tile_fsync_rsp ),
-      .h_2d_fsync_req_o  ( h_root_fsync_req  ),
-      .h_2d_fsync_rsp_i  ( h_root_fsync_rsp  ),
-      .v_2d_fsync_req_o  ( v_root_fsync_req  ),
-      .v_2d_fsync_rsp_i  ( v_root_fsync_rsp  )
-    );
-  end else $fatal(1,"Unsupported Mesh configuration");
+  // if ((N_TILES_Y == 2) && (N_TILES_X == 2)) begin: gen_2x2_fsync
+  //   fractal_sync_2x2 i_mesh_fsync (
+  //     .clk_i                                  ,
+  //     .rst_ni                                 ,
+  //     .h_1d_fsync_req_i  ( ht_tile_fsync_req ),
+  //     .h_1d_fsync_rsp_o  ( ht_tile_fsync_rsp ),
+  //     .v_1d_fsync_req_i  ( vt_tile_fsync_req ),
+  //     .v_1d_fsync_rsp_o  ( vt_tile_fsync_rsp ),
+  //     .h_nbr_fsycn_req_i ( hn_tile_fsync_req ),
+  //     .h_nbr_fsycn_rsp_o ( hn_tile_fsync_rsp ),
+  //     .v_nbr_fsycn_req_i ( vn_tile_fsync_req ),
+  //     .v_nbr_fsycn_rsp_o ( vn_tile_fsync_rsp ),
+  //     .h_2d_fsync_req_o  ( h_root_fsync_req  ),
+  //     .h_2d_fsync_rsp_i  ( h_root_fsync_rsp  ),
+  //     .v_2d_fsync_req_o  ( v_root_fsync_req  ),
+  //     .v_2d_fsync_rsp_i  ( v_root_fsync_rsp  )
+  //   );
+  // end else if ((N_TILES_Y == 4) && (N_TILES_X == 4)) begin: gen_4x4_fsync
+  //   fractal_sync_4x4 i_mesh_fsync (
+  //     .clk_i                                  ,
+  //     .rst_ni                                 ,
+  //     .h_1d_fsync_req_i  ( ht_tile_fsync_req ),
+  //     .h_1d_fsync_rsp_o  ( ht_tile_fsync_rsp ),
+  //     .v_1d_fsync_req_i  ( vt_tile_fsync_req ),
+  //     .v_1d_fsync_rsp_o  ( vt_tile_fsync_rsp ),
+  //     .h_nbr_fsycn_req_i ( hn_tile_fsync_req ),
+  //     .h_nbr_fsycn_rsp_o ( hn_tile_fsync_rsp ),
+  //     .v_nbr_fsycn_req_i ( vn_tile_fsync_req ),
+  //     .v_nbr_fsycn_rsp_o ( vn_tile_fsync_rsp ),
+  //     .h_2d_fsync_req_o  ( h_root_fsync_req  ),
+  //     .h_2d_fsync_rsp_i  ( h_root_fsync_rsp  ),
+  //     .v_2d_fsync_req_o  ( v_root_fsync_req  ),
+  //     .v_2d_fsync_rsp_i  ( v_root_fsync_rsp  )
+  //   );
+  // end else if ((N_TILES_Y == 8) && (N_TILES_X == 8)) begin: gen_8x8_fsync
+  //   fractal_sync_8x8 i_mesh_fsync (
+  //     .clk_i                                  ,
+  //     .rst_ni                                 ,
+  //     .h_1d_fsync_req_i  ( ht_tile_fsync_req ),
+  //     .h_1d_fsync_rsp_o  ( ht_tile_fsync_rsp ),
+  //     .v_1d_fsync_req_i  ( vt_tile_fsync_req ),
+  //     .v_1d_fsync_rsp_o  ( vt_tile_fsync_rsp ),
+  //     .h_nbr_fsycn_req_i ( hn_tile_fsync_req ),
+  //     .h_nbr_fsycn_rsp_o ( hn_tile_fsync_rsp ),
+  //     .v_nbr_fsycn_req_i ( vn_tile_fsync_req ),
+  //     .v_nbr_fsycn_rsp_o ( vn_tile_fsync_rsp ),
+  //     .h_2d_fsync_req_o  ( h_root_fsync_req  ),
+  //     .h_2d_fsync_rsp_i  ( h_root_fsync_rsp  ),
+  //     .v_2d_fsync_req_o  ( v_root_fsync_req  ),
+  //     .v_2d_fsync_rsp_i  ( v_root_fsync_rsp  )
+  //   );
+  // end else if ((N_TILES_Y == 16) && (N_TILES_X == 16)) begin: gen_16x16_fsync
+  //   fractal_sync_16x16 i_mesh_fsync (
+  //     .clk_i                                  ,
+  //     .rst_ni                                 ,
+  //     .h_1d_fsync_req_i  ( ht_tile_fsync_req ),
+  //     .h_1d_fsync_rsp_o  ( ht_tile_fsync_rsp ),
+  //     .v_1d_fsync_req_i  ( vt_tile_fsync_req ),
+  //     .v_1d_fsync_rsp_o  ( vt_tile_fsync_rsp ),
+  //     .h_nbr_fsycn_req_i ( hn_tile_fsync_req ),
+  //     .h_nbr_fsycn_rsp_o ( hn_tile_fsync_rsp ),
+  //     .v_nbr_fsycn_req_i ( vn_tile_fsync_req ),
+  //     .v_nbr_fsycn_rsp_o ( vn_tile_fsync_rsp ),
+  //     .h_2d_fsync_req_o  ( h_root_fsync_req  ),
+  //     .h_2d_fsync_rsp_i  ( h_root_fsync_rsp  ),
+  //     .v_2d_fsync_req_o  ( v_root_fsync_req  ),
+  //     .v_2d_fsync_rsp_i  ( v_root_fsync_rsp  )
+  //   );
+  // end else if ((N_TILES_Y == 32) && (N_TILES_X == 32)) begin: gen_32x32_fsync
+  //   fractal_sync_32x32 i_mesh_fsync (
+  //     .clk_i                                  ,
+  //     .rst_ni                                 ,
+  //     .h_1d_fsync_req_i  ( ht_tile_fsync_req ),
+  //     .h_1d_fsync_rsp_o  ( ht_tile_fsync_rsp ),
+  //     .v_1d_fsync_req_i  ( vt_tile_fsync_req ),
+  //     .v_1d_fsync_rsp_o  ( vt_tile_fsync_rsp ),
+  //     .h_nbr_fsycn_req_i ( hn_tile_fsync_req ),
+  //     .h_nbr_fsycn_rsp_o ( hn_tile_fsync_rsp ),
+  //     .v_nbr_fsycn_req_i ( vn_tile_fsync_req ),
+  //     .v_nbr_fsycn_rsp_o ( vn_tile_fsync_rsp ),
+  //     .h_2d_fsync_req_o  ( h_root_fsync_req  ),
+  //     .h_2d_fsync_rsp_i  ( h_root_fsync_rsp  ),
+  //     .v_2d_fsync_req_o  ( v_root_fsync_req  ),
+  //     .v_2d_fsync_rsp_i  ( v_root_fsync_rsp  )
+  //   );
+  // end else $fatal(1,"Unsupported Mesh configuration");
 
 /*******************************************************/
 /**              FractalSync Network End              **/

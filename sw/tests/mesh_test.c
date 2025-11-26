@@ -309,9 +309,7 @@ int main(void) {
 
   uint32_t exit_code[NUM_HARTS];
   if(num_errors[get_hartid()])
-    exit_code[get_hartid()] = FAIL_EXIT_CODE;
+    return 1;
   else
-    exit_code[get_hartid()] = PASS_EXIT_CODE;
-
-  return exit_code;
+    return 0;
 }

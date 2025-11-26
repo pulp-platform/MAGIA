@@ -83,11 +83,11 @@ module magia_tile
   input  logic [31:0]                       x_id_i,
   input  logic [31:0]                       y_id_i,
 
-  // FractalSync interface
-  fractal_sync_if.mst_port                  ht_fsync_if_o,
-  fractal_sync_if.mst_port                  hn_fsync_if_o,
-  fractal_sync_if.mst_port                  vt_fsync_if_o,
-  fractal_sync_if.mst_port                  vn_fsync_if_o,
+  // // FractalSync interface
+  // fractal_sync_if.mst_port                  ht_fsync_if_o,
+  // fractal_sync_if.mst_port                  hn_fsync_if_o,
+  // fractal_sync_if.mst_port                  vt_fsync_if_o,
+  // fractal_sync_if.mst_port                  vn_fsync_if_o,
 
   // Signals used by the core
   input  logic                              scan_cg_en_i,
@@ -262,9 +262,9 @@ module magia_tile
   logic[magia_tile_pkg::NR_FETCH_PORTS-1:0]                                 flush_valid;
   logic[magia_tile_pkg::NR_FETCH_PORTS-1:0]                                 flush_ready;
 
-  logic fsync_clear;   // Can be used to manage iDMA clear at top-level
-  logic fsync_done;
-  logic fsync_error;
+  //logic fsync_clear;   // Can be used to manage iDMA clear at top-level
+  //logic fsync_done;
+  //logic fsync_error;
 
   // FlooNoC connections between NI and router
   floo_req_t [4:0] floo_router_req_in;
@@ -354,7 +354,7 @@ module magia_tile
 
   assign idma_clear = 1'b0;
 
-  assign fsync_clear = 1'b0;
+  //assign fsync_clear = 1'b0;
 
   assign xif_coproc_rules[magia_tile_pkg::XIF_REDMULE_IDX] = '{sign_list: '{ {{redmule_pkg::MCNFIG, 3'h0}}, 
                                                                              {{redmule_pkg::MARITH, 3'h0}}, {{redmule_pkg::MARITH, 3'h1}}, 
@@ -370,7 +370,7 @@ module magia_tile
                                                                              {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_S_FUNC3}},
                                                                              {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_S_FUNC3}},
                                                                              {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_S_FUNC3}} }};
-  assign xif_coproc_rules[magia_tile_pkg::XIF_FSYNC_IDX]   = '{sign_list: '{ default: {magia_tile_pkg::FSYNC_OPCODE, magia_tile_pkg::FSYNC_FUNC3} }};
+  //assign xif_coproc_rules[magia_tile_pkg::XIF_FSYNC_IDX]   = '{sign_list: '{ default: {magia_tile_pkg::FSYNC_OPCODE, magia_tile_pkg::FSYNC_FUNC3} }};
 
   assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_EVT_0] = redmule_evt[0][0];  // Only 1 core supported
   assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_EVT_1] = redmule_evt[0][1];  // Only 1 core supported
@@ -383,8 +383,8 @@ module magia_tile
   assign irq[magia_tile_pkg::IRQ_IDX_A2O_BUSY]      = idma_axi2obi_busy;
   assign irq[magia_tile_pkg::IRQ_IDX_O2A_BUSY]      = idma_obi2axi_busy;
   assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_BUSY]  = redmule_busy;
-  assign irq[magia_tile_pkg::IRQ_IDX_FSYNC_DONE]    = fsync_done;
-  assign irq[magia_tile_pkg::IRQ_IDX_FSYNC_ERROR]   = fsync_error;
+  assign irq[magia_tile_pkg::IRQ_IDX_FSYNC_DONE]    = 0; //fsync_done;
+  assign irq[magia_tile_pkg::IRQ_IDX_FSYNC_ERROR]   = 0; //fsync_error;
   assign irq[magia_pkg::N_IRQ-magia_tile_pkg::IRQ_USED-1:16]   
                                                     = irq_i[magia_pkg::N_IRQ-magia_tile_pkg::IRQ_USED-1:16];
   assign irq[15:12]                                 = '0;
@@ -660,7 +660,7 @@ module magia_tile
     .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
     .X_MISA      ( magia_tile_pkg::X_MISA   ),
     .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
-  ) xif_coproc_if[magia_tile_pkg::N_COPROC] (); // Index 0 -> RedMulE, Index 1 -> iDMA, Index 2 -> Fractal Sync, Index 3 -> FPU
+  ) xif_coproc_if[magia_tile_pkg::N_COPROC] (); // Index 0 -> RedMulE, Index 1 -> iDMA, Index 2 -> FPU
 
 /*******************************************************/
 /**             Interface Definitions End             **/
@@ -1237,33 +1237,33 @@ module magia_tile
 /**             Fractal Sync Out Beginning            **/
 /*******************************************************/
 
-  fractal_sync_xif_inst_decoder #(
-    .INSTR_W    ( magia_tile_pkg::FSYNC_INSTR_W    ),
-    .DATA_W     ( magia_tile_pkg::FSYNC_DATA_W     ),
-    .ADDR_W     ( magia_tile_pkg::FSYNC_ADDR_W     ),
-    .N_RF_PORTS ( magia_tile_pkg::FSYNC_N_RF_PORTS ),
-    .OPCODE_W   ( magia_tile_pkg::FSYNC_OPCODE_W   ),
-    .FUNC3_W    ( magia_tile_pkg::FSYNC_FUNC3_W    ),
-    .OPCODE_OFF ( magia_tile_pkg::FSYNC_OPCODE_OFF ),
-    .FUNC3_OFF  ( magia_tile_pkg::FSYNC_FUNC3_OFF  ),
-    .N_CFG_REG  ( magia_tile_pkg::FSYNC_N_CFG_REG  ),
-    .AGGR_W     ( magia_tile_pkg::FSYNC_AGGR_W     ),
-    .ID_W       ( magia_tile_pkg::FSYNC_ID_W       ),
-    .NBR_AGGR_W ( magia_tile_pkg::FSYNC_NBR_AGGR_W ),
-    .NBR_ID_W   ( magia_tile_pkg::FSYNC_NBR_ID_W   ),
-    .STALL      ( magia_tile_pkg::FSYNC_STALL      )
-  ) i_fsync_dec (
-    .clk_i          ( sys_clk                                                   ),
-    .rst_ni         ( rst_ni                                                    ),
-    .clear_i        ( fsync_clear                                               ),
-    .xif_issue_if_i ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_FSYNC_IDX] ),
-    .ht_fsync_if_o  ( ht_fsync_if_o                                             ),
-    .hn_fsync_if_o  ( hn_fsync_if_o                                             ),
-    .vt_fsync_if_o  ( vt_fsync_if_o                                             ),
-    .vn_fsync_if_o  ( vn_fsync_if_o                                             ),
-    .done_o         ( fsync_done                                                ),
-    .error_o        ( fsync_error                                               )
-  );
+  // fractal_sync_xif_inst_decoder #(
+  //   .INSTR_W    ( magia_tile_pkg::FSYNC_INSTR_W    ),
+  //   .DATA_W     ( magia_tile_pkg::FSYNC_DATA_W     ),
+  //   .ADDR_W     ( magia_tile_pkg::FSYNC_ADDR_W     ),
+  //   .N_RF_PORTS ( magia_tile_pkg::FSYNC_N_RF_PORTS ),
+  //   .OPCODE_W   ( magia_tile_pkg::FSYNC_OPCODE_W   ),
+  //   .FUNC3_W    ( magia_tile_pkg::FSYNC_FUNC3_W    ),
+  //   .OPCODE_OFF ( magia_tile_pkg::FSYNC_OPCODE_OFF ),
+  //   .FUNC3_OFF  ( magia_tile_pkg::FSYNC_FUNC3_OFF  ),
+  //   .N_CFG_REG  ( magia_tile_pkg::FSYNC_N_CFG_REG  ),
+  //   .AGGR_W     ( magia_tile_pkg::FSYNC_AGGR_W     ),
+  //   .ID_W       ( magia_tile_pkg::FSYNC_ID_W       ),
+  //   .NBR_AGGR_W ( magia_tile_pkg::FSYNC_NBR_AGGR_W ),
+  //   .NBR_ID_W   ( magia_tile_pkg::FSYNC_NBR_ID_W   ),
+  //   .STALL      ( magia_tile_pkg::FSYNC_STALL      )
+  // ) i_fsync_dec (
+  //   .clk_i          ( sys_clk                                                   ),
+  //   .rst_ni         ( rst_ni                                                    ),
+  //   .clear_i        ( fsync_clear                                               ),
+  //   .xif_issue_if_i ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_FSYNC_IDX] ),
+  //   .ht_fsync_if_o  ( ht_fsync_if_o                                             ),
+  //   .hn_fsync_if_o  ( hn_fsync_if_o                                             ),
+  //   .vt_fsync_if_o  ( vt_fsync_if_o                                             ),
+  //   .vn_fsync_if_o  ( vn_fsync_if_o                                             ),
+  //   .done_o         ( fsync_done                                                ),
+  //   .error_o        ( fsync_error                                               )
+  // );
 
 /*******************************************************/
 /**                Fractal Sync Out End               **/
