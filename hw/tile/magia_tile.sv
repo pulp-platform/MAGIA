@@ -246,33 +246,13 @@ module magia_tile
 
   // Core output signals
   logic core_busy_o;
-  logic        sec_lvl_o;
-  logic [14:0] apu_master_flags_o;
-  logic [magia_tile_pkg::WAPUTYPE-1:0]  apu_master_type_o; // Use parameter for correct width
-  logic [5:0]  apu_master_op_o;
-  logic [95:0] apu_master_operands_o;
-  logic        apu_master_ready_o;
-  logic        apu_master_req_o;
-  logic        data_unaligned_o;
 
   logic[magia_pkg::N_IRQ-1:0]            irq;
   logic                                  redmule_busy;
   logic[magia_tile_pkg::N_CORE-1:0][1:0] redmule_evt;
 
-  logic                                clic_irq;
-  logic[magia_tile_pkg::CLIC_ID_W-1:0] clic_irq_id;
-  logic[7:0]                           clic_irq_level;
-  logic[1:0]                           clic_irq_priv;
-  logic                                clic_irq_shv;
-
-  logic fencei_flush_req;
-  logic fencei_flush_ack;
-
-  logic                                                                     enable_prefetching;
-  snitch_icache_pkg::icache_l0_events_t[magia_tile_pkg::NR_FETCH_PORTS-1:0] icache_l0_events; // Can be used to implement i$ IRQs
-  snitch_icache_pkg::icache_l1_events_t                                     icache_l1_events; // Can be used to implement i$ IRQs
-  logic[magia_tile_pkg::NR_FETCH_PORTS-1:0]                                 flush_valid;
-  logic[magia_tile_pkg::NR_FETCH_PORTS-1:0]                                 flush_ready;
+  logic                                     enable_prefetching;
+  logic[magia_tile_pkg::NR_FETCH_PORTS-1:0] flush_valid;
 
   logic fsync_clear;   // Can be used to manage iDMA clear at top-level
   logic fsync_done;
@@ -381,6 +361,10 @@ module magia_tile
   assign idma_clear = 1'b0;
 
   assign fsync_clear = 1'b0;
+
+  // Icache control signals
+  assign enable_prefetching = 1'b0;
+  assign flush_valid        = '0;
 
   // Event Unit provides unified interrupt management
   // External interrupts must be mapped to bit 11 (MEIE - Machine External Interrupt Enable)
@@ -763,15 +747,15 @@ module magia_tile
     .data_we_o              ( core_data_req.we         ),
     .data_rdata_i           ( core_data_rsp.rdata      ),
 
-    // APU interface
-    .apu_master_req_o       ( apu_master_req_o        ),
-    .apu_master_ready_o     ( apu_master_ready_o      ),
+    // APU interface (disabled - not connected)
+    .apu_master_req_o       (                         ),
+    .apu_master_ready_o     (                         ),
     .apu_master_gnt_i       ( '0                      ),
     
-    .apu_master_operands_o  ( apu_master_operands_o   ),
-    .apu_master_op_o        ( apu_master_op_o         ),
-    .apu_master_type_o      ( apu_master_type_o       ),
-    .apu_master_flags_o     ( apu_master_flags_o      ),
+    .apu_master_operands_o  (                         ),
+    .apu_master_op_o        (                         ),
+    .apu_master_type_o      (                         ),
+    .apu_master_flags_o     (                         ),
 
     .apu_master_valid_i     ( '0                      ),
     .apu_master_result_i    ( '0                      ),
@@ -784,8 +768,8 @@ module magia_tile
     .irq_id_o               ( eu_core_irq_ack_id[0]    ),
     .irq_sec_i              ( '0                      ),
 
-    // Security level
-    .sec_lvl_o              ( sec_lvl_o               ),
+    // Security level (unused)
+    .sec_lvl_o              (                         ),
     
     // Debug interface
     .debug_req_i            ( debug_req_i              ),
@@ -800,6 +784,17 @@ module magia_tile
   );
 
   assign core_sleep_o = !core_busy_o;
+
+  assign core_instr_req.memtype = 2'b00;
+  assign core_instr_req.prot    = 3'b000;
+  assign core_instr_req.dbg     = 1'b0;
+
+  assign mcycle_o          = 64'h0;
+  assign debug_havereset_o = 1'b0;
+  assign debug_running_o   = 1'b0;
+  assign debug_halted_o    = 1'b0;
+  assign debug_pc_valid_o  = 1'b0;
+  assign debug_pc_o        = 32'h0;
 
 /*******************************************************/
 /**                      Core End                     **/
@@ -1053,10 +1048,10 @@ module magia_tile
   .fetch_rerror_o       ( core_cache_instr_rsp.rerror ),
 
   .enable_prefetching_i ( enable_prefetching          ),
-  .icache_l0_events_o   ( icache_l0_events            ),
-  .icache_l1_events_o   ( icache_l1_events            ),
+  .icache_l0_events_o   (                             ),
+  .icache_l1_events_o   (                             ),
   .flush_valid_i        ( flush_valid                 ),
-  .flush_ready_o        ( flush_ready                 ),
+  .flush_ready_o        (                             ),
 
   .sram_cfg_data_i      ( '0                          ),
   .sram_cfg_tag_i       ( '0                          ),
