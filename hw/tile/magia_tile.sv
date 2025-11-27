@@ -280,6 +280,8 @@ module magia_tile
   floo_req_t [4:0] floo_router_req_out;
   floo_rsp_t [4:0] floo_router_rsp_out;
 
+  id_t floo_id;
+
   // Event Unit signals - Corrected for single-core array interface
   logic [0:0]                         eu_core_irq_req;    // [0:0] array for single core  
   logic [0:0][magia_tile_pkg::EVENT_UNIT_IRQ_WIDTH-1:0] eu_core_irq_id;     // [0:0][4:0] array
@@ -376,6 +378,7 @@ module magia_tile
   assign irq[3] = 1'b0;                     // Software interrupt (unused)
   assign irq[2:0] = '0;                     // Clear IRQs 0-2
 
+  assign floo_id = '{x: (x_id_i+1), y: y_id_i, port_id: 0};
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
