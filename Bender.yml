@@ -23,14 +23,14 @@ package:
 
 dependencies:
   redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 496f24545234ddb014da8fe57ef0c98eaa382028 } # branch: vi/magia
-  cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: e51af131252027374d083a745ab6727fb9959daa } # branch: vi/redmule_scaleup
+  cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: a90101211048ba1a16cedbe4db963ab6e12569d7 } # branch: vi/redmule_scaleup
   idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: a6b190c7991331432afa9a2899d032bc1b176830 } # branch: vi/redmule_scaleup
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: e3e00383adf3789dc29ddc8af2edd6fe62ba4d50 } # branch: vi/scaleup_rebased
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: ed023cb1effa8e395cc3d456b3500c56092523be } # branch: vi/scaleup_rebased
   cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , rev: 917ecbf908bdaa22c5713bbcff277d142506bb16 } # branch: michaero/astral
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
-  fpu_ss            : { git: "https://github.com/pulp-platform/fpu_ss.git"            , rev: 6a83b1754196c3d4509ce823118a190917f3b88a } # branch: vi/bender_manifest
+  fpu_ss            : { git: "https://github.com/pulp-platform/fpu_ss.git"            , rev: 8e2eff774d9d38a1e17a46bd56a0936dac9522f0 } # branch: vi/bender_manifest
   obi               : { git: "https://github.com/pulp-platform/obi.git"               , rev: 6a724da5c8d6412b88b6948746e04c1adf39d017 } # branch: main
   axi               : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: 0.4.4                                }
