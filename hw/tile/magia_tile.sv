@@ -990,7 +990,7 @@ module magia_tile
     .mgr_port_obi_a_optional_t ( magia_tile_pkg::core_data_obi_a_optional_t ),
     .mgr_port_obi_r_optional_t ( magia_tile_pkg::core_data_obi_r_optional_t ),
     .LrScEnable                (                                            ),
-    .RegisterAmo               (                                            ),
+    .RegisterAmo               ( magia_tile_pkg::RegisterAmo                ),
     .RiscvWordWidth            (                                            ),
     .NumTxns                   (                                            )
   ) i_obi_atomics (
@@ -1451,13 +1451,14 @@ module magia_tile
 /*******************************************************/
 
   fpu_ss #(
-    .PULP_ZFINX         ( magia_tile_pkg::FPU_ZFINX          ),
-    .INPUT_BUFFER_DEPTH ( magia_tile_pkg::FPU_BUFFER_DEPTH   ),
-    .OUT_OF_ORDER       ( magia_tile_pkg::FPU_OOO            ),
-    .FORWARDING         ( magia_tile_pkg::FPU_FWD            ),
-    .PulpDivsqrt        ( magia_tile_pkg::FPU_DIVSQRT        ),
-    .FPU_FEATURES       ( magia_tile_pkg::FPU_FEATURES       ),
-    .FPU_IMPLEMENTATION ( magia_tile_pkg::FPU_IMPLEMENTATION )
+    .PULP_ZFINX                ( magia_tile_pkg::FPU_ZFINX          ),
+    .INPUT_BUFFER_DEPTH        ( magia_tile_pkg::FPU_BUFFER_DEPTH   ),
+    .INPUT_BUFFER_FALL_THROUGH ( magia_tile_pkg::FPU_BUFFER_FT      ),
+    .OUT_OF_ORDER              ( magia_tile_pkg::FPU_OOO            ),
+    .FORWARDING                ( magia_tile_pkg::FPU_FWD            ),
+    .PulpDivsqrt               ( magia_tile_pkg::FPU_DIVSQRT        ),
+    .FPU_FEATURES              ( magia_tile_pkg::FPU_FEATURES       ),
+    .FPU_IMPLEMENTATION        ( magia_tile_pkg::FPU_IMPLEMENTATION )
   ) i_fpu (
     .clk_i                ( sys_clk            ),
     .rst_ni               ( rst_ni             ),

@@ -25,3 +25,4 @@ synth_targs += -t synopsys
 #endif
 
 synth_defs += -D REDMULE_COMPLEX_SYNTH
+synth_defs += -D SYNTHESIS

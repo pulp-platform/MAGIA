@@ -2,7 +2,9 @@
 Bender.lock
 bender
 scripts/compile.tcl
+scripts/synth_compile.tcl
 update-ips.log
+synth-ips.log
 build-hw.log
 profile-ips.log
 magia_venv/
