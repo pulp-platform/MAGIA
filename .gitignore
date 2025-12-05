@@ -10,3 +10,14 @@ profile-ips.log
 magia_venv/
 modelsim.ini
 sw/tests/*/
+spatz_cluster/
+
+spatz/bootrom/*.elf
+spatz/bootrom/*.bin
+spatz/bootrom/*.dump
+spatz/bootrom/*.hex
+
+spatz/sw/bin/*.elf
+spatz/sw/bin/*.bin
+spatz/sw/bin/*.dump
+

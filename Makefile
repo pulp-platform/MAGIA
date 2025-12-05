@@ -68,6 +68,7 @@ inst_entry    ?= 0xCC000000
 data_entry    ?= 0xCC010000
 boot_addr     ?= 0xCC000080
 test          ?= hello_world
+spatz_prog    ?= hello_spatz
 mesh_dv       ?= 1
 fast_sim      ?= 0
 # Add here a path to the core traces of each tile you want to monitor
@@ -99,6 +100,10 @@ OBJDUMP=$(ISA)$(XLEN)-unknown-elf-objdump
 CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
 LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
 
+# Spatz embedded binary support (via header)
+SPATZ_SW_DIR   := spatz/sw
+SPATZ_HEADER   := $(SPATZ_SW_DIR)/headers/$(spatz_prog).h
+
 # Setup build object dirs
 CRT=$(TEST_DIR)/$(test)/build/crt0.o
 OBJ=$(TEST_DIR)/$(test)/build/verif.o
@@ -121,7 +126,17 @@ $(STIM_INSTR) $(STIM_DATA): $(BIN)
 	ln -sfn ../../../$(WORK_PATH) $(VSIM_LIBS)
 
 $(BIN): $(CRT) $(OBJ)
-	$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT)
+	@if [ "$(spatz_prog)" != "none" ]; then \
+		if [ ! -f "$(SPATZ_HEADER)" ]; then \
+			echo "[INFO] Building Spatz program header: $(spatz_prog).h"; \
+			$(MAKE) -C $(SPATZ_SW_DIR) test=$(spatz_prog) all || exit 1; \
+		fi; \
+		echo "[CV32-LINK] Linking with embedded Spatz binary (from header)"; \
+		$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT); \
+	else \
+		echo "[CV32-LINK] Linking without Spatz binary"; \
+		$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT); \
+	fi
 
 $(CRT):
 	cd $(TEST_DIR) &&							\
@@ -211,6 +226,7 @@ bender_targs += -t cv32e40p_include_tracer
 # Targets needed to avoid error even though the module is not used
 bender_targs += -t snitch_cluster
 bender_targs += -t idma_test
+bender_targs += -t spatz          # Include Spatz CC files
 
 #ifeq ($(REDMULE_COMPLEX),1)
 #	tb := redmule_complex_tb
@@ -230,6 +246,7 @@ endif
 WAVES        := $(mkfile_path)/wave.do
 bender_targs += -t redmule_hwpe
 
+bender_defs  += -D TARGET_SPATZ
 
 update-ips:
 	$(BENDER) update

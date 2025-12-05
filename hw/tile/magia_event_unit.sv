@@ -67,7 +67,11 @@ import magia_tile_pkg::*;
   output logic                      eu_direct_gnt_o,
   output logic                      eu_direct_rvalid_o,
   output logic [31:0]               eu_direct_rdata_o,
-  output logic                      eu_direct_err_o
+  output logic                      eu_direct_err_o,
+
+   // OBI slave connection
+  input  core_obi_data_req_t        obi_req_i,
+  output core_obi_data_rsp_t        obi_rsp_o
 );
 
   // Create internal interface instances
@@ -93,15 +97,29 @@ import magia_tile_pkg::*;
   assign eu_direct_rdata_o  = eu_direct_link[0].r_rdata;
   assign eu_direct_err_o    = eu_direct_link[0].r_opc;  // r_opc: 0=OK, 1=ERROR
 
-  // Tie off speriph_slave (not used anymore)
-  assign speriph_slave.req   = 1'b0;
-  assign speriph_slave.add   = '0;
-  assign speriph_slave.wen   = 1'b1;
-  assign speriph_slave.wdata = '0;
-  assign speriph_slave.be    = '0;
-  assign speriph_slave.id    = '0;
+  // Address range check and offset calculation
+  localparam logic [magia_pkg::ADDR_W-1:0] EU_BASE_ADDR = magia_tile_pkg::EVENT_UNIT_ADDR_START;
+  logic addr_in_range;
+  logic [magia_pkg::ADDR_W-1:0] addr_offset;
+  
+  assign addr_in_range = (obi_req_i.a.addr >= magia_tile_pkg::EVENT_UNIT_ADDR_START) && 
+                         (obi_req_i.a.addr <= magia_tile_pkg::EVENT_UNIT_ADDR_END);
+  assign addr_offset   = obi_req_i.a.addr - EU_BASE_ADDR;
+  
+  // OBI to XBAR_PERIPH_BUS conversion - pass RELATIVE address (offset from base)
+  assign speriph_slave.req   = obi_req_i.req && addr_in_range;
+  assign speriph_slave.add   = addr_offset;           
+  assign speriph_slave.wen   = ~obi_req_i.a.we;       
+  assign speriph_slave.wdata = obi_req_i.a.wdata;
+  assign speriph_slave.be    = obi_req_i.a.be;
+  assign speriph_slave.id    = '0;                   
 
-
+  // Direct response mapping - no mux needed
+  assign obi_rsp_o.gnt         = speriph_slave.gnt;
+  assign obi_rsp_o.rvalid      = speriph_slave.r_valid;
+  assign obi_rsp_o.r.rdata     = speriph_slave.r_rdata;
+  assign obi_rsp_o.r.err       = speriph_slave.r_opc;  // r_opc: 0=OK, 1=ERROR
+  
 
   // Event Unit Flex instantiation
   event_unit_top #(

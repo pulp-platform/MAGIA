@@ -44,11 +44,11 @@ package magia_pkg;
   localparam int unsigned USR_W            = 1;                               // Default User Width
 
   // Parameters used by the NoC
-  parameter int unsigned AXI_NOC_ID_W      = 4;                                // AXI NoC ID Width: 2 bits on slave port + 2 bits to select from i$, iDMA and core data
+  parameter int unsigned AXI_NOC_ID_W      = 6;                                // AXI NoC ID Width: 3 bits slave ID + 3 bits routing (for 5 slave ports: 2^3=8)
   parameter int unsigned AXI_NOC_U_W       = USR_W;
 
   // Parameters used by the L2
-  parameter int unsigned L2_ID_W           = 2;                                // The ID Width reflects the ID Width of the Tile AXI XBAR
+  parameter int unsigned L2_ID_W           = 3;                                // The ID Width reflects the slave ID Width of the Tile AXI XBAR (for 5 ports: log2(5)=3)
   parameter int unsigned L2_U_W            = 1;
 
   // Parameter used for the Fractal Sync network

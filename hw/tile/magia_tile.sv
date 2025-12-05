@@ -43,8 +43,6 @@ module magia_tile
   parameter int unsigned          N_MEM_BANKS              = magia_pkg::N_MEM_BANKS,         // Number of memory banks 
   parameter int unsigned          N_WORDS_BANK             = magia_pkg::N_WORDS_BANK,        // Number of words per memory bank      
 
-  // Parameters used by the core
-
   // Parameters used by the iDMA
   parameter idma_pkg::error_cap_e ERROR_CAP                = idma_pkg::NO_ERROR_HANDLING     // Error handaling capability of the iDMA
 )(
@@ -127,6 +125,8 @@ module magia_tile
   logic[magia_pkg::ADDR_W-1:0] tile_fsync_ctrl_end_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_event_unit_start_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_event_unit_end_addr;
+  logic[magia_pkg::ADDR_W-1:0] tile_spatz_ctrl_start_addr;
+  logic[magia_pkg::ADDR_W-1:0] tile_spatz_ctrl_end_addr;
   
   magia_tile_pkg::redmule_data_req_t redmule_data_req;
   magia_tile_pkg::redmule_data_rsp_t redmule_data_rsp;
@@ -142,8 +142,8 @@ module magia_tile
   magia_tile_pkg::core_obi_data_req_t core_obi_data_req;
   magia_tile_pkg::core_obi_data_rsp_t core_obi_data_rsp;
 
-  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_req; // Index 0 -> L2, Index 1 -> L1SPM, Index 2 -> RedMulE_ctrl, Index 3 -> iDMA_ctrl, Index 4 -> FSync_ctrl
-  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_rsp; // Index 0 -> L2, Index 1 -> L1SPM, Index 2 -> RedMulE_ctrl, Index 3 -> iDMA_ctrl, Index 4 -> FSync_ctrl
+  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_req; // Index 0 -> L2, Index 1 -> L1SPM, Index 2 -> RedMulE_ctrl, Index 3 -> iDMA_ctrl, Index 4 -> FSync_ctrl, Index 5 -> Event_Unit Index 6 -> Spatz_ctrl
+  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_rsp; // Index 0 -> L2, Index 1 -> L1SPM, Index 2 -> RedMulE_ctrl, Index 3 -> iDMA_ctrl, Index 4 -> FSync_ctrl, Index 5 -> Event_Unit Index 6 -> Spatz_ctrl
 
   magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_cut_req; // Index 0 -> L2, Index 1 -> L1SPM
   magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_cut_rsp; // Index 0 -> L2, Index 1 -> L1SPM
@@ -151,11 +151,11 @@ module magia_tile
   magia_tile_pkg::core_obi_data_req_t core_l1_data_amo_req;
   magia_tile_pkg::core_obi_data_rsp_t core_l1_data_amo_rsp;
 
-  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_MGR-1:0] obi_xbar_slv_req; // Index 0 -> core request, Index 1 -> ext request
-  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_MGR-1:0] obi_xbar_slv_rsp; // Index 0 -> core request, Index 1 -> ext request
+  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_MGR-1:0] obi_xbar_slv_req; // Index 0 -> CV32, Index 1 -> ext, Index 2 -> Spatz
+  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_MGR-1:0] obi_xbar_slv_rsp; // Index 0 -> CV32, Index 1 -> ext, Index 2 -> Spatz
 
-  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_MGR-1:0] obi_xbar_slv_cut_req; // Index 0 -> core request, Index 1 -> ext request
-  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_MGR-1:0] obi_xbar_slv_cut_rsp; // Index 0 -> core request, Index 1 -> ext request
+  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_MGR-1:0] obi_xbar_slv_cut_req; // Index 0 -> CV32, Index 1 -> ext, Index 2 -> Spatz
+  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_MGR-1:0] obi_xbar_slv_cut_rsp; // Index 0 -> CV32, Index 1 -> ext, Index 2 -> Spatz
 
   magia_tile_pkg::core_obi_data_req_t ext_obi_data_req;
   magia_tile_pkg::core_obi_data_rsp_t ext_obi_data_rsp;
@@ -196,8 +196,8 @@ module magia_tile
   magia_tile_pkg::idma_hci_req_t idma_hci_write_req;
   magia_tile_pkg::idma_hci_rsp_t idma_hci_write_rsp;
 
-  magia_tile_pkg::axi_xbar_slv_req_t[magia_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_data_in_req; // Index 3 -> ext, Index 2 -> iDMA, Index 1 -> Core Data, Index 0 -> Core Instruction
-  magia_tile_pkg::axi_xbar_slv_rsp_t[magia_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_data_in_rsp; // Index 3 -> ext, Index 2 -> iDMA, Index 1 -> Core Data, Index 0 -> Core Instruction
+  magia_tile_pkg::axi_xbar_slv_req_t[magia_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_data_in_req; // Index 4 -> Spatz I$, Index 3 -> ext, Index 2 -> iDMA, Index 1 -> Core Data, Index 0 -> CV32 I$
+  magia_tile_pkg::axi_xbar_slv_rsp_t[magia_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_data_in_rsp; // Index 4 -> Spatz I$, Index 3 -> ext, Index 2 -> iDMA, Index 1 -> Core Data, Index 0 -> CV32 I$
 
   magia_pkg::axi_xbar_mst_req_t[magia_tile_pkg::AxiXbarNoMstPorts-1:0] axi_xbar_mst_req;
   magia_pkg::axi_xbar_mst_rsp_t[magia_tile_pkg::AxiXbarNoMstPorts-1:0] axi_xbar_mst_rsp;
@@ -290,6 +290,29 @@ module magia_tile
   logic [0:0]                         eu_core_clk_en;     // [0:0] array
   logic [0:0]                         eu_core_dbg_req;    // [0:0] array
 
+  // Spatz CC signals
+  snitch_pkg::interrupts_t spatz_irq;
+  magia_tile_pkg::core_hci_data_req_t [magia_tile_pkg::SPATZ_HCI_PORTS-1:0] spatz_hci_req;
+  magia_tile_pkg::core_hci_data_rsp_t [magia_tile_pkg::SPATZ_HCI_PORTS-1:0] spatz_hci_rsp;
+  magia_tile_pkg::core_obi_data_req_t spatz_obi_req;
+  magia_tile_pkg::core_obi_data_rsp_t spatz_obi_rsp;
+  logic        spatz_inst_req;         
+  logic [31:0] spatz_inst_addr;        
+  logic        spatz_inst_cacheable;    
+  logic        spatz_flush_i_valid;     
+  logic [31:0] spatz_inst_data;         
+  logic        spatz_inst_ready;        
+  logic        spatz_inst_error;        
+  logic        spatz_flush_i_ready;  
+  logic spatz_enable_prefetching;
+  snitch_pkg::core_events_t spatz_core_events;   
+  magia_tile_pkg::core_axi_instr_req_t  spatz_icache_axi_req;
+  magia_tile_pkg::core_axi_instr_rsp_t  spatz_icache_axi_rsp;
+  logic spatz_start;
+  logic spatz_done;
+  logic spatz_clk_en;     
+  logic spatz_clk;       
+
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
 /*******************************************************/
@@ -308,6 +331,8 @@ module magia_tile
   assign tile_fsync_ctrl_end_addr   = magia_tile_pkg::FSYNC_CTRL_ADDR_END;
   assign tile_event_unit_start_addr = magia_tile_pkg::EVENT_UNIT_ADDR_START;
   assign tile_event_unit_end_addr   = magia_tile_pkg::EVENT_UNIT_ADDR_END;
+  assign tile_spatz_ctrl_start_addr  = magia_tile_pkg::SPATZ_CTRL_ADDR_START;
+  assign tile_spatz_ctrl_end_addr    = magia_tile_pkg::SPATZ_CTRL_ADDR_END;
 
   assign obi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START,    end_addr: magia_tile_pkg::L2_ADDR_END    };
   assign obi_xbar_rule[magia_tile_pkg::L1SPM_IDX]    = '{idx: 32'd1, start_addr: tile_l1_start_addr,               end_addr: tile_l1_end_addr               };
@@ -316,12 +341,15 @@ module magia_tile
   assign obi_xbar_rule[magia_tile_pkg::REDMULE_CTRL_IDX] = '{idx: 32'd2, start_addr: tile_redmule_ctrl_start_addr, end_addr: tile_redmule_ctrl_end_addr     };
   assign obi_xbar_rule[magia_tile_pkg::IDMA_IDX]     = '{idx: 32'd3, start_addr: tile_idma_ctrl_start_addr,        end_addr: tile_idma_ctrl_end_addr        };
   assign obi_xbar_rule[magia_tile_pkg::FSYNC_CTRL_IDX] = '{idx: 32'd4, start_addr: tile_fsync_ctrl_start_addr,     end_addr: tile_fsync_ctrl_end_addr       };
+  assign obi_xbar_rule[magia_tile_pkg::EVENT_UNIT_IDX] = '{idx: 32'd5, start_addr: tile_event_unit_start_addr,     end_addr: tile_event_unit_end_addr       };
+  assign obi_xbar_rule[magia_tile_pkg::SPATZ_CTRL_IDX]  = '{idx: 32'd6, start_addr: tile_spatz_ctrl_start_addr,  end_addr: tile_spatz_ctrl_end_addr         };
 
 
-  assign axi_xbar_rule[magia_tile_pkg::L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START, end_addr: magia_tile_pkg::L2_ADDR_END };
-  assign axi_xbar_rule[magia_tile_pkg::L1SPM_IDX]    = '{idx: 32'd1, start_addr: tile_l1_start_addr,            end_addr: tile_l1_end_addr            };
-  assign axi_xbar_rule[magia_tile_pkg::RESERVED_IDX] = '{idx: 32'd1, start_addr: tile_reserved_start_addr,      end_addr: tile_reserved_end_addr      };
-  
+  assign axi_xbar_rule[magia_tile_pkg::AXI_L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START,   end_addr: magia_tile_pkg::L2_ADDR_END };
+  assign axi_xbar_rule[magia_tile_pkg::AXI_L1SPM_IDX]    = '{idx: 32'd1, start_addr: tile_l1_start_addr,              end_addr: tile_l1_end_addr            };
+  assign axi_xbar_rule[magia_tile_pkg::AXI_RESERVED_IDX] = '{idx: 32'd1, start_addr: tile_reserved_start_addr,        end_addr: tile_reserved_end_addr      };
+  assign axi_xbar_rule[magia_tile_pkg::AXI_BOOTROM_IDX]  = '{idx: 32'd2, start_addr: magia_tile_pkg::SPATZ_BOOT_ADDR, end_addr: magia_tile_pkg::SPATZ_BOOT_ADDR + magia_tile_pkg::SPATZ_BOOTROM_SIZE};
+
   assign obi_xbar_en_default_idx = '1; // Routing to the AXI Xbar all requests with an address outside the range of the internal L1 and the external L2
   assign obi_xbar_default_idx    = '0;
 
@@ -331,11 +359,15 @@ module magia_tile
   assign core_l2_data_rsp                                         = axi_xbar_data_in_rsp[magia_tile_pkg::AXI_CORE_DATA_IDX];
   assign axi_xbar_data_in_req[magia_tile_pkg::AXI_CORE_INSTR_IDX] = core_l2_instr_req;
   assign core_l2_instr_rsp                                        = axi_xbar_data_in_rsp[magia_tile_pkg::AXI_CORE_INSTR_IDX];
+  assign axi_xbar_data_in_req[magia_tile_pkg::AXI_SPATZ_INSTR_IDX]= spatz_icache_axi_req;
+  assign spatz_icache_axi_rsp                                     = axi_xbar_data_in_rsp[magia_tile_pkg::AXI_SPATZ_INSTR_IDX];
 
-  assign obi_xbar_slv_req[magia_tile_pkg::OBI_CORE_IDX] = core_obi_data_req;
-  assign core_obi_data_rsp                              = obi_xbar_slv_rsp[magia_tile_pkg::OBI_CORE_IDX];
-  assign obi_xbar_slv_req[magia_tile_pkg::OBI_EXT_IDX]  = ext_obi_data_req;
-  assign ext_obi_data_rsp                               = obi_xbar_slv_rsp[magia_tile_pkg::OBI_EXT_IDX];
+  assign obi_xbar_slv_req[magia_tile_pkg::OBI_CORE_IDX]  = core_obi_data_req;
+  assign core_obi_data_rsp                               = obi_xbar_slv_rsp[magia_tile_pkg::OBI_CORE_IDX];
+  assign obi_xbar_slv_req[magia_tile_pkg::OBI_EXT_IDX]   = ext_obi_data_req;
+  assign ext_obi_data_rsp                                = obi_xbar_slv_rsp[magia_tile_pkg::OBI_EXT_IDX];
+  assign obi_xbar_slv_req[magia_tile_pkg::OBI_SPATZ_IDX] = spatz_obi_req;
+  assign spatz_obi_rsp                                   = obi_xbar_slv_rsp[magia_tile_pkg::OBI_SPATZ_IDX];
 
   assign axi_data_user     = '0;
   assign obi_rsp_data_user = '0;
@@ -519,36 +551,36 @@ module magia_tile
     .axi_req_t    ( magia_pkg::axi_xbar_mst_req_t           ),
     .axi_rsp_t    ( magia_pkg::axi_xbar_mst_rsp_t           )
   ) i_ext_data_axi2obi (
-    .clk_i                  ( sys_clk                                       ),
-    .rst_ni                 ( rst_ni                                        ),
-    .testmode_i             ( test_mode_i                                   ),
-    .axi_req_i              ( axi_xbar_mst_req[magia_tile_pkg::OBI_EXT_IDX] ),
-    .axi_rsp_o              ( axi_xbar_mst_rsp[magia_tile_pkg::OBI_EXT_IDX] ),
-    .obi_req_o              ( ext_obi_data_req                              ),
-    .obi_rsp_i              ( ext_obi_data_rsp                              ),
-    .req_aw_id_o            (                                               ),
-    .req_aw_user_o          (                                               ),
-    .req_w_user_o           (                                               ),
-    .req_write_aid_i        ( axi2obi_req_write_aid                         ),
-    .req_write_auser_i      ( axi2obi_req_write_auser                       ),
-    .req_write_wuser_i      ( axi2obi_req_write_wuser                       ),
-    .req_ar_id_o            (                                               ),
-    .req_ar_user_o          (                                               ),
-    .req_read_aid_i         ( axi2obi_req_read_aid                          ),
-    .req_read_auser_i       ( axi2obi_req_read_auser                        ),
-    .rsp_write_aw_user_o    (                                               ),
-    .rsp_write_w_user_o     (                                               ),
-    .rsp_write_bank_strb_o  (                                               ),
-    .rsp_write_rid_o        (                                               ),
-    .rsp_write_ruser_o      (                                               ),
-    .rsp_write_last_o       (                                               ),
-    .rsp_write_hs_o         (                                               ),
-    .rsp_b_user_i           ( axi2obi_rsp_b_user                            ),
-    .rsp_read_ar_user_o     (                                               ),
-    .rsp_read_size_enable_o (                                               ),
-    .rsp_read_rid_o         (                                               ),
-    .rsp_read_ruser_o       (                                               ),
-    .rsp_r_user_i           ( axi2obi_rsp_r_user                            )
+    .clk_i                  ( sys_clk                                                ),
+    .rst_ni                 ( rst_ni                                                 ),
+    .testmode_i             ( test_mode_i                                            ),
+    .axi_req_i              ( axi_xbar_mst_req[magia_tile_pkg::AXI_XBAR_MST_INT_IDX] ),
+    .axi_rsp_o              ( axi_xbar_mst_rsp[magia_tile_pkg::AXI_XBAR_MST_INT_IDX] ),
+    .obi_req_o              ( ext_obi_data_req                                       ),
+    .obi_rsp_i              ( ext_obi_data_rsp                                       ),
+    .req_aw_id_o            (                                                        ),
+    .req_aw_user_o          (                                                        ),
+    .req_w_user_o           (                                                        ),
+    .req_write_aid_i        ( axi2obi_req_write_aid                                  ),
+    .req_write_auser_i      ( axi2obi_req_write_auser                                ),
+    .req_write_wuser_i      ( axi2obi_req_write_wuser                                ),
+    .req_ar_id_o            (                                                        ),
+    .req_ar_user_o          (                                                        ),
+    .req_read_aid_i         ( axi2obi_req_read_aid                                   ),
+    .req_read_auser_i       ( axi2obi_req_read_auser                                 ),
+    .rsp_write_aw_user_o    (                                                        ),
+    .rsp_write_w_user_o     (                                                        ),
+    .rsp_write_bank_strb_o  (                                                        ),
+    .rsp_write_rid_o        (                                                        ),
+    .rsp_write_ruser_o      (                                                        ),
+    .rsp_write_last_o       (                                                        ),
+    .rsp_write_hs_o         (                                                        ),
+    .rsp_b_user_i           ( axi2obi_rsp_b_user                                     ),
+    .rsp_read_ar_user_o     (                                                        ),
+    .rsp_read_size_enable_o (                                                        ),
+    .rsp_read_rid_o         (                                                        ),
+    .rsp_read_ruser_o       (                                                        ),
+    .rsp_r_user_i           ( axi2obi_rsp_r_user                                     )
   );
 
   // RedMule controller OBI-to-HWPE control interface
@@ -585,6 +617,14 @@ module magia_tile
     .en_i      ( core_clk_en ),
     .test_en_i ( test_mode_i ),
     .clk_o     ( core_clk    )
+  );
+
+  // Spatz clock gating controlled by obi_slave_ctrl_spatz
+  tc_clk_gating spatz_clock_gating (
+    .clk_i     ( sys_clk       ),
+    .en_i      ( spatz_clk_en  ),
+    .test_en_i ( test_mode_i   ),
+    .clk_o     ( spatz_clk     )
   );
 
 /*******************************************************/
@@ -645,13 +685,18 @@ module magia_tile
 /**          Interface Assignments Beginning          **/
 /*******************************************************/
 
-  `HCI_ASSIGN_TO_INTF(hci_core_if[0],                                   core_l1_data_req,   core_l1_data_rsp)   // Only 1 core supported
-  `HCI_ASSIGN_TO_INTF(hci_redmule_if[0],                                redmule_data_req,   redmule_data_rsp)   // Only 1 RedMulE supported
+  `HCI_ASSIGN_TO_INTF(hci_core_if[0],                                   core_l1_data_req,      core_l1_data_rsp)      // CV32E40P
+  `HCI_ASSIGN_TO_INTF(hci_core_if[1],                                   spatz_hci_req[0],      spatz_hci_rsp[0])      // Snitch HCI port 0
+  `HCI_ASSIGN_TO_INTF(hci_core_if[2],                                   spatz_hci_req[1],      spatz_hci_rsp[1])      // Spatz HCI port 0
+  `HCI_ASSIGN_TO_INTF(hci_core_if[3],                                   spatz_hci_req[2],      spatz_hci_rsp[2])      // Spatz HCI port 1
+  `HCI_ASSIGN_TO_INTF(hci_core_if[4],                                   spatz_hci_req[3],      spatz_hci_rsp[3])      // Spatz HCI port 2
+  `HCI_ASSIGN_TO_INTF(hci_core_if[5],                                   spatz_hci_req[4],      spatz_hci_rsp[4])      // Spatz HCI port 3
+  `HCI_ASSIGN_TO_INTF(hci_redmule_if[0],                                redmule_data_req,      redmule_data_rsp)      // RedMulE
   `HCI_ASSIGN_TO_INTF(hci_dma_if[magia_tile_pkg::HCI_DMA_CH_READ_IDX],  idma_hci_read_req,  idma_hci_read_rsp)  // iDMA HCI read channel
   `HCI_ASSIGN_TO_INTF(hci_dma_if[magia_tile_pkg::HCI_DMA_CH_WRITE_IDX], idma_hci_write_req, idma_hci_write_rsp) // iDMA HCI write channel
 
-  `AXI_ASSIGN_REQ_STRUCT(axi_xbar_data_out_req, axi_xbar_mst_req[magia_tile_pkg::OBI_CORE_IDX])
-  `AXI_ASSIGN_RESP_STRUCT(axi_xbar_mst_rsp[magia_tile_pkg::OBI_CORE_IDX], axi_xbar_data_out_rsp)
+  `AXI_ASSIGN_REQ_STRUCT(axi_xbar_data_out_req, axi_xbar_mst_req[magia_tile_pkg::AXI_XBAR_MST_EXT_IDX])
+  `AXI_ASSIGN_RESP_STRUCT(axi_xbar_mst_rsp[magia_tile_pkg::AXI_XBAR_MST_EXT_IDX], axi_xbar_data_out_rsp)
 
 /*******************************************************/
 /**             Interface Assignments End             **/
@@ -1218,14 +1263,32 @@ module magia_tile
 /*******************************************************/
 /**                Fractal Sync Out End               **/
 /*******************************************************/
+/**              Spatz Control Slave Beginning        **/
+/*******************************************************/
+
+  obi_slave_ctrl_spatz #(
+    .BaseAddr  ( magia_tile_pkg::SPATZ_CTRL_ADDR_START )
+  ) i_spatz_ctrl (
+    .clk_i     ( sys_clk                               ),
+    .rst_ni    ( rst_ni                                ),
+    .obi_req_i ( core_mem_data_req[6]                  ),  
+    .obi_rsp_o ( core_mem_data_rsp[6]                  ),
+    .clk_en_o  ( spatz_clk_en                          ),  
+    .start_o   ( spatz_start                           ),  
+    .done_o    ( spatz_done                            )  
+  );
+
+/*******************************************************/
+/**              Spatz Control Slave End              **/
+/*******************************************************/
 /**                 Event Unit Beginning              **/
 /*******************************************************/
 
   // Event array assignments for proper 2D array structure
-  assign acc_events_array[0]     = {redmule_evt[0][1], redmule_evt[0][0], redmule_busy, 1'b0};
+  assign acc_events_array[0]     = {redmule_evt[0][1], redmule_evt[0][0], redmule_busy, spatz_done};
   assign dma_events_array[0]     = {idma_o2a_done, idma_a2o_done};
   assign timer_events_array[0]   = 2'b00;
-  assign other_events_array[0] = {idma_o2a_busy, idma_a2o_busy, idma_o2a_start, idma_a2o_start, idma_o2a_error, idma_a2o_error, fsync_error, fsync_done, 24'b0};  // iDMA status events [31:28]|idma_o2a_error, idma_a2o_error, iDMA error events [27:26]|fsync_error, fsync_done, Fsync events [25:24]                                                        // Reserved [23:0] - SW events are INTERNAL to Event Unit!
+  assign other_events_array[0] =   {idma_o2a_busy, idma_a2o_busy, idma_o2a_start, idma_a2o_start, idma_o2a_error, idma_a2o_error, fsync_error, fsync_done, spatz_start, 23'b0};  // iDMA status events [31:28]|iDMA errors [27:26]|Fsync [25:24]|Spatz start [23]|Reserved [22:0]
 
  
   magia_event_unit #(
@@ -1243,10 +1306,10 @@ module magia_tile
     .test_mode_i      ( test_mode_i                                ),
 
     // Event inputs - single core arrays
-    .acc_events_i     ( acc_events_array     ),                    // Accelerator events
-    .dma_events_i     ( dma_events_array     ),                    // iDMA completion events  
-    .timer_events_i   ( timer_events_array   ),
-    .other_events_i   ( other_events_array   ),                   // Combined events
+    .acc_events_i     ( acc_events_array                           ),                   
+    .dma_events_i     ( dma_events_array                           ),                      
+    .timer_events_i   ( timer_events_array                         ),
+    .other_events_i   ( other_events_array                         ),                   
 
     // Core IRQ interface
     .core_irq_req_o   ( eu_core_irq_req                            ),
@@ -1255,14 +1318,14 @@ module magia_tile
     .core_irq_ack_id_i( eu_core_irq_ack_id                         ),
 
     // Core control
-    .core_busy_i      ( core_busy_o                              ),
+    .core_busy_i      ( core_busy_o                                ),
     .core_clock_en_o  ( eu_core_clk_en                             ),
 
     // Debug
     .dbg_req_i        ( debug_req_i                                ),
     .core_dbg_req_o   ( eu_core_dbg_req                            ),
 
-    // EU Direct Link Interface - abstract types
+    // EU Direct Link Interface
     .eu_direct_req_i      ( eu_direct_req.req                      ),
     .eu_direct_addr_i     ( eu_direct_req.addr                     ),
     .eu_direct_wen_i      ( eu_direct_req.wen                      ),
@@ -1271,11 +1334,171 @@ module magia_tile
     .eu_direct_gnt_o      ( eu_direct_rsp.gnt                      ),
     .eu_direct_rvalid_o   ( eu_direct_rsp.rvalid                   ),
     .eu_direct_rdata_o    ( eu_direct_rsp.rdata                    ),
-    .eu_direct_err_o      ( eu_direct_rsp.err                      )
+    .eu_direct_err_o      ( eu_direct_rsp.err                      ),
+    
+    // OBI Peripheral Slave Interface
+    .obi_req_i        ( core_mem_data_req[5]                       ),
+    .obi_rsp_o        ( core_mem_data_rsp[5]                       )
   );
 
 /*******************************************************/
 /**                    Event Unit End                 **/
+/*******************************************************/
+
+/*******************************************************/
+/**                  Spatz CC Beginning               **/
+/*******************************************************/
+  // Spatz interrupt signals
+  assign spatz_irq.msip      = 1'b0;              // Machine software interrupt (unused - no multi-core)
+  assign spatz_irq.mtip      = 1'b0;              // Machine timer interrupt (unused)
+  assign spatz_irq.meip      = spatz_start;       // Machine external interrupt - from obi_slave_ctrl_spatz
+  assign spatz_irq.mcip      = 1'b0;              // Machine cluster-local interrupt (unused - no cluster)
+  assign spatz_irq.debug     = 1'b0;              // Debug request from external debugger
+
+  spatz_cc_wrapper #(
+    .AddrWidth         ( magia_pkg::ADDR_W                       ),
+    .DataWidth         ( magia_pkg::DATA_W                       ),
+    .UserWidth         ( magia_tile_pkg::AXI_DATA_U_W            ),
+    .DMADataWidth      ( magia_pkg::DATA_W                       ),
+    .NumSpatzFPUs      ( SPATZ_NUM_FPU                           ),
+    .NumSpatzIPUs      ( SPATZ_NUM_IPU                           ),
+    .BootAddr          ( magia_tile_pkg::SPATZ_BOOT_ADDR         ),
+    .RVF               ( 1'b1                                    ),
+    .RVD               ( 1'b0                                    ),
+    .RVV               ( 1'b1                                    )
+  ) i_spatz_cc_core (
+    .clk_i             ( spatz_clk                               ),  // Use gated clock
+    .rst_ni            ( rst_ni                                  ),
+    .test_mode_i       ( test_mode_i                             ),
+    
+    // Hart ID
+    .hart_id_i         ( mhartid_i                               ),  // Same as CV32
+    
+    // Interrupts
+    .irq_i             ( spatz_irq                               ),
+    
+    // HCI Master Interface - Connect to HCI interconnect
+    .hci_master_req_o  ( spatz_hci_req                           ),
+    .hci_master_rsp_i  ( spatz_hci_rsp                           ),
+    
+    // OBI Master Interface - Connect to OBI crossbar
+    .obi_master_req_o  ( spatz_obi_req                           ),
+    .obi_master_rsp_i  ( spatz_obi_rsp                           ),
+    
+    // Instruction Cache Interface
+    .inst_req_o        ( spatz_inst_req                          ),
+    .inst_addr_o       ( spatz_inst_addr                         ),
+    .inst_cacheable_o  ( spatz_inst_cacheable                    ),
+    .flush_i_valid_o   ( spatz_flush_i_valid                     ),
+    .inst_data_i       ( spatz_inst_data                         ),
+    .inst_ready_i      ( spatz_inst_ready                        ),
+    .inst_error_i      ( spatz_inst_error                        ),
+    .flush_i_ready_i   ( spatz_flush_i_ready                     ),
+    
+    // Events and status
+    .core_events_o     ( spatz_core_events                       )
+  );
+
+/*******************************************************/
+/**                    Spatz CC End                   **/
+/*******************************************************/
+/**              Spatz ICache Beginning               **/
+/*******************************************************/
+
+  assign spatz_enable_prefetching = 1'b0;  
+
+  snitch_icache #(
+    .NR_FETCH_PORTS     ( 1                                                                         ), // Single Spatz CC core
+    .L0_LINE_COUNT      ( 8                                                  ), // L0 cache lines
+    .LINE_WIDTH         ( magia_tile_pkg::SPATZ_ICACHE_LINE_WIDTH            ), // 128 bits
+    .LINE_COUNT         ( magia_tile_pkg::SPATZ_ICACHE_LINE_COUNT            ), // 32 lines
+    .SET_COUNT          ( magia_tile_pkg::SPATZ_ICACHE_WAYS                  ), // 2-way set associative
+    .FETCH_AW           ( magia_pkg::ADDR_W                                  ), // Address width
+    .FETCH_DW           ( 32                                                 ), // 32-bit instructions
+    .FILL_AW            ( magia_pkg::ADDR_W                                  ), // AXI address width
+    .FILL_DW            ( magia_pkg::DATA_W                                  ), // AXI data width
+    .SERIAL_LOOKUP      ( 0                                                  ),
+    .L1_TAG_SCM         ( 0                                                  ),
+    .NUM_AXI_OUTSTANDING( 2                                                  ),
+    .EARLY_LATCH        ( 0                                                  ),
+    .L0_EARLY_TAG_WIDTH ( magia_tile_pkg::SPATZ_L0_EARLY_TAG_W               ),
+    .ISO_CROSSING       ( 1'b0                                               ),
+    .axi_req_t          ( magia_tile_pkg::core_axi_instr_req_t               ),
+    .axi_rsp_t          ( magia_tile_pkg::core_axi_instr_rsp_t               )
+  ) i_spatz_cc_icache (
+    .clk_i                ( spatz_clk                                        ), 
+    .clk_d2_i             ( spatz_clk                                        ),  
+    .rst_ni               ( rst_ni                                           ),
+    .enable_prefetching_i ( spatz_enable_prefetching                         ),
+    .icache_l0_events_o   (                                                  ),
+    .icache_l1_events_o   (                                                  ), 
+    .flush_valid_i        ( spatz_flush_i_valid                              ),
+    .flush_ready_o        ( spatz_flush_i_ready                              ),
+    .inst_addr_i          ( spatz_inst_addr                                  ),
+    .inst_cacheable_i     ( spatz_inst_cacheable                             ),
+    .inst_data_o          ( spatz_inst_data                                  ),
+    .inst_valid_i         ( spatz_inst_req                                   ),  
+    .inst_ready_o         ( spatz_inst_ready                                 ),  
+    .inst_error_o         ( spatz_inst_error                                 ),
+    .sram_cfg_tag_i       ( '0                                               ),
+    .sram_cfg_data_i      ( '0                                               ),
+    .axi_req_o            ( spatz_icache_axi_req                             ),
+    .axi_rsp_i            ( spatz_icache_axi_rsp                             )
+  );
+
+/*******************************************************/
+/**                Spatz ICache End                   **/
+/*******************************************************/
+/**            Spatz Bootrom Beginning                **/
+/*******************************************************/
+  // AXI to regbus converter for bootrom
+  magia_tile_pkg::reg_dma_req_t bootrom_reg_req;
+  magia_tile_pkg::reg_dma_rsp_t bootrom_reg_rsp;
+  logic [magia_pkg::AXI_NOC_ID_W-1:0] bootrom_reg_id;
+  logic bootrom_busy;
+
+  axi_to_reg_v2 #(
+    .AxiAddrWidth ( magia_pkg::ADDR_W             ),
+    .AxiDataWidth ( magia_pkg::DATA_W             ),
+    .AxiIdWidth   ( magia_pkg::AXI_NOC_ID_W       ),
+    .AxiUserWidth ( magia_pkg::AXI_NOC_U_W        ),
+    .RegDataWidth ( magia_pkg::DATA_W             ),
+    .axi_req_t    ( magia_pkg::axi_xbar_mst_req_t ),
+    .axi_rsp_t    ( magia_pkg::axi_xbar_mst_rsp_t ),
+    .reg_req_t    ( magia_tile_pkg::reg_dma_req_t ),
+    .reg_rsp_t    ( magia_tile_pkg::reg_dma_rsp_t )
+  ) i_axi_to_reg_bootrom (
+    .clk_i      ( sys_clk                                                     ),
+    .rst_ni     ( rst_ni                                                      ),
+    .axi_req_i  ( axi_xbar_mst_req[magia_tile_pkg::AXI_XBAR_MST_BOOTROM_IDX]  ),
+    .axi_rsp_o  ( axi_xbar_mst_rsp[magia_tile_pkg::AXI_XBAR_MST_BOOTROM_IDX]  ),
+    .reg_req_o  ( bootrom_reg_req                                             ),
+    .reg_rsp_i  ( bootrom_reg_rsp                                             ),
+    .reg_id_o   ( bootrom_reg_id                                              ),
+    .busy_o     ( bootrom_busy                                                )
+  );
+
+  // Spatz bootrom module (generated from spatz_init.S)
+  spatz_bootrom i_spatz_bootrom (
+    .clk_i   ( sys_clk                 ),
+    .req_i   ( bootrom_reg_req.valid   ),
+    .addr_i  ( bootrom_reg_req.addr    ),
+    .rdata_o ( bootrom_reg_rsp.rdata   )
+  );
+  
+  // Regbus response handling instead of macro
+  always_ff @(posedge sys_clk or negedge rst_ni) begin
+    if (!rst_ni) begin
+      bootrom_reg_rsp.ready <= 1'b0;
+    end else begin
+      bootrom_reg_rsp.ready <= bootrom_reg_req.valid;
+    end
+  end
+  
+  assign bootrom_reg_rsp.error = 1'b0;
+
+/*******************************************************/
+/**              Spatz Bootrom End                    **/
 /*******************************************************/
 
 endmodule: magia_tile
