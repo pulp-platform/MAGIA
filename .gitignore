@@ -10,7 +10,6 @@ profile-ips.log
 magia_venv/
 modelsim.ini
 sw/tests/*/
-spatz_cluster/
 
 spatz/bootrom/*.elf
 spatz/bootrom/*.bin
