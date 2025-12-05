@@ -4,6 +4,7 @@
 //
 // Auto-generated bootrom for Spatz core complex
 // Generated from: spatz_init.bin
+// Size: 140 bytes (35 words)
 
 module spatz_bootrom #(
   parameter int unsigned DataWidth = 32,
