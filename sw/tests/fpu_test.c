@@ -41,6 +41,7 @@ inline uint32_t f_add(volatile uint32_t op_a, volatile uint32_t op_b){
 int main(void) {
   uint32_t exit_code;
   
+#ifndef CV32E40X
   volatile float a, b, c;
   a = A_VAL;
   b = B_VAL;
@@ -51,13 +52,13 @@ int main(void) {
    }else{
      printf("Test PASSED\n");
    }
-
-/*
+#else
   uint32_t a, b, c;
   a = 0x414570A4; // Binary for 12.34f
   b = 0x42631EB8; // Binary for 56.78f
   c = f_add(a, b);
   printf("Float operation result: 0x%0x [expected: 0x428A3D71(69.12f)]\n", c);
-*/
+#endif
+
   return 0;
 }

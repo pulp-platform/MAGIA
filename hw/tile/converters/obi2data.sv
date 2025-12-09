@@ -30,6 +30,8 @@ module obi2data_rsp
   assign data_rsp_o.rvalid = obi_rsp_i.rvalid;
   assign data_rsp_o.rdata  = obi_rsp_i.r.rdata;
   assign data_rsp_o.err    = obi_rsp_i.r.err;
-  // cv32e40p doesn't support exclusive access - exokay field removed
+`ifdef CV32E40X
+  assign data_rsp_o.exokay = obi_rsp_i.r.r_optional.exokay;
+`endif
 
 endmodule: obi2data_rsp

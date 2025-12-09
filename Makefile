@@ -20,7 +20,11 @@
  
 
 # Paths to folders
+ROOT_DIR       := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+core           ?= CV32E40X
+
 MAGIA_DIR  ?= $(shell pwd)
+
 SW             ?= sw
 BUILD_DIR      ?= sim/work
 ifneq (,$(wildcard /etc/iis.version))
@@ -34,7 +38,11 @@ BENDER_DIR     ?= .
 ISA            ?= riscv
 ARCH           ?= rv
 XLEN           ?= 32
-XTEN           ?= imfcxpulpv2
+ifeq ($(CORE), CV32E40X)
+  XTEN         ?= imafc
+else
+  XTEN         ?= imfcxpulpv2
+endif
 ABI            ?= ilp
 XABI           ?= f
 
@@ -84,6 +92,10 @@ endif
 
 ifeq ($(debug),1)
 	FLAGS += -DDEBUG
+endif
+
+ifeq ($(CORE), CV32E40X)
+  FLAGS += -DCV32E40X
 endif
 
 # Include directories
@@ -203,6 +215,9 @@ include bender_sim.mk
 include bender_synth.mk
 include bender_profile.mk
 
+ifeq ($(CORE), CV32E40X)
+  bender_defs += -D COREV_ASSERT_OFF
+endif
 
 bender_targs += -t rtl
 bender_targs += -t test
@@ -229,8 +244,12 @@ else
 	tb         := magia_tile_tb
 endif
 WAVES        := $(mkfile_path)/wave.do
-bender_targs += -t redmule_hwpe
-
+ifeq ($(CORE), CV32E40X)
+  bender_targs += -t redmule_complex
+  bender_targs += -t cv32e40x_bhv
+else
+  bender_targs += -t redmule_hwpe
+endif
 
 update-ips:
 	$(BENDER) update

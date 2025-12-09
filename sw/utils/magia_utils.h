@@ -45,11 +45,9 @@
 
 static inline uint32_t get_hartid(){
     uint32_t hartid;
-    // In MAGIA: hartid = tile_id (each tile contains exactly one Flex-V core)
-    // mhartid_i is passed to each magia_tile and represents both tile and hart ID
     asm volatile("csrr %0, mhartid"
                  :"=r"(hartid):);
-    return hartid; // Hart ID = Tile ID in MAGIA architecture
+    return hartid;
 }
 
 static inline void amo_increment(volatile uint32_t addr, volatile uint32_t amnt){
