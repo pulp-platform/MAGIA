@@ -358,7 +358,7 @@ package magia_tile_pkg;
                   '{default: fpnew_pkg::DISABLED}
                 },
     PipeConfig: fpnew_pkg::DISTRIBUTED
-  };
+  };                                                                                    // FPU implementation
 
   typedef struct packed {
     int unsigned                 idx;
