@@ -25,36 +25,48 @@
 #include <stdint.h>
 #include "tinyprintf.h"
 
-
 #define NUM_L1_BANKS (32)
 #define WORDS_BANK   (8192)
 #define BITS_WORD    (32)
 #define BITS_BYTE    (8)
 
-#define REDMULE_BASE   (0x00000100)
-#define REDMULE_END    (0x000001FF)
-#define IDMA_BASE      (0x00000200)
-#define IDMA_END       (0x000005FF)
-#define FSYNC_BASE     (0x00000600)
-#define FSYNC_END      (0x000006FF)
+#define REDMULE_BASE    (0x00000100)
+#define REDMULE_END     (0x000001FF)
+#define IDMA_BASE       (0x00000200)
+#define IDMA_END        (0x000005FF)
+#define FSYNC_BASE      (0x00000600)
+#define FSYNC_END       (0x000006FF)
 #define EVENT_UNIT_BASE (0x00000700)
 #define EVENT_UNIT_END  (0x000016FF)
-#define RESERVED_START (0x00001700)   
-#define RESERVED_END   (0x0000FFFF)   
-#define STACK_START    (0x00010000)
-#define STACK_END      (0x0001FFFF)
-#define L1_BASE        (0x00020000)
-#define L1_SIZE        (0x000DFFFF)
-#define L1_TILE_OFFSET (0x00100000)
-#define L2_BASE        (0xCC000000)
-#define TEST_END_ADDR  (0xCC030000)
+#define RESERVED_START  (0x00001700)   
+#define RESERVED_END    (0x0000FFFF)   
+#define STACK_START     (0x00010000)
+#define STACK_END       (0x0001FFFF)
+#define L1_BASE         (0x00020000)
+#define L1_SIZE         (0x000E0000)
+#define L1_TILE_OFFSET  (0x00100000)
+#define L2_BASE         (0xCC000000)
+#define TEST_END_ADDR   (0xCC030000)
 
 #define DEFAULT_EXIT_CODE (0xDEFC)
 #define PASS_EXIT_CODE    (0xAAAA)
 #define FAIL_EXIT_CODE    (0xFFFF)
 
-// Individual IRQ indices removed - Event Unit provides unified interrupt management
+// Individual IRQ indices unnecessary - Event Unit provides unified interrupt management
 // Use Event Unit API (event_unit_utils.h) for event handling
+#define IRQ_REDMULE_EVT_0 (31)
+#define IRQ_REDMULE_EVT_1 (30)
+#define IRQ_A2O_ERROR     (29)
+#define IRQ_O2A_ERROR     (28)
+#define IRQ_A2O_DONE      (27)
+#define IRQ_O2A_DONE      (26)
+#define IRQ_A2O_START     (25)
+#define IRQ_O2A_START     (24)
+#define IRQ_A2O_BUSY      (23)
+#define IRQ_O2A_BUSY      (22)
+#define IRQ_REDMULE_BUSY  (21)
+#define IRQ_FSYNC_DONE    (20)
+#define IRQ_FSYNC_ERROR   (19)
 
 #define mmio64(x) (*(volatile uint64_t *)(x))
 #define mmio32(x) (*(volatile uint32_t *)(x))
@@ -111,19 +123,32 @@ static inline void sentinel_end(){
 }
 
 static inline void ccount_en(){
+#ifdef CV32E40X
+    asm volatile("csrrci zero, 0x320, 0x1" ::);
+#else
     uint32_t pcmr = 1;
     asm volatile("csrw 0x7e1, %0" ::"r"(pcmr));
+#endif
 }
 
 static inline void ccount_dis(){
+#ifdef CV32E40X
+    asm volatile("csrrsi zero, 0x320, 0x1" ::);
+#else
     uint32_t pcmr = 0;
     asm volatile("csrw 0x7e1, %0" ::"r"(pcmr));
+#endif
 }
 
 static inline uint32_t get_cyclel(){
     uint32_t cyclel;
+#ifdef CV32E40X
+    asm volatile("csrr %0, cycle"
+                 :"=r"(cyclel):);
+#else
     asm volatile("csrr %0, 0x780"
                  :"=r"(cyclel):);
+#endif
     return cyclel;
 }
 
@@ -143,14 +168,18 @@ uint32_t get_cycle(){
 
 static inline uint32_t get_timel(){
     uint32_t timel;
+#ifdef CV32E40X
+    asm volatile("csrr %0, time"
+                 :"=r"(timel):);
+#else
     asm volatile("csrr %0, 0x781"
                  :"=r"(timel):);
+#endif
     return timel;
 }
 
 static inline uint32_t get_timeh(){
     uint32_t timeh;
-    // RI5CY doesn't have separate timeh, return 0
     asm volatile("csrr %0, timeh"
                  :"=r"(timeh):);
     return timeh;
@@ -161,30 +190,6 @@ uint32_t get_time(){
     uint32_t timeh = get_timeh();
     if (timeh) return 0;
     return timel;
-}
-
-static inline uint32_t get_mhartid(){
-    uint32_t mhartid;
-    asm volatile("csrr %0, mhartid"
-                 :"=r"(mhartid):);
-    return mhartid;
-}
-
-static inline uint32_t get_cluster_id(){
-    // In MAGIA: cluster_id comes from bits [9:4] of mhartid (to match hardware mapping)
-    uint32_t mhartid = get_mhartid();
-    return (mhartid >> 4) & 0x3F; // Extract mhartid[9:4] - 6 bits for cluster_id
-}
-
-static inline uint32_t get_core_id(){
-    // In MAGIA: core_id comes from lower 4 bits of mhartid (tile/hart ID)
-    uint32_t mhartid = get_mhartid();
-    return mhartid & 0xF; // Extract mhartid[3:0] - 4 bits for core_id
-}
-
-static inline uint32_t get_tile_id(){
-    // In MAGIA: tile ID = hart ID (full mhartid value)
-    return get_mhartid();
 }
 
 // Additional Flex-V CSR access functions based on CSR table
