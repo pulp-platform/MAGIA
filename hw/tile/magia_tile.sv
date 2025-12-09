@@ -630,6 +630,7 @@ module magia_tile
     .rsp_r_user_i           ( axi2obi_rsp_r_user                            )
   );
 
+`ifndef CV32E40X
   // RedMule controller OBI-to-HWPE control interface
   obi2hwpe_ctrl obi2hwpe_ctrl_inst (
     .obi_req_i  ( core_mem_data_req[magia_tile_pkg::OBI_XBAR_REDMULE_CTRL_IDX] ),     
@@ -637,6 +638,7 @@ module magia_tile
     .ctrl_req_o ( redmule_ctrl_req                                             ),
     .ctrl_rsp_i ( redmule_ctrl_rsp                                             )
   );
+`endif
 
 /*******************************************************/
 /**                Type Conversions End               **/

@@ -107,6 +107,7 @@ package magia_tile_pkg;
   localparam int unsigned SWH    = DWH/BWH;                                             // Strobe Width for HWPE Interconnect
   localparam int unsigned WDH    = DWH/WWH;                                             // Number of words per data for HWPE Interconnect
 
+`ifdef CV32E40X
   // Parameters used by the cv32e40x core
   parameter bit          X_EXT_EN        = 1;                                           // Enable eXtension Interface (X) support, see eXtension Interface        
   parameter int unsigned X_NUM_RS        = 3;                                           // Number of register file read ports that can be used by the eXtension interface
@@ -120,7 +121,7 @@ package magia_tile_pkg;
   parameter bit[31:0]    DM_REGION_END   = 32'hF0003FFF;                                // End address of Debug Module region, see Debug & Trigger
   parameter bit          CLIC_EN         = 1'b0;                                        // Specifies whether Smclic, Smclicshv and Smclicconfig are supported
   parameter int unsigned CLIC_ID_W       = 1;                                           // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
-
+`else
   // Parameters used by cv32e40p core
   parameter int unsigned N_EXT_PERF_COUNTERS = 0;                                       // Number of external performance counters
   parameter int unsigned INSTR_RDATA_WIDTH   = 32;                                      // Instruction data width  
@@ -148,6 +149,7 @@ package magia_tile_pkg;
   parameter int unsigned OPCODE_OFF          = 0;                                       // Opcode field offset (bits 6:0)
   parameter int unsigned FUNC3_OFF           = 12;                                      // FUNC3 field offset (bits 14:12)
   parameter int unsigned CLIC_ID_W           = 5;                                       // CLIC interrupt ID width (5 bits for 32 interrupts)
+`endif
   
   // Parameters used by Event Unit
   parameter int unsigned EVENT_UNIT_IRQ_WIDTH = 5;                                      // Width of Event Unit IRQ ID signals (supports up to 32 different event types)
