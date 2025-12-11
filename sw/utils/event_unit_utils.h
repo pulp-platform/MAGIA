@@ -111,6 +111,13 @@
 #define EU_FSYNC_ERROR_MASK          (1 << EU_FSYNC_ERROR_BIT)
 #define EU_FSYNC_ALL_MASK            (EU_FSYNC_DONE_MASK | EU_FSYNC_ERROR_MASK)
 
+// Spatz events (accelerator events [8] + cluster events [23])
+#define EU_SPATZ_DONE_BIT            8   // acc_events_array[0][0] - Spatz completion
+#define EU_SPATZ_START_BIT           23  // other_events_array[0][23] - Spatz start trigger
+#define EU_SPATZ_DONE_MASK           (1 << EU_SPATZ_DONE_BIT)
+#define EU_SPATZ_START_MASK          (1 << EU_SPATZ_START_BIT)
+#define EU_SPATZ_ALL_MASK            (EU_SPATZ_DONE_MASK | EU_SPATZ_START_MASK)
+
 // Wait modes
 typedef enum {
     EU_WAIT_MODE_POLLING = 0,
@@ -319,6 +326,27 @@ static inline uint32_t eu_fsync_is_done(void) {
 
 static inline uint32_t eu_fsync_has_error(void) {
     return eu_check_events(EU_FSYNC_ERROR_MASK);
+}
+
+//=============================================================================
+// SPATZ FUNCTIONS
+//=============================================================================
+
+static inline void eu_spatz_init(void) {
+    eu_clear_events(0xFFFFFFFF);
+    eu_enable_events(EU_SPATZ_DONE_MASK);
+}
+
+static inline uint32_t eu_spatz_wait_completion(eu_wait_mode_t mode) {
+    return eu_wait_events(EU_SPATZ_DONE_MASK, mode, 1000000);
+}
+
+static inline uint32_t eu_spatz_is_done(void) {
+    return eu_check_events(EU_SPATZ_DONE_MASK);
+}
+
+static inline uint32_t eu_spatz_is_started(void) {
+    return eu_check_events(EU_SPATZ_START_MASK);
 }
 
 //=============================================================================
