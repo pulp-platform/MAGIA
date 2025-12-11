@@ -11,7 +11,7 @@ stages:
 
 init:
   stage: nonfree
-  script: make magia-nonfree-init
+  script: make magia-nonfree-init MAGIA_NONFREE_DEPS=0
   artifacts:
     paths: [ nonfree/ci.yml ]
 
