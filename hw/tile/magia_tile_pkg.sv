@@ -58,7 +58,7 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_SIZE          = 32'h0000_00FF; 
   localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_ADDR_END      = SPATZ_CTRL_ADDR_START + SPATZ_CTRL_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START      = SPATZ_CTRL_ADDR_END + 1;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE            = 32'h0000_E7FF;  // Extended: 0x1800 + 0xE7FF = 0xFFFF (bootrom moved to L2)
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE            = 32'h0000_E7FF;
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END        = RESERVED_ADDR_START + RESERVED_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START         = RESERVED_ADDR_END + 1;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE               = 32'h0000_FFFF;
@@ -305,8 +305,8 @@ package magia_tile_pkg;
   parameter logic [31:0] SPATZ_BOOT_ADDR          = 32'h1000_0000;
   parameter logic [31:0] SPATZ_BOOTROM_SIZE       = 32'h0000_00FF;
   
-  // Spatz TCDM address width
-  parameter int unsigned SPATZ_TCDM_ADDR_WIDTH = $clog2(magia_pkg::N_WORDS_BANK * magia_pkg::DATA_W / 8);  
+  // Spatz TCDM parameters
+  parameter int unsigned SPATZ_TCDM_ADDR_WIDTH = $clog2(magia_pkg::N_MEM_BANKS * magia_pkg::N_WORDS_BANK * magia_pkg::DATA_W / 8);  
   
   typedef struct packed {
     int unsigned                 idx;

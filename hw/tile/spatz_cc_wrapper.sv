@@ -20,7 +20,6 @@
  * 
  */
 
-`include "common_cells/assertions.svh"
 `include "snitch_vm/typedef.svh"
 
 module spatz_cc_wrapper
@@ -33,16 +32,11 @@ module spatz_cc_wrapper
   // Spatz Core Complex Parameters
   parameter int unsigned AddrWidth                = magia_pkg::ADDR_W,
   parameter int unsigned DataWidth                = magia_pkg::DATA_W,
-  parameter int unsigned UserWidth                = magia_tile_pkg::AXI_DATA_U_W,
-  parameter int unsigned DMADataWidth             = magia_pkg::DATA_W,
-  parameter int unsigned DMAIdWidth               = magia_tile_pkg::AXI_DATA_ID_W,
-  parameter int unsigned DMAAxiReqFifoDepth       = 2,
-  parameter int unsigned DMAReqFifoDepth          = 2,
-  parameter int unsigned TCDMAddrWidth            = $clog2(magia_pkg::N_WORDS_BANK * DataWidth / 8),
+  parameter int unsigned TCDMAddrWidth            = magia_tile_pkg::SPATZ_TCDM_ADDR_WIDTH,
   parameter int unsigned NumSpatzFPUs             = 4,
   parameter int unsigned NumSpatzIPUs             = 1,
   parameter int unsigned NumIntOutstandingLoads   = 1,
-  parameter int unsigned NumIntOutstandingMem     = 2,
+  parameter int unsigned NumIntOutstandingMem     = 4,
   parameter int unsigned NumSpatzOutstandingLoads = 4,
   parameter bit          Xdma                     = 1'b0,  // Disabled: use MAGIA tile iDMA instead
   parameter bit          RVF                      = 1'b1,
@@ -119,7 +113,7 @@ module spatz_cc_wrapper
   typedef logic [AddrWidth-1:0] addr_t;
   typedef logic [DataWidth-1:0] data_t;
   
-  // Accelerator types (from snitch_pkg, redefined locally for clarity)
+  // Accelerator types
   typedef struct packed {
     logic [31:0] addr;
     logic [5:0]  id;
@@ -146,7 +140,7 @@ module spatz_cc_wrapper
   // Virtual memory types - use macro from snitch_vm/typedef.svh
   `SNITCH_VM_TYPEDEF(AddrWidth)
   
-  // Hive types (instruction fetch) - matching spatz_cluster.sv exactly
+  // Hive types (instruction fetch) - matching spatz_cluster.sv
   typedef struct packed {
     logic flush_i_valid;
     addr_t inst_addr;
@@ -199,29 +193,24 @@ module spatz_cc_wrapper
   spatz_cc #(
     .AddrWidth                ( AddrWidth                 ),
     .DataWidth                ( DataWidth                 ),
-    .UserWidth                ( UserWidth                 ),
-    .DMADataWidth             ( DMADataWidth              ),
-    .DMAIdWidth               ( DMAIdWidth                ),
-    .DMAAxiReqFifoDepth       ( DMAAxiReqFifoDepth        ),
-    .DMAReqFifoDepth          ( DMAReqFifoDepth           ),
     .TCDMAddrWidth            ( TCDMAddrWidth             ),
-    .dreq_t                   ( magia_tile_pkg::spatz_reqrsp_req_t ),
-    .drsp_t                   ( magia_tile_pkg::spatz_reqrsp_rsp_t ),
-    .tcdm_req_t               ( magia_tile_pkg::spatz_tcdm_req_t   ),
+    .dreq_t                   ( magia_tile_pkg::spatz_reqrsp_req_t    ),
+    .drsp_t                   ( magia_tile_pkg::spatz_reqrsp_rsp_t    ),
+    .tcdm_req_t               ( magia_tile_pkg::spatz_tcdm_req_t      ),
     .tcdm_req_chan_t          ( magia_tile_pkg::spatz_tcdm_req_chan_t ),
-    .tcdm_rsp_t               ( magia_tile_pkg::spatz_tcdm_rsp_t   ),
+    .tcdm_rsp_t               ( magia_tile_pkg::spatz_tcdm_rsp_t      ),
     .tcdm_rsp_chan_t          ( magia_tile_pkg::spatz_tcdm_rsp_chan_t ),
-    .axi_req_t                ( magia_tile_pkg::idma_axi_req_t ),
-    .axi_ar_chan_t            ( magia_tile_pkg::idma_axi_ar_chan_t ),
-    .axi_aw_chan_t            ( magia_tile_pkg::idma_axi_aw_chan_t ),
-    .axi_rsp_t                ( magia_tile_pkg::idma_axi_rsp_t ),
+    .axi_req_t                ( magia_tile_pkg::idma_axi_req_t        ),
+    .axi_ar_chan_t            ( magia_tile_pkg::idma_axi_ar_chan_t    ),
+    .axi_aw_chan_t            ( magia_tile_pkg::idma_axi_aw_chan_t    ),
+    .axi_rsp_t                ( magia_tile_pkg::idma_axi_rsp_t        ),
     .hive_req_t               ( hive_req_t                ),
     .hive_rsp_t               ( hive_rsp_t                ),
     .acc_issue_req_t          ( acc_issue_req_t           ),
     .acc_issue_rsp_t          ( acc_issue_rsp_t           ),
     .acc_rsp_t                ( acc_rsp_t                 ),
     .dma_events_t             ( dma_events_t              ),
-    .dma_perf_t               ( logic                     ), // DMA disabled
+    .dma_perf_t               ( logic                     ), // Placeholder
     .FPUImplementation        ( FPUImplementation         ),
     .BootAddr                 ( BootAddr                  ),
     .RVE                      ( 1'b0                      ),
@@ -242,8 +231,7 @@ module spatz_cc_wrapper
     .IsoCrossing              ( 1'b0                      ),
     .RegisterOffloadRsp       ( RegisterOffloadRsp        ),
     .RegisterCoreReq          ( RegisterCoreReq           ),
-    .RegisterCoreRsp          ( RegisterCoreRsp           ),
-    .SnitchPMACfg             ( '{default: 0}             )
+    .RegisterCoreRsp          ( RegisterCoreRsp           )
   ) i_spatz_cc (
     .clk_i                    ( clk_i                     ),
     .clk_d2_i                 ( clk_i                     ), // Same clock domain
@@ -251,6 +239,7 @@ module spatz_cc_wrapper
     .testmode_i               ( test_mode_i               ),
     .hart_id_i                ( hart_id_i                 ),
     .irq_i                    ( irq_i                     ),
+    .tcdm_addr_base_i         ( magia_tile_pkg::L1_ADDR_START ),
     .hive_req_o               ( hive_req                  ),
     .hive_rsp_i               ( hive_rsp                  ),
     .data_req_o               ( data_req                  ),
@@ -262,8 +251,7 @@ module spatz_cc_wrapper
     .axi_dma_busy_o           ( /* DMA disabled */        ),
     .axi_dma_perf_o           ( /* DMA disabled */        ),
     .axi_dma_events_o         ( /* DMA disabled */        ),
-    .core_events_o            ( core_events_o             ),
-    .tcdm_addr_base_i         ( magia_tile_pkg::L1_ADDR_START )
+    .core_events_o            ( core_events_o             )
   );
   
   /*******************************************************************/
@@ -292,15 +280,10 @@ module spatz_cc_wrapper
   // Instantiate reqrsp to OBI converter module (Snitch port to L2/peripherals)
   reqrsp2obi #(
     .ObiCfg       ( magia_tile_pkg::obi_amo_cfg              ),
-    .MaxTrans     ( 4                                        ),
-    .AddrWidth    ( AddrWidth                                ),
-    .DataWidth    ( DataWidth                                ),
     .reqrsp_req_t ( magia_tile_pkg::spatz_reqrsp_req_t       ),
     .reqrsp_rsp_t ( magia_tile_pkg::spatz_reqrsp_rsp_t       ),
     .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t      ),
-    .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t      ),
-    .obi_a_chan_t ( magia_tile_pkg::core_data_obi_a_chan_t   ),
-    .obi_r_chan_t ( magia_tile_pkg::core_data_obi_r_chan_t   )
+    .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t      )
   ) i_snitch_reqrsp2obi (
     .clk_i        ( clk_i            ),
     .rst_ni       ( rst_ni           ),
@@ -314,38 +297,14 @@ module spatz_cc_wrapper
   /*           Protocol Conversion: TCDM (Spatz) → HCI              */
   /*******************************************************************/
   
-  // Port 0: Snitch TCDM with atomic operations (AMOADD, AMOSWAP, LR/SC, etc.)
-  tcdm2hci_amo #(
-    .MaxTrans      ( 4                                       ),
-    .AddrWidth     ( AddrWidth                               ),
-    .DataWidth     ( DataWidth                               ),
-    .tcdm_req_t    ( magia_tile_pkg::spatz_tcdm_req_t        ),
-    .tcdm_rsp_t    ( magia_tile_pkg::spatz_tcdm_rsp_t        ),
-    .hci_req_t     ( magia_tile_pkg::core_hci_data_req_t     ),
-    .hci_rsp_t     ( magia_tile_pkg::core_hci_data_rsp_t     ),
-    .reqrsp_req_t  ( magia_tile_pkg::spatz_reqrsp_req_t      ),
-    .reqrsp_rsp_t  ( magia_tile_pkg::spatz_reqrsp_rsp_t      ),
-    .obi_req_t     ( magia_tile_pkg::core_obi_data_req_t     ),
-    .obi_rsp_t     ( magia_tile_pkg::core_obi_data_rsp_t     )
-  ) i_tcdm2hci_amo_port0 (
-    .clk_i         ( clk_i                ),
-    .rst_ni        ( rst_ni               ),
-    .testmode_i    ( test_mode_i          ),
-    .tcdm_req_i    ( tcdm_req[0]          ),
-    .tcdm_rsp_o    ( tcdm_rsp[0]          ),
-    .hci_req_o     ( hci_master_req_o[0]  ),
-    .hci_rsp_i     ( hci_master_rsp_i[0]  )
-  );
-  
-  // Ports 1-4: Spatz vector memory ports (no atomics)
-  for (genvar i = 1; i < TCDMPorts; i++) begin : gen_tcdm2hci_direct
+  // Ports 0-3: Spatz vector memory ports (no atomics) - map to spatz_cc tcdm_req[0..3]
+  for (genvar i = 0; i < NumMemPortsPerSpatz; i++) begin : gen_tcdm2hci_spatz
     tcdm2hci #(
-      .MaxPending  ( NumSpatzOutstandingLoads             ),
       .tcdm_req_t  ( magia_tile_pkg::spatz_tcdm_req_t    ),
       .tcdm_rsp_t  ( magia_tile_pkg::spatz_tcdm_rsp_t    ),
       .hci_req_t   ( magia_tile_pkg::core_hci_data_req_t ),
       .hci_rsp_t   ( magia_tile_pkg::core_hci_data_rsp_t )
-    ) i_tcdm2hci (
+    ) i_tcdm2hci_spatz (
       .clk_i       ( clk_i                ),
       .rst_ni      ( rst_ni               ),
       .tcdm_req_i  ( tcdm_req[i]          ),
@@ -354,5 +313,28 @@ module spatz_cc_wrapper
       .hci_rsp_i   ( hci_master_rsp_i[i]  )
     );
   end
+  
+  /*******************************************************************/
+  /*  Port 4: Snitch TCDM with AMO → tcdm2hci_atomic converter      */
+  /*******************************************************************/
+  
+  // Use tcdm2hci_atomic: TCDM → tcdm2obi → obi_atop_resolver → obi2hci → HCI
+  tcdm2hci_atomic #(
+    .tcdm_req_t     ( magia_tile_pkg::spatz_tcdm_req_t    ),
+    .tcdm_rsp_t     ( magia_tile_pkg::spatz_tcdm_rsp_t    ),
+    .obi_req_t      ( magia_tile_pkg::core_obi_data_req_t ),
+    .obi_rsp_t      ( magia_tile_pkg::core_obi_data_rsp_t ),
+    .hci_req_t      ( magia_tile_pkg::core_hci_data_req_t ),
+    .hci_rsp_t      ( magia_tile_pkg::core_hci_data_rsp_t ),
+    .SbrPortObiCfg  ( magia_tile_pkg::obi_amo_cfg         ),
+    .MgrPortObiCfg  ( obi_pkg::ObiDefaultConfig           )  
+  ) i_tcdm2hci_atomic_snitch (
+    .clk_i      ( clk_i                                 ),
+    .rst_ni     ( rst_ni                                ),
+    .tcdm_req_i ( tcdm_req[NumMemPortsPerSpatz]         ),
+    .tcdm_rsp_o ( tcdm_rsp[NumMemPortsPerSpatz]         ),
+    .hci_req_o  ( hci_master_req_o[NumMemPortsPerSpatz] ),
+    .hci_rsp_i  ( hci_master_rsp_i[NumMemPortsPerSpatz] )
+  );
 
 endmodule : spatz_cc_wrapper

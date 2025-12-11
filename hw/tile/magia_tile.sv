@@ -871,25 +871,25 @@ module magia_tile
     .mgr_port_rsp_i ( core_l1_data_amo_rsp                         )
   );
 
-  for (genvar i = 1; i < magia_tile_pkg::N_MGR; i++) begin: gen_obi_xbar_sbr_cut
-    obi_cut #(
-      .ObiCfg       ( magia_tile_pkg::obi_amo_cfg            ),
-      .obi_a_chan_t ( magia_tile_pkg::core_data_obi_a_chan_t ),
-      .obi_r_chan_t ( magia_tile_pkg::core_data_obi_r_chan_t ),
-      .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t    ),
-      .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t    )
-    ) i_obi_cut_sbr (
-      .clk_i          ( sys_clk                 ),
-      .rst_ni         ( rst_ni                  ),
-      .sbr_port_req_i ( obi_xbar_slv_req[i]     ),
-      .sbr_port_rsp_o ( obi_xbar_slv_rsp[i]     ),
-      .mgr_port_req_o ( obi_xbar_slv_cut_req[i] ),
-      .mgr_port_rsp_i ( obi_xbar_slv_cut_rsp[i] )
-    );
-   end
+  obi_cut #(
+    .ObiCfg       ( magia_tile_pkg::obi_amo_cfg            ),
+    .obi_a_chan_t ( magia_tile_pkg::core_data_obi_a_chan_t ),
+    .obi_r_chan_t ( magia_tile_pkg::core_data_obi_r_chan_t ),
+    .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t    ),
+    .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t    )
+  ) i_obi_cut_sbr_ext (
+    .clk_i          ( sys_clk                               ),
+    .rst_ni         ( rst_ni                                ),
+    .sbr_port_req_i ( obi_xbar_slv_req[magia_tile_pkg::OBI_EXT_IDX]     ),
+    .sbr_port_rsp_o ( obi_xbar_slv_rsp[magia_tile_pkg::OBI_EXT_IDX]     ),
+    .mgr_port_req_o ( obi_xbar_slv_cut_req[magia_tile_pkg::OBI_EXT_IDX] ),
+    .mgr_port_rsp_i ( obi_xbar_slv_cut_rsp[magia_tile_pkg::OBI_EXT_IDX] )
+  );
 
-   assign obi_xbar_slv_cut_req[0] = obi_xbar_slv_req[0];
-   assign obi_xbar_slv_rsp[0]     = obi_xbar_slv_cut_rsp[0];
+  assign obi_xbar_slv_cut_req[magia_tile_pkg::OBI_CORE_IDX]  = obi_xbar_slv_req[magia_tile_pkg::OBI_CORE_IDX];
+  assign obi_xbar_slv_rsp[magia_tile_pkg::OBI_CORE_IDX]      = obi_xbar_slv_cut_rsp[magia_tile_pkg::OBI_CORE_IDX];
+  assign obi_xbar_slv_cut_req[magia_tile_pkg::OBI_SPATZ_IDX] = obi_xbar_slv_req[magia_tile_pkg::OBI_SPATZ_IDX];
+  assign obi_xbar_slv_rsp[magia_tile_pkg::OBI_SPATZ_IDX]     = obi_xbar_slv_cut_rsp[magia_tile_pkg::OBI_SPATZ_IDX];
   
   obi_xbar #(
     .SbrPortObiCfg      ( magia_tile_pkg::obi_amo_cfg            ),
@@ -1358,8 +1358,6 @@ module magia_tile
   spatz_cc_wrapper #(
     .AddrWidth         ( magia_pkg::ADDR_W                       ),
     .DataWidth         ( magia_pkg::DATA_W                       ),
-    .UserWidth         ( magia_tile_pkg::AXI_DATA_U_W            ),
-    .DMADataWidth      ( magia_pkg::DATA_W                       ),
     .NumSpatzFPUs      ( SPATZ_NUM_FPU                           ),
     .NumSpatzIPUs      ( SPATZ_NUM_IPU                           ),
     .BootAddr          ( magia_tile_pkg::SPATZ_BOOT_ADDR         ),
