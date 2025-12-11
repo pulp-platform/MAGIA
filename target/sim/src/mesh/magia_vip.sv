@@ -141,15 +141,15 @@ module magia_vip
       tile_cnt = 0;
       //eoc = 1'b1;
       for (int i = 0; i < magia_tb_pkg::N_TILES; i++)
-        if (i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + 2*i+1][3] == 1'b1)
+        if (i_l2_mem.i_l2_mem.mem[32'hCCFF_0000 + 2*i+1][3] == 1'b1)
           tile_cnt++;
       #10000;
     end while(tile_cnt<magia_tb_pkg::N_TILES);
     
     if(tile_cnt == magia_tb_pkg::N_TILES) begin
       for (int i = 0; i < magia_tb_pkg::N_TILES; i++) begin
-        if({i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + 2*i+1],i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + 2*i]} != 16'h800) begin
-            $display("TILE[%d] ERRORS: %d", i, {i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + 2*i+1],i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + 2*i]}[10:0]);
+        if({i_l2_mem.i_l2_mem.mem[32'hCCFF_0000 + 2*i+1],i_l2_mem.i_l2_mem.mem[32'hCCFF_0000 + 2*i]} != 16'h800) begin
+            $display("TILE[%d] ERRORS: %d", i, {i_l2_mem.i_l2_mem.mem[32'hCCFF_0000 + 2*i+1],i_l2_mem.i_l2_mem.mem[32'hCCFF_0000 + 2*i]}[10:0]);
             error++;
         end
       end
@@ -467,36 +467,240 @@ module magia_vip
   end
 `endif
 
+// `ifdef PROFILE_SENTINEL
+//   localparam time sentinel_overhead = CLK_PERIOD; // Overhead of the sentinel start/end pair
+//   bit[31:0] curr_instr_wb[magia_tb_pkg::N_TILES];
+//   time start_sentinel[magia_tb_pkg::N_TILES][$];
+//   time end_sentinel[magia_tb_pkg::N_TILES][$];
+//   time sentinel_latency[magia_tb_pkg::N_TILES];
+//   for (genvar i = 0; i < magia_tb_pkg::N_TILES_Y; i++) begin: gen_tile_instr_monitor_y
+//     for (genvar j = 0; j < magia_tb_pkg::N_TILES_X; j++) begin: gen_tile_instr_monitor_x 
+//       assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_core.instr_valid_id ?
+//       i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_core.instr_rdata_id : '0;
+//       always @(curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j]) begin: instr_wb_reporter
+//         if (curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] == 32'h5AA00013) begin
+//           start_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
+//           $display("[TB][mhartid %0d - Tile (%0d, %0d)] Detected sentinel start instruction in WB stage at time %0dns", 
+//           i*magia_tb_pkg::N_TILES_X+j, i, j, $time);
+//         end
+//         if (curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] == 32'h5FF00013) begin
+//           end_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
+//           $display("[TB][mhartid %0d - Tile (%0d, %0d)] Detected sentinel end instruction in WB stage at time %0dns", 
+//           i*magia_tb_pkg::N_TILES_X+j, i, j, $time);
+
+//           if (start_sentinel[i*magia_tb_pkg::N_TILES_X+j].size() < 1) begin
+//             $error("[TB][mhartid %0d - Tile (%0d, %0d)] Detected sentinel end instruction without corresponding sentinel start instruction",
+//             i*magia_tb_pkg::N_TILES_X+j, i, j);
+//             end_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back();
+//           end else begin
+//             sentinel_latency[i*magia_tb_pkg::N_TILES_X+j] = end_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - start_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - sentinel_overhead;
+//             $display("[TB][mhartid %0d - Tile (%0d, %0d)] Detected sentinel start-end pair with latency %0tns (%0d clock cycles)",
+//             i*magia_tb_pkg::N_TILES_X+j, i, j, sentinel_latency[i*magia_tb_pkg::N_TILES_X+j], sentinel_latency[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD);
+//           end
+//         end
+//       end
+//     end
+//   end
+// `endif
+
+`ifdef PROFILE_IDMA
+  localparam time clock_period = CLK_PERIOD;
+  time start_cmi_sentinel[magia_tb_pkg::N_TILES][$];
+  time end_cmi_sentinel[magia_tb_pkg::N_TILES][$];
+  time latency_cmi_sentinel[magia_tb_pkg::N_TILES];
+  time acc_cmi_sentinel[magia_tb_pkg::N_TILES] = '{default: 0};
+  time max_cmi_sentinel = 0;
+  time start_cmo_sentinel[magia_tb_pkg::N_TILES][$];
+  time end_cmo_sentinel[magia_tb_pkg::N_TILES][$];
+  time latency_cmo_sentinel[magia_tb_pkg::N_TILES];
+  time acc_cmo_sentinel[magia_tb_pkg::N_TILES] = '{default: 0};
+  time max_cmo_sentinel = 0;
+  for (genvar i = 0; i < magia_tb_pkg::N_TILES_Y; i++) begin: gen_tile_idma_monitor_y
+    for (genvar j = 0; j < magia_tb_pkg::N_TILES_X; j++) begin: gen_tile_idma_monitor_x
+      always @(posedge i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_idma_ctrl_mm.irq_a2o_busy_o) begin 
+        start_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
+        $display("[TB][mhartid %0d - Tile (%0d, %0d)][CMI_START] Detected start input communication busy at time %0dns", 
+        i*magia_tb_pkg::N_TILES_X+j, i, j, $time);
+      end
+      always @(negedge i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_idma_ctrl_mm.irq_a2o_busy_o) begin
+        if (i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_idma_ctrl_mm.i_l2_to_l1_ch.rst_ni) begin
+          end_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
+          latency_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j] = end_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - start_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - clock_period;
+          acc_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j] += latency_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j];
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)][CMI_FINISH] Detected finish (record) input communication busy at time %0dns: start-end pair with latency %0tns (%0d clock cycles) and accumulated latency %0tns (%0d clock cycles)", 
+          i*magia_tb_pkg::N_TILES_X+j, i, j, $time, latency_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j], latency_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD, acc_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j], acc_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD);
+        end  
+      end
+      always @(posedge i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_idma_ctrl_mm.irq_o2a_busy_o) begin 
+        start_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
+        $display("[TB][mhartid %0d - Tile (%0d, %0d)][CMO_START] Detected start output communication busy at time %0dns", 
+        i*magia_tb_pkg::N_TILES_X+j, i, j, $time);
+      end
+      always @(negedge i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_idma_ctrl_mm.irq_o2a_busy_o) begin
+        if (i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_idma_ctrl_mm.i_l2_to_l1_ch.rst_ni) begin
+          end_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
+          latency_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j] = end_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - start_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - clock_period;
+          acc_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j] += latency_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j];
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)][CMO_FINISH] Detected finish (record) output communication busy at time %0dns: start-end pair with latency %0tns (%0d clock cycles) and accumulated latency %0tns (%0d clock cycles)", 
+          i*magia_tb_pkg::N_TILES_X+j, i, j, $time, latency_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j], latency_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD, acc_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j], acc_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD);
+        end  
+      end
+    end
+  end
+`endif
+
+
+// Used to profile sentinels
 `ifdef PROFILE_SENTINEL
   localparam time sentinel_overhead = CLK_PERIOD; // Overhead of the sentinel start/end pair
-  bit[31:0] curr_instr_wb[magia_tb_pkg::N_TILES];
+  bit[31:0] curr_instr_wb_pper[magia_tb_pkg::N_TILES];
   time start_sentinel[magia_tb_pkg::N_TILES][$];
   time end_sentinel[magia_tb_pkg::N_TILES][$];
   time sentinel_latency[magia_tb_pkg::N_TILES];
-  for (genvar i = 0; i < magia_tb_pkg::N_TILES_Y; i++) begin: gen_tile_instr_monitor_y
-    for (genvar j = 0; j < magia_tb_pkg::N_TILES_X; j++) begin: gen_tile_instr_monitor_x 
-      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_core.wb_valid ?
-      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_core.regfile_wdata : '0;
-      always @(curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j]) begin: instr_wb_reporter
-        if (curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] == 32'h5AA00013) begin
+  time start_cmi_sentinel[magia_tb_pkg::N_TILES][$];
+  time end_cmi_sentinel[magia_tb_pkg::N_TILES][$];
+  time latency_cmi_sentinel[magia_tb_pkg::N_TILES];
+  time acc_cmi_sentinel[magia_tb_pkg::N_TILES] = '{default: 0};
+  time max_cmi_sentinel = 0;
+  time start_cmo_sentinel[magia_tb_pkg::N_TILES][$];
+  time end_cmo_sentinel[magia_tb_pkg::N_TILES][$];
+  time latency_cmo_sentinel[magia_tb_pkg::N_TILES];
+  time acc_cmo_sentinel[magia_tb_pkg::N_TILES] = '{default: 0};
+  time max_cmo_sentinel = 0;
+  time start_cmp_sentinel[magia_tb_pkg::N_TILES][$];
+  time end_cmp_sentinel[magia_tb_pkg::N_TILES][$];
+  time latency_cmp_sentinel[magia_tb_pkg::N_TILES];
+  time acc_cmp_sentinel[magia_tb_pkg::N_TILES] = '{default: 0};
+  time max_cmp_sentinel = 0;
+  time max_cmiop_sentinel = 0;
+  time start_sync_sentinel[magia_tb_pkg::N_TILES][$];
+  time end_sync_sentinel[magia_tb_pkg::N_TILES][$];
+  time latency_sync_sentinel[magia_tb_pkg::N_TILES];
+  time acc_sync_sentinel[magia_tb_pkg::N_TILES] = '{default: 0};
+  time max_sync_sentinel = 0;
+  for (genvar i = 0; i < magia_tb_pkg::N_TILES_Y; i++) begin: gen_tile_pper_instr_monitor_y
+    for (genvar j = 0; j < magia_tb_pkg::N_TILES_X; j++) begin: gen_tile_pper_instr_monitor_x 
+      assign curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_core.instr_valid_id ?
+      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_core.instr_rdata_id : '0;
+      always @(curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j]) begin: instr_pper_wb_reporter
+        if (curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j] == 32'h5AA00013) begin
           start_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
           $display("[TB][mhartid %0d - Tile (%0d, %0d)] Detected sentinel start instruction in WB stage at time %0dns", 
           i*magia_tb_pkg::N_TILES_X+j, i, j, $time);
         end
-        if (curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] == 32'h5FF00013) begin
-          end_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
-          $display("[TB][mhartid %0d - Tile (%0d, %0d)] Detected sentinel end instruction in WB stage at time %0dns", 
+        if (curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j] == 32'h50B00013) begin
+          start_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)][CMI_START] Detected start input communication sentinel accumulator instruction in WB stage at time %0dns", 
           i*magia_tb_pkg::N_TILES_X+j, i, j, $time);
-
+        end
+        if (curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j] == 32'h51B00013) begin
+          start_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)][CMO_START] Detected start output communication sentinel accumulator instruction in WB stage at time %0dns", 
+          i*magia_tb_pkg::N_TILES_X+j, i, j, $time);
+        end
+        if (curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j] == 32'h52B00013) begin
+          start_cmp_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)][CMP_START] Detected start computation sentinel accumulator instruction in WB stage at time %0dns", 
+          i*magia_tb_pkg::N_TILES_X+j, i, j, $time);
+        end
+        if (curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j] == 32'h53B00013) begin
+          start_sync_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
+          $display("[TB][mhartid %0d - Tile (%0d, %0d)][SYNC_START] Detected start synchronization sentinel accumulator instruction in WB stage at time %0dns", 
+          i*magia_tb_pkg::N_TILES_X+j, i, j, $time);
+        end
+        if (curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j] == 32'h5FF00013) begin
+          end_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
           if (start_sentinel[i*magia_tb_pkg::N_TILES_X+j].size() < 1) begin
             $error("[TB][mhartid %0d - Tile (%0d, %0d)] Detected sentinel end instruction without corresponding sentinel start instruction",
             i*magia_tb_pkg::N_TILES_X+j, i, j);
             end_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back();
           end else begin
             sentinel_latency[i*magia_tb_pkg::N_TILES_X+j] = end_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - start_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - sentinel_overhead;
-            $display("[TB][mhartid %0d - Tile (%0d, %0d)] Detected sentinel start-end pair with latency %0tns (%0d clock cycles)",
-            i*magia_tb_pkg::N_TILES_X+j, i, j, sentinel_latency[i*magia_tb_pkg::N_TILES_X+j], sentinel_latency[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD);
+            $display("[TB][mhartid %0d - Tile (%0d, %0d)] Detected sentinel end instruction in WB stage at time %0dns: start-end pair with latency %0tns (%0d clock cycles)", 
+            i*magia_tb_pkg::N_TILES_X+j, i, j, $time, sentinel_latency[i*magia_tb_pkg::N_TILES_X+j], sentinel_latency[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD);
           end
+        end
+        if (curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j] == 32'h50C00013) begin
+          end_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
+          if (start_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j].size() < 1) begin
+            $error("[TB][mhartid %0d - Tile (%0d, %0d)][CMI_ERROR] Detected finish (record) input communication sentinel accumulator instruction without corresponding start input communication sentinel accumulator instruction",
+            i*magia_tb_pkg::N_TILES_X+j, i, j);
+            end_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back();
+          end else begin
+            latency_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j] = end_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - start_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - sentinel_overhead;
+            acc_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j] += latency_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j];
+            $display("[TB][mhartid %0d - Tile (%0d, %0d)][CMI_FINISH] Detected finish (record) input communication sentinel accumulator instruction in WB stage at time %0dns: start-end pair with latency %0tns (%0d clock cycles) and accumulated latency %0tns (%0d clock cycles)", 
+            i*magia_tb_pkg::N_TILES_X+j, i, j, $time, latency_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j], latency_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD, acc_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j], acc_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD);
+          end
+        end
+        if (curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j] == 32'h51C00013) begin
+          end_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
+          if (start_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j].size() < 1) begin
+            $error("[TB][mhartid %0d - Tile (%0d, %0d)][CMO_ERROR] Detected finish (record) output communication sentinel accumulator instruction without corresponding start output communication sentinel accumulator instruction",
+            i*magia_tb_pkg::N_TILES_X+j, i, j);
+            end_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back();
+          end else begin
+            latency_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j] = end_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - start_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - sentinel_overhead;
+            acc_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j] += latency_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j];
+            $display("[TB][mhartid %0d - Tile (%0d, %0d)][CMO_FINISH] Detected finish (record) output communication sentinel accumulator instruction in WB stage at time %0dns: start-end pair with latency %0tns (%0d clock cycles) and accumulated latency %0tns (%0d clock cycles)", 
+            i*magia_tb_pkg::N_TILES_X+j, i, j, $time, latency_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j], latency_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD, acc_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j], acc_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD);
+          end
+        end
+        if (curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j] == 32'h52C00013) begin
+          end_cmp_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
+          if (start_cmp_sentinel[i*magia_tb_pkg::N_TILES_X+j].size() < 1) begin
+            $error("[TB][mhartid %0d - Tile (%0d, %0d)][CMP_ERROR] Detected finish (record) computation sentinel accumulator instruction without corresponding start computation sentinel accumulator instruction",
+            i*magia_tb_pkg::N_TILES_X+j, i, j);
+            end_cmp_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back();
+          end else begin
+            latency_cmp_sentinel[i*magia_tb_pkg::N_TILES_X+j] = end_cmp_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - start_cmp_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - sentinel_overhead;
+            acc_cmp_sentinel[i*magia_tb_pkg::N_TILES_X+j] += latency_cmp_sentinel[i*magia_tb_pkg::N_TILES_X+j];
+            $display("[TB][mhartid %0d - Tile (%0d, %0d)][CMP_FINISH] Detected finish (record) computation sentinel accumulator instruction in WB stage at time %0dns: start-end pair with latency %0tns (%0d clock cycles) and accumulated latency %0tns (%0d clock cycles)", 
+            i*magia_tb_pkg::N_TILES_X+j, i, j, $time, latency_cmp_sentinel[i*magia_tb_pkg::N_TILES_X+j], latency_cmp_sentinel[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD, acc_cmp_sentinel[i*magia_tb_pkg::N_TILES_X+j], acc_cmp_sentinel[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD);
+          end
+        end
+        if (curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j] == 32'h53C00013) begin
+          end_sync_sentinel[i*magia_tb_pkg::N_TILES_X+j].push_back($time);
+          if (start_sync_sentinel[i*magia_tb_pkg::N_TILES_X+j].size() < 1) begin
+            $error("[TB][mhartid %0d - Tile (%0d, %0d)][SYNC_ERROR] Detected finish (record) synchronization sentinel accumulator instruction without corresponding start synchronization sentinel accumulator instruction",
+            i*magia_tb_pkg::N_TILES_X+j, i, j);
+            end_sync_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back();
+          end else begin
+            latency_sync_sentinel[i*magia_tb_pkg::N_TILES_X+j] = end_sync_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - start_sync_sentinel[i*magia_tb_pkg::N_TILES_X+j].pop_back() - sentinel_overhead;
+            acc_sync_sentinel[i*magia_tb_pkg::N_TILES_X+j] += latency_sync_sentinel[i*magia_tb_pkg::N_TILES_X+j];
+            $display("[TB][mhartid %0d - Tile (%0d, %0d)][SYNC_FINISH] Detected finish (record) synchronization sentinel accumulator instruction in WB stage at time %0dns: start-end pair with latency %0tns (%0d clock cycles) and accumulated latency %0tns (%0d clock cycles)", 
+            i*magia_tb_pkg::N_TILES_X+j, i, j, $time, latency_sync_sentinel[i*magia_tb_pkg::N_TILES_X+j], latency_sync_sentinel[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD, acc_sync_sentinel[i*magia_tb_pkg::N_TILES_X+j], acc_sync_sentinel[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD);
+          end
+        end
+        if (curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j] == 32'h50D00013) begin
+          $display("[TB][PERF][mhartid %0d - Tile (%0d, %0d)][CMI_PERF] Input communication sentinel accumulator state: %0tns (%0d clock cycles)", 
+          i*magia_tb_pkg::N_TILES_X+j, i, j, acc_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j], acc_cmi_sentinel[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD);
+        end
+        if (curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j] == 32'h51D00013) begin
+          $display("[TB][PERF][mhartid %0d - Tile (%0d, %0d)][CMO_PERF] Output communication sentinel accumulator state: %0tns (%0d clock cycles)", 
+          i*magia_tb_pkg::N_TILES_X+j, i, j, acc_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j], acc_cmo_sentinel[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD);
+        end
+        if (curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j] == 32'h52D00013) begin
+          $display("[TB][PERF][mhartid %0d - Tile (%0d, %0d)][CMP_PERF] Computation sentinel accumulator state: %0tns (%0d clock cycles)", 
+          i*magia_tb_pkg::N_TILES_X+j, i, j, acc_cmp_sentinel[i*magia_tb_pkg::N_TILES_X+j], acc_cmp_sentinel[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD);
+        end
+        if (curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j] == 32'h53D00013) begin
+          $display("[TB][PERF][mhartid %0d - Tile (%0d, %0d)][SYNC_PERF] Synchronization sentinel accumulator state: %0tns (%0d clock cycles)", 
+          i*magia_tb_pkg::N_TILES_X+j, i, j, acc_sync_sentinel[i*magia_tb_pkg::N_TILES_X+j], acc_sync_sentinel[i*magia_tb_pkg::N_TILES_X+j]/CLK_PERIOD);
+        end
+        if (curr_instr_wb_pper[i*magia_tb_pkg::N_TILES_X+j] == 32'h5EE00013) begin
+          for (int unsigned i = 0; i < magia_tb_pkg::N_TILES; i++) begin
+            if (max_cmi_sentinel < acc_cmi_sentinel[i]) max_cmi_sentinel = acc_cmi_sentinel[i];
+            if (max_cmo_sentinel < acc_cmo_sentinel[i]) max_cmo_sentinel = acc_cmo_sentinel[i];
+            if (max_cmp_sentinel < acc_cmp_sentinel[i]) max_cmp_sentinel = acc_cmp_sentinel[i];
+            if (max_cmiop_sentinel < (acc_cmi_sentinel[i]+acc_cmo_sentinel[i]+acc_cmp_sentinel[i])) max_cmiop_sentinel = (acc_cmi_sentinel[i]+acc_cmo_sentinel[i]+acc_cmp_sentinel[i]);
+          end
+          $display("[TB][PERF][mhartid %0d - Tile (%0d, %0d)] Global maximul performance overheads:
+          \tInput communication:          %0tns (%0d clock cycles)
+          \tOutpu (result) communication: %0tns (%0d clock cycles)
+          \tComputation:                  %0tns (%0d clock cycles)
+          \tTotal (CMI+CMO+CMP):          %0tns (%0d clock cycles)", 
+          i*magia_tb_pkg::N_TILES_X+j, i, j, max_cmi_sentinel, max_cmi_sentinel/CLK_PERIOD, max_cmo_sentinel, max_cmo_sentinel/CLK_PERIOD, max_cmp_sentinel, max_cmp_sentinel/CLK_PERIOD, max_cmiop_sentinel, max_cmiop_sentinel/CLK_PERIOD);
         end
       end
     end

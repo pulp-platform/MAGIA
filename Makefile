@@ -65,13 +65,13 @@ ipstools      ?= 0
 inst_hex_name ?= build/stim_instr.txt 
 data_hex_name ?= build/stim_data.txt 
 inst_entry    ?= 0xCC000000
-data_entry    ?= 0xCC010000
+data_entry    ?= 0xCC100000
 boot_addr     ?= 0xCC000080
 test          ?= hello_world
 mesh_dv       ?= 1
 fast_sim      ?= 0
 # Add here a path to the core traces of each tile you want to monitor
-num_cores     ?= 16
+num_cores     ?= 4
 $(foreach i, $(shell seq 0 $(shell echo $$(($(num_cores)-1)))), \
 	$(eval log_path_$(i) := ./core_$(i)_traces.log)               \
 )
