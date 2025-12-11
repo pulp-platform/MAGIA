@@ -20,6 +20,7 @@
  
 
 # Paths to folders
+MAGIA_DIR  ?= $(shell pwd)
 SW             ?= sw
 BUILD_DIR      ?= sim/work
 ifneq (,$(wildcard /etc/iis.version))
@@ -341,6 +342,10 @@ MAGIA_NONFREE_DIR ?= nonfree
 MAGIA_NONFREE_COMMIT ?= main
 
 .PHONY: magia-nonfree-init
+MAGIA_NONFREE_DEPS ?= 1
 magia-nonfree-init:
 	git clone $(MAGIA_NONFREE_REMOTE) $(MAGIA_NONFREE_DIR)
 	cd $(MAGIA_NONFREE_DIR) && git checkout $(MAGIA_NONFREE_COMMIT)
+	if [ "$(MAGIA_NONFREE_DEPS)" -eq "1" ]; then $(MAKE) nonfree-init-dep ; fi 
+
+-include $(MAGIA_NONFREE_DIR)/nonfree.mk
