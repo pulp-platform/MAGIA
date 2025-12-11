@@ -125,12 +125,16 @@ $(STIM_INSTR) $(STIM_DATA): $(BIN)
 	ln -sfn ../../../$(INI_PATH) $(VSIM_INI) &&						\
 	ln -sfn ../../../$(WORK_PATH) $(VSIM_LIBS)
 
+# Build Spatz program header (if spatz_prog is specified)
+.PHONY: spatz-header
+spatz-header:
+	@if [ "$(spatz_prog)" != "none" ]; then \
+		echo "[SPATZ] Building program: $(spatz_prog).c -> $(spatz_prog).h"; \
+		$(MAKE) -C $(SPATZ_SW_DIR) test=$(spatz_prog) all || exit 1; \
+	fi
+
 $(BIN): $(CRT) $(OBJ)
 	@if [ "$(spatz_prog)" != "none" ]; then \
-		if [ ! -f "$(SPATZ_HEADER)" ]; then \
-			echo "[INFO] Building Spatz program header: $(spatz_prog).h"; \
-			$(MAKE) -C $(SPATZ_SW_DIR) test=$(spatz_prog) all || exit 1; \
-		fi; \
 		echo "[CV32-LINK] Linking with embedded Spatz binary (from header)"; \
 		$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT); \
 	else \
@@ -145,7 +149,7 @@ $(CRT):
 	mkdir -p build								
 	$(CC) $(CC_OPTS) -c $(BOOTSCRIPT) -o $(CRT)
 
-$(OBJ):
+$(OBJ): spatz-header
 	cd $(TEST_DIR) &&											\
 	mkdir -p $(test) &&											\
 	cd $(test) &&												\

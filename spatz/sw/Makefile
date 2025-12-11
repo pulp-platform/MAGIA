@@ -37,7 +37,7 @@ LDFLAGS     += -Wl,--gc-sections -Wl,-z,norelro
 LDFLAGS     += $(ARCH_FLAGS)
 
 # Test name (pass with test=name)
-test        ?= hello_spatz
+test        ?= test_binary_spatz
 
 # Directories
 BIN_DIR      = bin
