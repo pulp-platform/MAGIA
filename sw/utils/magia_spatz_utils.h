@@ -8,7 +8,6 @@
 #define SPATZ_FUNC_PTR      (SPATZ_CTRL_BASE + 0x04)
 #define SPATZ_START         (SPATZ_CTRL_BASE + 0x08)
 #define SPATZ_DONE          (SPATZ_CTRL_BASE + 0x0C)
-#define SPATZ_BOOT_ADDR     (0x00001800)
 
 #define mmio32(x) (*(volatile uint32_t *)(x))
 
