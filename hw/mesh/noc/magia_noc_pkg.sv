@@ -15,6 +15,7 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Alessandro Nadalini <alessandro.nadalini3@unibo.it>
+ *          Victor Isachi <victor.isachi@unibo.it>
  * 
  * MAGIA NoC Package
  */
@@ -56,19 +57,19 @@ package magia_noc_pkg;
 
         case (num_tiles)
             32'd4:  begin
-                Sam = floo_axi_mesh_2x2_noc_pkg::Sam;
+                Sam = floo_axi_nw_mesh_2x2_noc_pkg::Sam;
             end
             32'd16: begin
-                Sam = floo_axi_mesh_4x4_noc_pkg::Sam;
+                Sam = floo_axi_nw_mesh_4x4_noc_pkg::Sam;
             end
             32'd64: begin
-                Sam = floo_axi_mesh_8x8_noc_pkg::Sam;
+                Sam = floo_axi_nw_mesh_8x8_noc_pkg::Sam;
             end
             32'd256: begin
-                Sam = floo_axi_mesh_16x16_noc_pkg::Sam;
+                Sam = floo_axi_nw_mesh_16x16_noc_pkg::Sam;
             end
             32'd1024: begin
-                Sam = floo_axi_mesh_32x32_noc_pkg::Sam;
+                Sam = floo_axi_nw_mesh_32x32_noc_pkg::Sam;
             end
         endcase
 
@@ -84,19 +85,19 @@ package magia_noc_pkg;
 
         case (num_tiles)
             32'd4:  begin
-                RouteCfg = floo_axi_mesh_2x2_noc_pkg::RouteCfg;
+                RouteCfg = floo_axi_nw_mesh_2x2_noc_pkg::RouteCfg;
             end
             32'd16: begin
-                RouteCfg = floo_axi_mesh_4x4_noc_pkg::RouteCfg;
+                RouteCfg = floo_axi_nw_mesh_4x4_noc_pkg::RouteCfg;
             end
             32'd64: begin
-                RouteCfg = floo_axi_mesh_8x8_noc_pkg::RouteCfg;
+                RouteCfg = floo_axi_nw_mesh_8x8_noc_pkg::RouteCfg;
             end
             32'd256: begin
-                RouteCfg = floo_axi_mesh_16x16_noc_pkg::RouteCfg;
+                RouteCfg = floo_axi_nw_mesh_16x16_noc_pkg::RouteCfg;
             end
             32'd1024: begin
-                RouteCfg = floo_axi_mesh_32x32_noc_pkg::RouteCfg;
+                RouteCfg = floo_axi_nw_mesh_32x32_noc_pkg::RouteCfg;
             end
         endcase
 
@@ -106,31 +107,52 @@ package magia_noc_pkg;
     // Actual declaration of RouteCfg
     localparam route_cfg_t RouteCfg = gen_route_config(N_TILES);
 
-    typedef logic[ADDR_W-1:0] axi_data_mst_addr_t;
-    typedef logic[DATA_W-1:0] axi_data_mst_data_t;
-    typedef logic[STRB_W-1:0] axi_data_mst_strb_t;
-    typedef logic[L2_ID_W-1:0] axi_data_mst_id_t;
-    typedef logic[L2_U_W-1:0] axi_data_mst_user_t;
-    `AXI_TYPEDEF_ALL_CT(axi_data_mst, axi_data_mst_req_t, axi_data_mst_rsp_t, axi_data_mst_addr_t, axi_data_mst_id_t, axi_data_mst_data_t, axi_data_mst_strb_t, axi_data_mst_user_t)
+    typedef logic[ADDR_W-1:0]  axi_narrow_data_mst_addr_t;
+    typedef logic[DATA_W-1:0]  axi_narrow_data_mst_data_t;
+    typedef logic[STRB_W-1:0]  axi_narrow_data_mst_strb_t;
+    typedef logic[L2_ID_W-1:0] axi_narrow_data_mst_id_t;
+    typedef logic[L2_U_W-1:0]  axi_narrow_data_mst_user_t;
+    `AXI_TYPEDEF_ALL_CT(axi_narrow_data_mst, axi_narrow_data_mst_req_t, axi_narrow_data_mst_rsp_t, axi_narrow_data_mst_addr_t, axi_narrow_data_mst_id_t, axi_narrow_data_mst_data_t, axi_narrow_data_mst_strb_t, axi_narrow_data_mst_user_t)
 
-    typedef logic[ADDR_W-1:0] axi_data_slv_addr_t;
-    typedef logic[DATA_W-1:0] axi_data_slv_data_t;
-    typedef logic[STRB_W-1:0] axi_data_slv_strb_t;
-    typedef logic[AXI_NOC_ID_W-1:0] axi_data_slv_id_t;
-    typedef logic[AXI_NOC_U_W-1:0] axi_data_slv_user_t;
-    `AXI_TYPEDEF_ALL_CT(axi_data_slv, axi_data_slv_req_t, axi_data_slv_rsp_t, axi_data_slv_addr_t, axi_data_slv_id_t, axi_data_slv_data_t, axi_data_slv_strb_t, axi_data_slv_user_t)
+    typedef logic[ADDR_W-1:0]       axi_narrow_data_slv_addr_t;
+    typedef logic[DATA_W-1:0]       axi_narrow_data_slv_data_t;
+    typedef logic[STRB_W-1:0]       axi_narrow_data_slv_strb_t;
+    typedef logic[AXI_NOC_ID_W-1:0] axi_narrow_data_slv_id_t;
+    typedef logic[AXI_NOC_U_W-1:0]  axi_narrow_data_slv_user_t;
+    `AXI_TYPEDEF_ALL_CT(axi_narrow_data_slv, axi_narrow_data_slv_req_t, axi_narrow_data_slv_rsp_t, axi_narrow_data_slv_addr_t, axi_narrow_data_slv_id_t, axi_narrow_data_slv_data_t, axi_narrow_data_slv_strb_t, axi_narrow_data_slv_user_t)
 
-    `FLOO_TYPEDEF_HDR_T(hdr_t, id_t, id_t, axi_ch_e, rob_idx_t)
-    localparam axi_cfg_t AxiCfg = '{
-        AddrWidth: ADDR_W,
-        DataWidth: DATA_W,
-        UserWidth: AXI_U_W,
-        InIdWidth: AXI_NOC_ID_W,
+    typedef logic[ADDR_W-1:0]          axi_wide_data_mst_addr_t;
+    typedef logic[WIDE_DATA_W-1:0]     axi_wide_data_mst_data_t;
+    typedef logic[WIDE_STRB_W-1:0]     axi_wide_data_mst_strb_t;
+    typedef logic[iDMA_AxiIdWidth-1:0] axi_wide_data_mst_id_t;
+    typedef logic[iDMA_UserWidth-1:0]  axi_wide_data_mst_user_t;
+    `AXI_TYPEDEF_ALL_CT(axi_wide_data_mst, axi_wide_data_mst_req_t, axi_wide_data_mst_rsp_t, axi_wide_data_mst_addr_t, axi_wide_data_mst_id_t, axi_wide_data_mst_data_t, axi_wide_data_mst_strb_t, axi_wide_data_mst_user_t)
+
+    typedef logic[ADDR_W-1:0]          axi_wide_data_slv_addr_t;
+    typedef logic[WIDE_DATA_W-1:0]     axi_wide_data_slv_data_t;
+    typedef logic[WIDE_STRB_W-1:0]     axi_wide_data_slv_strb_t;
+    typedef logic[iDMA_AxiIdWidth-1:0] axi_wide_data_slv_id_t;
+    typedef logic[iDMA_UserWidth-1:0]  axi_wide_data_slv_user_t;
+    `AXI_TYPEDEF_ALL_CT(axi_wide_data_slv, axi_wide_data_slv_req_t, axi_wide_data_slv_rsp_t, axi_wide_data_slv_addr_t, axi_wide_data_slv_id_t, axi_wide_data_slv_data_t, axi_wide_data_slv_strb_t, axi_wide_data_slv_user_t)
+
+    `FLOO_TYPEDEF_HDR_T(hdr_t, id_t, id_t, nw_ch_e, rob_idx_t)
+    localparam axi_cfg_t AxiCfgN = '{
+        AddrWidth:  ADDR_W,
+        DataWidth:  DATA_W,
+        UserWidth:  AXI_U_W,
+        InIdWidth:  AXI_NOC_ID_W,
         OutIdWidth: L2_ID_W
     };
+    localparam axi_cfg_t AxiCfgW = '{
+        AddrWidth:  ADDR_W,
+        DataWidth:  WIDE_DATA_W,
+        UserWidth:  iDMA_UserWidth,
+        InIdWidth:  iDMA_AxiIdWidth,
+        OutIdWidth: iDMA_AxiIdWidth
+    };
 
-    `FLOO_TYPEDEF_AXI_CHAN_ALL(axi, req, rsp, axi_data_slv, AxiCfg, hdr_t)
+    `FLOO_TYPEDEF_NW_CHAN_ALL(axi, req, rsp, wide, axi_narrow_data_slv, axi_wide_data_slv, AxiCfgN, AxiCfgW, hdr_t)
 
-    `FLOO_TYPEDEF_AXI_LINK_ALL(req, rsp, req, rsp)
+    `FLOO_TYPEDEF_NW_LINK_ALL(req, rsp, wide, req, rsp, wide)
 
 endpackage

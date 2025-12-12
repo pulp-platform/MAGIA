@@ -66,7 +66,7 @@ ipstools      ?= 0
 inst_hex_name ?= build/stim_instr.txt 
 data_hex_name ?= build/stim_data.txt 
 inst_entry    ?= 0xCC000000
-data_entry    ?= 0xCC010000
+data_entry    ?= 0xCC100000
 boot_addr     ?= 0xCC000080
 test          ?= hello_world
 mesh_dv       ?= 1
@@ -97,7 +97,7 @@ LINKSCRIPT := sw/kernel/link.ld
 CC=$(ISA)$(XLEN)-unknown-elf-gcc
 LD=$(CC)
 OBJDUMP=$(ISA)$(XLEN)-unknown-elf-objdump
-CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
+CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O3 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
 LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
 
 # Setup build object dirs

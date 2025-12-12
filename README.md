@@ -104,10 +104,10 @@ L2 size: 1 GB.
 | *Stack*          | \[0x0001_0000:0x0001_FFFF\]                   | \[0x0001_0000:0x0001_FFFF\]+*ID*\*0x0010_0000, *ID* > 0, are **forbidden** |
 | *L1*             | \[0x0002_0000:0x000F_FFFF\]+*ID*\*0x0010_0000 | Up to 3072 tiles                                                           |
 | *L2*             | \[0xC000_0000:0xFFFF_FFFF\]                   |                                                                            |
-| *Instructions*   | \[0xCC00_0000:0xCC00_8000\]                   |                                                                            |
-| *Data*           | \[0xCC01_0000:0xCC04_0000\]                   |                                                                            |
+| *Instructions*   | \[0xCC00_0000:0xCC00_8000\]                   | Program up to 32KB                                                         |
+| *Data*           | \[0xCC10_0000:0xCCFF_FFFF\]                   | Usable data ram of size 15MB                                               |
 | *L2 Base*        | 0xCC00_0000                                   |                                                                            |
-| *Test End*       | 0xCC03_0000                                   |                                                                            |
+| *Test End*       | 0xCCFF_0000                                   |                                                                            |
 | *String (utoa)*  | 0x0000_0000+*ID*\*0x0010_0000                 |                                                                            |
 | *Print (stderr)* | 0xFFFF_0000                                   |                                                                            |
 | *Print (stdio)*  | 0xFFFF_0004                                   |                                                                            |

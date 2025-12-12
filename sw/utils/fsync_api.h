@@ -27,7 +27,7 @@
   #include "magia_utils.h"
 
   #define _FS_GLOBAL_AGGR (0xFFFFFFFF >> (1+__builtin_clz(NUM_HARTS)))
-  #define _FS_GLOBAL_ID   (-1)
+  #define _FS_GLOBAL_ID   ((NUM_HARTS/2)-1)
   #define _FS_HNBR_AGGR   (0x1)
   #define _FS_HNBR_ID     (0)
   #define _FS_VNBR_AGGR   (0x1)

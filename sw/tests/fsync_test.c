@@ -71,7 +71,7 @@ int main(void) {
 #endif
 
       // Instruction immediately preceding synchronization: indicates start of the synchronization region
-      sentinel_start();
+      stnl_snc_s();
 
       fsync(ids, aggregates);
 #ifndef STALLING
@@ -80,7 +80,7 @@ int main(void) {
 #endif
 
       // Instruction immediately following synchronization: indicates end of the synchronization region
-      sentinel_end();
+      stnl_snc_f();
 
       printf("Synchronized...\n");
     }
@@ -101,7 +101,7 @@ int main(void) {
 #endif
 
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
-    sentinel_start();
+    stnl_snc_s();
 
     fsync_global();
 #ifndef STALLING
@@ -110,7 +110,7 @@ int main(void) {
 #endif
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
-    sentinel_end();
+    stnl_snc_f();
 
 #if VERBOSE > 1
     printf("Synchronized...\n");
@@ -132,7 +132,7 @@ int main(void) {
 #endif
 
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
-    sentinel_start();
+    stnl_snc_s();
 
     fsync_hnbr();
 #ifndef STALLING
@@ -141,7 +141,7 @@ int main(void) {
 #endif
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
-    sentinel_end();
+    stnl_snc_f();
 
 #if VERBOSE > 1
     printf("Synchronized...\n");
@@ -163,7 +163,7 @@ int main(void) {
 #endif
 
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
-    sentinel_start();
+    stnl_snc_s();
 
     fsync_vnbr();
 #ifndef STALLING
@@ -172,7 +172,7 @@ int main(void) {
 #endif
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
-    sentinel_end();
+    stnl_snc_f();
 
 #if VERBOSE > 1
     printf("Synchronized...\n");
@@ -200,7 +200,7 @@ int main(void) {
 #endif
 
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
-    sentinel_start();
+    stnl_snc_s();
 
     fsync_hring();
 #ifndef STALLING
@@ -209,7 +209,7 @@ int main(void) {
 #endif
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
-    sentinel_end();
+    stnl_snc_f();
 
 #if VERBOSE > 1
     printf("Synchronized...\n");
@@ -237,7 +237,7 @@ int main(void) {
 #endif
 
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
-    sentinel_start();
+    stnl_snc_s();
 
     fsync_vring();
 #ifndef STALLING
@@ -246,7 +246,7 @@ int main(void) {
 #endif
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
-    sentinel_end();
+    stnl_snc_f();
 
 #if VERBOSE > 1
     printf("Synchronized...\n");
@@ -269,7 +269,7 @@ int main(void) {
 #endif
 
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
-    sentinel_start();
+    stnl_snc_s();
 
     fsync_rows();
 #ifndef STALLING
@@ -278,7 +278,7 @@ int main(void) {
 #endif
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
-    sentinel_end();
+    stnl_snc_f();
 
 #if VERBOSE > 1
     printf("Synchronized...\n");
@@ -301,7 +301,7 @@ int main(void) {
 #endif
 
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
-    sentinel_start();
+    stnl_snc_s();
 
     fsync_cols();
 #ifndef STALLING
@@ -310,7 +310,7 @@ int main(void) {
 #endif
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
-    sentinel_end();
+    stnl_snc_f();
 
 #if VERBOSE > 1
     printf("Synchronized...\n");

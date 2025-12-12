@@ -49,7 +49,7 @@ static inline void idma_conf_in(){
               (0b0       << 15) | \
               (0b000     << 12) | \
               (0x0       <<  7) | \
-              (0b1011011 <<  0)   \n");
+              (0b1011011 <<  0)   \n\t");
 }
 
 /* conf instruction */
@@ -79,7 +79,7 @@ static inline void idma_conf_out(){
               (0b0       << 15) | \
               (0b000     << 12) | \
               (0x0       <<  7) | \
-              (0b1011011 <<  0)   \n");
+              (0b1011011 <<  0)   \n\t");
 }
 
 /* set instruction */
@@ -93,18 +93,20 @@ static inline void idma_conf_out(){
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1111011 <<  0)   \n"); /* OPCODE */
 static inline void idma_set_addr_len_in(volatile uint32_t dst_addr, volatile uint32_t src_addr, volatile uint32_t len){
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_addr));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_addr));
-  asm volatile ("addi t0, %0, 0" :: "r"(len));
-  asm volatile(
-       ".word (0b00111   << 27) | \
-              (0x0       << 26) | \
-              (0b0       << 25) | \
-              (0b00110   << 20) | \
-              (0b00101   << 15) | \
-              (0b000     << 12) | \
-              (0x0       <<  7) | \
-              (0b1111011 <<  0)   \n");
+  asm volatile("addi t2, %0, 0\n\t"
+               "addi t1, %1, 0\n\t"
+               "addi t0, %2, 0\n\t"
+        ".word (0b00111   << 27) | \
+               (0x0       << 26) | \
+               (0b0       << 25) | \
+               (0b00110   << 20) | \
+               (0b00101   << 15) | \
+               (0b000     << 12) | \
+               (0x0       <<  7) | \
+               (0b1111011 <<  0)   \n\t"
+               :
+               :"r"(dst_addr), "r"(src_addr), "r"(len)
+               :"t2", "t1", "t0");
 }
 
 /* set instruction */
@@ -118,18 +120,20 @@ static inline void idma_set_addr_len_in(volatile uint32_t dst_addr, volatile uin
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1111011 <<  0)   \n"); /* OPCODE */
 static inline void idma_set_addr_len_out(volatile uint32_t dst_addr, volatile uint32_t src_addr, volatile uint32_t len){
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_addr));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_addr));
-  asm volatile ("addi t0, %0, 0" :: "r"(len));
-  asm volatile(
-       ".word (0b00111   << 27) | \
-              (0x0       << 26) | \
-              (0b1       << 25) | \
-              (0b00110   << 20) | \
-              (0b00101   << 15) | \
-              (0b000     << 12) | \
-              (0x0       <<  7) | \
-              (0b1111011 <<  0)   \n");
+  asm volatile("addi t2, %0, 0\n\t"
+               "addi t1, %1, 0\n\t"
+               "addi t0, %2, 0\n\t"
+        ".word (0b00111   << 27) | \
+               (0x0       << 26) | \
+               (0b1       << 25) | \
+               (0b00110   << 20) | \
+               (0b00101   << 15) | \
+               (0b000     << 12) | \
+               (0x0       <<  7) | \
+               (0b1111011 <<  0)   \n\t"
+               :
+               :"r"(dst_addr), "r"(src_addr), "r"(len)
+               :"t2", "t1", "t0");
 }
 
 /* set instruction */
@@ -143,18 +147,20 @@ static inline void idma_set_addr_len_out(volatile uint32_t dst_addr, volatile ui
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1111011 <<  0)   \n"); /* OPCODE */
 static inline void idma_set_std2_rep2_in(volatile uint32_t dst_std_2, volatile uint32_t src_std_2, volatile uint32_t reps_2){
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_std_2));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_std_2));
-  asm volatile ("addi t0, %0, 0" :: "r"(reps_2));
-  asm volatile(
-       ".word (0b00111   << 27) | \
-              (0x0       << 26) | \
-              (0b0       << 25) | \
-              (0b00110   << 20) | \
-              (0b00101   << 15) | \
-              (0b001     << 12) | \
-              (0x0       <<  7) | \
-              (0b1111011 <<  0)   \n");
+  asm volatile("addi t2, %0, 0\n\t"
+               "addi t1, %1, 0\n\t"
+               "addi t0, %2, 0\n\t"
+        ".word (0b00111   << 27) | \
+               (0x0       << 26) | \
+               (0b0       << 25) | \
+               (0b00110   << 20) | \
+               (0b00101   << 15) | \
+               (0b001     << 12) | \
+               (0x0       <<  7) | \
+               (0b1111011 <<  0)   \n\t"
+               :
+               :"r"(dst_std_2), "r"(src_std_2), "r"(reps_2)
+               :"t2", "t1", "t0");
 }
 
 /* set instruction */
@@ -168,18 +174,20 @@ static inline void idma_set_std2_rep2_in(volatile uint32_t dst_std_2, volatile u
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1111011 <<  0)   \n"); /* OPCODE */
 static inline void idma_set_std2_rep2_out(volatile uint32_t dst_std_2, volatile uint32_t src_std_2, volatile uint32_t reps_2){
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_std_2));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_std_2));
-  asm volatile ("addi t0, %0, 0" :: "r"(reps_2));
-  asm volatile(
-       ".word (0b00111   << 27) | \
-              (0x0       << 26) | \
-              (0b1       << 25) | \
-              (0b00110   << 20) | \
-              (0b00101   << 15) | \
-              (0b001     << 12) | \
-              (0x0       <<  7) | \
-              (0b1111011 <<  0)   \n");
+  asm volatile("addi t2, %0, 0\n\t"
+               "addi t1, %1, 0\n\t"
+               "addi t0, %2, 0\n\t"
+        ".word (0b00111   << 27) | \
+               (0x0       << 26) | \
+               (0b1       << 25) | \
+               (0b00110   << 20) | \
+               (0b00101   << 15) | \
+               (0b001     << 12) | \
+               (0x0       <<  7) | \
+               (0b1111011 <<  0)   \n\t"
+               :
+               :"r"(dst_std_2), "r"(src_std_2), "r"(reps_2)
+               :"t2", "t1", "t0");
 }
 
 /* set instruction */
@@ -193,18 +201,20 @@ static inline void idma_set_std2_rep2_out(volatile uint32_t dst_std_2, volatile 
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1111011 <<  0)   \n"); /* OPCODE */
 static inline void idma_set_std3_rep3_in(volatile uint32_t dst_std_3, volatile uint32_t src_std_3, volatile uint32_t reps_3){
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_std_3));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_std_3));
-  asm volatile ("addi t0, %0, 0" :: "r"(reps_3));
-  asm volatile(
-       ".word (0b00111   << 27) | \
-              (0x0       << 26) | \
-              (0b0       << 25) | \
-              (0b00110   << 20) | \
-              (0b00101   << 15) | \
-              (0b010     << 12) | \
-              (0x0       <<  7) | \
-              (0b1111011 <<  0)   \n");
+  asm volatile("addi t2, %0, 0\n\t"
+               "addi t1, %1, 0\n\t"
+               "addi t0, %2, 0\n\t"
+        ".word (0b00111   << 27) | \
+               (0x0       << 26) | \
+               (0b0       << 25) | \
+               (0b00110   << 20) | \
+               (0b00101   << 15) | \
+               (0b010     << 12) | \
+               (0x0       <<  7) | \
+               (0b1111011 <<  0)   \n\t"
+               :
+               :"r"(dst_std_3), "r"(src_std_3), "r"(reps_3)
+               :"t2", "t1", "t0");
 }
 
 /* set instruction */
@@ -218,18 +228,20 @@ static inline void idma_set_std3_rep3_in(volatile uint32_t dst_std_3, volatile u
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1111011 <<  0)   \n"); /* OPCODE */
 static inline void idma_set_std3_rep3_out(volatile uint32_t dst_std_3, volatile uint32_t src_std_3, volatile uint32_t reps_3){
-  asm volatile ("addi t2, %0, 0" :: "r"(dst_std_3));
-  asm volatile ("addi t1, %0, 0" :: "r"(src_std_3));
-  asm volatile ("addi t0, %0, 0" :: "r"(reps_3));
-  asm volatile(
-       ".word (0b00111   << 27) | \
-              (0x0       << 26) | \
-              (0b1       << 25) | \
-              (0b00110   << 20) | \
-              (0b00101   << 15) | \
-              (0b010     << 12) | \
-              (0x0       <<  7) | \
-              (0b1111011 <<  0)   \n");
+  asm volatile("addi t2, %0, 0\n\t"
+               "addi t1, %1, 0\n\t"
+               "addi t0, %2, 0\n\t"
+        ".word (0b00111   << 27) | \
+               (0x0       << 26) | \
+               (0b1       << 25) | \
+               (0b00110   << 20) | \
+               (0b00101   << 15) | \
+               (0b010     << 12) | \
+               (0x0       <<  7) | \
+               (0b1111011 <<  0)   \n\t"
+               :
+               :"r"(dst_std_3), "r"(src_std_3), "r"(reps_3)
+               :"t2", "t1", "t0");
 }
 
 /* start instruction */
@@ -247,7 +259,7 @@ static inline void idma_start_in(){
               (0x0       << 15) | \
               (0b111     << 12) | \
               (0x0       <<  7) | \
-              (0b1111011 <<  0)   \n");
+              (0b1111011 <<  0)   \n\t");
 }
 
 /* start instruction */
@@ -265,7 +277,7 @@ static inline void idma_start_out(){
               (0x0       << 15) | \
               (0b111     << 12) | \
               (0x0       <<  7) | \
-              (0b1111011 <<  0)   \n");
+              (0b1111011 <<  0)   \n\t");
 }
 
 #endif /*IDMA_ISA_UTILS_H*/

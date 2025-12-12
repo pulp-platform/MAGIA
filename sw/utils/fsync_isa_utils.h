@@ -31,15 +31,17 @@
   //             (0x0       <<  7) | \     /* Reserved - 0x0 */
   //             (0b1011011 <<  0)   \n"); /* OPCODE */
 static inline void fsync(volatile uint32_t id, volatile uint32_t aggregate){
-  asm volatile("addi t1, %0, 0" ::"r"(id));
-  asm volatile("addi t0, %0, 0" ::"r"(aggregate));
-  asm volatile(
-       ".word (0x0       << 25) | \
-              (0b00110   << 20) | \
-              (0b00101   << 15) | \
-              (0b010     << 12) | \
-              (0x0       <<  7) | \
-              (0b1011011 <<  0)   \n");
+  asm volatile("addi t1, %0, 0\n\t"
+               "addi t0, %1, 0\n\t"
+        ".word (0x0       << 25) | \
+               (0b00110   << 20) | \
+               (0b00101   << 15) | \
+               (0b010     << 12) | \
+               (0x0       <<  7) | \
+               (0b1011011 <<  0)   \n\t"
+               :
+               :"r"(id), "r"(aggregate)
+               :"t1", "t0");
 }
 
 #endif /*FSYNC_ISA_UTILS_H*/

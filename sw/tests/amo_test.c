@@ -34,6 +34,30 @@ int main(void) {
 
   printf("Starting AMO test...\n");
 
+  if (hartid == 0) {
+    printf("Releasing binary semaphores...\n");
+    for (int i = 1; i < NUM_HARTS; i++){
+      bsem_signal(SYNC_BASE + i*L1_TILE_OFFSET);
+    }
+    printf("Binary semaphores released...\n");
+  } else {
+    printf("Acquiring binary semaphore...\n");
+    bsem_wait(SYNC_BASE + hartid*L1_TILE_OFFSET);
+    printf("Binary semaphore acquired...\n");
+  }
+
+  if (hartid == 0) {
+    printf("Acquiring counting semaphore...\n");
+    for (int i = 1; i < NUM_HARTS; i++){
+      csem_wait(SYNC_BASE + hartid*L1_TILE_OFFSET);
+    }
+    printf("Acquiring counting emaphore...\n");
+  } else {
+    printf("Releasing counting semaphore...\n");
+    csem_signal(SYNC_BASE + 0*L1_TILE_OFFSET);
+    printf("Counting semaphore released...\n");
+  }
+
   for (int i = 0; i < NUM_ITER; i++){
     wait_nop(get_hartid());
     for (int i = 0; i < AMO_TILES; i++){

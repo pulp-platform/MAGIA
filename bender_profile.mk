@@ -17,10 +17,16 @@ profile_targs += -t rtl
 profile_targs += -t test
 profile_targs += -t idma_test
 
+ifeq ($(mesh_dv), 0)
+	profile_targs += -t standalone_tile
+endif
+
 profile_targs += -t magia_tile_test
 
 profile_targs += -t magia_dv
 
-profile_defs += -D PROFILE_SENTINEL
 # profile_defs += -D PROFILE_SYNC
+profile_defs += -D SEQUENTIAL_IRQ
+profile_defs += -D PROFILE_SENTINEL
+profile_defs += -D PROFILE_TIMESLOT
 # profile_defs += -D PROFILE_DETAILED

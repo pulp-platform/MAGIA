@@ -61,23 +61,31 @@ module magia_tile
   // NoC input and output links
   input  floo_req_t                         noc_south_req_i,
   output floo_rsp_t                         noc_south_rsp_o,
+  input  floo_wide_t                        noc_south_wide_i,
   output floo_req_t                         noc_south_req_o,
   input  floo_rsp_t                         noc_south_rsp_i,
+  output floo_wide_t                        noc_south_wide_o,
 
   input  floo_req_t                         noc_east_req_i,
   output floo_rsp_t                         noc_east_rsp_o,
+  input  floo_wide_t                        noc_east_wide_i,
   output floo_req_t                         noc_east_req_o,
   input  floo_rsp_t                         noc_east_rsp_i,
+  output floo_wide_t                        noc_east_wide_o,
 
   input  floo_req_t                         noc_north_req_i,
   output floo_rsp_t                         noc_north_rsp_o,
+  input  floo_wide_t                        noc_north_wide_i,
   output floo_req_t                         noc_north_req_o,
   input  floo_rsp_t                         noc_north_rsp_i,
+  output floo_wide_t                        noc_north_wide_o,
 
   input  floo_req_t                         noc_west_req_i,
   output floo_rsp_t                         noc_west_rsp_o,
+  input  floo_wide_t                        noc_west_wide_i,
   output floo_req_t                         noc_west_req_o,
   input  floo_rsp_t                         noc_west_rsp_i,
+  output floo_wide_t                        noc_west_wide_o,
 
   // Tile spatial IDs
   input  logic [31:0]                       x_id_i,
@@ -124,12 +132,6 @@ module magia_tile
   logic[magia_pkg::ADDR_W-1:0] tile_l1_end_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_reserved_start_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_reserved_end_addr;
-  
-  magia_tile_pkg::redmule_data_req_t redmule_data_req;
-  magia_tile_pkg::redmule_data_rsp_t redmule_data_rsp;
-
-  magia_tile_pkg::redmule_ctrl_req_t redmule_ctrl_req;  // Can be used to manage RedMulE control at top-level
-  magia_tile_pkg::redmule_ctrl_rsp_t redmule_ctrl_rsp;  // Can be used to manage RedMulE control at top-level
 
   magia_tile_pkg::core_data_req_t core_data_req;
   magia_tile_pkg::core_data_rsp_t core_data_rsp;
@@ -170,35 +172,53 @@ module magia_tile
   magia_tile_pkg::core_axi_instr_req_t core_l2_instr_req;
   magia_tile_pkg::core_axi_instr_rsp_t core_l2_instr_rsp;
 
-  magia_tile_pkg::idma_axi_req_t idma_axi_read_req;
-  magia_tile_pkg::idma_axi_rsp_t idma_axi_read_rsp;
+  magia_tile_pkg::idma_axi_req_t idma_axi_read_req_out;
+  magia_tile_pkg::idma_axi_rsp_t idma_axi_read_rsp_out;
 
-  magia_tile_pkg::idma_axi_req_t idma_axi_write_req;
-  magia_tile_pkg::idma_axi_rsp_t idma_axi_write_rsp;
+  magia_tile_pkg::idma_axi_req_t idma_axi_write_req_out;
+  magia_tile_pkg::idma_axi_rsp_t idma_axi_write_rsp_out;
   
-  magia_tile_pkg::idma_axi_req_t idma_axi_req;
-  magia_tile_pkg::idma_axi_rsp_t idma_axi_rsp;
+  magia_tile_pkg::idma_axi_req_t idma_axi_req_out;
+  magia_tile_pkg::idma_axi_rsp_t idma_axi_rsp_out;
 
-  magia_tile_pkg::idma_obi_req_t idma_obi_read_req;
-  magia_tile_pkg::idma_obi_rsp_t idma_obi_read_rsp;
+  magia_tile_pkg::idma_axi_req_t idma_axi_read_req_in;
+  magia_tile_pkg::idma_axi_rsp_t idma_axi_read_rsp_in;
 
-  magia_tile_pkg::idma_obi_req_t idma_obi_write_req;
-  magia_tile_pkg::idma_obi_rsp_t idma_obi_write_rsp;
+  magia_tile_pkg::idma_axi_req_t idma_axi_write_req_in;
+  magia_tile_pkg::idma_axi_rsp_t idma_axi_write_rsp_in;
 
-  magia_tile_pkg::idma_hci_req_t idma_hci_read_req;
-  magia_tile_pkg::idma_hci_rsp_t idma_hci_read_rsp;
+  magia_tile_pkg::idma_axi_req_t idma_axi_req_in;
+  magia_tile_pkg::idma_axi_rsp_t idma_axi_rsp_in;
 
-  magia_tile_pkg::idma_hci_req_t idma_hci_write_req;
-  magia_tile_pkg::idma_hci_rsp_t idma_hci_write_rsp;
+  magia_tile_pkg::idma_obi_req_t idma_obi_read_req_out;
+  magia_tile_pkg::idma_obi_rsp_t idma_obi_read_rsp_out;
 
-  magia_tile_pkg::axi_xbar_slv_req_t[magia_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_data_in_req; // Index 3 -> ext, Index 2 -> iDMA, Index 1 -> Core Data, Index 0 -> Core Instruction
-  magia_tile_pkg::axi_xbar_slv_rsp_t[magia_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_data_in_rsp; // Index 3 -> ext, Index 2 -> iDMA, Index 1 -> Core Data, Index 0 -> Core Instruction
+  magia_tile_pkg::idma_obi_req_t idma_obi_write_req_out;
+  magia_tile_pkg::idma_obi_rsp_t idma_obi_write_rsp_out;
 
-  magia_pkg::axi_xbar_mst_req_t[magia_tile_pkg::AxiXbarNoMstPorts-1:0] axi_xbar_mst_req;
-  magia_pkg::axi_xbar_mst_rsp_t[magia_tile_pkg::AxiXbarNoMstPorts-1:0] axi_xbar_mst_rsp;
-  
-  magia_pkg::axi_xbar_mst_req_t axi_xbar_data_out_req;
-  magia_pkg::axi_xbar_mst_rsp_t axi_xbar_data_out_rsp;
+  magia_tile_pkg::idma_obi_req_t idma_obi_read_req_in;
+  magia_tile_pkg::idma_obi_rsp_t idma_obi_read_rsp_in;
+
+  magia_tile_pkg::idma_obi_req_t idma_obi_write_req_in;
+  magia_tile_pkg::idma_obi_rsp_t idma_obi_write_rsp_in;
+
+  magia_tile_pkg::idma_hci_req_t idma_hci_read_req_out;
+  magia_tile_pkg::idma_hci_rsp_t idma_hci_read_rsp_out;
+
+  magia_tile_pkg::idma_hci_req_t idma_hci_write_req_out;
+  magia_tile_pkg::idma_hci_rsp_t idma_hci_write_rsp_out;
+
+  magia_tile_pkg::idma_hci_req_t idma_hci_read_req_in;
+  magia_tile_pkg::idma_hci_rsp_t idma_hci_read_rsp_in;
+
+  magia_tile_pkg::idma_hci_req_t idma_hci_write_req_in;
+  magia_tile_pkg::idma_hci_rsp_t idma_hci_write_rsp_in;
+
+  magia_tile_pkg::axi_xbar_slv_req_t[magia_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_slv_req; // Index 2 -> ext, Index 1 -> Core Data, Index 0 -> Core Instruction
+  magia_tile_pkg::axi_xbar_slv_rsp_t[magia_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_slv_rsp; // Index 2 -> ext, Index 1 -> Core Data, Index 0 -> Core Instruction
+
+  magia_pkg::axi_xbar_mst_req_t[magia_tile_pkg::AxiXbarNoMstPorts-1:0] axi_xbar_mst_req;  // Index 1 -> ext, Index 0 -> OBI XBAR
+  magia_pkg::axi_xbar_mst_rsp_t[magia_tile_pkg::AxiXbarNoMstPorts-1:0] axi_xbar_mst_rsp;  // Index 1 -> ext, Index 0 -> OBI XBAR
 
   logic[magia_tile_pkg::axi_xbar_cfg.NoSlvPorts-1:0] en_default_mst_port;
   
@@ -267,12 +287,13 @@ module magia_tile
   logic fsync_error;
 
   // FlooNoC connections between NI and router
-  floo_req_t [4:0] floo_router_req_in;
-  floo_rsp_t [4:0] floo_router_rsp_in;
-  floo_req_t [4:0] floo_router_req_out;
-  floo_rsp_t [4:0] floo_router_rsp_out;
-
-  id_t floo_id;
+  id_t              floo_id;
+  floo_req_t  [4:0] floo_router_req_in;
+  floo_rsp_t  [4:0] floo_router_rsp_in;
+  floo_wide_t [4:0] floo_router_wide_in;
+  floo_req_t  [4:0] floo_router_req_out;
+  floo_rsp_t  [4:0] floo_router_rsp_out;
+  floo_wide_t [4:0] floo_router_wide_out;
   
   logic                           x_compressed_valid;
   logic                           x_compressed_ready;
@@ -317,12 +338,10 @@ module magia_tile
   assign obi_xbar_en_default_idx = '1; // Routing to the AXI Xbar all requests with an address outside the range of the internal L1 and the external L2
   assign obi_xbar_default_idx    = '0;
 
-  assign axi_xbar_data_in_req[magia_tile_pkg::AXI_IDMA_IDX]       = idma_axi_req;
-  assign idma_axi_rsp                                             = axi_xbar_data_in_rsp[magia_tile_pkg::AXI_IDMA_IDX];
-  assign axi_xbar_data_in_req[magia_tile_pkg::AXI_CORE_DATA_IDX]  = core_l2_data_req;
-  assign core_l2_data_rsp                                         = axi_xbar_data_in_rsp[magia_tile_pkg::AXI_CORE_DATA_IDX];
-  assign axi_xbar_data_in_req[magia_tile_pkg::AXI_CORE_INSTR_IDX] = core_l2_instr_req;
-  assign core_l2_instr_rsp                                        = axi_xbar_data_in_rsp[magia_tile_pkg::AXI_CORE_INSTR_IDX];
+  assign axi_xbar_slv_req[magia_tile_pkg::AXI_SLV_CORE_DATA_IDX]  = core_l2_data_req;
+  assign core_l2_data_rsp                                         = axi_xbar_slv_rsp[magia_tile_pkg::AXI_SLV_CORE_DATA_IDX];
+  assign axi_xbar_slv_req[magia_tile_pkg::AXI_SLV_CORE_INSTR_IDX] = core_l2_instr_req;
+  assign core_l2_instr_rsp                                        = axi_xbar_slv_rsp[magia_tile_pkg::AXI_SLV_CORE_INSTR_IDX];
 
   assign obi_xbar_slv_req[magia_tile_pkg::OBI_CORE_IDX] = core_obi_data_req;
   assign core_obi_data_rsp                              = obi_xbar_slv_rsp[magia_tile_pkg::OBI_CORE_IDX];
@@ -347,10 +366,17 @@ module magia_tile
 
   assign en_default_mst_port = '1;
 
+  assign floo_id = '{x: (x_id_i+1), y: y_id_i, port_id: 0};
+
   assign hci_clear = 1'b0;
   assign hci_ctrl  = '0;
 
-  assign redmule_ctrl_req = '0;
+  assign hwpe_redmule_ctrl[0].req  = 1'b0;
+  assign hwpe_redmule_ctrl[0].add  = '0;
+  assign hwpe_redmule_ctrl[0].wen  = 1'b0;
+  assign hwpe_redmule_ctrl[0].be   = '0;
+  assign hwpe_redmule_ctrl[0].data = '0;
+  assign hwpe_redmule_ctrl[0].id   = '0;
 
   assign idma_clear = 1'b0;
 
@@ -411,8 +437,6 @@ module magia_tile
   assign xif_redmule_if.compressed_req   = '0;
   assign xif_redmule_if.mem_ready        = 1'b0;
   assign xif_redmule_if.mem_resp         = '0;
-
-  assign floo_id = '{x: (x_id_i+1), y: y_id_i, port_id: 0};
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -485,79 +509,203 @@ module magia_tile
   obi2hci_req #(
     .obi_req_t ( magia_tile_pkg::idma_obi_req_t ),
     .hic_req_t ( magia_tile_pkg::idma_hci_req_t )
-  ) i_idma_obi2hci_req (
-    .obi_req_i ( idma_obi_read_req ),
-    .hci_req_o ( idma_hci_read_req )
+  ) i_idma_out_obi2hci_req (
+    .obi_req_i ( idma_obi_read_req_out ),
+    .hci_req_o ( idma_hci_read_req_out )
   );
 
   hci2obi_rsp #(
     .hci_rsp_t ( magia_tile_pkg::idma_hci_rsp_t ),
     .obi_rsp_t ( magia_tile_pkg::idma_obi_rsp_t )
-  ) i_idma_hci2obi_rsp (
-    .hci_rsp_i ( idma_hci_read_rsp ),
-    .obi_rsp_o ( idma_obi_read_rsp )
+  ) i_idma_out_hci2obi_rsp (
+    .hci_rsp_i ( idma_hci_read_rsp_out ),
+    .obi_rsp_o ( idma_obi_read_rsp_out )
   );
 
   obi2hci_req #(
     .obi_req_t ( magia_tile_pkg::idma_obi_req_t ),
     .hic_req_t ( magia_tile_pkg::idma_hci_req_t )
-  ) i_idma_obi2hci_write_req (
-    .obi_req_i ( idma_obi_write_req ),
-    .hci_req_o ( idma_hci_write_req )
+  ) i_idma_out_obi2hci_write_req (
+    .obi_req_i ( idma_obi_write_req_out ),
+    .hci_req_o ( idma_hci_write_req_out )
   );
 
   hci2obi_rsp #(
     .hci_rsp_t ( magia_tile_pkg::idma_hci_rsp_t ),
     .obi_rsp_t ( magia_tile_pkg::idma_obi_rsp_t )
-  ) i_idma_hci2obi_write_rsp (
-    .hci_rsp_i ( idma_hci_write_rsp ),
-    .obi_rsp_o ( idma_obi_write_rsp )
+  ) i_idma_out_hci2obi_write_rsp (
+    .hci_rsp_i ( idma_hci_write_rsp_out ),
+    .obi_rsp_o ( idma_obi_write_rsp_out )
+  );
+
+  obi2hci_req #(
+    .obi_req_t ( magia_tile_pkg::idma_obi_req_t ),
+    .hic_req_t ( magia_tile_pkg::idma_hci_req_t )
+  ) i_idma_in_obi2hci_req (
+    .obi_req_i ( idma_obi_read_req_in ),
+    .hci_req_o ( idma_hci_read_req_in )
+  );
+
+  hci2obi_rsp #(
+    .hci_rsp_t ( magia_tile_pkg::idma_hci_rsp_t ),
+    .obi_rsp_t ( magia_tile_pkg::idma_obi_rsp_t )
+  ) i_idma_in_hci2obi_rsp (
+    .hci_rsp_i ( idma_hci_read_rsp_in ),
+    .obi_rsp_o ( idma_obi_read_rsp_in )
+  );
+
+  obi2hci_req #(
+    .obi_req_t ( magia_tile_pkg::idma_obi_req_t ),
+    .hic_req_t ( magia_tile_pkg::idma_hci_req_t )
+  ) i_idma_in_obi2hci_write_req (
+    .obi_req_i ( idma_obi_write_req_in ),
+    .hci_req_o ( idma_hci_write_req_in )
+  );
+
+  hci2obi_rsp #(
+    .hci_rsp_t ( magia_tile_pkg::idma_hci_rsp_t ),
+    .obi_rsp_t ( magia_tile_pkg::idma_obi_rsp_t )
+  ) i_idma_in_hci2obi_write_rsp (
+    .hci_rsp_i ( idma_hci_write_rsp_in ),
+    .obi_rsp_o ( idma_obi_write_rsp_in )
   );
 
   axi_to_obi #(
-    .ObiCfg       ( magia_tile_pkg::obi_amo_cfg             ),
-    .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t     ),
-    .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t     ),
-    .obi_a_chan_t ( magia_tile_pkg::core_data_obi_a_chan_t  ),
-    .obi_r_chan_t ( magia_tile_pkg::core_data_obi_r_chan_t  ),
-    .AxiAddrWidth ( magia_pkg::ADDR_W                       ),
-    .AxiDataWidth ( magia_pkg::DATA_W                       ),
-    .AxiIdWidth   ( magia_pkg::AXI_NOC_ID_W                 ),
-    .AxiUserWidth ( magia_pkg::AXI_NOC_U_W                  ),
-    .MaxTrans     ( 1                                       ),
-    .axi_req_t    ( magia_pkg::axi_xbar_mst_req_t           ),
-    .axi_rsp_t    ( magia_pkg::axi_xbar_mst_rsp_t           )
+    .ObiCfg       ( magia_tile_pkg::obi_amo_cfg            ),
+    .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t    ),
+    .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t    ),
+    .obi_a_chan_t ( magia_tile_pkg::core_data_obi_a_chan_t ),
+    .obi_r_chan_t ( magia_tile_pkg::core_data_obi_r_chan_t ),
+    .AxiAddrWidth ( magia_pkg::ADDR_W                      ),
+    .AxiDataWidth ( magia_pkg::DATA_W                      ),
+    .AxiIdWidth   ( magia_pkg::AXI_NOC_ID_W                ),
+    .AxiUserWidth ( magia_pkg::AXI_NOC_U_W                 ),
+    .MaxTrans     ( 8                                      ),
+    .axi_req_t    ( magia_pkg::axi_xbar_mst_req_t          ),
+    .axi_rsp_t    ( magia_pkg::axi_xbar_mst_rsp_t          )
   ) i_ext_data_axi2obi (
-    .clk_i                  ( sys_clk                                       ),
-    .rst_ni                 ( rst_ni                                        ),
-    .testmode_i             ( test_mode_i                                   ),
-    .axi_req_i              ( axi_xbar_mst_req[magia_tile_pkg::OBI_EXT_IDX] ),
-    .axi_rsp_o              ( axi_xbar_mst_rsp[magia_tile_pkg::OBI_EXT_IDX] ),
-    .obi_req_o              ( ext_obi_data_req                              ),
-    .obi_rsp_i              ( ext_obi_data_rsp                              ),
-    .req_aw_id_o            (                                               ),
-    .req_aw_user_o          (                                               ),
-    .req_w_user_o           (                                               ),
-    .req_write_aid_i        ( axi2obi_req_write_aid                         ),
-    .req_write_auser_i      ( axi2obi_req_write_auser                       ),
-    .req_write_wuser_i      ( axi2obi_req_write_wuser                       ),
-    .req_ar_id_o            (                                               ),
-    .req_ar_user_o          (                                               ),
-    .req_read_aid_i         ( axi2obi_req_read_aid                          ),
-    .req_read_auser_i       ( axi2obi_req_read_auser                        ),
-    .rsp_write_aw_user_o    (                                               ),
-    .rsp_write_w_user_o     (                                               ),
-    .rsp_write_bank_strb_o  (                                               ),
-    .rsp_write_rid_o        (                                               ),
-    .rsp_write_ruser_o      (                                               ),
-    .rsp_write_last_o       (                                               ),
-    .rsp_write_hs_o         (                                               ),
-    .rsp_b_user_i           ( axi2obi_rsp_b_user                            ),
-    .rsp_read_ar_user_o     (                                               ),
-    .rsp_read_size_enable_o (                                               ),
-    .rsp_read_rid_o         (                                               ),
-    .rsp_read_ruser_o       (                                               ),
-    .rsp_r_user_i           ( axi2obi_rsp_r_user                            )
+    .clk_i                  ( sys_clk                                           ),
+    .rst_ni                 ( rst_ni                                            ),
+    .testmode_i             ( test_mode_i                                       ),
+    .axi_req_i              ( axi_xbar_mst_req[magia_tile_pkg::AXI_MST_OBI_IDX] ),
+    .axi_rsp_o              ( axi_xbar_mst_rsp[magia_tile_pkg::AXI_MST_OBI_IDX] ),
+    .obi_req_o              ( ext_obi_data_req                                  ),
+    .obi_rsp_i              ( ext_obi_data_rsp                                  ),
+    .req_aw_id_o            (                                                   ),
+    .req_aw_user_o          (                                                   ),
+    .req_w_user_o           (                                                   ),
+    .req_write_aid_i        ( axi2obi_req_write_aid                             ),
+    .req_write_auser_i      ( axi2obi_req_write_auser                           ),
+    .req_write_wuser_i      ( axi2obi_req_write_wuser                           ),
+    .req_ar_id_o            (                                                   ),
+    .req_ar_user_o          (                                                   ),
+    .req_read_aid_i         ( axi2obi_req_read_aid                              ),
+    .req_read_auser_i       ( axi2obi_req_read_auser                            ),
+    .rsp_write_aw_user_o    (                                                   ),
+    .rsp_write_w_user_o     (                                                   ),
+    .rsp_write_bank_strb_o  (                                                   ),
+    .rsp_write_rid_o        (                                                   ),
+    .rsp_write_ruser_o      (                                                   ),
+    .rsp_write_last_o       (                                                   ),
+    .rsp_write_hs_o         (                                                   ),
+    .rsp_b_user_i           ( axi2obi_rsp_b_user                                ),
+    .rsp_read_ar_user_o     (                                                   ),
+    .rsp_read_size_enable_o (                                                   ),
+    .rsp_read_rid_o         (                                                   ),
+    .rsp_read_ruser_o       (                                                   ),
+    .rsp_r_user_i           ( axi2obi_rsp_r_user                                )
+  );
+
+  axi_to_obi #(
+    .ObiCfg       ( magia_tile_pkg::obi_idma_cfg      ),
+    .obi_req_t    ( magia_tile_pkg::idma_obi_req_t    ),
+    .obi_rsp_t    ( magia_tile_pkg::idma_obi_rsp_t    ),
+    .obi_a_chan_t ( magia_tile_pkg::idma_obi_a_chan_t ),
+    .obi_r_chan_t ( magia_tile_pkg::idma_obi_r_chan_t ),
+    .AxiAddrWidth ( iDMA_AddrWidth                    ),
+    .AxiDataWidth ( iDMA_DataWidth                    ),
+    .AxiIdWidth   ( iDMA_AxiIdWidth                   ),
+    .AxiUserWidth ( iDMA_UserWidth                    ),
+    .MaxTrans     ( 8                                 ),
+    .axi_req_t    ( magia_tile_pkg::idma_axi_req_t    ),
+    .axi_rsp_t    ( magia_tile_pkg::idma_axi_rsp_t    )
+  ) i_idma_read_in_axi2obi (
+    .clk_i                  ( sys_clk               ),
+    .rst_ni                 ( rst_ni                ),
+    .testmode_i             ( test_mode_i           ),
+    .axi_req_i              ( idma_axi_read_req_in  ),
+    .axi_rsp_o              ( idma_axi_read_rsp_in  ),
+    .obi_req_o              ( idma_obi_read_req_in  ),
+    .obi_rsp_i              ( idma_obi_read_rsp_in  ),
+    .req_aw_id_o            (                       ),
+    .req_aw_user_o          (                       ),
+    .req_w_user_o           (                       ),
+    .req_write_aid_i        ( '0                    ),
+    .req_write_auser_i      ( '0                    ),
+    .req_write_wuser_i      ( '0                    ),
+    .req_ar_id_o            (                       ),
+    .req_ar_user_o          (                       ),
+    .req_read_aid_i         ( '0                    ),
+    .req_read_auser_i       ( '0                    ),
+    .rsp_write_aw_user_o    (                       ),
+    .rsp_write_w_user_o     (                       ),
+    .rsp_write_bank_strb_o  (                       ),
+    .rsp_write_rid_o        (                       ),
+    .rsp_write_ruser_o      (                       ),
+    .rsp_write_last_o       (                       ),
+    .rsp_write_hs_o         (                       ),
+    .rsp_b_user_i           ( '0                    ),
+    .rsp_read_ar_user_o     (                       ),
+    .rsp_read_size_enable_o (                       ),
+    .rsp_read_rid_o         (                       ),
+    .rsp_read_ruser_o       (                       ),
+    .rsp_r_user_i           ( '0                    )
+  );
+
+  axi_to_obi #(
+    .ObiCfg       ( magia_tile_pkg::obi_idma_cfg      ),
+    .obi_req_t    ( magia_tile_pkg::idma_obi_req_t    ),
+    .obi_rsp_t    ( magia_tile_pkg::idma_obi_rsp_t    ),
+    .obi_a_chan_t ( magia_tile_pkg::idma_obi_a_chan_t ),
+    .obi_r_chan_t ( magia_tile_pkg::idma_obi_r_chan_t ),
+    .AxiAddrWidth ( iDMA_AddrWidth                    ),
+    .AxiDataWidth ( iDMA_DataWidth                    ),
+    .AxiIdWidth   ( iDMA_AxiIdWidth                   ),
+    .AxiUserWidth ( iDMA_UserWidth                    ),
+    .MaxTrans     ( 8                                 ),
+    .axi_req_t    ( magia_tile_pkg::idma_axi_req_t    ),
+    .axi_rsp_t    ( magia_tile_pkg::idma_axi_rsp_t    )
+  ) i_idma_write_in_axi2obi (
+    .clk_i                  ( sys_clk               ),
+    .rst_ni                 ( rst_ni                ),
+    .testmode_i             ( test_mode_i           ),
+    .axi_req_i              ( idma_axi_write_req_in ),
+    .axi_rsp_o              ( idma_axi_write_rsp_in ),
+    .obi_req_o              ( idma_obi_write_req_in ),
+    .obi_rsp_i              ( idma_obi_write_rsp_in ),
+    .req_aw_id_o            (                       ),
+    .req_aw_user_o          (                       ),
+    .req_w_user_o           (                       ),
+    .req_write_aid_i        ( '0                    ),
+    .req_write_auser_i      ( '0                    ),
+    .req_write_wuser_i      ( '0                    ),
+    .req_ar_id_o            (                       ),
+    .req_ar_user_o          (                       ),
+    .req_read_aid_i         ( '0                    ),
+    .req_read_auser_i       ( '0                    ),
+    .rsp_write_aw_user_o    (                       ),
+    .rsp_write_w_user_o     (                       ),
+    .rsp_write_bank_strb_o  (                       ),
+    .rsp_write_rid_o        (                       ),
+    .rsp_write_ruser_o      (                       ),
+    .rsp_write_last_o       (                       ),
+    .rsp_write_hs_o         (                       ),
+    .rsp_b_user_i           ( '0                    ),
+    .rsp_read_ar_user_o     (                       ),
+    .rsp_read_size_enable_o (                       ),
+    .rsp_read_rid_o         (                       ),
+    .rsp_read_ruser_o       (                       ),
+    .rsp_r_user_i           ( '0                    )
   );
 
 /*******************************************************/
@@ -583,50 +731,47 @@ module magia_tile
 /*******************************************************/
 /**           Interface Definitions Beginning         **/
 /*******************************************************/
-
-  hci_mem_intf #(
-    .AW ( magia_tile_pkg::AWM    ),
-    .DW ( magia_tile_pkg::DW_LIC ),
-    .BW ( magia_tile_pkg::BW_LIC ),
-    .IW ( magia_tile_pkg::IW     ),
-    .UW ( magia_tile_pkg::UW_LIC )
+  
+  hci_core_intf #(
+    .DW ( magia_tile_pkg::MEM_DATA_W ),
+    .AW ( magia_tile_pkg::MEM_ADDR_W ),
+    .BW ( magia_tile_pkg::MEM_BYTE_W ),
+    .UW ( magia_tile_pkg::MEM_USER_W ),
+    .IW ( magia_tile_pkg::MEM_ID_W   )
   ) hci_tcdm_sram_if[N_MEM_BANKS-1:0] (
     .clk ( sys_clk )
   );
   
   hci_core_intf #(
-    .DW ( magia_tile_pkg::DW_LIC ),
-    .AW ( magia_tile_pkg::AWC    ),
-    .OW ( magia_tile_pkg::AWC    ),
-    .UW ( magia_tile_pkg::UW_LIC )
+    .DW ( magia_pkg::DATA_W         ),
+    .AW ( magia_pkg::ADDR_W         ),
+    .UW ( magia_pkg::USR_W          ),
+    .IW ( magia_tile_pkg::LICO_ID_W )
   ) hci_core_if[magia_tile_pkg::N_CORE-1:0] (
     .clk( sys_clk )
   );
 
+  hwpe_ctrl_intf_periph #(
+    .ID_WIDTH( magia_tile_pkg::LICO_ID_W )
+  ) hwpe_redmule_ctrl[magia_tile_pkg::N_HWPE-1:0] (
+    .clk(sys_clk)
+  );
+  
   hci_core_intf #(
     .DW ( magia_tile_pkg::REDMULE_DW ),
-    .AW ( magia_tile_pkg::AWH        ),
-    .OW ( magia_tile_pkg::OWH        ),
-    .UW ( magia_tile_pkg::REDMULE_UW )
+    .AW ( magia_tile_pkg::REDMULE_AW ),
+    .UW ( magia_tile_pkg::REDMULE_UW ),
+    .IW ( magia_tile_pkg::LICO_ID_W  )
   ) hci_redmule_if[magia_tile_pkg::N_HWPE-1:0] (
     .clk( sys_clk )
   );
 
   hci_core_intf #(
-    .DW ( magia_tile_pkg::DW_LIC ),
-    .AW ( magia_tile_pkg::AWC    ),
-    .OW ( magia_tile_pkg::AWC    ),
-    .UW ( magia_tile_pkg::UW_LIC )
+    .DW ( magia_tile_pkg::iDMA_DataWidth ),
+    .AW ( magia_tile_pkg::iDMA_AddrWidth ),
+    .UW ( magia_tile_pkg::iDMA_UserWidth ),
+    .IW ( magia_tile_pkg::LICO_ID_W      )
   ) hci_dma_if[magia_tile_pkg::N_DMA-1:0] (
-    .clk( sys_clk )
-  );
-
-  hci_core_intf #(
-    .DW ( magia_tile_pkg::DW_LIC ),
-    .AW ( magia_tile_pkg::AWC    ),
-    .OW ( magia_tile_pkg::AWC    ),
-    .UW ( magia_tile_pkg::UW_LIC )
-  ) hci_ext_if[magia_tile_pkg::N_EXT-1:0] (
     .clk( sys_clk )
   );
 
@@ -668,13 +813,11 @@ module magia_tile
 /**          Interface Assignments Beginning          **/
 /*******************************************************/
 
-  `HCI_ASSIGN_TO_INTF(hci_core_if[0],                                   core_l1_data_req,   core_l1_data_rsp)   // Only 1 core supported
-  `HCI_ASSIGN_TO_INTF(hci_redmule_if[0],                                redmule_data_req,   redmule_data_rsp)   // Only 1 RedMulE supported
-  `HCI_ASSIGN_TO_INTF(hci_dma_if[magia_tile_pkg::HCI_DMA_CH_READ_IDX],  idma_hci_read_req,  idma_hci_read_rsp)  // iDMA HCI read channel
-  `HCI_ASSIGN_TO_INTF(hci_dma_if[magia_tile_pkg::HCI_DMA_CH_WRITE_IDX], idma_hci_write_req, idma_hci_write_rsp) // iDMA HCI write channel
-
-  `AXI_ASSIGN_REQ_STRUCT(axi_xbar_data_out_req, axi_xbar_mst_req[magia_tile_pkg::OBI_CORE_IDX])
-  `AXI_ASSIGN_RESP_STRUCT(axi_xbar_mst_rsp[magia_tile_pkg::OBI_CORE_IDX], axi_xbar_data_out_rsp)
+  `HCI_ASSIGN_TO_INTF(hci_core_if[0],                                       core_l1_data_req,       core_l1_data_rsp)       // Only 1 core supported
+  `HCI_ASSIGN_TO_INTF(hci_dma_if[magia_tile_pkg::HCI_DMA_OUT_CH_READ_IDX],  idma_hci_read_req_out,  idma_hci_read_rsp_out)  // iDMA out HCI read channel
+  `HCI_ASSIGN_TO_INTF(hci_dma_if[magia_tile_pkg::HCI_DMA_OUT_CH_WRITE_IDX], idma_hci_write_req_out, idma_hci_write_rsp_out) // iDMA out HCI write channel
+  `HCI_ASSIGN_TO_INTF(hci_dma_if[magia_tile_pkg::HCI_DMA_IN_CH_READ_IDX],   idma_hci_read_req_in,   idma_hci_read_rsp_in)   // iDMA in HCI read channel
+  `HCI_ASSIGN_TO_INTF(hci_dma_if[magia_tile_pkg::HCI_DMA_IN_CH_WRITE_IDX],  idma_hci_write_req_in,  idma_hci_write_rsp_in)  // iDMA in HCI write channel
 
 /*******************************************************/
 /**             Interface Assignments End             **/
@@ -683,17 +826,21 @@ module magia_tile
 /*******************************************************/
 
   redmule_top #(
-    .ID_WIDTH           ( magia_tile_pkg::REDMULE_ID_W       ),
-    .N_CORES            ( magia_tile_pkg::N_CORE             ),
-    .DW                 ( magia_tile_pkg::REDMULE_DW         ),
-    .UW                 ( magia_tile_pkg::REDMULE_UW         ),
-    .X_EXT              ( magia_tile_pkg::X_EXT_EN           ),
-    .SysInstWidth       ( magia_pkg::INSTR_W                 ),
-    .SysDataWidth       ( magia_pkg::DATA_W                  ),
-    .redmule_data_req_t ( magia_tile_pkg::redmule_data_req_t ),
-    .redmule_data_rsp_t ( magia_tile_pkg::redmule_data_rsp_t ),
-    .redmule_ctrl_req_t ( magia_tile_pkg::redmule_ctrl_req_t ),
-    .redmule_ctrl_rsp_t ( magia_tile_pkg::redmule_ctrl_rsp_t )
+    .ID_WIDTH           ( magia_tile_pkg::REDMULE_ID_W          ),
+    .N_CORES            ( magia_tile_pkg::N_CORE                ),
+    .DW                 ( magia_tile_pkg::REDMULE_DW            ),
+    .UW                 ( magia_tile_pkg::REDMULE_UW            ),
+    .X_EXT              ( magia_tile_pkg::X_EXT_EN              ),
+    .SysInstWidth       ( magia_pkg::INSTR_W                    ),
+    .SysDataWidth       ( magia_pkg::DATA_W                     ),
+    .NumContext         ( magia_tile_pkg::REDMULE_N_CONTEXT     ),
+    .FpFormat           ( magia_tile_pkg::REDMULE_FPFORMAT      ),
+    .Height             ( magia_tile_pkg::REDMULE_HEIGHT        ),
+    .Width              ( magia_tile_pkg::REDMULE_WIDTH         ),
+    .NumPipeRegs        ( magia_tile_pkg::REDMULE_P_REGS        ),
+    .PipeConfig         ( magia_tile_pkg::REDMULE_P_CONFIG      ),
+    .BITW               ( /*DO NOT OVERWRITE*/                  ),
+    .HCI_SIZE_tcdm      ( magia_tile_pkg::REDMULE_HCI_SIZE_TCDM )
   ) i_redmule_top (
     .clk_i               ( sys_clk                                                     ),
     .rst_ni              ( rst_ni                                                      ),
@@ -707,11 +854,9 @@ module magia_tile
     .xif_compressed_if_i ( xif_redmule_if.coproc_compressed                            ),
     .xif_mem_if_o        ( xif_redmule_if.coproc_mem                                   ),
 
-    .data_req_o          ( redmule_data_req                                            ),
-    .data_rsp_i          ( redmule_data_rsp                                            ),
+    .periph              ( hwpe_redmule_ctrl[0]                                        ), // Only 1 RedMulE supported
 
-    .ctrl_req_i          ( redmule_ctrl_req                                            ),
-    .ctrl_rsp_o          ( redmule_ctrl_rsp                                            )
+    .tcdm                ( hci_redmule_if[0]                                           )  // Only 1 RedMulE supported
   );
 
 /*******************************************************/
@@ -845,7 +990,9 @@ module magia_tile
     .mgr_port_obi_a_optional_t ( magia_tile_pkg::core_data_obi_a_optional_t ),
     .mgr_port_obi_r_optional_t ( magia_tile_pkg::core_data_obi_r_optional_t ),
     .LrScEnable                (                                            ),
-    .RegisterAmo               ( magia_tile_pkg::RegisterAmo                )
+    .RegisterAmo               ( magia_tile_pkg::RegisterAmo                ),
+    .RiscvWordWidth            (                                            ),
+    .NumTxns                   (                                            )
   ) i_obi_atomics (
     .clk_i          ( sys_clk                                      ),
     .rst_ni         ( rst_ni                                       ),
@@ -925,40 +1072,33 @@ module magia_tile
 /**         Local Interconnect (HCI) Beginning        **/
 /*******************************************************/
 
-  hci_interconnect #(
-    .N_HWPE  ( magia_tile_pkg::N_HWPE  ),
-    .N_CORE  ( magia_tile_pkg::N_CORE  ),
-    .N_DMA   ( magia_tile_pkg::N_DMA   ),
-    .N_EXT   ( magia_tile_pkg::N_EXT   ),
-    .N_MEM   ( N_MEM_BANKS             ),
-    .AWC     ( magia_tile_pkg::AWC     ),
-    .AWM     ( magia_tile_pkg::AWM     ),
-    .DW_LIC  ( magia_tile_pkg::DW_LIC  ),
-    .BW_LIC  ( magia_tile_pkg::BW_LIC  ),
-    .UW_LIC  ( magia_tile_pkg::UW_LIC  ),
-    .DW_SIC  (                         ),
-    .TS_BIT  ( magia_tile_pkg::TS_BIT  ),
-    .IW      ( magia_tile_pkg::IW      ),
-    .EXPFIFO ( magia_tile_pkg::EXPFIFO ),
-    .DWH     ( magia_tile_pkg::DWH     ),
-    .AWH     ( magia_tile_pkg::AWH     ),
-    .BWH     ( magia_tile_pkg::BWH     ),
-    .WWH     ( magia_tile_pkg::WWH     ),
-    .OWH     ( magia_tile_pkg::OWH     ),
-    .UWH     ( magia_tile_pkg::UWH     ),
-    .SEL_LIC ( magia_tile_pkg::SEL_LIC )
+  local_interconnect #(
+    .N_HWPE               ( magia_tile_pkg::N_HWPE        ),
+    .N_DMA                ( magia_tile_pkg::N_DMA         ),
+    .N_CORE               ( magia_tile_pkg::N_CORE        ),
+    .N_MEM                ( N_MEM_BANKS                   ),
+    .EXPFIFO              ( magia_tile_pkg::EXPFIFO       ),
+    .FILTER_WRITE_R_VALID ( /*DO NOT OVERWRITE*/          ),
+    .MEM_DATA_W           ( magia_tile_pkg::MEM_DATA_W    ),
+    .MEM_ADDR_W           ( magia_tile_pkg::MEM_ADDR_W    ),
+    .MEM_BYTE_W           ( magia_tile_pkg::MEM_BYTE_W    ),
+    .MEM_USER_W           ( magia_tile_pkg::MEM_USER_W    ),
+    .MEM_ID_W             ( magia_tile_pkg::MEM_ID_W      ),
+    .HCI_SIZE_hwpe        ( magia_tile_pkg::HCI_SIZE_HWPE ),
+    .HCI_SIZE_dma         ( magia_tile_pkg::HCI_SIZE_DMA  ),
+    .HCI_SIZE_core        ( magia_tile_pkg::HCI_SIZE_CORE ),
+    .HCI_SIZE_mem         ( magia_tile_pkg::HCI_SIZE_MEM  )
   ) i_local_interconnect (
-    .clk_i   ( sys_clk           ),
-    .rst_ni  ( rst_ni            ),
-    .clear_i ( hci_clear         ),
+    .clk_i   ( sys_clk          ),
+    .rst_ni  ( rst_ni           ),
 
-    .ctrl_i  ( hci_ctrl          ),
+    .clear_i ( hci_clear        ),
+    .ctrl_i  ( hci_ctrl         ),
     
-    .cores   ( hci_core_if       ),
-    .dma     ( hci_dma_if        ),
-    .ext     ( hci_ext_if        ),
-    .mems    ( hci_tcdm_sram_if  ),
-    .hwpe    ( hci_redmule_if[0] )
+    .hwpe    ( hci_redmule_if   ),
+    .dma     ( hci_dma_if       ),
+    .core    ( hci_core_if      ),
+    .mem     ( hci_tcdm_sram_if )
   );
 
 /*******************************************************/
@@ -968,10 +1108,10 @@ module magia_tile
 /*******************************************************/
 
   l1_spm #(
-    .N_BANK   ( N_MEM_BANKS        ),
-    .N_WORDS  ( N_WORDS_BANK       ),
-    .DATA_W   ( magia_pkg::DATA_W  ),
-    .ID_W     ( magia_tile_pkg::IW ),
+    .N_BANK   ( N_MEM_BANKS               ),
+    .N_WORDS  ( N_WORDS_BANK              ),
+    .DATA_W   ( magia_pkg::DATA_W         ),
+    .ID_W     ( magia_tile_pkg::LICO_ID_W ),
     .SIM_INIT ( "zeros"            )
   ) i_l1_spm (
     .clk_i      ( sys_clk          ),
@@ -1023,17 +1163,17 @@ module magia_tile
 
     .xif_issue_if_i  ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_IDMA_IDX] ),
 
-    .axi_read_req_o  ( idma_axi_read_req                                        ),
-    .axi_read_rsp_i  ( idma_axi_read_rsp                                        ),
+    .axi_read_req_o  ( idma_axi_read_req_out                                    ),
+    .axi_read_rsp_i  ( idma_axi_read_rsp_out                                    ),
 
-    .axi_write_req_o ( idma_axi_write_req                                       ),
-    .axi_write_rsp_i ( idma_axi_write_rsp                                       ),
+    .axi_write_req_o ( idma_axi_write_req_out                                   ),
+    .axi_write_rsp_i ( idma_axi_write_rsp_out                                   ),
 
-    .obi_read_req_o  ( idma_obi_read_req                                        ),
-    .obi_read_rsp_i  ( idma_obi_read_rsp                                        ),
+    .obi_read_req_o  ( idma_obi_read_req_out                                    ),
+    .obi_read_rsp_i  ( idma_obi_read_rsp_out                                    ),
 
-    .obi_write_req_o ( idma_obi_write_req                                       ),
-    .obi_write_rsp_i ( idma_obi_write_rsp                                       ),
+    .obi_write_req_o ( idma_obi_write_req_out                                   ),
+    .obi_write_rsp_i ( idma_obi_write_rsp_out                                   ),
 
     .axi2obi_start_o ( idma_axi2obi_start                                       ),
     .axi2obi_busy_o  ( idma_axi2obi_busy                                        ),
@@ -1050,14 +1190,14 @@ module magia_tile
     .axi_req_t  ( magia_tile_pkg::idma_axi_req_t ),
     .axi_resp_t ( magia_tile_pkg::idma_axi_rsp_t )
   ) i_axi_rw_join (
-    .clk_i            ( sys_clk            ),
-    .rst_ni           ( rst_ni             ),
-    .slv_read_req_i   ( idma_axi_read_req  ),
-    .slv_read_resp_o  ( idma_axi_read_rsp  ),
-    .slv_write_req_i  ( idma_axi_write_req ),
-    .slv_write_resp_o ( idma_axi_write_rsp ),
-    .mst_req_o        ( idma_axi_req       ),
-    .mst_resp_i       ( idma_axi_rsp       )
+    .clk_i            ( sys_clk                ),
+    .rst_ni           ( rst_ni                 ),
+    .slv_read_req_i   ( idma_axi_read_req_out  ),
+    .slv_read_resp_o  ( idma_axi_read_rsp_out  ),
+    .slv_write_req_i  ( idma_axi_write_req_out ),
+    .slv_write_resp_o ( idma_axi_write_rsp_out ),
+    .mst_req_o        ( idma_axi_req_out       ),
+    .mst_resp_i       ( idma_axi_rsp_out       )
   );
 
 /*******************************************************/
@@ -1131,16 +1271,16 @@ module magia_tile
     .mst_resp_t     ( magia_pkg::axi_xbar_mst_rsp_t          ),
     .rule_t         ( axi_pkg::xbar_rule_32_t                )
   ) i_axi_xbar (
-    .clk_i                  ( sys_clk               ),
-    .rst_ni                 ( rst_ni                ),
-    .test_i                 ( test_mode_i           ),
-    .slv_ports_req_i        ( axi_xbar_data_in_req  ),
-    .slv_ports_resp_o       ( axi_xbar_data_in_rsp  ),
-    .mst_ports_req_o        ( axi_xbar_mst_req      ),
-    .mst_ports_resp_i       ( axi_xbar_mst_rsp      ),
-    .addr_map_i             ( axi_xbar_rule         ),
-    .en_default_mst_port_i  ( en_default_mst_port   ),
-    .default_mst_port_i     ( '0                    )
+    .clk_i                  ( sys_clk             ),
+    .rst_ni                 ( rst_ni              ),
+    .test_i                 ( test_mode_i         ),
+    .slv_ports_req_i        ( axi_xbar_slv_req    ),
+    .slv_ports_resp_o       ( axi_xbar_slv_rsp    ),
+    .mst_ports_req_o        ( axi_xbar_mst_req    ),
+    .mst_ports_resp_i       ( axi_xbar_mst_rsp    ),
+    .addr_map_i             ( axi_xbar_rule       ),
+    .en_default_mst_port_i  ( en_default_mst_port ),
+    .default_mst_port_i     ( '0                  )
   );
 
 /*******************************************************/
@@ -1149,40 +1289,9 @@ module magia_tile
 /**             FlooNoC modules Beginning             **/
 /*******************************************************/
   
-  floo_axi_chimney #(
-    .AxiCfg         ( AxiCfg                                    ),
-    .ChimneyCfg     ( set_ports(ChimneyDefaultCfg, 1'b1, 1'b1)  ),
-    .RouteCfg       ( RouteCfg                                  ),
-    .id_t           ( id_t                                      ),
-    .rob_idx_t      ( rob_idx_t                                 ),
-    .hdr_t          ( hdr_t                                     ),
-    .sam_rule_t     ( sam_rule_t                                ),
-    .Sam            ( Sam                                       ),
-    .axi_in_req_t   ( axi_data_slv_req_t                        ),
-    .axi_in_rsp_t   ( axi_data_slv_rsp_t                        ),
-    .axi_out_req_t  ( axi_data_mst_req_t                        ),
-    .axi_out_rsp_t  ( axi_data_mst_rsp_t                        ),
-    .floo_req_t     ( floo_req_t                                ),
-    .floo_rsp_t     ( floo_rsp_t                                )
-  ) i_magia_tile_ni (
-    .clk_i          ( sys_clk                                           ),
-    .rst_ni         ( rst_ni                                            ),
-    .test_enable_i  ( test_mode_i                                       ),
-    .sram_cfg_i     ( '0                                                ),
-    .axi_in_req_i   ( axi_xbar_data_out_req                             ),
-    .axi_in_rsp_o   ( axi_xbar_data_out_rsp                             ),
-    .axi_out_req_o  ( axi_xbar_data_in_req[magia_tile_pkg::AXI_EXT_IDX] ),
-    .axi_out_rsp_i  ( axi_xbar_data_in_rsp[magia_tile_pkg::AXI_EXT_IDX] ),
-    .id_i           ( floo_id                                           ),
-    .route_table_i  ( '0                                                ),
-    .floo_req_o     ( floo_router_req_in[4]                             ),
-    .floo_rsp_i     ( floo_router_rsp_out[4]                            ),
-    .floo_req_i     ( floo_router_req_out[4]                            ),
-    .floo_rsp_o     ( floo_router_rsp_in[4]                             )
-  );
-
-  floo_axi_router #(
-    .AxiCfg       ( AxiCfg      ),
+  floo_nw_router #(
+    .AxiCfgN      ( AxiCfgN     ),
+    .AxiCfgW      ( AxiCfgW     ),
     .RouteAlgo    ( XYRouting   ),
     .NumRoutes    ( 5           ),
     .NumInputs    ( 5           ),
@@ -1192,44 +1301,114 @@ module magia_tile
     .id_t         ( id_t        ),
     .hdr_t        ( hdr_t       ),
     .floo_req_t   ( floo_req_t  ),
-    .floo_rsp_t   ( floo_rsp_t  )
+    .floo_rsp_t   ( floo_rsp_t  ),
+    .floo_wide_t  ( floo_wide_t )
   ) i_magia_tile_router (
-    .clk_i          ( sys_clk             ),
-    .rst_ni         ( rst_ni              ),
-    .test_enable_i  ( test_mode_i         ),
-    .id_i           ( floo_id             ),
-    .id_route_map_i ( '0                  ),
-    .floo_req_i     ( floo_router_req_in  ),
-    .floo_rsp_o     ( floo_router_rsp_out ),
-    .floo_req_o     ( floo_router_req_out ),
-    .floo_rsp_i     ( floo_router_rsp_in  )
+    .clk_i          ( sys_clk              ),
+    .rst_ni         ( rst_ni               ),
+    .test_enable_i  ( test_mode_i          ),
+    .id_i           ( floo_id              ),
+    .id_route_map_i ( '0                   ),
+    .floo_req_i     ( floo_router_req_in   ),
+    .floo_rsp_o     ( floo_router_rsp_out  ),
+    .floo_req_o     ( floo_router_req_out  ),
+    .floo_rsp_i     ( floo_router_rsp_in   ),
+    .floo_wide_i    ( floo_router_wide_in  ),
+    .floo_wide_o    ( floo_router_wide_out )
   );
 
   // Output requests
   assign noc_south_req_o = floo_router_req_out[0];
   assign floo_router_rsp_in[0] = noc_south_rsp_i;
+  assign noc_south_wide_o = floo_router_wide_out[0];
 
   assign noc_east_req_o = floo_router_req_out[1];
   assign floo_router_rsp_in[1] = noc_east_rsp_i;
+  assign noc_east_wide_o = floo_router_wide_out[1];
 
   assign noc_north_req_o = floo_router_req_out[2];
   assign floo_router_rsp_in[2] = noc_north_rsp_i;
+  assign noc_north_wide_o = floo_router_wide_out[2];
 
   assign noc_west_req_o = floo_router_req_out[3];
   assign floo_router_rsp_in[3] = noc_west_rsp_i;
+  assign noc_west_wide_o = floo_router_wide_out[3];
 
   // Input requests
   assign floo_router_req_in[0] = noc_south_req_i;
   assign noc_south_rsp_o = floo_router_rsp_out[0];
+  assign floo_router_wide_in[0] = noc_south_wide_i;
 
   assign floo_router_req_in[1] = noc_east_req_i;
   assign noc_east_rsp_o = floo_router_rsp_out[1];
+  assign floo_router_wide_in[1] = noc_east_wide_i;
 
   assign floo_router_req_in[2] = noc_north_req_i;
   assign noc_north_rsp_o = floo_router_rsp_out[2];
+  assign floo_router_wide_in[2] = noc_north_wide_i;
 
   assign floo_router_req_in[3] = noc_west_req_i;
   assign noc_west_rsp_o = floo_router_rsp_out[3];
+  assign floo_router_wide_in[3] = noc_west_wide_i;
+  
+  floo_nw_chimney #(
+    .AxiCfgN              ( AxiCfgN                                  ),
+    .AxiCfgW              ( AxiCfgW                                  ),
+    .ChimneyCfgN          ( set_ports(ChimneyDefaultCfg, 1'b1, 1'b1) ),
+    .ChimneyCfgW          ( set_ports(ChimneyDefaultCfg, 1'b1, 1'b1) ),
+    .RouteCfg             ( RouteCfg                                 ),
+    .id_t                 ( id_t                                     ),
+    .rob_idx_t            ( rob_idx_t                                ),
+    .hdr_t                ( hdr_t                                    ),
+    .sam_rule_t           ( sam_rule_t                               ),
+    .Sam                  ( Sam                                      ),
+    .axi_narrow_in_req_t  ( axi_narrow_data_slv_req_t                ),
+    .axi_narrow_in_rsp_t  ( axi_narrow_data_slv_rsp_t                ),
+    .axi_narrow_out_req_t ( axi_narrow_data_mst_req_t                ),
+    .axi_narrow_out_rsp_t ( axi_narrow_data_mst_rsp_t                ),
+    .axi_wide_in_req_t    ( axi_wide_data_slv_req_t                  ),
+    .axi_wide_in_rsp_t    ( axi_wide_data_slv_rsp_t                  ),
+    .axi_wide_out_req_t   ( axi_wide_data_mst_req_t                  ),
+    .axi_wide_out_rsp_t   ( axi_wide_data_mst_rsp_t                  ),
+    .floo_req_t           ( floo_req_t                               ),
+    .floo_rsp_t           ( floo_rsp_t                               ),
+    .floo_wide_t          ( floo_wide_t                              )
+  ) i_magia_tile_ni (
+    .clk_i                ( sys_clk                                           ),
+    .rst_ni               ( rst_ni                                            ),
+    .test_enable_i        ( test_mode_i                                       ),
+    .sram_cfg_i           ( '0                                                ),
+    .axi_narrow_in_req_i  ( axi_xbar_mst_req[magia_tile_pkg::AXI_MST_EXT_IDX] ),
+    .axi_narrow_in_rsp_o  ( axi_xbar_mst_rsp[magia_tile_pkg::AXI_MST_EXT_IDX] ),
+    .axi_narrow_out_req_o ( axi_xbar_slv_req[magia_tile_pkg::AXI_SLV_EXT_IDX] ),
+    .axi_narrow_out_rsp_i ( axi_xbar_slv_rsp[magia_tile_pkg::AXI_SLV_EXT_IDX] ),
+    .axi_wide_in_req_i    ( idma_axi_req_out                                  ),
+    .axi_wide_in_rsp_o    ( idma_axi_rsp_out                                  ),
+    .axi_wide_out_req_o   ( idma_axi_req_in                                   ),
+    .axi_wide_out_rsp_i   ( idma_axi_rsp_in                                   ),
+    .id_i                 ( floo_id                                           ),
+    .route_table_i        ( '0                                                ),
+    .floo_req_o           ( floo_router_req_in[4]                             ),
+    .floo_rsp_i           ( floo_router_rsp_out[4]                            ),
+    .floo_wide_o          ( floo_router_wide_in[4]                            ),
+    .floo_req_i           ( floo_router_req_out[4]                            ),
+    .floo_rsp_o           ( floo_router_rsp_in[4]                             ),
+    .floo_wide_i          ( floo_router_wide_out[4]                           )
+  );
+
+  axi_rw_split #(
+    .axi_req_t  ( magia_tile_pkg::idma_axi_req_t ),
+    .axi_resp_t ( magia_tile_pkg::idma_axi_rsp_t )
+  ) i_axi_rw_split (
+    .clk_i            ( sys_clk               ),
+    .rst_ni           ( rst_ni                ),
+    .slv_req_i        ( idma_axi_req_in       ),
+    .slv_resp_o       ( idma_axi_rsp_in       ),
+    .mst_read_req_o   ( idma_axi_read_req_in  ),
+    .mst_read_resp_i  ( idma_axi_read_rsp_in  ),
+    .mst_write_req_o  ( idma_axi_write_req_in ),
+    .mst_write_resp_i ( idma_axi_write_rsp_in )
+  );
 
 /*******************************************************/
 /**                FlooNoC modules End                **/

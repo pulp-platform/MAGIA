@@ -22,23 +22,23 @@ package:
     - "Victor Isachi (victor.isachi@unibo.it)"
 
 dependencies:
-  redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 9a1aa14be0b23f0ade84bab57e7e434397ac9876 } # branch: vi/scale_up
+  redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 496f24545234ddb014da8fe57ef0c98eaa382028 } # branch: vi/magia
   cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: a90101211048ba1a16cedbe4db963ab6e12569d7 } # branch: vi/redmule_scaleup
   idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: a6b190c7991331432afa9a2899d032bc1b176830 } # branch: vi/redmule_scaleup
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
-  hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: c35d5b0886ab549fb9144c3c14a4682112330e21 } # branch: yt/reqrsp
-  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 5a48a854573fca5bbabc1cfd4110fa4530a50ed7 } # branch: vi/redmule_scaleup
+  hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: e3e00383adf3789dc29ddc8af2edd6fe62ba4d50 } # branch: vi/scaleup_rebased
+  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: ed023cb1effa8e395cc3d456b3500c56092523be } # branch: vi/scaleup_rebased
   cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , rev: 917ecbf908bdaa22c5713bbcff277d142506bb16 } # branch: michaero/astral
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
   fpu_ss            : { git: "https://github.com/pulp-platform/fpu_ss.git"            , rev: 8e2eff774d9d38a1e17a46bd56a0936dac9522f0 } # branch: vi/bender_manifest
-  obi               : { git: "https://github.com/pulp-platform/obi.git"               , version: 0.1.6                                }
+  obi               : { git: "https://github.com/pulp-platform/obi.git"               , rev: 6a724da5c8d6412b88b6948746e04c1adf39d017 } # branch: main
   axi               : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: 0.4.4                                }
-  safety_island     : { git: "https://github.com/pulp-platform/safety_island.git"     , rev: 2273db6c780ab7c582feaf0c9645ad644c35aa11 } # branch: vi/redmule_scaleup
+  axi_obi           : { git: "https://github.com/pulp-platform/axi_obi.git"           , rev: 84f21a6524bedcf17a569a62ac01b8a5610819c8 } # branch: main
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
-  fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: fdb619f40f99d769cfceb20ac2117ff8d99e98a3 } # branch: main
-  floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , rev: f4a36265cda8b56faee45692afb20ddfffba6dee } # branch: main
+  fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: df8e21b7e2b0e2d3198bf44a60b4ca67c334bcc2 } # branch: main
+  floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , version: 0.6.1                                }
 
 export_include_dirs:
   - hw/include
@@ -50,7 +50,7 @@ sources:
       CORE_TRACES: ~
     files:
       # NoC
-      - target/sim/src/tile/floo_axi_mesh_1x2_pkg.sv
+      - target/sim/src/tile/floo_axi_nw_mesh_1x2_pkg.sv
       # MAGIA Packages
       - hw/mesh/magia_pkg.sv
       - hw/tile/magia_tile_pkg.sv
@@ -66,6 +66,7 @@ sources:
       - hw/tile/converters/xif_if2struct.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
+      - hw/tile/local_interconnect.sv
       - hw/tile/idma_xif_inst_decoder.sv
       - hw/tile/xif_inst_dispatcher.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
@@ -85,11 +86,11 @@ sources:
       CORE_TRACES: ~
     files:
       # NoC
-      - hw/mesh/noc/floo_axi_mesh_2x2_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_4x4_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_8x8_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_16x16_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_32x32_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_2x2_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_4x4_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_8x8_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_16x16_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_32x32_noc.sv
       # MAGIA Packages
       - hw/mesh/magia_pkg.sv
       - hw/tile/magia_tile_pkg.sv
@@ -106,6 +107,7 @@ sources:
       - hw/tile/converters/xif_if2struct.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
+      - hw/tile/local_interconnect.sv
       - hw/tile/idma_xif_inst_decoder.sv
       - hw/tile/xif_inst_dispatcher.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
@@ -125,11 +127,11 @@ sources:
   - target: all(not(magia_dv), asic)
     files:
       # NoC
-      - hw/mesh/noc/floo_axi_mesh_2x2_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_4x4_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_8x8_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_16x16_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_32x32_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_2x2_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_4x4_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_8x8_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_16x16_noc.sv
+      - hw/mesh/noc/floo_axi_nw_mesh_32x32_noc.sv
       # MAGIA Packages
       - hw/mesh/magia_pkg.sv
       - hw/tile/magia_tile_pkg.sv
@@ -146,6 +148,7 @@ sources:
       - hw/tile/converters/xif_if2struct.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
+      - hw/tile/local_interconnect.sv
       - hw/tile/idma_xif_inst_decoder.sv
       - hw/tile/xif_inst_dispatcher.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
@@ -153,11 +156,6 @@ sources:
       - hw/tile/fractal_sync_xif_inst_decoder.sv
       - hw/tile/magia_tile.sv
       # MAGIA
-      - hw/mesh/noc/floo_axi_mesh_2x2_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_4x4_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_8x8_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_16x16_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_32x32_noc.sv
       - hw/mesh/magia.sv
       # Tech
       - pd/sourcecode/tc_sram.sv
