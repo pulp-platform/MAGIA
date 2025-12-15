@@ -442,7 +442,7 @@ module magia_tile
   assign irq[magia_pkg::N_IRQ-magia_tile_pkg::IRQ_USED-1:16]   
                                                     = irq_i[magia_pkg::N_IRQ-magia_tile_pkg::IRQ_USED-1:16];
   assign irq[15:12]                                 = '0;
-  assign irq[11]                                    = irq_i[11];
+  assign irq[11]                                    = eu_core_irq_req[0]; // Event Unit IRQ mapped to external interrupt (bit 11) /* irq_i[11]; */
   assign irq[10:8]                                  = '0;
   assign irq[7]                                     = irq_i[7];
   assign irq[6:4]                                   = '0;
@@ -1646,6 +1646,13 @@ module magia_tile
   assign timer_events_array[0] = 2'b00;
   assign other_events_array[0] = {idma_obi2axi_busy, idma_axi2obi_busy, idma_obi2axi_start, idma_axi2obi_start, idma_obi2axi_error, idma_axi2obi_error, fsync_error, fsync_done, 24'b0};  // iDMA status events [31:28]|idma_obi2axi_error, idma_axi2obi_error, iDMA error events [27:26]|fsync_error, fsync_done, Fsync events [25:24], Reserved [23:0] - SW events are INTERNAL to Event Unit!
 
+`ifdef CV32E40X
+  assign eu_core_irq_ack    = eu_core_irq_req;
+  assign eu_core_irq_ack_id = eu_core_irq_id;
+  
+  assign core_busy_o = !core_sleep_o;
+`endif
+  
   magia_event_unit #(
     .NB_CORES         ( 1  ), // Single core system
     .NB_SW_EVT        ( 1  ), // Minimum 1 SW event to avoid indexing issues (unused but required)

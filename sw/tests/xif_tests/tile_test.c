@@ -22,6 +22,7 @@
 #include "magia_tile_utils.h"
 #include "redmule_isa_utils.h"
 #include "idma_isa_utils.h"
+#include "event_unit_utils.h"
 
 #include "x_input.h"
 #include "w_input.h"
@@ -47,8 +48,6 @@
 
 #define CONCURRENT
 
-#define IRQ_EN
-
 void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uint32_t dst_address){
   uint32_t dst_addr;
   uint32_t src_addr;
@@ -61,10 +60,6 @@ void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uin
   uint32_t dst_std_3;
   uint32_t src_std_3;
   uint32_t reps_3;
-
-#ifdef IRQ_EN
-  irq_en(1<<IRQ_A2O_DONE);
-#endif
 
   for (int i = 0; i < x_dim*y_dim; i++)
     mmio16(T_BASE + 2*i) = src_data[i];
@@ -101,14 +96,12 @@ void idma_mv_in(unsigned int x_dim, unsigned int y_dim, uint16_t src_data[], uin
 #endif
   idma_set_std3_rep3_in(dst_std_3, src_std_3, reps_3);
 
+  eu_clear_events(0xFFFFFFFF);
+  eu_enable_events(EU_IDMA_A2O_DONE_MASK);
+
   idma_start_in();
 
-#ifdef IRQ_EN
-  asm volatile("wfi" ::: "memory");
-  printf("Detected IRQ...\n");
-#else
-  wait_print(WAIT_CYCLES);
-#endif
+  eu_wait_events_polling(EU_IDMA_A2O_DONE_MASK, 10000000);
 
 #if VERBOSE > 100
   for (int i = 0; i < x_dim*y_dim; i++)
@@ -140,10 +133,6 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
   uint32_t dst_std_3;
   uint32_t src_std_3;
   uint32_t reps_3;
-
-#ifdef IRQ_EN
-  irq_en(1<<IRQ_O2A_DONE);
-#endif
 
   idma_conf_out();
 
@@ -177,14 +166,12 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
 #endif
   idma_set_std3_rep3_out(dst_std_3, src_std_3, reps_3);
 
+  eu_clear_events(0xFFFFFFFF);
+  eu_enable_events(EU_IDMA_O2A_DONE_MASK);
+
   idma_start_out();
 
-#ifdef IRQ_EN
-  asm volatile("wfi" ::: "memory");
-  printf("Detected IRQ...\n");
-#else
-  wait_print(WAIT_CYCLES);
-#endif
+  eu_wait_events_polling(EU_IDMA_O2A_DONE_MASK, 10000000);
 
 #if VERBOSE > 100
   for (int i = 0; i < x_dim*y_dim; i++)
@@ -205,6 +192,9 @@ void idma_mv_out(unsigned int x_dim, unsigned int y_dim, uint32_t src_address, u
 }
 
 int main(void) {
+  // Initialize event unit
+  eu_init();
+  
   // X
   printf("Initializing X through iDMA...\n");
   idma_mv_in(M_SIZE, N_SIZE, x_inp, X_BASE);
@@ -232,23 +222,15 @@ int main(void) {
   printf("N_SIZE: %4x\n", N_SIZE);  
 #endif
 
-  redmule_mcnfig(K_SIZE, M_SIZE, N_SIZE);
-
-  redmule_marith(Y_BASE, W_BASE, X_BASE);
-
-#ifdef IRQ_EN
-  irq_en(1<<IRQ_REDMULE_EVT_0);
-#endif
-
   printf("Testing matrix multiplication with RedMulE...\n");
 
-#ifdef IRQ_EN
-  // Wait for end of computation
-  asm volatile("wfi" ::: "memory");
-  printf("Detected IRQ...\n");
-#else
-  wait_print(WAIT_CYCLES);
-#endif
+  eu_clear_events(0xFFFFFFFF);
+  eu_enable_events(EU_REDMULE_DONE_MASK);
+
+  redmule_mcnfig(K_SIZE, M_SIZE, N_SIZE);
+  redmule_marith(Y_BASE, W_BASE, X_BASE);
+
+  eu_wait_events_polling(EU_REDMULE_DONE_MASK, 10000000);
 
   printf("Moving results through iDMA...\n");
   idma_mv_out(M_SIZE, K_SIZE, Y_BASE, V_BASE);

@@ -21,6 +21,7 @@
 
 #include "magia_tile_utils.h"
 #include "idma_isa_utils.h"
+#include "event_unit_utils.h"
 
 #include "x_input.h"
 
@@ -33,8 +34,6 @@
 #define N_SIZE (64)
 
 #define VERBOSE (0)
-
-#define IRQ_EN
 
 #define WAIT_CYCLES (10)
 
@@ -53,18 +52,15 @@ int main(void) {
   uint32_t src_std_3;
   uint32_t reps_3;
 
+  // Initialize Event Unit once
+  eu_init();
+
   // Z - golden (reference)
   for (int i = 0; i < M_SIZE*N_SIZE; i++)
     mmio16(Z_BASE + 2*i) = x_inp[i];
 #if VERBOSE > 100
   for (int i = 0; i < M_SIZE*N_SIZE; i++)
     printf("Z[%8x]: 0x%4x\n", Z_BASE + 2*i, mmio16(Z_BASE + 2*i));
-#endif
-
-#ifdef IRQ_EN
-  // Enable IRQs
-  uint32_t index = (1<<IRQ_A2O_DONE) | (1<<IRQ_O2A_DONE);
-  irq_en(index);
 #endif
 
   idma_conf_in();
@@ -99,14 +95,13 @@ int main(void) {
 #endif
   idma_set_std3_rep3_in(dst_std_3, src_std_3, reps_3);
 
+  eu_clear_events(0xFFFFFFFF);
+  eu_enable_events(EU_IDMA_A2O_DONE_MASK);
+
   idma_start_in();
   printf("iDMA moving data from L2 to L1...\n");
-#ifdef IRQ_EN
-  asm volatile("wfi" ::: "memory");
-  printf("Detected IRQ...\n");
-#else
-  wait_print(WAIT_CYCLES);
-#endif
+
+  eu_idma_wait_a2o_completion(EU_WAIT_MODE_POLLING);
 
   idma_conf_out();
 
@@ -173,27 +168,25 @@ int main(void) {
 #endif
   idma_set_std3_rep3_in(dst_std_3, src_std_3, reps_3);
 
+  eu_clear_events(0xFFFFFFFF);
+  eu_enable_events(EU_IDMA_ALL_DONE_MASK);
+
   idma_start_out();
 
   idma_start_in();
 
+  eu_idma_wait_completion(EU_WAIT_MODE_POLLING);
+
   printf("iDMA moving concurrently data from L1 to L2 and from L2 to L1...\n");
-#ifdef IRQ_EN
-  asm volatile("wfi" ::: "memory");
-  printf("Detected IRQ...\n");
 #else
-  wait_print(2*WAIT_CYCLES);
-#endif
-#else
+  eu_clear_events(0xFFFFFFFF);
+  eu_enable_events(EU_IDMA_O2A_DONE_MASK);
+
   idma_start_out();
 
+  eu_idma_wait_o2a_completion(EU_WAIT_MODE_POLLING);
+
   printf("iDMA moving data from L1 to L2...\n");
-#ifdef IRQ_EN
-  asm volatile("wfi" ::: "memory");
-  printf("Detected IRQ...\n");
-#else
-  wait_print(WAIT_CYCLES);
-#endif
 #endif
 
   printf("Verifying results...\n");

@@ -21,6 +21,7 @@
 
 #include "magia_tile_utils.h"
 #include "redmule_isa_utils.h"
+#include "event_unit_utils.h"
 
 #include "x_input.h"
 #include "w_input.h"
@@ -38,13 +39,14 @@
 
 #define VERBOSE (0)
 
-#define IRQ_EN
-
 #define WAIT_CYCLES (10)
 
 #define DIFF_TH (0x0011)
 
 int main(void) {
+  // Initialize Event Unit for RedMulE
+  eu_redmule_init();
+  
   // X
   for (int i = 0; i < M_SIZE*N_SIZE; i++)
     mmio16(X_BASE + 2*i) = x_inp[i];
@@ -83,24 +85,14 @@ int main(void) {
   printf("N_SIZE: %4x\n", N_SIZE);  
 #endif
 
-  redmule_mcnfig(K_SIZE, M_SIZE, N_SIZE);
-
-  redmule_marith(Y_BASE, W_BASE, X_BASE);
-
-#ifdef IRQ_EN
-  // Enable IRQs
-  uint32_t index = (1<<IRQ_REDMULE_EVT_0) | (1<<IRQ_REDMULE_EVT_1);
-  irq_en(index);
-#endif
-
   // Wait for end of computation
   printf("Testing matrix multiplication with RedMulE...\n");
-#ifdef IRQ_EN
-  asm volatile("wfi" ::: "memory");
-  printf("Detected IRQ...\n");
-#else
-  wait_print(WAIT_CYCLES);
-#endif
+
+  redmule_mcnfig(K_SIZE, M_SIZE, N_SIZE);
+  redmule_marith(Y_BASE, W_BASE, X_BASE);
+
+  eu_redmule_wait_completion(EU_WAIT_MODE_POLLING);
+
   printf("Verifying results...\n");
   
   unsigned int num_errors = 0;
