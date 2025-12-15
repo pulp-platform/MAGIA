@@ -23,19 +23,17 @@
 #include "magia_utils.h"
 #include "fsync_isa_utils.h"
 #include "fsync_api.h"
+#include "event_unit_utils.h"
 #include "cache_fill.h"
 
 #define VERBOSE (0)
-
-#define STALLING
 
 int main(void) {
   uint32_t aggregates[NUM_HARTS];
   uint32_t ids[NUM_HARTS];
 
-#ifndef STALLING
-  irq_en(1<<IRQ_FSYNC_DONE);
-#endif
+  // Initialize Event Unit once
+  eu_init();
 
 #if NUM_HARTS == 16
   /// Custom 4x4 synch.
@@ -58,105 +56,75 @@ int main(void) {
     case 15: aggregates[get_hartid()] = 0b1111; ids[get_hartid()] = 7; break;
   }
 
-  // h_pprintf("FractalSync aggregate: 0b"); pprintf(bs(aggregates[get_hartid()])); pprintf(", id: "); pprintf(ds(ids[get_hartid()])); n_pprintf("...");
   printf("FractalSync aggregate: 0x%0x, id: %0d...\n", aggregates[get_hartid()], ids[get_hartid()]);
 
+  // Clear Event Unit and ensure FSync mask is enabled
+  eu_clear_events(0xFFFFFFFF);
+  eu_enable_events(EU_FSYNC_DONE_MASK);
+  
   fsync(ids[get_hartid()], aggregates[get_hartid()]);
 
-#ifndef STALLING
-  asm volatile("wfi" ::: "memory");
-  // h_pprintf("Detected IRQ...\n");
-  printf("Detected IRQ...\n");
-#endif
+  eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
 
   sentinel_instr_id();
 #endif
 
   printf("[FractalSync] Horizontal neighbor test starting\n");
+  eu_clear_events(0xFFFFFFFF);
+  eu_enable_events(EU_FSYNC_DONE_MASK);
   fsync_hnbr();
-
-#ifndef STALLING
-  asm volatile("wfi" ::: "memory");
-  // h_pprintf("Detected IRQ...\n");
-  printf("Detected IRQ...\n");
-#endif
-
+  eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
   sentinel_instr_id();
   printf("[FractalSync] Horizontal neighbor test ending\n");
 
   printf("[FractalSync] Horizontal ring neighbor test starting\n");
+  eu_clear_events(0xFFFFFFFF);
+  eu_enable_events(EU_FSYNC_DONE_MASK);
   fsync_hring();
-
-#ifndef STALLING
-  asm volatile("wfi" ::: "memory");
-  // h_pprintf("Detected IRQ...\n");
-  printf("Detected IRQ...\n");
-#endif
-
+  eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
   sentinel_instr_id();
   printf("[FractalSync] Horizontal ring neighbor test ending\n");
 
   printf("[FractalSync] Vertical neighbor test starting\n");
+  eu_clear_events(0xFFFFFFFF);
+  eu_enable_events(EU_FSYNC_DONE_MASK);
   fsync_vnbr();
-
-#ifndef STALLING
-  asm volatile("wfi" ::: "memory");
-  // h_pprintf("Detected IRQ...\n");
-  printf("Detected IRQ...\n");
-#endif
-
+  eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
   sentinel_instr_id();
   printf("[FractalSync] Vertical neighbor test ending\n");
 
   printf("[FractalSync] Vertical ring neighbor test starting\n");
+  eu_clear_events(0xFFFFFFFF);
+  eu_enable_events(EU_FSYNC_DONE_MASK);
   fsync_vring();
-
-#ifndef STALLING
-  asm volatile("wfi" ::: "memory");
-  // h_pprintf("Detected IRQ...\n");
-  printf("Detected IRQ...\n");
-#endif
-
+  eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
   sentinel_instr_id();
   printf("[FractalSync] Vertical ring neighbor test ending\n");
 
   printf("[FractalSync] Row test starting\n");
+  eu_clear_events(0xFFFFFFFF);
+  eu_enable_events(EU_FSYNC_DONE_MASK);
   fsync_rows();
-
-#ifndef STALLING
-  asm volatile("wfi" ::: "memory");
-  // h_pprintf("Detected IRQ...\n");
-  printf("Detected IRQ...\n");
-#endif
-
+  eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
   sentinel_instr_id();
   printf("[FractalSync] Row test ending\n");
 
   printf("[FractalSync] Column test starting\n");
+  eu_clear_events(0xFFFFFFFF);
+  eu_enable_events(EU_FSYNC_DONE_MASK);
   fsync_cols();
-
-#ifndef STALLING
-  asm volatile("wfi" ::: "memory");
-  // h_pprintf("Detected IRQ...\n");
-  printf("Detected IRQ...\n");
-#endif
-
+  eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
   sentinel_instr_id();
   printf("[FractalSync] Column test ending\n");
 
   printf("[FractalSync] Global test starting\n");
+  eu_clear_events(0xFFFFFFFF);
+  eu_enable_events(EU_FSYNC_DONE_MASK);
   fsync_global();
-
-#ifndef STALLING
-  asm volatile("wfi" ::: "memory");
-  // h_pprintf("Detected IRQ...\n");
-  printf("Detected IRQ...\n");
-#endif
-
+  eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
   sentinel_instr_id();
   printf("[FractalSync] Global test ending\n");
 
-  // h_pprintf("FractalSync test finished...\n");
   printf("FractalSync test finished...\n");
 
   return 0;

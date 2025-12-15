@@ -130,8 +130,8 @@ $(STIM_INSTR) $(STIM_DATA): $(BIN)
 	scripts/parse_s19.pl $(BIN).s19 > $(BIN).txt &&					\
 	python scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
 	cd $(TEST_DIR)/$(test) &&										\
-	ln -sfn ../../../$(INI_PATH) $(VSIM_INI) &&						\
-	ln -sfn ../../../$(WORK_PATH) $(VSIM_LIBS)
+	ln -sfn $(ROOT_DIR)/$(INI_PATH) $(VSIM_INI) &&						\
+	ln -sfn $(ROOT_DIR)/$(WORK_PATH) $(VSIM_LIBS)
 
 $(BIN): $(CRT) $(OBJ)
 	$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT)

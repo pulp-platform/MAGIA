@@ -23,6 +23,7 @@
 #include "magia_utils.h"
 #include "fsync_isa_utils.h"
 #include "fsync_api.h"
+#include "event_unit_utils.h"
 #include "cache_fill.h"
 
 #define VERBOSE (0)
@@ -38,14 +39,15 @@
 
 #define NUM_LEVELS (31-__builtin_clz(NUM_HARTS))
 
-#define STALLING
-
 #define CACHE_HEAT_CYCLES (3)
 
 int main(void) {
   uint32_t tile_hartid  = get_hartid();
   uint32_t tile_xhartid = GET_X_ID(tile_hartid);
   uint32_t tile_yhartid = GET_Y_ID(tile_hartid);
+
+  // Initialize Event Unit once
+  eu_init();
 
   printf("Starting Fractal Sync test...\n");
 
@@ -58,10 +60,6 @@ int main(void) {
     // Climb FS tree test
     for (int i = 0; i < NUM_LEVELS; i++){
       printf("Fractal Sync at level %0d...\n", i+1);
-
-#ifndef STALLING
-      irq_en(1<<IRQ_FSYNC_DONE);
-#endif
       
       uint32_t aggregates = (1 << (i+1))-1;
       uint32_t ids = 0;
@@ -73,11 +71,10 @@ int main(void) {
       // Instruction immediately preceding synchronization: indicates start of the synchronization region
       sentinel_start();
 
+      eu_clear_events(0xFFFFFFFF);
+      eu_enable_events(EU_FSYNC_DONE_MASK);
       fsync(ids, aggregates);
-#ifndef STALLING
-      asm volatile("wfi" ::: "memory");
-      printf("Detected IRQ...\n");
-#endif
+      eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
 
       // Instruction immediately following synchronization: indicates end of the synchronization region
       sentinel_end();
@@ -91,10 +88,6 @@ int main(void) {
     printf("Fractal Sync global synchrnonization test...\n");
 #endif
 
-#ifndef STALLING
-    irq_en(1<<IRQ_FSYNC_DONE);
-#endif
-
 #if VERBOSE > 10
     printf("aggregate: 0x%0x\n", _FS_GLOBAL_AGGR);
     printf("id: 0x%0x\n", _FS_GLOBAL_ID);
@@ -103,11 +96,10 @@ int main(void) {
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
     sentinel_start();
 
+    eu_clear_events(0xFFFFFFFF);
+    eu_enable_events(EU_FSYNC_DONE_MASK);
     fsync_global();
-#ifndef STALLING
-    asm volatile("wfi" ::: "memory");
-    printf("Detected IRQ...\n");
-#endif
+    eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
     sentinel_end();
@@ -122,10 +114,6 @@ int main(void) {
     printf("Fractal Sync horizontal neighbor synchrnonization test...\n");
 #endif
 
-#ifndef STALLING
-    irq_en(1<<IRQ_FSYNC_DONE);
-#endif
-
 #if VERBOSE > 10
     printf("aggregate: 0x%0x\n", _FS_HNBR_AGGR);
     printf("id: 0x%0x\n", _FS_HNBR_ID);
@@ -134,11 +122,10 @@ int main(void) {
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
     sentinel_start();
 
+    eu_clear_events(0xFFFFFFFF);
+    eu_enable_events(EU_FSYNC_DONE_MASK);
     fsync_hnbr();
-#ifndef STALLING
-    asm volatile("wfi" ::: "memory");
-    printf("Detected IRQ...\n");
-#endif
+    eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
     sentinel_end();
@@ -153,10 +140,6 @@ int main(void) {
     printf("Fractal Sync vertical neighbor synchrnonization test...\n");
 #endif
 
-#ifndef STALLING
-    irq_en(1<<IRQ_FSYNC_DONE);
-#endif
-
 #if VERBOSE > 10
     printf("aggregate: 0x%0x\n", _FS_VNBR_AGGR);
     printf("id: 0x%0x\n", _FS_VNBR_ID);
@@ -165,11 +148,10 @@ int main(void) {
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
     sentinel_start();
 
+    eu_clear_events(0xFFFFFFFF);
+    eu_enable_events(EU_FSYNC_DONE_MASK);
     fsync_vnbr();
-#ifndef STALLING
-    asm volatile("wfi" ::: "memory");
-    printf("Detected IRQ...\n");
-#endif
+    eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
     sentinel_end();
@@ -182,10 +164,6 @@ int main(void) {
 #ifdef HRING_FS_TEST
 #if VERBOSE > 1
     printf("Fractal Sync horizontal ring synchrnonization test...\n");
-#endif
-
-#ifndef STALLING
-    irq_en(1<<IRQ_FSYNC_DONE);
 #endif
 
 #if VERBOSE > 10
@@ -202,11 +180,10 @@ int main(void) {
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
     sentinel_start();
 
+    eu_clear_events(0xFFFFFFFF);
+    eu_enable_events(EU_FSYNC_DONE_MASK);
     fsync_hring();
-#ifndef STALLING
-    asm volatile("wfi" ::: "memory");
-    printf("Detected IRQ...\n");
-#endif
+    eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
     sentinel_end();
@@ -219,10 +196,6 @@ int main(void) {
 #ifdef VRING_FS_TEST
 #if VERBOSE > 1
     printf("Fractal Sync vertical ring synchrnonization test...\n");
-#endif
-
-#ifndef STALLING
-    irq_en(1<<IRQ_FSYNC_DONE);
 #endif
 
 #if VERBOSE > 10
@@ -239,11 +212,10 @@ int main(void) {
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
     sentinel_start();
 
+    eu_clear_events(0xFFFFFFFF);
+    eu_enable_events(EU_FSYNC_DONE_MASK);
     fsync_vring();
-#ifndef STALLING
-    asm volatile("wfi" ::: "memory");
-    printf("Detected IRQ...\n");
-#endif
+    eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
     sentinel_end();
@@ -258,10 +230,6 @@ int main(void) {
     printf("Fractal Sync row synchrnonization test...\n");
 #endif
 
-#ifndef STALLING
-    irq_en(1<<IRQ_FSYNC_DONE);
-#endif
-
 #if VERBOSE > 10
     uint32_t id = row_id_lookup(tile_yhartid);
     printf("aggregate: 0x%0x\n", _FS_RC_AGGR);
@@ -271,11 +239,10 @@ int main(void) {
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
     sentinel_start();
 
+    eu_clear_events(0xFFFFFFFF);
+    eu_enable_events(EU_FSYNC_DONE_MASK);
     fsync_rows();
-#ifndef STALLING
-    asm volatile("wfi" ::: "memory");
-    printf("Detected IRQ...\n");
-#endif
+    eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
     sentinel_end();
@@ -290,10 +257,6 @@ int main(void) {
     printf("Fractal Sync column synchrnonization test...\n");
 #endif
 
-#ifndef STALLING
-    irq_en(1<<IRQ_FSYNC_DONE);
-#endif
-
 #if VERBOSE > 10
     uint32_t id = col_id_lookup(tile_xhartid);
     printf("aggregate: 0x%0x\n", _FS_RC_AGGR);
@@ -303,11 +266,10 @@ int main(void) {
     // Instruction immediately preceding synchronization: indicates start of the synchronization region
     sentinel_start();
 
+    eu_clear_events(0xFFFFFFFF);
+    eu_enable_events(EU_FSYNC_DONE_MASK);
     fsync_cols();
-#ifndef STALLING
-    asm volatile("wfi" ::: "memory");
-    printf("Detected IRQ...\n");
-#endif
+    eu_fsync_wait_completion(EU_WAIT_MODE_POLLING);
 
     // Instruction immediately following synchronization: indicates end of the synchronization region
     sentinel_end();

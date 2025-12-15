@@ -144,10 +144,6 @@ package magia_tile_pkg;
   parameter int unsigned APU_NUSFLAGS_CPU    = 5;                                       // APU user side flags
   parameter logic[31:0]  DM_HALT_ADDR        = 32'h1A110800;                            // Debug module halt address  
   parameter int unsigned X_NUM_RS            = 2;                                       // Number of register file read ports (R-type instructions have 2 source operands)
-  parameter int unsigned OPCODE_W            = 7;                                       // Opcode field width (7 bits)
-  parameter int unsigned FUNC3_W             = 3;                                       // FUNC3 field width (3 bits)
-  parameter int unsigned OPCODE_OFF          = 0;                                       // Opcode field offset (bits 6:0)
-  parameter int unsigned FUNC3_OFF           = 12;                                      // FUNC3 field offset (bits 14:12)
   parameter int unsigned CLIC_ID_W           = 5;                                       // CLIC interrupt ID width (5 bits for 32 interrupts)
 `endif
   

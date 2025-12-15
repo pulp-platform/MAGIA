@@ -15,6 +15,7 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
+ *          Victor Isachi <victor.isachi@unibo.it>
  * 
  * Core Data Demux EU Direct Link
  * 
@@ -79,11 +80,17 @@ module core_data_demux_eu_direct
   end
 
   // To regular crossbar
-  assign xbar_data_req_o.req   = core_data_req_i.req && !use_eu_direct;
-  assign xbar_data_req_o.addr  = core_data_req_i.addr;
-  assign xbar_data_req_o.be    = core_data_req_i.be;
-  assign xbar_data_req_o.wdata = core_data_req_i.wdata;
-  assign xbar_data_req_o.we    = core_data_req_i.we;
+  assign xbar_data_req_o.req     = core_data_req_i.req && !use_eu_direct;
+  assign xbar_data_req_o.addr    = core_data_req_i.addr;
+  assign xbar_data_req_o.be      = core_data_req_i.be;
+  assign xbar_data_req_o.wdata   = core_data_req_i.wdata;
+  assign xbar_data_req_o.we      = core_data_req_i.we;
+`ifdef CV32E40X
+  assign xbar_data_req_o.atop    = core_data_req_i.atop;
+  assign xbar_data_req_o.memtype = core_data_req_i.memtype;
+  assign xbar_data_req_o.prot    = core_data_req_i.prot;
+  assign xbar_data_req_o.dbg     = core_data_req_i.dbg;
+`endif
 
   // To EU direct link (abstract interface)
   // Pass relative offset to Event Unit (subtract base address)
@@ -101,11 +108,17 @@ module core_data_demux_eu_direct
         core_data_rsp_o.rvalid = xbar_data_rsp_i.rvalid;
         core_data_rsp_o.rdata  = xbar_data_rsp_i.rdata;
         core_data_rsp_o.err    = xbar_data_rsp_i.err;
+`ifdef CV32E40X
+        core_data_rsp_o.exokay = xbar_data_rsp_i.exokay;
+`endif
       end
       EU: begin
         core_data_rsp_o.rvalid = eu_direct_rsp_i.rvalid;
         core_data_rsp_o.rdata  = eu_direct_rsp_i.rdata;
         core_data_rsp_o.err    = eu_direct_rsp_i.err;
+`ifdef CV32E40X
+        core_data_rsp_o.exokay = '0;
+`endif
       end
     endcase
   end
