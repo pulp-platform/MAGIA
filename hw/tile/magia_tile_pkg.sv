@@ -107,10 +107,8 @@ package magia_tile_pkg;
   localparam int unsigned SWH    = DWH/BWH;                                             // Strobe Width for HWPE Interconnect
   localparam int unsigned WDH    = DWH/WWH;                                             // Number of words per data for HWPE Interconnect
 
-`ifdef CV32E40X
   // Parameters used by the cv32e40x core
-  parameter bit          X_EXT_EN        = 1;                                           // Enable eXtension Interface (X) support, see eXtension Interface        
-  parameter int unsigned X_NUM_RS        = 3;                                           // Number of register file read ports that can be used by the eXtension interface
+  parameter bit          X_EXT_EN        = 1;                                           // Enable eXtension Interface (X) support, see eXtension Interface
   parameter int unsigned X_ID_W          = 4;                                           // Identification width for the eXtension interface
   parameter int unsigned X_MEM_W         = 32;                                          // Memory access width for loads/stores via the eXtension interface
   parameter int unsigned X_RFR_W         = 32;                                          // Register file read access width for the eXtension interface
@@ -120,8 +118,7 @@ package magia_tile_pkg;
   parameter bit[31:0]    DM_REGION_START = 32'hF0000000;                                // Start address of Debug Module region, see Debug & Trigger
   parameter bit[31:0]    DM_REGION_END   = 32'hF0003FFF;                                // End address of Debug Module region, see Debug & Trigger
   parameter bit          CLIC_EN         = 1'b0;                                        // Specifies whether Smclic, Smclicshv and Smclicconfig are supported
-  parameter int unsigned CLIC_ID_W       = 1;                                           // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
-`else
+
   // Parameters used by cv32e40p core
   parameter int unsigned N_EXT_PERF_COUNTERS = 0;                                       // Number of external performance counters
   parameter int unsigned INSTR_RDATA_WIDTH   = 32;                                      // Instruction data width  
@@ -142,7 +139,12 @@ package magia_tile_pkg;
   parameter int unsigned APU_WOP_CPU         = 6;                                       // APU operation width
   parameter int unsigned APU_NDSFLAGS_CPU    = 15;                                      // APU data side flags
   parameter int unsigned APU_NUSFLAGS_CPU    = 5;                                       // APU user side flags
-  parameter logic[31:0]  DM_HALT_ADDR        = 32'h1A110800;                            // Debug module halt address  
+  parameter logic[31:0]  DM_HALT_ADDR        = 32'h1A110800;                            // Debug module halt address
+
+`ifdef CV32E40X
+  parameter int unsigned X_NUM_RS        = 3;                                           // Number of register file read ports that can be used by the eXtension interface
+  parameter int unsigned CLIC_ID_W       = 1;                                           // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
+`else
   parameter int unsigned X_NUM_RS            = 2;                                       // Number of register file read ports (R-type instructions have 2 source operands)
   parameter int unsigned CLIC_ID_W           = 5;                                       // CLIC interrupt ID width (5 bits for 32 interrupts)
 `endif
