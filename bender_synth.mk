@@ -18,14 +18,6 @@ synth_targs += -t redmule_complex
 synth_targs += -t asic
 synth_targs += -t synopsys
 
-ifdef CORE
-	ifeq ($(CORE), CV32E40X)
-		synth_targs += -t cv32e40x
-	else ifeq ($(CORE), CV32E40P)
-		synth_targs += -t cv32e40p
-	endif
-endif
-
 #ifeq ($(REDMULE_COMPLEX),1)
 #	synth_defs += -D REDMULE_COMPLEX_SYNTH
 #else

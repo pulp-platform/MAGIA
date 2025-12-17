@@ -1,3 +1,5 @@
+core="$1"
+
 export MAGIA_DIR=$(pwd)
 echo "Exporting MAGIA path to $MAGIA_DIR"
 export PATH=$MAGIA_DIR:$PATH
@@ -11,10 +13,13 @@ export PATH=/usr/pack/gcc-5.2.0-af/x86_64-rhe6-linux/bin:$PATH
 export PATH=/usr/local/anaconda3-2023.07/condabin:$PATH
 export PATH=/home/visachi/.local/bin:$PATH
 export XLEN=32
-echo "Exporting ISA extentions: I, M, A, F, C"
-export XTEN=imafc
-# echo "Exporting ISA extentions: I, M, F, C, XPULP_V2"
-# export XTEN=imfcxpulpv2
+if [[ "core" == "CV32E40P" ]]; then
+  echo "Exporting ISA extentions: I, M, F, C, XPULP_V2"
+  export XTEN=imfcxpulpv2
+else
+  echo "Exporting ISA extentions: I, M, A, F, C"
+  export XTEN=imafc
+fi
 echo "Sourcing python virtual environment"
 source ./magia_venv/bin/activate
 echo "Finished setting up the environment"

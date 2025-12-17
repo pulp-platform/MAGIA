@@ -27,14 +27,6 @@ ifeq ($(mesh_dv), 0)
 	sim_targs += -t standalone_tile
 endif
 
-ifdef CORE
-	ifeq ($(CORE), CV32E40X)
-		sim_targs += -t cv32e40x
-	else ifeq ($(CORE), CV32E40P)
-		sim_targs += -t cv32e40p
-	endif
-endif
-
 sim_targs += -t magia_tile_test
 
 sim_targs += -t magia_dv
