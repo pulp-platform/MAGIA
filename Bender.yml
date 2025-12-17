@@ -48,11 +48,19 @@ export_include_dirs:
   - hw/include
 
 sources:
+  # Core definition
+  - target: cv32e40x
+    defines:
+      CV32E40X: ~
+    files:
+  - target: cv32e40p
+    defines:
+      CV32E40P: ~
+    files:
   # MAGIA standalone tile
   - target: all(magia_dv, standalone_tile)
     defines:
       CORE_TRACES: ~
-      CV32E40X: ~
     files:
       # NoC
       - target/sim/src/tile/floo_axi_mesh_1x2_pkg.sv
