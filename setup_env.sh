@@ -1,4 +1,5 @@
 core="$1"
+echo "Selected core: $core"
 
 export MAGIA_DIR=$(pwd)
 echo "Exporting MAGIA path to $MAGIA_DIR"
@@ -13,7 +14,7 @@ export PATH=/usr/pack/gcc-5.2.0-af/x86_64-rhe6-linux/bin:$PATH
 export PATH=/usr/local/anaconda3-2023.07/condabin:$PATH
 export PATH=/home/visachi/.local/bin:$PATH
 export XLEN=32
-if [[ "core" == "CV32E40P" ]]; then
+if [[ "$core" == "CV32E40P" ]]; then
   echo "Exporting ISA extentions: I, M, F, C, XPULP_V2"
   export XTEN=imfcxpulpv2
 else
