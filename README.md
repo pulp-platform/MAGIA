@@ -304,9 +304,7 @@ fsync_global();
 
 **Compiler ISA Extensions**: The `XTEN` parameter in `setup_env.sh`.
 
-**Bender Defines**: `CV32E40X`/`CV32E40P` defines in `Bender.yml`.
-
-**Software**: `CORE` parameter in `Makefile`.
+**Software and Bender Defines**: `CORE` parameter in `Makefile`.
 
 ## 🔏 License
 MAGIA is an open-source project with a permissive license. All `software` sources are licensed under the Apache License 2.0 ([`LICENSE.APACHE`](LICENSE.APACHE)). All `hardware` sources are licensed under the Solderpad Hardware License 0.51 ([`LICENSE.SHL`](LICENSE.SHL)).
