@@ -38,7 +38,7 @@ BENDER_DIR     ?= .
 ISA            ?= riscv
 ARCH           ?= rv
 XLEN           ?= 32
-ifeq ($(CORE), CV32E40X)
+ifeq ($(core), CV32E40X)
   XTEN         ?= imafc
 else
   XTEN         ?= imfcxpulpv2
@@ -94,7 +94,7 @@ ifeq ($(debug),1)
 	FLAGS += -DDEBUG
 endif
 
-ifeq ($(CORE), CV32E40X)
+ifeq ($(core), CV32E40X)
   FLAGS += -DCV32E40X
 endif
 
@@ -215,8 +215,16 @@ include bender_sim.mk
 include bender_synth.mk
 include bender_profile.mk
 
-ifeq ($(CORE), CV32E40X)
+ifeq ($(core), CV32E40X)
   bender_defs += -D COREV_ASSERT_OFF
+endif
+
+ifeq ($(core), CV32E40X)
+  bender_defs += -D CV32E40X
+else ifeq ($(core), CV32E40P)
+  bender_defs += -D CV32E40P
+else
+  $(error Detected unsupported core, must choose among CV32E40X and CV32E40P)
 endif
 
 bender_targs += -t rtl
@@ -244,7 +252,7 @@ else
 	tb         := magia_tile_tb
 endif
 WAVES        := $(mkfile_path)/wave.do
-ifeq ($(CORE), CV32E40X)
+ifeq ($(core), CV32E40X)
   bender_targs += -t redmule_complex
   bender_targs += -t cv32e40x_bhv
 else

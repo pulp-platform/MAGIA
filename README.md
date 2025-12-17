@@ -24,6 +24,8 @@ By default, the `python` in your `$PATH` is used. You can specify the version by
 
 The following *optional* parameters can be specified:
 
+`core`: **CV32E40X**|**CV32E40P** (**Default**: CV32E40X). Selects between the cv32e40x core with Xif programming interface and cv32e40p with memory mapped interface.
+
 `mesh_dv`: **0**|**1** (**Default**: 1). 0 simulation of a single tile; 1 simulation of the entire mesh.
 
 `fast_sim`: **0**|**1** (**Default**: 0). 0 faster simulation that does not track signals; 1 simulation that tracks signals (for debugging).
@@ -36,7 +38,7 @@ The following *optional* parameters can be specified:
 
 **1)** Setup the *environment* (`MAGIA` folder):
 ```bash
-source setup_env.sh
+source setup_env.sh <core>
 ```
 **2)** Install *python dependencies* (`MAGIA` folder):
 ```bash
@@ -48,7 +50,7 @@ make bender
 ```
 **4)** Clone the *dependencies* and generate the *compilation script* (`MAGIA` folder):
 ```bash
-make update-ips > update-ips.log <mesh_dv>
+make update-ips > update-ips.log <core> <mesh_dv>
 ```
 **4\*)** Apply FlooNoC *patch* - **currently FlooNoC requires this step but should not need it in the future** (`MAGIA` folder):
 ```bash
@@ -56,27 +58,27 @@ make floonoc-patch
 ```
 **5)** *Build* the hardware (`MAGIA` folder):
 ```bash
-make build-hw > build-hw.log <mesh_dv> <fast_sim>
+make build-hw > build-hw.log <core> <mesh_dv> <fast_sim>
 ```
 **6)** *Compile* the test code (`MAGIA` folder):
 ```bash
-make all <test>
+make all <test> <core>
 ```
 **7)** *Run* test (`MAGIA` folder):
 ```bash
-make run <test> <gui> <mesh_dv>
+make run <test> <core> <gui> <mesh_dv>
 ```
 
 **Full example**:
 ```bash
 make python_venv
-source setup_env.sh
+source setup_env.sh CV32E40P
 make python_deps
 make bender
-make update-ips > update-ips.log
-make build-hw > build-hw.log fast_sim=1
-make all test=fsync_test
-make run test=fsync_test
+make update-ips > update-ips.log core=CV32E40P
+make build-hw > build-hw.log core=CV32E40P fast_sim=1
+make all test=fsync_test core=CV32E40P
+make run test=fsync_test core=CV32E40P
 ```
 
 ## ⚙️ Architecture
@@ -298,13 +300,6 @@ fsync_global();
 **Tests**  : The `MESH_X_TILES` and `MESH_Y_TILES` parameters in `sw/utils/magia_utils.h` adapt the software stack to the specific mesh configuration.
 
 **RTL/TB** : The `N_TILES_X` and `N_TILES_Y` parameters in `hw/mesh/magia_pkg.sv` specifie the number of tiles and allows the derivation of the appropriate data and syncrhonization networks.
-
-## 🗜️ Chaning core configuration
-**Supported Cores and Programming Interfaces**: `cv32e40x` with `Xif`, `cv32e40p` with memory mapped interface
-
-**Compiler ISA Extensions**: The `XTEN` parameter in `setup_env.sh`.
-
-**Software and Bender Defines**: `CORE` parameter in `Makefile`.
 
 ## 🔏 License
 MAGIA is an open-source project with a permissive license. All `software` sources are licensed under the Apache License 2.0 ([`LICENSE.APACHE`](LICENSE.APACHE)). All `hardware` sources are licensed under the Solderpad Hardware License 0.51 ([`LICENSE.SHL`](LICENSE.SHL)).
