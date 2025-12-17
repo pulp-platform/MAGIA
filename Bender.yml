@@ -34,7 +34,7 @@ dependencies:
   obi               : { git: "https://github.com/pulp-platform/obi.git"               , rev: 528dc65303d5ffb02fbc254324c6b53eac0dd6e5 }                         
   axi               : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: 0.4.4                                }
-  axi_obi           : { git: "https://github.com/pulp-platform/axi_obi.git"           , rev: 84f21a6524bedcf17a569a62ac01b8a5610819c8 }
+  axi_obi           : { git: "https://github.com/pulp-platform/axi_obi.git"           , rev: 3f29bd67369a093cf5be4ea3fdac3c6c216424cc } # branch: vi/magia
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
   fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: fdb619f40f99d769cfceb20ac2117ff8d99e98a3 } # branch: main
