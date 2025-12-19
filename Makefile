@@ -39,9 +39,9 @@ ISA            ?= riscv
 ARCH           ?= rv
 XLEN           ?= 32
 ifeq ($(core), CV32E40X)
-  XTEN         ?= imafc
+  XTEN         = imafc
 else
-  XTEN         ?= imfcxpulpv2
+  XTEN         = imfcxpulpv2
 endif
 ABI            ?= ilp
 XABI           ?= f
