@@ -44,7 +44,7 @@ package magia_pkg;
   localparam int unsigned USR_W            = 1;                               // Default User Width
 
   // Parameters used by the NoC
-  parameter int unsigned AXI_NOC_ID_W      = 6;                                // AXI NoC ID Width: 3 bits slave ID + 3 bits routing (for 5 slave ports: 2^3=8)
+  parameter int unsigned AXI_NOC_ID_W      = 6;                                // AXI NoC ID Width: matches slave side id_width (6 bits)
   parameter int unsigned AXI_NOC_U_W       = USR_W;
 
   // Parameters used by the L2

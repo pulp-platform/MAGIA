@@ -2189,8 +2189,8 @@ typedef logic[0:0] axi_data_slv_user_t;
   localparam axi_cfg_t AxiCfg = '{    AddrWidth: 32,
     DataWidth: 32,
     UserWidth: 1,
-    InIdWidth: 4,
-    OutIdWidth: 2};
+    InIdWidth: 6,
+    OutIdWidth: 3};
 `FLOO_TYPEDEF_AXI_CHAN_ALL(axi, req, rsp, axi_data_slv, AxiCfg, hdr_t)
 
 `FLOO_TYPEDEF_AXI_LINK_ALL(req, rsp, req, rsp)
