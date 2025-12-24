@@ -1,16 +1,18 @@
-# Spatz Core Complex in MAGIA Tile
+# Spatz Vector Accelerator in MAGIA
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE.APACHE)
 [![SHL-0.51 license](https://img.shields.io/badge/license-SHL--0.51-green)](LICENSE.SHL)
 
-## Overview
+The Spatz Core Complex (spatz_cc) is a **RISC-V Vector Extension 1.0 accelerator** integrated into the MAGIA tile architecture. It consists of **Snitch** (a compact 32-bit RISC-V scalar core) and **Spatz** (a vector coprocessor with multiple FPU lanes). The CV32 host core controls Spatz CC through memory-mapped registers and interrupt-driven task dispatching, following an accelerator-style programming model.
 
-The Spatz Core Complex (spatz_cc) is integrated into the MAGIA tile architecture as a **vector co-processor accelerator** controlled by the CV32 host core. Spatz CC consists of two main components: **Snitch** (a compact 32-bit RISC-V scalar core with integer and floating-point support) and **Spatz** (a RISC-V Vector Extension 1.0 coprocessor with multiple lanes of vector FPUs for parallel execution). These components collaborate through an **offload mechanism**: Snitch executes scalar code and control flow, while vector operations are offloaded to the Spatz vector unit via the RISC-V Vector Extension interface.
+**Key Features:**
+- RISC-V Vector Extension 1.0 support (RVV)
+- Single and double precision floating-point (RVF, RVD)
+- Configurable vector length (VLEN: 128-512 bits)
+- Up to 8 vector FPU lanes
+- Clock-gated, interrupt-driven operation
+- Transparent binary embedding in CV32 firmware
 
-The integration in the MAGIA tile follows an accelerator-style programming model where the CV32 host manages Spatz CC execution through memory-mapped control registers and interrupt-driven task dispatching.
-
----
-
-## Hardware Integration
+## ⚙️ Hardware Integration
 
 ### OBI Slave Control Interface
 
@@ -38,53 +40,85 @@ The OBI slave exposes the following registers (base address: `SPATZ_CTRL_BASE = 
 4. Snitch writes exit code to `SPATZ_EXCHANGE_REG` and sets `SPATZ_DONE = 1`
 5. CV32 can check completion through event-unit (WFE or polling) and reads exit code
 
-### Instantiation and Connection
+## 🚀 Quick Start
 
-**Location in MAGIA:** Spatz CC is instantiated inside `magia_tile.sv` as part of the tile's processing elements.
+### Typical CV32 Test with Spatz Tasks
 
-**Key Parameters in MAKEFILE**
-- **`SPATZ_RVD`** (default: 0): Controls TCDM data width and ELEN
-  - `0`: 32-bit TCDM, ELEN=32 (single-precision only)
-  - `1`: 64-bit TCDM, ELEN=64 (double-precision support)
-  - **HCI Interconnect Impact:** When `RVD=1`, the HCI interconnect must support 64-bit so the HCI's ports are 2x.
-- **`SPATZ_VLEN`** (default: 256): Vector register length in bits (128, 256, 512, ...)
-- **`SPATZ_N_IPU`** (default: 1): Number of Integer Processing Units (1-8)
-- **`SPATZ_N_FPU`** (default: 4): Number of Floating Point Units (1-8)
-- **`SPATZ_XDIVSQRT`** (default: 0): Enable FP div/sqrt
-- **`SPATZ_RVF`** (default: 1): Enable single-precision floating-point
-- **`SPATZ_RVV`** (default: 1): Enable RISC-V Vector extension
+```c
+#include "magia_spatz_utils.h"
+#include "event_unit_utils.h"
+#include "my_test_task_bin.h"  // Auto-generated
 
-**Other Parameters in magia_tile_pkg:**
+int main(void) {
+    // Initialize Event Unit and Spatz
+    eu_init();
+    eu_enable_events(EU_SPATZ_DONE_MASK);
+    spatz_init(SPATZ_BINARY_START);
+    
+    // Launch vector task
+    spatz_run_task(MY_VECTOR_TASK);
+    eu_wait_spatz_wfe(EU_SPATZ_DONE_MASK);
+    
+    if (spatz_get_exit_code() != 0) {
+        printf("Task failed: 0x%03lx\n", spatz_get_exit_code());
+        return 1;
+    }
+    
+    spatz_clk_dis();  // Power saving
+    return 0;
+}
+```
 
-These parameters are defined in `hw/tile/magia_tile_pkg.sv` and control advanced Spatz CC configuration. For detailed parameter descriptions, refer to the [Spatz CC documentation](https://github.com/pulp-platform/spatz).
+### Writing a Spatz Task
 
-**Memory and Outstanding Transactions:**
-- **`SPATZ_NUM_INT_OUTSTANDING_LOADS`** (default: 1)
-- **`SPATZ_NUM_INT_OUTSTANDING_MEM`** (default: 4)
-- **`SPATZ_NUM_SPATZ_OUTSTANDING_LOADS`** (default: 4)
+Create `spatz/sw/tasks/my_vector_task.c`:
 
-**Pipeline Control:**
-- **`SPATZ_REGISTER_OFFLOAD_RSP`** (default: 0)
-- **`SPATZ_REGISTER_CORE_REQ`** (default: 1)
-- **`SPATZ_REGISTER_CORE_RSP`** (default: 1)
+```c
+#include "magia_tile_utils.h"
 
-**FPU Pipeline Stages (Spatz Vector Unit):**
-- **`SPATZ_FPU_PIPE_FMA_FP32`** (default: 1)
-- **`SPATZ_FPU_PIPE_FMA_FP64`** (default: 2)
-- **`SPATZ_FPU_PIPE_DIVSQRT_FP32`** (default: 2)
-- **`SPATZ_FPU_PIPE_DIVSQRT_FP64`** (default: 4)
-- **`SPATZ_FPU_PIPE_NONCOMP`** (default: 1)
-- **`SPATZ_FPU_PIPE_CONV`** (default: 2)
-- **`SPATZ_FPU_PIPE_DOTP`** (default: 2)
+int my_vector_task(void) {
+    // Your vector code here using RVV intrinsics
+    asm volatile("vsetvli zero, %0, e32, m4, ta, ma" ::"r"(32));
+    // ...
+    return 0;
+}
+```
 
-**Boot ROM:**
-- **`SPATZ_BOOT_ADDR`** (default: 0x10000000): Spatz CC bootrom base address in Snitch address space
-- **`SPATZ_BOOTROM_SIZE`** (default: 0xFF): Size of bootrom region
+**Naming Convention (Required):**
+- File: `*_task.c` (lowercase, ends with `_task`)
+- Function: `int *_task(void)` (matches filename)
+- Symbol: `*_TASK` (uppercase in generated header)
 
+---
 
-**Interconnect:**
+## 🔧 Configuration Parameters
+### Main Parameters (Makefile)
 
-Spatz CC has multiple interconnect interfaces for different domains:
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `SPATZ_RVD` | 0 | 0: 32-bit TCDM (ELEN=32); 1: 64-bit TCDM (ELEN=64, double precision) |
+| `SPATZ_VLEN` | 256 | Vector register length in bits (128, 256, 512) |
+| `SPATZ_N_FPU` | 4 | Number of FPU lanes (1-8) |
+| `SPATZ_N_IPU` | 1 | Number of integer processing units (1-8) |
+| `SPATZ_RVF` | 1 | Enable single-precision floating-point |
+| `SPATZ_RVV` | 1 | Enable RISC-V Vector extension |
+| `SPATZ_XDIVSQRT` | 0 | Enable FP div/sqrt |
+
+### Advanced Parameters
+
+Defined in `hw/tile/magia_tile_pkg.sv`. See [Spatz documentation](https://github.com/pulp-platform/spatz) for details.
+
+**Memory & Transactions:**
+- `SPATZ_NUM_INT_OUTSTANDING_LOADS`, `SPATZ_NUM_INT_OUTSTANDING_MEM`
+- `SPATZ_NUM_SPATZ_OUTSTANDING_LOADS`
+
+**Pipeline:**
+- `SPATZ_REGISTER_OFFLOAD_RSP`, `SPATZ_REGISTER_CORE_REQ/RSP`
+- `SPATZ_FPU_PIPE_*` (FMA, DIVSQRT, CONV, DOTP stages)
+
+---
+
+## 📋 Control Interface
 
 1. **HCI Ports (High-Performance L1/TCDM Access):**
    - Spatz CC connects to the **HCI interconnect** with multiple ports (5-10 ports depending on `N_FPU` and `RVD`)
@@ -108,21 +142,39 @@ Spatz CC has multiple interconnect interfaces for different domains:
 
 ## Execution Flow
 
-### Accelerator-Style Operation Model
 
-Spatz CC operates as a **clock-gated, interrupt-driven accelerator** commanded by CV32:
+### Operation Sequence
 
-1. **CV32 enables Spatz CC clock** (`SPATZ_CLK_EN = 1`)
-2. **CV32 writes task entry point** to `SPATZ_EXCHANGE_REG`
-3. **CV32 triggers execution** by writing to `SPATZ_START` (sends interrupt to Snitch core)
-4. **Snitch core wakes from WFI**, executes task (using Spatz vector unit if needed), writes exit code, sets `SPATZ_DONE`
-5. **CV32 reads result**, optionally disables Spatz CC clock to save power
+1. **CV32 enables clock** (`SPATZ_CLK_EN = 1`)
+2. **CV32 writes task address** to `SPATZ_EXCHANGE_REG`
+3. **CV32 triggers execution** (`SPATZ_START = 1` → interrupt to Snitch)
+4. **Snitch wakes**, executes task, writes exit code, sets `SPATZ_DONE = 1`
+5. **CV32 reads result** and optionally disables clock
 
-Between tasks, Spatz CC (Snitch core) remains in **WFI (Wait-For-Interrupt)** state, consuming minimal power. CV32 can disable the clock completely when Spatz CC is idle.
+**Exit Codes:**
+- `0x000`: Success
+- `0x1XX`: Exception (XX = mcause[7:0])
 
-### Boot and Initialization Sequence
+---
 
-#### 1. BootROM (`spatz/bootrom/spatz_init.S`)
+## 🖥️ Programming API
+
+### C Functions (`sw/utils/magia_spatz_utils.h`)
+
+```c
+// Clock control
+void spatz_clk_en(void);
+void spatz_clk_dis(void);
+
+// Initialization and task control
+void spatz_init(uint32_t addr);          // Initialize with binary start address
+void spatz_run_task(uint32_t addr);      // Set task address and trigger
+uint32_t spatz_get_exit_code(void);      // Read exit code
+```
+
+---
+
+## 🏗️ Boot and Initialization
 The bootROM is **extremely minimal** (only 3 instructions) to minimize hardware impact and ROM area. It performs only:
 ```assembly
 // Read dispatcher entry point from EXCHANGE_REG (set by CV32)
@@ -169,214 +221,68 @@ dispatcher_loop:
 - `0x000`: Task completed successfully
 - `0x1XX`: Exception occurred (XX = mcause[7:0])
 
----
+### Workflow
 
-## Programming Interface
+**Programmer writes task** → **Makefile auto-detects** → **Builds Spatz binary** → **Converts to header** → **Embeds in CV32 firmware**
 
-### C API (`sw/utils/magia_spatz_utils.h`)
+**Task Naming Convention:**
+- File: `*_task.c` (e.g., `my_vector_task.c`)
+- Function: `int *_task(void)`
+- Symbol: `*_TASK` (uppercase in header)
 
-The programming interface provides simple functions to control Spatz CC as an accelerator:
+### Auto-Detection and Build
 
-#### Initialization Functions
-```c
-void spatz_clk_en(void);        // Enable Spatz CC clock
-void spatz_clk_dis(void);       // Disable Spatz CC clock (power saving)
-void spatz_init(uint32_t addr); // Initialize Spatz CC with binary start address
+Top-level Makefile automatically:
+1. Scans test code for `*_TASK` symbols
+2. Triggers Spatz binary build
+3. Generates header with task addresses
+
+```makefile
+# Automatic in MAGIA-SPATZ/Makefile
+SPATZ_TASKS := $(shell grep -oP '\b[A-Z][A-Z0-9_]*_TASK\b' $(TEST_SRCS))
+$(OBJ): spatz-header  # Header generated before CV32 compilation
 ```
 
-#### Task Control Functions
-```c
-void spatz_set_func(uint32_t addr);     // Set task entry point in EXCHANGE_REG
-void spatz_trigger_en_irq(void);        // Trigger Spatz CC interrupt (start task)
-void spatz_run_task(uint32_t addr);     // Combined: set address + trigger
-uint32_t spatz_get_exit_code(void);     // Read task exit code from EXCHANGE_REG
-```
-
-### Typical Usage Pattern
+### Generated Header Example
 
 ```c
-#include "magia_spatz_utils.h"
-#include "event_unit_utils.h"
-#include "my_test_task_bin.h"  // Auto-generated header with TASK symbols
+// Auto-generated: test_name_task_bin.h
+const uint8_t test_name_task_bin[] __attribute__((section(".spatz_binary"))) = {
+    0x37, 0x01, 0x02, 0x00, ...  // Spatz binary data
+};
 
-int main(void) {
-    // Initialize Event Unit (for WFE synchronization)
-    eu_init();
-    eu_enable_events(EU_SPATZ_DONE_MASK);
-    
-    // Initialize Spatz CC (first time only)
-    spatz_init(SPATZ_BINARY_START);
-    
-    // Launch task 1
-    spatz_run_task(MY_FIRST_TASK);
-    eu_wait_spatz_wfe(EU_SPATZ_DONE_MASK);  // Wait for completion
-    
-    if (spatz_get_exit_code() != 0) {
-        printf("Task 1 failed: 0x%03lx\n", spatz_get_exit_code());
-    }
-    
-    // Launch task 2 (no re-init needed)
-    spatz_run_task(MY_SECOND_TASK);
-    eu_wait_spatz_wfe(EU_SPATZ_DONE_MASK);
-    
-    // Disable Spatz CC clock to save power
-    spatz_clk_dis();
-    
-    return 0;
-}
+#define SPATZ_BINARY_START ((uint32_t)&_spatz_binary_start)
+#define MY_VECTOR_TASK     (SPATZ_BINARY_START + 0x00000120)  // Task offset
 ```
 
 ---
 
-## Software Build System
-
-### Task Development Workflow
-
-The build system is designed to make task development **transparent and automatic**. The programmer only needs to:
-
-1. **Write task function** in C inside `spatz/sw/tasks/`:
-   ```c
-   // spatz/sw/tasks/my_vector_task.c
-   void my_vector_task(void) {
-       // Task code using RISC-V Vector intrinsics
-       // ...
-   }
-   ```
-   
-   **Naming Convention (REQUIRED):**
-   - File name: `'*_task.c` (lowercase with underscores, must end with `_task`)
-   - Function name: `void *_task(void)` (must match file name exactly and end with `_task`)
-   - Symbol in header: `*_TASK` (must match file name but uppercase)
-   - Example: `my_vector_task.c` → `void my_vector_task(void)` → `MY_VECTOR_TASK`
-
-2. **Include auto-generated header** in CV32 test:
-   ```c
-   #include "cv32_test_name_task_bin.h"  // Contains SPATZ_BINARY_START, MY_VECTOR_TASK
-   ```
-
-3. **Call task** from CV32 code:
-   ```c
-   spatz_init(SPATZ_BINARY_START);
-   spatz_run_task(MY_VECTOR_TASK);
-   ```
-
-### Build Flow (Automatic)
-
-#### Top-Level Makefile (`MAGIA-SPATZ/Makefile`)
-
-When building a CV32 test, the top-level Makefile:
-
-1. **Auto-detects Spatz tasks** used in the test:
-   ```makefile
-   SPATZ_TASKS := $(shell grep -oP '\b[A-Z][A-Z0-9_]*_TASK\b' $(TEST_SRCS) | ...)
-   ```
-
-2. **Triggers Spatz CC binary build** (if tasks detected):
-   ```makefile
-   spatz-header:
-       cd spatz/sw && $(MAKE) all task="$(SPATZ_TASKS)" TEST_NAME=$(test)
-   ```
-
-3. **CV32 object depends on header**:
-   ```makefile
-   $(OBJ): spatz-header  # Ensures header exists before compiling CV32 test
-   ```
-
-#### Spatz Makefile (`spatz/sw/Makefile`)
-
-The Spatz CC build system:
-
-1. **Compiles runtime + tasks** into single ELF:
-   ```makefile
-   $(ELF): $(CRT0_OBJ) $(TASK_SRCS)
-       $(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(CRT0_OBJ) $(TASK_SRCS)
-   ```
-   - Links `spatz_crt0.S` (dispatcher + trap handler)
-   - Links all task `.c` files
-   - Uses `spatz_program.ld` linker script (position-independent code at 0x00000000)
-
-2. **Generates binary**:
-   ```makefile
-   $(BIN): $(ELF)
-       $(OBJCOPY) -O binary $< $@
-   ```
-
-3. **Converts binary to C header** with `bin2header.py`:
-   ```c
-   // Auto-generated: spatz/sw/headers_bin/my_test_task_bin.h
-   
-   const uint8_t my_test_task_bin[] __attribute__((section(".spatz_binary"))) = {
-       0x37, 0x01, 0x02, 0x00, ...  // Binary data
-   };
-   
-   extern uint32_t _spatz_binary_start;  // Linker symbol from CV32 link.ld
-   #define SPATZ_BINARY_START ((uint32_t)&_spatz_binary_start)
-   
-   #define SPATZ_DISPATCHER_LOOP (SPATZ_BINARY_START + 0x000000a4)
-   #define MY_VECTOR_TASK        (SPATZ_BINARY_START + 0x00000120)  // Offset
-   ```
-
-4. **CV32 linker embeds binary** after CV32 `.text` in instrram:
-   ```ld
-   // sw/kernel/link.ld
-   .text : { ... } > instrram
-   
-   _spatz_binary_start = .;
-   .spatz_binary : {
-       KEEP(*(.spatz_binary))  // Embeds array from header
-   } > instrram
-   ```
-
-**Result:** Spatz CC code is **inlined into CV32 binary**, loaded into instrram at simulation/synthesis, completely transparent to programmer.
-
----
-
-## Complete Build and Run Script
-
-The build and run process is **identical** whether your test uses Spatz tasks or not. The build system automatically detects and handles everything:
+## ⚡ Complete Build and Run
 
 ```bash
-#!/bin/bash
-# Setup and build MAGIA + Spatz system
-
-# 1. Setup Python virtual environment
-export BASE_PYTHON=python3
+# 1. Setup environment
 make python_venv
 source setup_env.sh
 make python_deps
-
-# 2. Setup Bender (dependency manager)
 make bender
-make update-ips mesh_dv=0 > update-ips.log
-
-# 3. Apply FlooNoC patch
+make update-ips > update-ips.log
 make floonoc-patch
 
-# 4. Build hardware (QuestaSim)
+# 2. Build hardware (QuestaSim)
 module load questasim/2024.3
 make build-hw mesh_dv=0 fast_sim=1 > build-hw.log
 
-# 5. Build software (CV32 + Spatz CC) - AUTOMATIC task detection!
+# 3. Build software (auto-detects Spatz tasks)
 module load pulp-gcc7/1.0.16
-make clean all test='name_test' mesh_dv=0
+make clean all test='my_test' mesh_dv=0
 
-# 6. Run simulation
-make run test='name_test' mesh_dv=0 gui=0
+# 4. Run simulation
+make run test='my_test' mesh_dv=0 gui=0
 ```
 
-### What Happens Automatically
-
-**If your test includes Spatz CC tasks** (following the programming pattern described above):
-1. Makefile **auto-detects** task symbols (e.g., `VECTOR_TASK`, `MY_FIRST_TASK`) in your test code
-2. **Automatically builds** Spatz CC binary with `spatz_crt0.S` + all detected task `.c` files
-3. **Automatically converts** binary to header file (`name_test_task_bin.h`)
-4. CV32 test includes the header and calls `spatz_run_task(TASK_NAME)`
-5. Entire Spatz CC binary is **embedded inline** into CV32 instrram
-
-**If your test does NOT use Spatz CC:**
-- Build proceeds normally without Spatz CC binary generation
-- No overhead or extra steps required
-
-**Key Point:** The programmer **never manipulates binaries, addresses, or loading manually**. Just follow the programming pattern (write tasks, include header, call `spatz_run_task()`) and the build system handles everything — **fully accelerator-style!**
+**Note:** Build flow is **identical** whether your test uses Spatz or not — the system automatically detects and handles Spatz tasks!
 
 ---
+
+## 🔏 License
+All `software` sources are licensed under the Apache License 2.0 ([`LICENSE.APACHE`](LICENSE.APACHE)). All `hardware` sources are licensed under the Solderpad Hardware License 0.51 ([`LICENSE.SHL`](LICENSE.SHL)).
