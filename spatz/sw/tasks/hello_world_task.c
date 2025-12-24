@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 ETH Zurich and University of Bologna
+ * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
- *
  * 
- * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- *  
- * All initialization (stack, regs, vector, BSS) done in spatz_crt0.S  
- * Minimal Boot ROM - only read FUNC_PTR and jump
+ * Authors: Luca Balboni <luca.balboni10@studio.unibo,it>
+ *
+ * Hello World Task for Spatz_cc
  */
+#include "magia_tile_utils.h"
 
-#define EXCHANGE_REG_ADDR 0x00001704  // OBI slave ctrl exchange register
-
-  .section .text.bootrom
-  .global _start
-  .option norvc
-
-_start:
-  // Read dispatcher loop address from EXCHANGE_REG (set by CV32)
-  li      t0, EXCHANGE_REG_ADDR
-  lw      t1, 0(t0)
-  
-  // Jump to _start in spatz binary (does all init)
-  jr      t1
+int hello_world_task(void) {
+    printf("[SPATZ] Hello World from Spatz!\n");
+    return 0;
+}

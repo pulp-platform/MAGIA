@@ -21,6 +21,7 @@
  */
 
 package magia_tile_pkg;
+  import reqrsp_pkg::*;  // Import reqrsp package for AMO types used in REQRSP_TYPEDEF_ALL
 
   `include "hci/typedef.svh"
   `include "hwpe-ctrl/typedef.svh"
@@ -71,9 +72,95 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                  = 32'h3FFF_FFFF;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_END              = L2_ADDR_START + L2_SIZE; 
 
+
+//SPATZ PARAMETERS from Makefile defines
+  //SPATZ_RVD (Double-width vector extension support)
+  `ifdef SPATZ_RVD
+    localparam bit SPATZ_RVD_PARAM = `SPATZ_RVD;
+  `else
+    localparam bit SPATZ_RVD_PARAM = 1'b0;
+  `endif
+  
+  //SPATZ_N_IPU and SPATZ_N_FPU
+  `ifdef SPATZ_N_IPU
+    localparam int unsigned SPATZ_NUM_IPU = `SPATZ_N_IPU;
+  `else
+    localparam int unsigned SPATZ_NUM_IPU = 1;
+  `endif
+  
+  `ifdef SPATZ_N_FPU
+    localparam int unsigned SPATZ_NUM_FPU = `SPATZ_N_FPU;
+  `else
+    localparam int unsigned SPATZ_NUM_FPU = 4;
+  `endif
+  
+  //SPATZ_XDIVSQRT (FP division/sqrt enable)
+  `ifdef SPATZ_XDIVSQRT
+    localparam bit SPATZ_XDIVSQRT_PARAM = `SPATZ_XDIVSQRT;
+  `else
+    localparam bit SPATZ_XDIVSQRT_PARAM = 1'b0;
+  `endif
+  
+  //SPATZ_XDMA (DMA inside Spatz_cc)
+  `ifdef SPATZ_XDMA
+    localparam bit SPATZ_XDMA_PARAM = `SPATZ_XDMA;
+  `else
+    localparam bit SPATZ_XDMA_PARAM = 1'b0;
+  `endif
+  
+  //SPATZ_RVF (Single-precision FP support)
+  `ifdef SPATZ_RVF
+    localparam bit SPATZ_RVF_PARAM = `SPATZ_RVF;
+  `else
+    localparam bit SPATZ_RVF_PARAM = 1'b1;
+  `endif
+  
+  //SPATZ_RVV (Vector extension support)
+  `ifdef SPATZ_RVV
+    localparam bit SPATZ_RVV_PARAM = `SPATZ_RVV;
+  `else
+    localparam bit SPATZ_RVV_PARAM = 1'b1;
+  `endif
+  
+  // Spatz CC parameters (must be defined before HCI parameters)
+  localparam int unsigned SPATZ_NUM_FU            = (SPATZ_NUM_FPU > SPATZ_NUM_IPU) ? SPATZ_NUM_FPU : SPATZ_NUM_IPU;  // Max of FPU and IPU
+  localparam int unsigned SPATZ_TCDM_PORTS        = SPATZ_NUM_FU + 1;  // N_FU + 1 TCDM ports (N_FU vector + 1 snitch)
+  localparam int unsigned SPATZ_HCI_PORTS         = SPATZ_RVD_PARAM ? (SPATZ_TCDM_PORTS * 2) : SPATZ_TCDM_PORTS;  // RVD=1: 2xTCDM HCI32, RVD=0: 1xTCDM HCI32
+
+  // Spatz CC outstanding transactions and timing parameters
+  parameter int unsigned SPATZ_NUM_INT_OUTSTANDING_LOADS   = 1;   // Snitch core outstanding loads
+  parameter int unsigned SPATZ_NUM_INT_OUTSTANDING_MEM     = 4;   // Snitch core outstanding memory ops
+  parameter int unsigned SPATZ_NUM_SPATZ_OUTSTANDING_LOADS = 4;   // Spatz vector unit outstanding loads
+  parameter bit          SPATZ_XDIVSQRT                    = SPATZ_XDIVSQRT_PARAM; // From Makefile define (0=disabled, 1=enabled)
+  parameter bit          SPATZ_XDMA                        = SPATZ_XDMA_PARAM;     // From Makefile define (0=disabled, 1=enabled)
+  parameter bit          SPATZ_RVF                         = SPATZ_RVF_PARAM;      // From Makefile define (single-precision FP)
+  parameter bit          SPATZ_RVV                         = SPATZ_RVV_PARAM;      // From Makefile define (vector extension)
+  parameter bit          SPATZ_REGISTER_OFFLOAD_RSP        = 1'b0; // Pipeline register on offload response
+  parameter bit          SPATZ_REGISTER_CORE_REQ           = 1'b1; // Pipeline register on core request
+  parameter bit          SPATZ_REGISTER_CORE_RSP           = 1'b1; // Pipeline register on core response
+  
+  // Spatz FPU Pipeline Configuration (PipeRegs: stages per operation per format [FP32, FP64, FP16, FP8, FP16ALT, FP8ALT])
+  // Default: Optimized for balanced latency/throughput (Spatz Cluster default configuration)
+  parameter int unsigned SPATZ_FPU_PIPE_FMA_FP32    = 1;   // FMA FP32 pipeline stages
+  parameter int unsigned SPATZ_FPU_PIPE_FMA_FP64    = 2;   // FMA FP64 pipeline stages  
+  parameter int unsigned SPATZ_FPU_PIPE_DIVSQRT_FP32 = 2;   // DIVSQRT FP32 stages (if XDivSqrt=1)
+  parameter int unsigned SPATZ_FPU_PIPE_DIVSQRT_FP64 = 4;   // DIVSQRT FP64 stages (if XDivSqrt=1)
+  parameter int unsigned SPATZ_FPU_PIPE_NONCOMP     = 1;   // Non-computational ops (compare, classify) stages
+  parameter int unsigned SPATZ_FPU_PIPE_CONV        = 2;   // Conversion ops stages
+  parameter int unsigned SPATZ_FPU_PIPE_DOTP        = 2;   // Dot product ops stages
+
+  // Spatz bootrom parameters
+  parameter logic [31:0] SPATZ_BOOT_ADDR          = 32'h1000_0000;  // Spatz bootrom base address
+  parameter logic [31:0] SPATZ_BOOTROM_SIZE       = 32'h0000_00FF;
+  
+  // Spatz TCDM parameters
+  parameter int unsigned SPATZ_TCDM_ADDR_WIDTH = $clog2(magia_pkg::N_MEM_BANKS * magia_pkg::N_WORDS_BANK * magia_pkg::DATA_W / 8);  
+  parameter int unsigned SPATZ_TCDM_DATA_WIDTH = SPATZ_RVD_PARAM ? 64 : 32;                  // Spatz TCDM data width
+  parameter int unsigned SPATZ_TCDM_STRB_WIDTH = SPATZ_RVD_PARAM ? 8 : 4;                    // Spatz TCDM strobe width
+
   // Parameters used by the HCI
   parameter int unsigned N_HWPE  = 1;                                                   // Number of HWPEs attached to the port
-  parameter int unsigned N_CORE  = 6;                                                   // Number of Core ports: 1 CV32 + 5 Spatz HCI
+  parameter int unsigned N_CORE  = 1 + SPATZ_HCI_PORTS;                                 // Number of Core ports: 1 CV32 + Spatz HCI ports (RVD=1: 11 total, RVD=0: 6 total)
   parameter int unsigned N_DMA   = 2;                                                   // Number of DMA ports (1 for the read channel and 1 for the write channel)
   typedef enum logic{
     HCI_DMA_CH_READ_IDX  = 1'b0,
@@ -295,18 +382,6 @@ package magia_tile_pkg;
   parameter int unsigned SPATZ_ICACHE_WAYS       = 2;                                   // Spatz i$ number of ways (2-way set associative)
   localparam int unsigned SPATZ_L0_EARLY_TAG_W   = snitch_pkg::PAGE_SHIFT - $clog2(SPATZ_ICACHE_LINE_WIDTH/8); // L0 early tag width
   
-  // Spatz CC parameters
-  parameter int unsigned SPATZ_NUM_FPU            = 4;               // Number of FPU units in Spatz
-  parameter int unsigned SPATZ_NUM_IPU            = 1;               // Number of IPU units in Spatz
-  localparam int unsigned SPATZ_NUM_FU            = (SPATZ_NUM_FPU > SPATZ_NUM_IPU) ? SPATZ_NUM_FPU : SPATZ_NUM_IPU;  // Max of FPU and IPU
-  localparam int unsigned SPATZ_HCI_PORTS         = SPATZ_NUM_FU + 1;  // +1 for Snitch integer load/store
-
-  // Spatz bootrom parameters
-  parameter logic [31:0] SPATZ_BOOT_ADDR          = 32'h1000_0000;
-  parameter logic [31:0] SPATZ_BOOTROM_SIZE       = 32'h0000_00FF;
-  
-  // Spatz TCDM parameters
-  parameter int unsigned SPATZ_TCDM_ADDR_WIDTH = $clog2(magia_pkg::N_MEM_BANKS * magia_pkg::N_WORDS_BANK * magia_pkg::DATA_W / 8);  
   
   typedef struct packed {
     int unsigned                 idx;
@@ -423,7 +498,15 @@ package magia_tile_pkg;
   `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic[DWH-1:0], logic[UWH-1:0])
 
   localparam obi_pkg::obi_optional_cfg_t obi_amo_optional_cfg = obi_pkg::obi_all_optional_config(AUSER_WIDTH, WUSER_WIDTH, RUSER_WIDTH, MID_WIDTH, ACHK_WIDTH, RCHK_WIDTH);
-  localparam obi_pkg::obi_cfg_t          obi_amo_cfg          = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, OBI_ID_WIDTH, obi_amo_optional_cfg);
+  localparam obi_pkg::obi_optional_cfg_t obi_no_amo_optional_cfg = '{UseAtop: 1'b0, UseMemtype: 1'b0, UseProt: 1'b0, UseDbg: 1'b0, AUserWidth: AUSER_WIDTH, WUserWidth: WUSER_WIDTH, RUserWidth: RUSER_WIDTH, MidWidth: MID_WIDTH, AChkWidth: ACHK_WIDTH, RChkWidth: RCHK_WIDTH};
+  
+  // OBI full configurations - 32-bit (default)
+  localparam obi_pkg::obi_cfg_t obi_amo_cfg = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, OBI_ID_WIDTH, obi_amo_optional_cfg);
+  localparam obi_pkg::obi_cfg_t obi_no_amo_cfg = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, OBI_ID_WIDTH, obi_no_amo_optional_cfg);
+  
+  // OBI full configurations - 64-bit
+  localparam obi_pkg::obi_cfg_t obi_amo_cfg_64 = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, SPATZ_TCDM_DATA_WIDTH, OBI_ID_WIDTH, obi_amo_optional_cfg);
+  localparam obi_pkg::obi_cfg_t obi_no_amo_cfg_64 = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, SPATZ_TCDM_DATA_WIDTH, OBI_ID_WIDTH, obi_no_amo_optional_cfg);
   localparam bit                         RegisterAmo          = 1;
   
   `OBI_TYPEDEF_ALL_A_OPTIONAL(core_data_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
@@ -525,7 +608,39 @@ package magia_tile_pkg;
   typedef logic                            spatz_tcdm_user_t;
   typedef logic [magia_tile_pkg::SPATZ_TCDM_ADDR_WIDTH-1:0] spatz_tcdm_addr_t;
   
+  // 64-bit types for TCDM and reqrsp interfaces when RVD=1
+  typedef logic [SPATZ_TCDM_DATA_WIDTH-1:0]     spatz_data64_t;
+  typedef logic [SPATZ_TCDM_STRB_WIDTH-1:0]     spatz_strb64_t;
+  
   `TCDM_TYPEDEF_ALL(spatz_tcdm, spatz_tcdm_addr_t, spatz_data_t, spatz_strb_t, spatz_tcdm_user_t)
-  `REQRSP_TYPEDEF_ALL(spatz_reqrsp, spatz_addr_t, spatz_data_t, spatz_strb_t)
+  `REQRSP_TYPEDEF_ALL(spatz_reqrsp, spatz_addr_t, spatz_data_t, spatz_strb_t)        // 32-bit for Snitch data port (RVD=0, DataWidth=32)
+  `REQRSP_TYPEDEF_ALL(spatz_reqrsp64, spatz_addr_t, spatz_data64_t, spatz_strb64_t)  // 64-bit for Snitch data port (RVD=1, DataWidth=64)
+
+  // TCDM64 types with AMO support (using TCDM_TYPEDEF_ALL macro which includes amo field)
+  typedef logic [magia_pkg::ADDR_W-1:0]        spatz_tcdm64_addr_t;
+  typedef logic [SPATZ_TCDM_DATA_WIDTH-1:0]    spatz_tcdm64_data_t;
+  typedef logic [SPATZ_TCDM_STRB_WIDTH-1:0]    spatz_tcdm64_strb_t;
+  typedef logic                                 spatz_tcdm64_user_t;
+  
+  `TCDM_TYPEDEF_ALL(spatz_tcdm64, spatz_tcdm64_addr_t, spatz_tcdm64_data_t, spatz_tcdm64_strb_t, spatz_tcdm64_user_t)
+  
+  // Alias for backward compatibility with spatz_cc instantiation
+  typedef spatz_tcdm64_req_chan_t spatz_tcdm64_payload_t;
+
+  // TCDM32 types with AMO support (for modular atomic resolver architecture)
+  typedef logic [magia_pkg::ADDR_W-1:0]        spatz_tcdm32_addr_t;
+  typedef logic [31:0]                          spatz_tcdm32_data_t;
+  typedef logic [3:0]                           spatz_tcdm32_strb_t;
+  typedef logic                                 spatz_tcdm32_user_t;
+  
+  `TCDM_TYPEDEF_ALL(spatz_tcdm32, spatz_tcdm32_addr_t, spatz_tcdm32_data_t, spatz_tcdm32_strb_t, spatz_tcdm32_user_t)
+  
+  // OBI 32-bit types for modular atomic architecture  
+  `OBI_TYPEDEF_ALL_A_OPTIONAL(spatz_obi32_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
+  `OBI_TYPEDEF_ALL_R_OPTIONAL(spatz_obi32_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
+  `OBI_TYPEDEF_A_CHAN_T(spatz_obi32_a_chan_t, magia_pkg::ADDR_W, 32, AID_WIDTH, spatz_obi32_a_optional_t)
+  `OBI_TYPEDEF_R_CHAN_T(spatz_obi32_r_chan_t, 32, RID_WIDTH, spatz_obi32_r_optional_t)
+  `OBI_TYPEDEF_DEFAULT_REQ_T(spatz_obi32_req_t, spatz_obi32_a_chan_t)
+  `OBI_TYPEDEF_RSP_T(spatz_obi32_rsp_t, spatz_obi32_r_chan_t)
 
 endpackage: magia_tile_pkg

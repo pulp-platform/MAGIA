@@ -337,16 +337,23 @@ static inline void eu_spatz_init(void) {
     eu_enable_events(EU_SPATZ_DONE_MASK);
 }
 
-static inline uint32_t eu_spatz_wait_completion(eu_wait_mode_t mode) {
-    return eu_wait_events(EU_SPATZ_DONE_MASK, mode, 1000000);
-}
-
 static inline uint32_t eu_spatz_is_done(void) {
     return eu_check_events(EU_SPATZ_DONE_MASK);
 }
 
-static inline uint32_t eu_spatz_is_started(void) {
-    return eu_check_events(EU_SPATZ_START_MASK);
+
+static inline void eu_wait_spatz_wfe(uint32_t event_mask) {
+    while (!eu_check_events(event_mask)) {
+        eu_evt_wait();
+    }
+    eu_clear_events(event_mask);
+}
+
+static inline void eu_wait_spatz_polling(uint32_t event_mask) {
+    while (!eu_check_events(event_mask)) {
+        wait_nop(10);
+    }
+    eu_clear_events(event_mask);
 }
 
 //=============================================================================

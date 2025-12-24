@@ -4,7 +4,7 @@
 //
 // Auto-generated bootrom for Spatz core complex
 // Generated from: spatz_init.bin
-// Size: 240 bytes (60 words)
+// Size: 16 bytes (4 words)
 
 module spatz_bootrom #(
   parameter int unsigned DataWidth = 32,
@@ -15,70 +15,14 @@ module spatz_bootrom #(
   input  logic [AddrWidth-1:0]  addr_i,
   output logic [DataWidth-1:0]  rdata_o
 );
-  localparam int RomSize = 60;
+  localparam int RomSize = 4;
   localparam int AddrBits = RomSize > 1 ? $clog2(RomSize) : 1;
 
   const logic [RomSize-1:0][DataWidth-1:0] mem = {
     32'h00030067,
     32'h0002a303,
     32'h70428293,
-    32'h000012b7,
-    32'h3002b073,
-    32'h00800293,
-    32'h3042b073,
-    32'h80028293,
-    32'h000012b7,
-    32'h0002a023,
-    32'h70828293,
-    32'h000012b7,
-    32'hf40282e3,
-    32'h0062f2b3,
-    32'h80030313,
-    32'h00001337,
-    32'h344022f3,
-    32'hf59ff06f,
-    32'h10500073,
-    32'h3002a073,
-    32'h00800293,
-    32'h3042a073,
-    32'h80028293,
-    32'h000012b7,
-    32'h30529073,
-    32'h02828293,
-    32'h00000297,
-    32'h3002a073,
-    32'h20000293,
-    32'h00000f93,
-    32'h00000f13,
-    32'h00000e93,
-    32'h00000e13,
-    32'h00000d93,
-    32'h00000d13,
-    32'h00000c93,
-    32'h00000c13,
-    32'h00000b93,
-    32'h00000b13,
-    32'h00000a93,
-    32'h00000a13,
-    32'h00000993,
-    32'h00000913,
-    32'h00000893,
-    32'h00000813,
-    32'h00000793,
-    32'h00000713,
-    32'h00000693,
-    32'h00000613,
-    32'h00000593,
-    32'h00000513,
-    32'h00000493,
-    32'h00000413,
-    32'h00000393,
-    32'h00000313,
-    32'h00000293,
-    32'h00000213,
-    32'h00000193,
-    32'h00000113,
-    32'h00000093
+    32'h000012b7
   };
 
   // Combinatorial read - no flop to avoid 1-cycle delay

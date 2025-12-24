@@ -32,9 +32,13 @@ module tcdm2hci_atomic
   parameter type hci_req_t  = logic,
   parameter type hci_rsp_t  = logic,
   
+  // OBI optional types for atomic resolver
+  parameter type obi_a_optional_t = logic,
+  parameter type obi_r_optional_t = logic,
+  
   // OBI configuration for atomic resolver
   parameter obi_pkg::obi_cfg_t SbrPortObiCfg = obi_pkg::ObiDefaultConfig,
-  parameter obi_pkg::obi_cfg_t MgrPortObiCfg = obi_pkg::ObiDefaultConfig  
+  parameter obi_pkg::obi_cfg_t MgrPortObiCfg = obi_pkg::ObiDefaultConfig
 )(
   input  logic      clk_i,
   input  logic      rst_ni,
@@ -77,16 +81,16 @@ module tcdm2hci_atomic
   /*******************************************************************/
   
   obi_atop_resolver #(
-    .SbrPortObiCfg             ( SbrPortObiCfg ),
-    .MgrPortObiCfg             ( MgrPortObiCfg ),
-    .sbr_port_obi_req_t        ( obi_req_t     ),
-    .sbr_port_obi_rsp_t        ( obi_rsp_t     ),
-    .mgr_port_obi_req_t        (               ),
-    .mgr_port_obi_rsp_t        (               ),
-    .mgr_port_obi_a_optional_t (               ),
-    .mgr_port_obi_r_optional_t (               ),
-    .LrScEnable                (               ),
-    .RegisterAmo               (               )
+    .SbrPortObiCfg             ( SbrPortObiCfg      ),
+    .MgrPortObiCfg             ( MgrPortObiCfg      ),
+    .sbr_port_obi_req_t        ( obi_req_t          ),
+    .sbr_port_obi_rsp_t        ( obi_rsp_t          ),
+    .mgr_port_obi_req_t        ( obi_req_t          ),
+    .mgr_port_obi_rsp_t        ( obi_rsp_t          ),
+    .mgr_port_obi_a_optional_t ( obi_a_optional_t   ),
+    .mgr_port_obi_r_optional_t ( obi_r_optional_t   ),
+    .LrScEnable                ( 1'b1               ),
+    .RegisterAmo               ( 1'b0               )
   ) i_obi_atop_resolver (
     .clk_i          ( clk_i            ),
     .rst_ni         ( rst_ni           ),

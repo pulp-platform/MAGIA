@@ -22,7 +22,7 @@ MEMORY
 {
     instrram    : ORIGIN = 0xcc000000, LENGTH = 0x8000
     dataram     : ORIGIN = 0xcc010000, LENGTH = 0x30000
-    stack       : ORIGIN = 0x00010000, LENGTH = 0x10000 /* 64K, maybe it's a bit too much (?) */
+    stack       : ORIGIN = 0x00010000, LENGTH = 0xC000 /* 48K - CV32 stack only */
 }
 
 /* Stack information variables */
@@ -62,16 +62,17 @@ SECTIONS
     }  > instrram
 
     /* Spatz embedded binary - inlined from header file */
-    /* Array with __attribute__((section(".spatz_binary"))) */
     /* Positioned right after CV32 .text in instrram */
+    
+    . = ALIGN(4);
+    _spatz_binary_start = .;
+    
     .spatz_binary : {
-        . = ALIGN(4);
-        _spatz_binary_start = .;
-        *(.spatz_binary)
-        *(.spatz_binary.*)
-        _spatz_binary_end = .;
-        _spatz_binary_size = _spatz_binary_end - _spatz_binary_start;
+        KEEP(*(.spatz_binary))
     } > instrram
+    
+    _spatz_binary_end = .;
+    _spatz_binary_size = _spatz_binary_end - _spatz_binary_start;
 
     /*--------------------------------------------------------------------*/
     /* Global constructor/destructor segment                              */

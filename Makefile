@@ -90,6 +90,7 @@ endif
 INC += -Isw
 INC += -Isw/inc
 INC += -Isw/utils
+INC += -Ispatz/sw/headers_bin
 
 BOOTSCRIPT := sw/kernel/crt0.S
 LINKSCRIPT := sw/kernel/link.ld
@@ -102,7 +103,10 @@ LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -MM
 
 # Spatz embedded binary support (via header)
 SPATZ_SW_DIR   := spatz/sw
-SPATZ_HEADER   := $(SPATZ_SW_DIR)/headers/$(spatz_prog).h
+
+# Auto-detect which Spatz tasks are used by looking for *_TASK symbols in CV32 code
+# Example: HELLO_WORLD_TASK → hello_world_task
+SPATZ_TASKS := $(shell grep -oP '\b(?!SPATZ_)[A-Z][A-Z0-9_]*_TASK\b' $(TEST_SRCS) 2>/dev/null | tr '[:upper:]' '[:lower:]' | awk '!seen[$$0]++')
 
 # Setup build object dirs
 CRT=$(TEST_DIR)/$(test)/build/crt0.o
@@ -125,22 +129,24 @@ $(STIM_INSTR) $(STIM_DATA): $(BIN)
 	ln -sfn ../../../$(INI_PATH) $(VSIM_INI) &&						\
 	ln -sfn ../../../$(WORK_PATH) $(VSIM_LIBS)
 
-# Build Spatz program header (if spatz_prog is specified)
+# Build Spatz binary with auto-detected tasks (only if tasks are used)
+# Generate test-specific header: test_name_task_bin.h
 .PHONY: spatz-header
 spatz-header:
-	@if [ "$(spatz_prog)" != "none" ]; then \
-		echo "[SPATZ] Building program: $(spatz_prog).c -> $(spatz_prog).h"; \
-		$(MAKE) -C $(SPATZ_SW_DIR) test=$(spatz_prog) all || exit 1; \
+	@if [ -n "$(SPATZ_TASKS)" ]; then \
+		echo "[SPATZ] Auto-detected tasks: $(SPATZ_TASKS)"; \
+		$(MAKE) -C $(SPATZ_SW_DIR) task="$(SPATZ_TASKS)" TEST_NAME=$(test) SPATZ_RVD=$(SPATZ_RVD) SPATZ_VLEN=$(SPATZ_VLEN) SPATZ_N_IPU=$(SPATZ_N_IPU) SPATZ_N_FPU=$(SPATZ_N_FPU) SPATZ_XDIVSQRT=$(SPATZ_XDIVSQRT) SPATZ_XDMA=$(SPATZ_XDMA) SPATZ_RVF=$(SPATZ_RVF) SPATZ_RVV=$(SPATZ_RVV) all; \
+	else \
+		echo "[SPATZ] No Spatz tasks detected - skipping Spatz compilation"; \
 	fi
 
 $(BIN): $(CRT) $(OBJ)
-	@if [ "$(spatz_prog)" != "none" ]; then \
-		echo "[CV32-LINK] Linking with embedded Spatz binary (from header)"; \
-		$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT); \
+	@if [ -n "$(SPATZ_TASKS)" ]; then \
+		echo "[CV32-LINK] Linking with embedded Spatz binary (tasks: $(SPATZ_TASKS))"; \
 	else \
 		echo "[CV32-LINK] Linking without Spatz binary"; \
-		$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT); \
 	fi
+	$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT)
 
 $(CRT):
 	cd $(TEST_DIR) &&							\
@@ -149,7 +155,12 @@ $(CRT):
 	mkdir -p build								
 	$(CC) $(CC_OPTS) -c $(BOOTSCRIPT) -o $(CRT)
 
+# Compile CV32 test (depends on spatz-header only if tasks detected)
+ifneq ($(SPATZ_TASKS),)
 $(OBJ): spatz-header
+endif
+
+$(OBJ):
 	cd $(TEST_DIR) &&											\
 	mkdir -p $(test) &&											\
 	cd $(test) &&												\
@@ -250,7 +261,30 @@ endif
 WAVES        := $(mkfile_path)/wave.do
 bender_targs += -t redmule_hwpe
 
+# Define for Spatz target
 bender_defs  += -D TARGET_SPATZ
+SPATZ_RVD      ?= 0   # 0: 32-bit TCDM (ELEN=32), 1: 64-bit TCDM (ELEN=64)
+SPATZ_VLEN     ?= 256 # Vector length in bits (128, 256, 512, ...)
+SPATZ_NRVREG   ?= 32  # Number of vector registers (RISC-V standard=32)
+SPATZ_NR_VRF_BANKS ?= 4  # Number of VRF banks (banking parallelism: 2, 4, 8)
+SPATZ_N_IPU    ?= 1   # Number of Integer Processing Units (1-8)
+SPATZ_N_FPU    ?= 4   # Number of Floating Point Units (1-8)
+SPATZ_NR_PARALLEL_INSTR ?= 4  # Number of parallel vector instructions (scoreboard depth)
+SPATZ_XDIVSQRT ?= 0   # 0: FP div/sqrt disabled, 1: enabled (increases area)
+SPATZ_XDMA     ?= 0   # 0: DMA disabled, 1: enabled
+SPATZ_RVF      ?= 1   # 0: single-precision FP disabled, 1: enabled
+SPATZ_RVV      ?= 1   # 0: vector extension disabled, 1: enabled
+bender_defs    += -D SPATZ_RVD=$(SPATZ_RVD)
+bender_defs    += -D SPATZ_VLEN=$(SPATZ_VLEN)
+bender_defs    += -D SPATZ_NRVREG=$(SPATZ_NRVREG)
+bender_defs    += -D SPATZ_NR_VRF_BANKS=$(SPATZ_NR_VRF_BANKS)
+bender_defs    += -D SPATZ_N_IPU=$(SPATZ_N_IPU)
+bender_defs    += -D SPATZ_N_FPU=$(SPATZ_N_FPU)
+bender_defs    += -D SPATZ_NR_PARALLEL_INSTR=$(SPATZ_NR_PARALLEL_INSTR)
+bender_defs    += -D SPATZ_XDIVSQRT=$(SPATZ_XDIVSQRT)
+bender_defs    += -D SPATZ_XDMA=$(SPATZ_XDMA)
+bender_defs    += -D SPATZ_RVF=$(SPATZ_RVF)
+bender_defs    += -D SPATZ_RVV=$(SPATZ_RVV)
 
 update-ips:
 	$(BENDER) update
@@ -303,6 +337,10 @@ clean-sdk:
 
 clean:
 	rm -rf $(TEST_DIR)/$(test)
+	@if [ -d "$(SPATZ_SW_DIR)" ]; then \
+		echo "[CLEAN] Cleaning Spatz..."; \
+		$(MAKE) -C $(SPATZ_SW_DIR) clean; \
+	fi
 
 dis:
 	$(OBJDUMP) -d -S $(BIN) > $(DUMP)

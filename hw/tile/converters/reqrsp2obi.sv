@@ -51,6 +51,8 @@ module reqrsp2obi
       reqrsp_pkg::AMOMaxu:  return 6'h3C;
       reqrsp_pkg::AMOMin:   return 6'h30;
       reqrsp_pkg::AMOMinu:  return 6'h38;
+      reqrsp_pkg::AMOLR:    return 6'h22;
+      reqrsp_pkg::AMOSC:    return 6'h23;
       default:              return 6'h00;
     endcase
   endfunction

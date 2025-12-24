@@ -51,6 +51,8 @@ module tcdm2obi
       reqrsp_pkg::AMOMaxu:  return 6'h3C;  // AMOMAXU (unsigned)
       reqrsp_pkg::AMOMin:   return 6'h30;  // AMOMIN (signed)
       reqrsp_pkg::AMOMinu:  return 6'h38;  // AMOMINU (unsigned)
+      reqrsp_pkg::AMOLR:    return 6'h22;  // ATOPLR (Load-Reserved)
+      reqrsp_pkg::AMOSC:    return 6'h23;  // ATOPSC (Store-Conditional)
       default:              return 6'h00;  // Safe default: ATOPNONE
     endcase
   endfunction

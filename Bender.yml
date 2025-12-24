@@ -25,7 +25,7 @@ package:
 dependencies:
   redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 9a1aa14be0b23f0ade84bab57e7e434397ac9876 } # branch: vi/scale_up
   cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: 37a82d337ba60129c333d104c29e816d0698b53b } # branch: lb/magia_core
-  spatz             : { git: "https://github.com/pulp-platform/spatz.git"             , rev: 3c8caf502dd175a12382f0682d3fd8ba3dcb0bab } # branch: lb/magia-spatz_cc
+  spatz             : { git: "https://github.com/pulp-platform/spatz.git"             , rev: fdeedf0713f7a5fe2133b7a4409023601e96f764 } # branch: lb/magia-spatz_cc
   idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: a6b190c7991331432afa9a2899d032bc1b176830 } # branch: vi/redmule_scaleup
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: c35d5b0886ab549fb9144c3c14a4682112330e21 } # branch: yt/reqrsp
@@ -72,6 +72,10 @@ sources:
       - hw/tile/converters/tcdm2obi.sv
       - hw/tile/converters/tcdm2hci_atomic.sv
       - hw/tile/converters/reqrsp2obi.sv
+      - hw/tile/converters/tcdm64_to_dual_hci32.sv
+      - hw/tile/converters/tcdm64_to_dual_tcdm32.sv
+      - hw/tile/converters/tcdm64_to_dual_hci32_atomic.sv
+      - hw/tile/converters/reqrsp64_to_obi32.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
@@ -122,6 +126,10 @@ sources:
       - hw/tile/converters/tcdm2obi.sv
       - hw/tile/converters/tcdm2hci_atomic.sv
       - hw/tile/converters/reqrsp2obi.sv
+      - hw/tile/converters/tcdm64_to_dual_hci32.sv
+      - hw/tile/converters/tcdm64_to_dual_tcdm32.sv
+      - hw/tile/converters/tcdm64_to_dual_hci32_atomic.sv
+      - hw/tile/converters/reqrsp64_to_obi32.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
@@ -171,6 +179,10 @@ sources:
       - hw/tile/converters/tcdm2obi.sv
       - hw/tile/converters/tcdm2hci_atomic.sv
       - hw/tile/converters/reqrsp2obi.sv
+      - hw/tile/converters/tcdm64_to_dual_hci32.sv
+      - hw/tile/converters/tcdm64_to_dual_tcdm32.sv
+      - hw/tile/converters/tcdm64_to_dual_hci32_atomic.sv
+      - hw/tile/converters/reqrsp64_to_obi32.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv

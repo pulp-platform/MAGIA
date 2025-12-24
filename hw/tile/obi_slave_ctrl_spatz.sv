@@ -40,13 +40,13 @@ module obi_slave_ctrl_spatz
 
   // Register offsets
   localparam logic [3:0] CLK_EN_OFFSET   = 4'h0;  // +0x00
-  localparam logic [3:0] FUNC_PTR_OFFSET = 4'h4;  // +0x04
+  localparam logic [3:0] EXCHANGE_REG_OFFSET = 4'h4;  // +0x04
   localparam logic [3:0] START_OFFSET    = 4'h8;  // +0x08
   localparam logic [3:0] DONE_OFFSET     = 4'hC;  // +0x0C
 
   // Registers
   logic        clk_en_q;
-  logic [31:0] func_ptr_q;
+  logic [31:0] exchange_reg_q;
   logic        start_q;
   logic        done_q;
   
@@ -72,22 +72,22 @@ module obi_slave_ctrl_spatz
   // Register write logic (combinational)
   // ============================================
   logic        clk_en_d;
-  logic [31:0] func_ptr_d;
+  logic [31:0] exchange_reg_d;
   logic        start_d;
   logic        done_d;
   
   always_comb begin
     // Default: keep current values
-    clk_en_d   = clk_en_q;
-    func_ptr_d = func_ptr_q;
-    start_d    = start_q;
-    done_d     = 1'b0;  // Done is a pulse, auto-clears
+    clk_en_d       = clk_en_q;
+    exchange_reg_d = exchange_reg_q;
+    start_d        = start_q;
+    done_d         = 1'b0;  // Done is a pulse, auto-clears
     
     // Update registers on write only if address is valid
     if (obi_req_i.req && obi_req_i.a.we && addr_valid) begin
       case (addr_offset)
-        CLK_EN_OFFSET:   clk_en_d   = obi_req_i.a.wdata[0];
-        FUNC_PTR_OFFSET: func_ptr_d = obi_req_i.a.wdata;
+        CLK_EN_OFFSET:       clk_en_d       = obi_req_i.a.wdata[0];
+        EXCHANGE_REG_OFFSET: exchange_reg_d = obi_req_i.a.wdata;
         START_OFFSET:    start_d    = obi_req_i.a.wdata[0];  // CV32 sets to 1, Spatz clears to 0
         DONE_OFFSET:     done_d     = obi_req_i.a.wdata[0];  // Spatz writes 1, creates pulse
       endcase
@@ -99,13 +99,13 @@ module obi_slave_ctrl_spatz
   // ============================================
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
-      clk_en_q   <= 1'b0;
-      func_ptr_q <= 32'h0;
-      start_q    <= 1'b0;
-      done_q     <= 1'b0;
+      clk_en_q       <= 1'b0;
+      exchange_reg_q <= 32'h0;
+      start_q        <= 1'b0;
+      done_q         <= 1'b0;
     end else begin
-      clk_en_q   <= clk_en_d;
-      func_ptr_q <= func_ptr_d;
+      clk_en_q       <= clk_en_d;
+      exchange_reg_q <= exchange_reg_d;
       start_q    <= start_d;
       done_q     <= done_d;
     end
@@ -120,8 +120,8 @@ module obi_slave_ctrl_spatz
     
     if (obi_req_i.req && !obi_req_i.a.we && addr_valid) begin
       case (addr_offset)
-        CLK_EN_OFFSET:   rdata_d = {31'h0, clk_en_q};
-        FUNC_PTR_OFFSET: rdata_d = func_ptr_q;
+        CLK_EN_OFFSET:       rdata_d = {31'h0, clk_en_q};
+        EXCHANGE_REG_OFFSET: rdata_d = exchange_reg_q;
         START_OFFSET:    rdata_d = {31'h0, start_q};
         DONE_OFFSET:     rdata_d = {31'h0, done_q};
         default:         rdata_d = 32'hDEADBEEF;

@@ -167,31 +167,6 @@ uint32_t get_time(){
     return timel;
 }
 
-static inline uint32_t get_mhartid(){
-    uint32_t mhartid;
-    asm volatile("csrr %0, mhartid"
-                 :"=r"(mhartid):);
-    return mhartid;
-}
-
-static inline uint32_t get_cluster_id(){
-    // In MAGIA: cluster_id comes from bits [9:4] of mhartid (to match hardware mapping)
-    uint32_t mhartid = get_mhartid();
-    return (mhartid >> 4) & 0x3F; // Extract mhartid[9:4] - 6 bits for cluster_id
-}
-
-static inline uint32_t get_core_id(){
-    // In MAGIA: core_id comes from lower 4 bits of mhartid (tile/hart ID)
-    uint32_t mhartid = get_mhartid();
-    return mhartid & 0xF; // Extract mhartid[3:0] - 4 bits for core_id
-}
-
-static inline uint32_t get_tile_id(){
-    // In MAGIA: tile ID = hart ID (full mhartid value)
-    return get_mhartid();
-}
-
-// Additional Flex-V CSR access functions based on CSR table
 static inline uint32_t get_mstatus(){
     uint32_t mstatus;
     asm volatile("csrr %0, 0x300" :"=r"(mstatus):); // MSTATUS (0x300)
@@ -240,17 +215,23 @@ static inline uint32_t get_uhartid(){
     return uhartid;
 }
 
-// Flex-V performance counter control
-static inline void perf_counter_enable(){
-    uint32_t pcer = 3; // Enable cycles (bit 0) and instruction count (bit 1)
-    uint32_t pcmr = 1; // Enable global performance counter
-    asm volatile("csrw 0x7e0, %0" ::"r"(pcer)); // PCER_MACHINE (0x7E0)
-    asm volatile("csrw 0x7e1, %0" ::"r"(pcmr)); // PCMR_MACHINE (0x7E1)
+
+// CV32E40P Performance Counter Functions
+static inline void cv32e40p_ccount_enable(){
+    asm volatile("csrw 0x7E0, %0" :: "r"(0x1));  // Enable PCCR[0]
+    asm volatile("csrw 0x7E1, %0" :: "r"(0x1));  // Enable counting, , no saturation
 }
 
-static inline void perf_counter_disable(){
-    uint32_t pcmr = 0; // Disable global performance counter
-    asm volatile("csrw 0x7e1, %0" ::"r"(pcmr)); // PCMR_MACHINE (0x7E1)
+// Read CV32E40P cycle counter
+static inline uint32_t cv32e40p_get_cycles(){
+    uint32_t cycles;
+    asm volatile("csrr %0, 0x780" : "=r"(cycles));  // Read PCCR[0]
+    return cycles;
+}
+
+// Disable CV32E40P cycle counter
+static inline void cv32e40p_ccount_disable(){
+    asm volatile("csrw 0x7E1, %0" :: "r"(0x0));  // Disable counting
 }
 
 #endif /*MAGIA_TILE_UTILS_H*/

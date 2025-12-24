@@ -1,79 +1,148 @@
-# Copyright 2024 ETH Zurich and University of Bologna.
-# Solderpad Hardware License, Version 0.51, see LICENSE for details.
+# Copyright (C) 2023-2024 ETH Zurich and University of Bologna
+#
+# Licensed under the Solderpad Hardware License, Version 0.51 
+# (the "License"); you may not use this file except in compliance 
+# with the License. You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # SPDX-License-Identifier: SHL-0.51
 #
+# Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
 # Spatz Programs Makefile for MAGIA Tile
 
-# Toolchain - LLVM for vector extension support
-LLVM_PATH ?= /sw/tool/riscv/snitch-llvm/0.12.0
+# Toolchain - Use Spatz LLVM with RVV 0.10 support
+LLVM_PATH := /sw/scratch/luca.balboni10/SPATZ/install/llvm
+
+# Configuration from top-level Makefile
+SPATZ_RVD      ?= 0   # 0: ELEN=32, 1: ELEN=64
+SPATZ_VLEN     ?= 256 # Vector length in bits
+SPATZ_N_IPU    ?= 1   # Number of Integer Processing Units (1-8)
+SPATZ_N_FPU    ?= 4   # Number of Floating Point Units (1-8)
+SPATZ_XDIVSQRT ?= 0   # 0: FP div/sqrt disabled, 1: enabled
+SPATZ_XDMA     ?= 0   # 0: DMA disabled, 1: enabled
+SPATZ_RVF      ?= 1   # 0: single-precision FP disabled, 1: enabled
+SPATZ_RVV      ?= 1   # 0: vector extension disabled, 1: enabled
+
+# Test name for generating specific header (passed from top Makefile)
+TEST_NAME      ?= base_spatz_test
 
 ISA      ?= riscv
 ARCH     ?= rv
 XLEN     ?= 32
-XTEN     := imafv0p10  # MAGIA Spatz: I+M+A+F(SP)+V0.10
-ABI      ?= ilp
-XABI     ?= 32f
+
+# Build ISA string dynamically based on configuration flags
+XTEN := ima
+ifeq ($(SPATZ_RVD),1)
+    XTEN := $(XTEN)fd
+    XABI ?= 32d
+else ifeq ($(SPATZ_RVF),1)
+    XTEN := $(XTEN)f
+    XABI ?= 32f
+else
+    XABI ?= 32
+endif
+ifeq ($(SPATZ_RVV),1)
+    XTEN := $(XTEN)v
+endif
+XTEN := $(XTEN)_zfh
+ABI  ?= ilp
 
 # Toolchain paths
 CC      = $(LLVM_PATH)/bin/clang
 OBJCOPY = $(LLVM_PATH)/bin/llvm-objcopy
 OBJDUMP = $(LLVM_PATH)/bin/llvm-objdump
 
-# Architecture flags
+# Architecture flags  
 ARCH_FLAGS   = --target=riscv32 -march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XABI)
 ARCH_FLAGS  += -menable-experimental-extensions
 
-# Compiler flags
+# Compiler flags (RVD=$(SPATZ_RVD), VLEN=$(SPATZ_VLEN), N_IPU=$(SPATZ_N_IPU), N_FPU=$(SPATZ_N_FPU), XDivSqrt=$(SPATZ_XDIVSQRT), Xdma=$(SPATZ_XDMA), RVF=$(SPATZ_RVF), RVV=$(SPATZ_RVV))
 CFLAGS       = $(ARCH_FLAGS) -static -nostartfiles -nostdlib
 CFLAGS      += -O2 -g -Wall -Wextra
-CFLAGS      += -fno-common -ffunction-sections -fdata-sections
+CFLAGS      += -fno-common -ffunction-sections -fdata-sections -fPIC
+CFLAGS      += -fno-builtin-memset -fno-builtin-memcpy
 CFLAGS      += -mcmodel=medany
-CFLAGS      += -I../../sw/utils -I../../hw/include
-CFLAGS      += -DTINYPRINTF_DEFINE_TFP_SPRINTF=0
+CFLAGS      += -DSPATZ_RVD=$(SPATZ_RVD) -DSPATZ_VLEN=$(SPATZ_VLEN) -DSPATZ_N_IPU=$(SPATZ_N_IPU) -DSPATZ_N_FPU=$(SPATZ_N_FPU) -DSPATZ_XDIVSQRT=$(SPATZ_XDIVSQRT) -DSPATZ_XDMA=$(SPATZ_XDMA) -DSPATZ_RVF=$(SPATZ_RVF) -DSPATZ_RVV=$(SPATZ_RVV)
+CFLAGS      += -I../../sw/utils -I../../hw/include -Ispatz_utils
 
 # Linker flags
-LDFLAGS      = -T spatz_program.ld -fuse-ld=lld
-LDFLAGS     += -Wl,--gc-sections -Wl,-z,norelro
+LDFLAGS      = -T $(KERNEL_DIR)/spatz_program.ld -fuse-ld=lld
+LDFLAGS     += -Wl,-z,norelro
+LDFLAGS     += -Wl,--allow-multiple-definition
 LDFLAGS     += $(ARCH_FLAGS)
 
-# Test name (pass with test=name)
-test        ?= test_binary_spatz
+# Single binary with selected tests (passed via TESTS variable)
+# Binary and header names based on TEST_NAME
+BINARY_NAME  = $(TEST_NAME)_task_bin
+HEADER_NAME  = $(TEST_NAME)_task_bin
 
 # Directories
 BIN_DIR      = bin
-HEADER_DIR   = headers
-TESTS_DIR    = tests
+HEADER_DIR   = headers_bin
+TESTS_DIR    = tasks
+KERNEL_DIR   = kernel
+
+# Tasks to include (lowercase 'task' variable)
+# Usage: make all task="general_task" or task="general_task hello_world_task"
+# MUST be specified explicitly - no default
+task         ?=
+
+# Source files for selected tasks
+TASK_SRCS    = $(addprefix $(TESTS_DIR)/,$(addsuffix .c,$(task)))
 
 # Source and output files
-SRC          = $(TESTS_DIR)/$(test).c
-ELF          = $(BIN_DIR)/$(test).elf
-BIN          = $(BIN_DIR)/$(test).bin
-DUMP         = $(BIN_DIR)/$(test).dump
-HEADER       = $(HEADER_DIR)/$(test).h
+CRT0         = $(KERNEL_DIR)/spatz_crt0.S
+CRT0_OBJ     = $(BIN_DIR)/spatz_crt0.o
+ELF          = $(BIN_DIR)/$(BINARY_NAME).elf
+BIN          = $(BIN_DIR)/$(BINARY_NAME).bin
+DUMP         = $(BIN_DIR)/$(BINARY_NAME).dump
+HEADER       = $(HEADER_DIR)/$(HEADER_NAME).h
 
 # Python script for bin2header conversion
 BIN2HEADER   = ../../scripts/bin2header.py
 
 .PHONY: all clean bin header dirs
 
-# Complete build: clean, compile binary, generate header
-all: clean bin header
+# Complete build: compile binary and generate header
+# Force header regeneration when TASKS changes (always delete and rebuild)
+all: bin
+	@rm -f $(HEADER)
+	@$(MAKE) header
 
 # Build binary (ELF + BIN + DUMP)
 bin: dirs $(BIN) $(DUMP)
 
-# Generate header from binary
+# Generate header from binary (always regenerated by 'all' target)
 header: dirs $(HEADER)
 
 # Create directories
 dirs:
 	@mkdir -p $(BIN_DIR) $(HEADER_DIR)
 
-# Build ELF executable
-$(ELF): $(SRC) spatz_program.ld
+# Compile crt0.S
+$(CRT0_OBJ): $(CRT0)
+	@echo "[SPATZ] Compiling crt0..."
+	$(CC) $(ARCH_FLAGS) -c -o $@ $(CRT0)
+
+# Build ELF executable with crt0 + selected tasks
+# Tasks are launched by CV32 via interrupt-driven task switching
+$(ELF): $(CRT0_OBJ) $(TASK_SRCS) $(KERNEL_DIR)/spatz_program.ld
 	@mkdir -p $(BIN_DIR)
-	@echo "[SPATZ] Compiling $(test).c ..."
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC)
+	@if [ -z "$(TASK_SRCS)" ]; then \
+		echo "[SPATZ] ERROR: No task sources found for task=$(task)"; \
+		exit 1; \
+	fi
+	@echo "[SPATZ] Included tasks: $(task)"
+	@echo "[SPATZ] Tasks will be launched by CV32 via spatz_set_func() and interrupt"
+	@FIRST_TASK=$(word 1,$(task)); \
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(CRT0_OBJ) $(TASK_SRCS) \
+		-Wl,--defsym,__first_task=$${FIRST_TASK}
 
 # Generate binary from ELF
 $(BIN): $(ELF)
@@ -85,17 +154,41 @@ $(DUMP): $(ELF)
 	@echo "[SPATZ] Generating disassembly..."
 	$(OBJDUMP) -D -S $< > $@
 
-# Generate header file with inline binary array
-$(HEADER): $(BIN)
+# Generate header with binary array + extract function symbols
+$(HEADER): $(BIN) $(ELF)
 	@mkdir -p $(HEADER_DIR)
-	@echo "[SPATZ] Generating header..."
-	python3 $(BIN2HEADER) $(BIN) $(HEADER) \
-		--name $(subst -,_,$(test))_binary \
+	@echo "[SPATZ] Generating header with binary array..."
+	@python3 $(BIN2HEADER) $(BIN) $(HEADER) \
+		--name $(HEADER_NAME) \
 		--section .spatz_binary \
-		--address 0x00000000
+		--address "dynamic (_spatz_binary_start)"
+	@echo "[SPATZ] Adding binary start + dispatcher + task symbols..."
+	@GUARD_NAME=$$(echo "$(HEADER_NAME)" | tr 'a-z' 'A-Z'); \
+	sed -i "/#endif \/\* __$${GUARD_NAME}_H__ \*\//d" $(HEADER)
+	@echo "" >> $(HEADER)
+	@echo "/* Binary start address - defined by CV32 linker */" >> $(HEADER)
+	@echo "extern uint32_t _spatz_binary_start; /* Linker symbol from CV32 link.ld */" >> $(HEADER)
+	@echo "#define SPATZ_BINARY_START ((uint32_t)&_spatz_binary_start)" >> $(HEADER)
+	@echo "" >> $(HEADER)
+	@echo "/* Dispatcher loop address - for spatz_run() */" >> $(HEADER)
+	@DISP_ADDR=$$($(OBJDUMP) -t $(ELF) | grep "dispatcher_loop$$" | awk '{print $$1}'); \
+	echo "#define SPATZ_DISPATCHER_LOOP (SPATZ_BINARY_START + 0x$${DISP_ADDR})" >> $(HEADER)
+	@echo "" >> $(HEADER)
+	@echo "/* Task function entry points - OFFSETS from SPATZ_BINARY_START */" >> $(HEADER)
+	@$(OBJDUMP) -t $(ELF) | grep "_task$$" | grep -v "__first_task$$" | awk '{print $$1, $$NF}' | while read addr name; do \
+		TASK_NAME=$$(echo $$name | tr 'a-z' 'A-Z'); \
+		echo "#define $${TASK_NAME} (SPATZ_BINARY_START + 0x$$addr)" >> $(HEADER); \
+	done
+	@echo "" >> $(HEADER)
+	@GUARD_NAME=$$(echo "$(HEADER_NAME)" | tr 'a-z' 'A-Z'); \
+	echo "#endif /* __$${GUARD_NAME}_H__ */" >> $(HEADER)
 
 clean:
-	rm -rf $(BIN_DIR)/*.elf $(BIN_DIR)/*.bin $(BIN_DIR)/*.dump
+	rm -rf $(BIN_DIR)/*.elf $(BIN_DIR)/*.bin $(BIN_DIR)/*.dump $(BIN_DIR)/*.o
 	rm -rf $(HEADER_DIR)/*.h
+
+# Clean only current test artifacts (preserves other headers)
+clean-test:
+	rm -f $(ELF) $(BIN) $(DUMP) $(CRT0_OBJ) $(HEADER)
 
 .PRECIOUS: $(ELF) $(BIN)
