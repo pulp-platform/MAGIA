@@ -29,15 +29,15 @@
 
 // Test data with golden reference
 // Pattern: A[i] = 1.0, B[i] = 2.0 for all i
-// Expected result: 1024 * 1.0 * 2.0 = 2048.0
-#define DOTP_SIZE 1024  
+// Expected result: 2048 * 1.0 * 2.0 = 4096.0
+#define DOTP_SIZE 2048  
 #define DIFF_TH (0x0011)
 typedef uint16_t fp16_t;
 
-// FP16 encoding: 1.0 = 0x3C00, 2.0 = 0x4000, 2048.0 = 0x6800
+// FP16 encoding: 1.0 = 0x3C00, 2.0 = 0x4000, 4096.0 = 0x6C00
 static const fp16_t dotp_a_value = 0x3C00;  // 1.0 in FP16
 static const fp16_t dotp_b_value = 0x4000;  // 2.0 in FP16
-static const fp16_t dotp_golden = 0x6800;   // 2048.0 in FP16
+static const fp16_t dotp_golden = 0x6C00;   // 4096.0 in FP16
 
 // Memory layout in L1
 #define A_VEC_BASE      (L1_BASE + 0x00010000)
@@ -146,7 +146,7 @@ int main(void) {
     fp16_t result_spatz = mmio16(RESULT_SPATZ);
 
     printf("Spatz cycles: %u\n", spatz_cycles);
-    printf("Spatz result: 0x%08x\n\n", result_spatz);
+    printf("Spatz result: 0x%04x\n\n", result_spatz);
 
     // =====================================================
     // Result Verification

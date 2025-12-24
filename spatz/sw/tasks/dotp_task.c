@@ -48,7 +48,8 @@ int dotp_task(void) {
     // Compute dot product using Spatz benchmark kernel
     float16_t result_fp16 = fdotp_v16b(A, B, N);
     
-    *result = result_fp16;
+    // Store result as FP16 (cast pointer to float16_t*)
+    *(float16_t *)result = result_fp16;
     
     return 0;
 }

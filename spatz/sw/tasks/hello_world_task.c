@@ -21,6 +21,6 @@
 #include "magia_tile_utils.h"
 
 int hello_world_task(void) {
-    printf("[SPATZ] Hello World from Spatz!\n");
+    printf("[SNITCH] Hello World from Spatz!\n");
     return 0;
 }

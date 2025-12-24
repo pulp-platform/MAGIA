@@ -52,7 +52,7 @@ int main(void) {
     eu_wait_spatz_wfe(EU_SPATZ_DONE_MASK);
     
     if(spatz_get_exit_code() != 0) {
-        printf("[CV32] SPATZ TASK ENDED with exit code: 0x%03lx\n", spatz_get_exit_code());
+        printf("[CV32] SPATZ TASK ENDED with exit code: 0x%03x\n", spatz_get_exit_code());
         errors++;
     } else {
         printf("[CV32] SPATZ TASK ENDED successfully\n");
