@@ -1,6 +1,6 @@
 # Spatz Vector Accelerator in MAGIA
-[![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE.APACHE)
-[![SHL-0.51 license](https://img.shields.io/badge/license-SHL--0.51-green)](LICENSE.SHL)
+[![License](https://img.shields.io/badge/license-Apache--2.0-green)](../LICENSE.APACHE)
+[![SHL-0.51 license](https://img.shields.io/badge/license-SHL--0.51-green)](../LICENSE.SHL)
 
 The Spatz Core Complex (spatz_cc) is a **RISC-V Vector Extension 1.0 accelerator** integrated into the MAGIA tile architecture. It consists of **Snitch** (a compact 32-bit RISC-V scalar core) and **Spatz** (a vector coprocessor with multiple FPU lanes). The CV32 host core controls Spatz CC through memory-mapped registers and interrupt-driven task dispatching, following an accelerator-style programming model.
 
@@ -321,4 +321,4 @@ make run test='my_test' mesh_dv=0 gui=0
 ---
 
 ## 🔏 License
-All `software` sources are licensed under the Apache License 2.0 ([`LICENSE.APACHE`](LICENSE.APACHE)). All `hardware` sources are licensed under the Solderpad Hardware License 0.51 ([`LICENSE.SHL`](LICENSE.SHL)).
+All `software` sources are licensed under the Apache License 2.0 ([`LICENSE.APACHE`](../LICENSE.APACHE)). All `hardware` sources are licensed under the Solderpad Hardware License 0.51 ([`LICENSE.SHL`](../LICENSE.SHL)).
