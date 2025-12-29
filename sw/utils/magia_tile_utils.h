@@ -39,7 +39,7 @@
 #define FSYNC_END      (0x000006FF)
 #define EVENT_UNIT_BASE (0x00000700)
 #define EVENT_UNIT_END  (0x000016FF)
-#define SPATZ_CTRL_BASE (0x00001700)  // Use magia_spatz_utils.h for Spatz control functions
+#define SPATZ_CTRL_BASE (0x00001700)
 #define SPATZ_CTRL_END  (0x000017FF)
 #define RESERVED_START (0x00001800)   
 #define RESERVED_END   (0x0000FFFF)   

@@ -43,9 +43,6 @@ The OBI slave exposes the following registers (base address: `SPATZ_CTRL_BASE = 
 ## 🚀 Quick Start
 
 ### Typical CV32 Test with Spatz Tasks
-
-**CRITICAL:** You **MUST** include the auto-generated header `<test_name>_task_bin.h` for your test!
-
 ```c
 #include "magia_spatz_utils.h"
 #include "event_unit_utils.h"
