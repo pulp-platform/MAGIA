@@ -44,19 +44,21 @@ The OBI slave exposes the following registers (base address: `SPATZ_CTRL_BASE = 
 
 ### Typical CV32 Test with Spatz Tasks
 
+**CRITICAL:** You **MUST** include the auto-generated header `<test_name>_task_bin.h` for your test!
+
 ```c
 #include "magia_spatz_utils.h"
 #include "event_unit_utils.h"
-#include "my_test_task_bin.h"  // Auto-generated
+#include "my_test_task_bin.h"  // REQUIRED - Auto-generated header with SPATZ_BINARY_START and task symbols
 
 int main(void) {
     // Initialize Event Unit and Spatz
     eu_init();
     eu_enable_events(EU_SPATZ_DONE_MASK);
-    spatz_init(SPATZ_BINARY_START);
+    spatz_init(SPATZ_BINARY_START);  // Uses address from auto-generated header
     
     // Launch vector task
-    spatz_run_task(MY_VECTOR_TASK);
+    spatz_run_task(MY_VECTOR_TASK);  // MY_VECTOR_TASK defined in auto-generated header
     eu_wait_spatz_wfe(EU_SPATZ_DONE_MASK);
     
     if (spatz_get_exit_code() != 0) {
@@ -68,6 +70,11 @@ int main(void) {
     return 0;
 }
 ```
+
+**Header Naming Convention:**
+- Test file: `sw/tests/my_test.c`
+- Generated header: `spatz/sw/headers_bin/my_test_task_bin.h`
+- Include in your test: `#include "my_test_task_bin.h"`
 
 ### Writing a Spatz Task
 
@@ -245,6 +252,8 @@ $(OBJ): spatz-header  # Header generated before CV32 compilation
 
 ### Generated Header Example
 
+The build system automatically generates a header file with the Spatz binary and task entry points:
+
 ```c
 // Auto-generated: test_name_task_bin.h
 const uint8_t test_name_task_bin[] __attribute__((section(".spatz_binary"))) = {
@@ -253,11 +262,41 @@ const uint8_t test_name_task_bin[] __attribute__((section(".spatz_binary"))) = {
 
 #define SPATZ_BINARY_START ((uint32_t)&_spatz_binary_start)
 #define MY_VECTOR_TASK     (SPATZ_BINARY_START + 0x00000120)  // Task offset
+#define ANOTHER_TASK       (SPATZ_BINARY_START + 0x00000240)  // Another task offset
+
 ```
 
----
+**You MUST include this header in your CV32 test:**
+```c
+#include "my_test_task_bin.h"  // Required for SPATZ_BINARY_START and task symbols
+```
+
 
 ## ⚡ Complete Build and Run
+
+### Example Test with Spatz
+
+**File: `sw/tests/my_test.c`**
+```c
+#include "magia_tile_utils.h"
+#include "magia_utils.h"
+#include "magia_spatz_utils.h"
+#include "event_unit_utils.h"
+#include "my_test_task_bin.h"
+
+int main(void) {
+    eu_init();
+    eu_enable_events(EU_SPATZ_DONE_MASK);
+    spatz_init(SPATZ_BINARY_START);
+    
+    spatz_run_task(MY_VECTOR_TASK);
+    eu_wait_spatz_wfe(EU_SPATZ_DONE_MASK);
+    
+    return spatz_get_exit_code();
+}
+```
+
+### Build Commands
 
 ```bash
 # 1. Setup environment
