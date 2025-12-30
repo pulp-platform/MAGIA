@@ -29,15 +29,15 @@ The OBI slave exposes the following registers (base address: `SPATZ_CTRL_BASE = 
 | Register Name       | Offset | Address    | Description                                                                                 |
 |---------------------|--------|------------|---------------------------------------------------------------------------------------------|
 | `SPATZ_CLK_EN`      | 0x00   | 0x00001700 | Clock enable (write 1 to enable, 0 to disable Spatz CC clock)                                            |
-| `SPATZ_EXCHANGE_REG`| 0x04   | 0x00001704 | Exchange register: CV32 writes task address, Spatz CC (Snitch) writes exit code                          |
+| `SPATZ_EXCHANGE_REG`| 0x04   | 0x00001704 | Exchange register: CV32 writes task address, then **optionally** parameter pointer; Snitch writes exit code  |
 | `SPATZ_START`       | 0x08   | 0x00001708 | Trigger register: write 1 to send interrupt (multicycle assertion) to Spatz CC, Snitch clears it         |
 | `SPATZ_DONE`        | 0x0C   | 0x0000170C | Done flag: Spatz CC sets to 1 when task completes, done signal is a pulse, auto-clears                   |
 
 **Signal Flow:**
 1. CV32 writes task address to `SPATZ_EXCHANGE_REG`
 2. CV32 writes 1 to `SPATZ_START` → triggers external interrupt to Spatz CC (Snitch core)
-3. Snitch core wakes from WFI, deasserts `SPATZ_START`, reads task address from `SPATZ_EXCHANGE_REG`, executes task
-4. Snitch writes exit code to `SPATZ_EXCHANGE_REG` and sets `SPATZ_DONE = 1`
+3. Snitch core wakes from WFI, **reads and saves task address**, then deasserts `SPATZ_START`
+4. Snitch jumps to task, executes it, writes exit code to `SPATZ_EXCHANGE_REG` and sets `SPATZ_DONE = 1`
 5. CV32 can check completion through event-unit (WFE or polling) and reads exit code
 
 ## 🚀 Quick Start
@@ -54,8 +54,16 @@ int main(void) {
     eu_enable_events(EU_SPATZ_DONE_MASK);
     spatz_init(SPATZ_BINARY_START);  // Uses address from auto-generated header
     
-    // Launch vector task
+    //Simple task (no parameters via EXCHANGE_REG)
     spatz_run_task(MY_VECTOR_TASK);  // MY_VECTOR_TASK defined in auto-generated header
+    eu_wait_spatz_wfe(EU_SPATZ_DONE_MASK);
+    
+    //Task with parameters via EXCHANGE_REG (optional)
+    typedef struct { uint32_t addr; uint32_t size; } params_t;
+    params_t params = {.addr = DATA_BASE, .size = 1024};
+    
+    spatz_run_task(ANOTHER_TASK); // ANOTHER_TASK defined in auto-generated header
+    spatz_pass_params((uint32_t)&params);  // Optional: pass params via EXCHANGE_REG
     eu_wait_spatz_wfe(EU_SPATZ_DONE_MASK);
     
     if (spatz_get_exit_code() != 0) {
@@ -172,10 +180,11 @@ void spatz_clk_dis(void);
 
 // Initialization and task control
 void spatz_init(uint32_t addr);          // Initialize with binary start address
-void spatz_run_task(uint32_t addr);      // Set task address and trigger
-uint32_t spatz_get_exit_code(void);      // Read exit code
+void spatz_run_task(uint32_t addr);                      // Set task address and trigger
+void spatz_pass_params(uint32_t params_ptr);             // Pass parameter pointer via EXCHANGE_REG (waits for START clear)
+void spatz_run_task_with_params(uint32_t addr, uint32_t params_ptr);  // Combined: run task + pass params
+uint32_t spatz_get_exit_code(void);                      // Read exit code
 ```
-
 ---
 
 ## 🏗️ Boot and Initialization
@@ -210,10 +219,10 @@ dispatcher_loop:
 
 **Trap Handler (`_trap_handler`):**
 - **Interrupts** (mcause[31]=1): 
-  - Clears `START` register to deassert interrupt signal
-  - Reads task address from `EXCHANGE_REG`
-  - Calls task via `jalr`
-  - Writes exit code 0 (success) to `EXCHANGE_REG`
+  - **Reads and saves task address** from `EXCHANGE_REG` into a register
+  - Clears `START` register to deassert interrupt signal (after it's safe to reuse `EXCHANGE_REG`)
+  - Jumps to saved task address via `jalr ra, 0(t1)`
+  - After task returns, writes exit code 0 (success) to `EXCHANGE_REG`
   - Sets `DONE = 1`
   
 - **Exceptions** (mcause[31]=0):

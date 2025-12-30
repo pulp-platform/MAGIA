@@ -64,6 +64,20 @@ static inline void spatz_run_task(uint32_t spatz_task_addr) {
     spatz_trigger_en_irq();
 }
 
+static inline void spatz_pass_params(uint32_t params_ptr) {
+    // Wait for Spatz to save task address and clear START
+    // (crt0 reads task addr from EXCHANGE_REG, clears START, then jumps)
+    while(mmio32(SPATZ_START) != 0);
+    
+    // Now safe to write parameter pointer to EXCHANGE_REG
+    mmio32(SPATZ_EXCHANGE_REG) = params_ptr;
+}
+
+static inline void spatz_run_task_with_params(uint32_t spatz_task_addr, uint32_t params_ptr) {
+    spatz_run_task(spatz_task_addr);
+    spatz_pass_params(params_ptr);
+}
+
 static inline void spatz_init(uint32_t spatz_start_addr) {
     spatz_set_func(spatz_start_addr);
     spatz_clk_en();

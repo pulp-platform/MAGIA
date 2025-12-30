@@ -129,14 +129,16 @@ _handle_interrupt:
     li      t1, 11
     bne     t0, t1, _trap_ret
     
+    /* Read task address from EXCHANGE_REG and save it in t1 */
+    li      t0, EXCHANGE_REG_ADDR
+    lw      t1, 0(t0)
+    beqz    t1, _trap_ret
+    
     /* Clear START */
     li      t0, START_ADDR
     sw      zero, 0(t0)
     
-    /* Read and call task */
-    li      t0, EXCHANGE_REG_ADDR
-    lw      t1, 0(t0)
-    beqz    t1, _trap_ret
+    /* Jump to saved task address */
     jalr    ra, 0(t1)
     
     /* Task completed - write exit code 0 (success, no exceptions) */

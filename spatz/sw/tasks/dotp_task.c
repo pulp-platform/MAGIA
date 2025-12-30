@@ -21,10 +21,11 @@
 
 #include <stdint.h>
 #include "magia_tile_utils.h"
+#include "magia_spatz_utils.h"
 #include "spatz_workers.h"
 
-// Parameters passed via L1 shared memory
-#define DOTP_PARAM_BASE  (L1_BASE + 0x00015000)
+// EXCHANGE_REG address for reading parameter pointer
+#define EXCHANGE_REG_ADDR (SPATZ_EXCHANGE_REG)
 
 // Parameter structure in shared L1 memory
 typedef struct {
@@ -37,8 +38,9 @@ typedef struct {
 // Main entry point
 int dotp_task(void) {
     
-    // Read parameters from shared L1 memory
-    volatile dotp_params_t *params = (volatile dotp_params_t *)DOTP_PARAM_BASE;
+    // Read parameter structure pointer from EXCHANGE_REG
+    uint32_t params_ptr = mmio32(EXCHANGE_REG_ADDR);
+    volatile dotp_params_t *params = (volatile dotp_params_t *)params_ptr;
     
     float16_t *A = (float16_t *)params->a_addr;
     float16_t *B = (float16_t *)params->b_addr;

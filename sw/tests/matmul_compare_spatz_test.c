@@ -152,7 +152,7 @@ int main(void) {
     uint32_t spatz_start = cv32e40p_get_cycles();
     
     spatz_run_task(MATMUL16_TASK);
-    
+    spatz_pass_params(MATMUL_PARAM_BASE);    
     eu_wait_spatz_polling(EU_SPATZ_DONE_MASK);
     
     uint32_t spatz_cycles = cv32e40p_get_cycles() - spatz_start;
