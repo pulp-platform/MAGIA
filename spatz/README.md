@@ -179,7 +179,7 @@ void spatz_clk_en(void);
 void spatz_clk_dis(void);
 
 // Initialization and task control
-void spatz_init(uint32_t addr);          // Initialize with binary start address
+void spatz_init(uint32_t addr);                          // Initialize with binary start address
 void spatz_run_task(uint32_t addr);                      // Set task address and trigger
 void spatz_pass_params(uint32_t params_ptr);             // Pass parameter pointer via EXCHANGE_REG (waits for START clear)
 void spatz_run_task_with_params(uint32_t addr, uint32_t params_ptr);  // Combined: run task + pass params
