@@ -44,23 +44,19 @@ static const fp16_t dotp_golden = 0x6C00;   // 4096.0 in FP16
 #define B_VEC_BASE      (L1_BASE + 0x00012000)
 #define B_VEC_TRANSP    (L1_BASE + 0x00014000)  // B transposed for RedMule
 #define RESULT_REDMULE  (L1_BASE + 0x00016000)
-#define RESULT_CV32     (L1_BASE + 0x00016010)
 #define RESULT_SPATZ    (L1_BASE + 0x00016020)
 
-// Spatz parameter area in shared L1
-#define DOTP_PARAM_BASE (L1_BASE + 0x00015000)
+// Parameter structure for Spatz task (matches dotp_task.c)
+typedef struct {
+    uint32_t a_addr;        // Vector A address
+    uint32_t b_addr;        // Vector B address  
+    uint32_t result_addr;   // Result address (scalar)
+    uint32_t n_elements;    // Number of elements
+} dotp_params_t;
 
 int main(void) {
     // Enable CV32E40P cycle counter
     cv32e40p_ccount_enable();
-    
-    printf("\n");
-    printf("========================================\n");
-    printf("Dot Product Performance Comparison\n");
-    printf("========================================\n");
-    printf("Vector size: %d elements\n", DOTP_SIZE);
-    printf("Data type: FP16\n");
-    printf("Test pattern: A[i] = 1.0, B[i] = 2.0\n");
 
     // Initialize vectors with test pattern
     printf("Initializing vectors...\n");
@@ -75,9 +71,6 @@ int main(void) {
     // =====================================================
     // Test 1: RedMule HWPE (using 1×N GEMM)
     // =====================================================
-    printf("----------------------------------------\n");
-    printf("Test 1: RedMule HWPE Accelerator\n");
-    printf("----------------------------------------\n");
     
     // Initialize and configure RedMulE
     hwpe_cg_enable();
@@ -115,30 +108,27 @@ int main(void) {
     // =====================================================
     // Test 2: Spatz Vector Processor
     // =====================================================
-    printf("----------------------------------------\n");
-    printf("Test 2: Spatz Vector Processor\n");
-    printf("----------------------------------------\n");
     
     // Initialize Event Unit and Spatz
     eu_init();
     eu_enable_events(EU_SPATZ_DONE_MASK);
     
-    printf("Initializing Spatz...\n");
     spatz_init(SPATZ_BINARY_START);
     
     // Write parameters to shared L1 memory for Spatz task
-    volatile uint32_t *params = (volatile uint32_t *)DOTP_PARAM_BASE;
-    params[0] = A_VEC_BASE;       // a_addr
-    params[1] = B_VEC_BASE;       // b_addr
-    params[2] = RESULT_SPATZ;     // result_addr
-    params[3] = DOTP_SIZE;        // n_elements
+    uint32_t param_base = L1_BASE + 0x00015000;
+    volatile dotp_params_t *params = (volatile dotp_params_t *)param_base;
+    params->a_addr = A_VEC_BASE;
+    params->b_addr = B_VEC_BASE;
+    params->result_addr = RESULT_SPATZ;
+    params->n_elements = DOTP_SIZE;
     
     printf("Starting Spatz dot product...\n");
     
     uint32_t spatz_start = cv32e40p_get_cycles();
     
     spatz_run_task(DOTP_TASK);
-    spatz_pass_params(DOTP_PARAM_BASE);
+    spatz_pass_params(param_base);
     
     eu_wait_spatz_polling(EU_SPATZ_DONE_MASK);
     
@@ -152,9 +142,6 @@ int main(void) {
     // =====================================================
     // Result Verification
     // =====================================================
-    printf("========================================\n");
-    printf("Result Verification\n");
-    printf("========================================\n");
     
     unsigned int redmule_errors = 0;
     unsigned int spatz_errors = 0;

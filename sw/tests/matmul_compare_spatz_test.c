@@ -16,7 +16,7 @@
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
  * 
- *  Matrix Multiplication Comparison Test: RedMule vs Spatz
+ * Matrix Multiplication Comparison Test: RedMule vs Spatz
  */
 
 #include <stdint.h>
@@ -43,7 +43,6 @@
 #define Y_BASE (L1_BASE + 0x0001A048)
 #define Z_BASE (L2_BASE + 0x00042000)
 
-// Aliases for consistency with comparison test
 #define A_BASE X_BASE
 #define B_BASE W_BASE
 #define C_REDMULE_BASE Y_BASE
@@ -53,20 +52,24 @@
 // Spatz parameter area in shared L1
 #define MATMUL_PARAM_BASE (L1_BASE + 0x00010000)
 
-#define VERBOSE (0)
+// Parameter structure for Spatz task (matches matmul16_task.c)
+typedef struct {
+    uint32_t a_addr;        // Matrix A address
+    uint32_t b_addr;        // Matrix B address  
+    uint32_t c_addr;        // Matrix C address (result)
+    uint32_t m_size;        // Number of rows in A and C
+    uint32_t n_size;        // Number of columns in A, rows in B
+    uint32_t k_size;        // Number of columns in B and C
+} matmul_params_t;
+
 #define DIFF_TH (0x0011)
 
-// Use 16-bit float for RedMule compatibility
 typedef uint16_t fp16_t;
 
 int main(void) {
     // Enable CV32E40P cycle counter
     cv32e40p_ccount_enable();
     
-    printf("\n");
-    printf("========================================\n");
-    printf("MATMUL Performance Comparison Test\n");
-    printf("========================================\n");
 
     // Initialize input matrices from golden model headers
     printf("Initializing matrices from golden model...\n");
@@ -88,9 +91,6 @@ int main(void) {
     // =====================================================
     // Test 1: RedMule HWPE Accelerator
     // =====================================================
-    printf("----------------------------------------\n");
-    printf("Test 1: RedMule HWPE Accelerator\n");
-    printf("----------------------------------------\n");
     
     // Initialize and configure RedMulE
     hwpe_cg_enable();
@@ -122,9 +122,6 @@ int main(void) {
     // =====================================================
     // Test 2: Spatz Vector Processor
     // =====================================================
-    printf("----------------------------------------\n");
-    printf("Test 2: Spatz Vector Processor\n");
-    printf("----------------------------------------\n");
     
     // Initialize Event Unit and Spatz
     eu_init();
@@ -134,13 +131,13 @@ int main(void) {
     spatz_init(SPATZ_BINARY_START);
     
     // Write parameters to shared L1 memory for Spatz task
-    volatile uint32_t *params = (volatile uint32_t *)MATMUL_PARAM_BASE;
-    params[0] = A_BASE;           // a_addr
-    params[1] = B_BASE;           // b_addr  
-    params[2] = C_SPATZ_BASE;     // c_addr
-    params[3] = M_SIZE;           // m_size
-    params[4] = N_SIZE;           // n_size
-    params[5] = K_SIZE;           // k_size
+    volatile matmul_params_t *params = (volatile matmul_params_t *)MATMUL_PARAM_BASE;
+    params->a_addr = A_BASE;
+    params->b_addr = B_BASE;
+    params->c_addr = C_SPATZ_BASE;
+    params->m_size = M_SIZE;
+    params->n_size = N_SIZE;
+    params->k_size = K_SIZE;
     
     printf("Initializing Spatz output matrix to zero...\n");
     for (uint32_t i = 0; i < M_SIZE * K_SIZE; i++) {
@@ -162,9 +159,6 @@ int main(void) {
     // =====================================================
     // Result Verification
     // =====================================================
-    printf("========================================\n");
-    printf("Result Verification\n");
-    printf("========================================\n");
     
     unsigned int mismatch_errors = 0;
     uint16_t redmule_val, spatz_val, diff;
@@ -186,7 +180,6 @@ int main(void) {
     printf("\n");
     if (mismatch_errors == 0) {
       printf("SUCCESS: RedMule and Spatz produce IDENTICAL results!\n");
-      printf("All %d elements match (diff <= %d)\n", M_SIZE*K_SIZE, DIFF_TH);
     } else {
       printf("FAILURE: RedMule and Spatz differ in %d elements\n", mismatch_errors);
     }

@@ -14,34 +14,13 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  * 
- * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
+ * Authors: Luca Balboni <luca.balboni10@studio.unibo,it>
  *
- * Simple Hello World Task for Spatz
+ * Hello World Task for Spatz_cc
  */
-
-#include <stdint.h>
 #include "magia_tile_utils.h"
-#include "magia_spatz_utils.h"
-#include "spatz_workers.h"
 
-#define EXCHANGE_REG_ADDR (SPATZ_EXCHANGE_REG)
-
-// Parameter structure
-typedef struct {
-    uint32_t tile_id;
-} hello_params_t;
-
-// Main entry point
-int hello_task(void) {
-    
-    // Read parameter structure pointer from EXCHANGE_REG
-    uint32_t params_ptr = mmio32(EXCHANGE_REG_ADDR);
-    volatile hello_params_t *params = (volatile hello_params_t *)params_ptr;
-    
-    uint32_t tile_id = params->tile_id;
-    
-    // Print from Spatz!
-    printf("*** Hello from Spatz task on Tile %d! ***\n", tile_id);
-    
+int hello_world_simple_task(void) {
+    printf("[SNITCH] Hello World from Spatz!\n");
     return 0;
 }
