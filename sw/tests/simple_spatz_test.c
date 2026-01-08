@@ -47,7 +47,7 @@ int main(void) {
     // Test: Spatz Task
     // ==========================================
     printf("\n[CV32] Launching SPATZ Task\n");
-    spatz_run_task(HELLO_WORLD_SIMPLE_TASK);
+    spatz_run_task(INSTRUCTIONS_SWEEP_SIMPLE_TASK);
 
     eu_wait_spatz_wfe(EU_SPATZ_DONE_MASK);
     
