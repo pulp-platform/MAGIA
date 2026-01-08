@@ -57,10 +57,13 @@ module tcdm2obi
     endcase
   endfunction
 
+  logic amo_detected;
+  assign amo_detected = (tcdm_req_i.q.amo != reqrsp_pkg::AMONone);
+
   // TCDM → OBI Request (combinatorial)
   assign obi_req_o.req                  = tcdm_req_i.q_valid;
   assign obi_req_o.a.addr               = tcdm_req_i.q.addr;
-  assign obi_req_o.a.we                 = tcdm_req_i.q.write;
+  assign obi_req_o.a.we                 = tcdm_req_i.q.write || amo_detected;
   assign obi_req_o.a.wdata              = tcdm_req_i.q.data;
   assign obi_req_o.a.be                 = tcdm_req_i.q.strb;
   assign obi_req_o.a.aid                = '0;

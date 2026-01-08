@@ -61,10 +61,11 @@ module reqrsp2obi
   /*               Direct reqrsp → OBI conversion                    */
   /*******************************************************************/
 
-  // Request path: reqrsp.q → OBI.a
+  logic amo_detected;
+  assign amo_detected = (reqrsp_req_i.q.amo != reqrsp_pkg::AMONone);
   assign obi_req_o.req                  = reqrsp_req_i.q_valid;
   assign obi_req_o.a.addr               = reqrsp_req_i.q.addr;
-  assign obi_req_o.a.we                 = reqrsp_req_i.q.write;
+  assign obi_req_o.a.we                 = reqrsp_req_i.q.write || amo_detected;
   assign obi_req_o.a.wdata              = reqrsp_req_i.q.data;
   assign obi_req_o.a.be                 = reqrsp_req_i.q.strb;
   assign obi_req_o.a.aid                = '0;
@@ -79,11 +80,11 @@ module reqrsp2obi
   assign obi_req_o.a.a_optional.dbg     = 1'b0;
   assign obi_req_o.a.a_optional.achk    = '0;
 
-  // Response path: OBI.r → reqrsp.p
+  // OBI → reqrsp Response
   assign reqrsp_rsp_o.q_ready = obi_rsp_i.gnt;
   assign reqrsp_rsp_o.p_valid = obi_rsp_i.rvalid;
   assign reqrsp_rsp_o.p.data  = obi_rsp_i.r.rdata;
-  assign reqrsp_rsp_o.p.error = obi_rsp_i.r.err;  // Forward OBI error to reqrsp protocol
+  assign reqrsp_rsp_o.p.error = obi_rsp_i.r.err;
 
 endmodule
 
