@@ -24,6 +24,7 @@
 
 module tcdm2hci_atomic
   import obi_pkg::*;
+  import magia_tile_pkg::*;
 #(
   parameter type tcdm_req_t = logic,
   parameter type tcdm_rsp_t = logic,
@@ -81,16 +82,16 @@ module tcdm2hci_atomic
   /*******************************************************************/
   
   obi_atop_resolver #(
-    .SbrPortObiCfg             ( SbrPortObiCfg      ),
-    .MgrPortObiCfg             ( MgrPortObiCfg      ),
-    .sbr_port_obi_req_t        ( obi_req_t          ),
-    .sbr_port_obi_rsp_t        ( obi_rsp_t          ),
-    .mgr_port_obi_req_t        ( obi_req_t          ),
-    .mgr_port_obi_rsp_t        ( obi_rsp_t          ),
-    .mgr_port_obi_a_optional_t ( obi_a_optional_t   ),
-    .mgr_port_obi_r_optional_t ( obi_r_optional_t   ),
-    .LrScEnable                ( 1'b1               ),
-    .RegisterAmo               ( 1'b0               )
+    .SbrPortObiCfg             ( SbrPortObiCfg              ),
+    .MgrPortObiCfg             ( MgrPortObiCfg              ),
+    .sbr_port_obi_req_t        ( obi_req_t                  ),
+    .sbr_port_obi_rsp_t        ( obi_rsp_t                  ),
+    .mgr_port_obi_req_t        ( obi_req_t                  ),
+    .mgr_port_obi_rsp_t        ( obi_rsp_t                  ),
+    .mgr_port_obi_a_optional_t ( obi_a_optional_t           ),
+    .mgr_port_obi_r_optional_t ( obi_r_optional_t           ),
+    .LrScEnable                ( 1'b1                       ),
+    .RegisterAmo               ( magia_tile_pkg::RegisterAmo)
   ) i_obi_atop_resolver (
     .clk_i          ( clk_i            ),
     .rst_ni         ( rst_ni           ),

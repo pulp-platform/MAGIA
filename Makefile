@@ -68,7 +68,6 @@ inst_entry    ?= 0xCC000000
 data_entry    ?= 0xCC010000
 boot_addr     ?= 0xCC000080
 test          ?= hello_world
-spatz_prog    ?= hello_spatz
 mesh_dv       ?= 1
 fast_sim      ?= 0
 # Add here a path to the core traces of each tile you want to monitor
