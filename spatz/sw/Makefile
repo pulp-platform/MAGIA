@@ -16,7 +16,6 @@
 # Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
 # Spatz Programs Makefile for MAGIA Tile
 
-# Toolchain - Use Spatz LLVM with RVV 0.10 support
 LLVM_PATH := /sw/scratch/luca.balboni10/SPATZ/install/llvm
 
 # Configuration from top-level Makefile
