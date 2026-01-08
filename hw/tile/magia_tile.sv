@@ -1374,6 +1374,7 @@ module magia_tile
     
     // Hart ID
     .hart_id_i         ( mhartid_i                               ),  // Same as CV32
+    .tcdm_addr_base_i  ( tile_l1_start_addr                      ),  // Dynamic L1 base per tile
     
     // Interrupts
     .irq_i             ( spatz_irq                               ),

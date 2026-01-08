@@ -80,6 +80,7 @@ module spatz_cc_wrapper
   
   // Core configuration
   input  logic [31:0]                             hart_id_i,
+  input  logic [AddrWidth-1:0]                    tcdm_addr_base_i,  // TCDM base address for this tile
   
   // Interrupts
   input  snitch_pkg::interrupts_t                 irq_i,
@@ -257,7 +258,7 @@ module spatz_cc_wrapper
         .testmode_i               ( test_mode_i               ),
         .hart_id_i                ( hart_id_i                 ),
         .irq_i                    ( irq_i                     ),
-        .tcdm_addr_base_i         ( magia_tile_pkg::L1_ADDR_START ),
+        .tcdm_addr_base_i         ( tcdm_addr_base_i          ),
         .hive_req_o               ( hive_req                  ),
         .hive_rsp_i               ( hive_rsp                  ),
         .data_req_o               ( gen_signals.data_req      ),
@@ -322,7 +323,7 @@ module spatz_cc_wrapper
         .testmode_i               ( test_mode_i               ),
         .hart_id_i                ( hart_id_i                 ),
         .irq_i                    ( irq_i                     ),
-        .tcdm_addr_base_i         ( magia_tile_pkg::L1_ADDR_START ),
+        .tcdm_addr_base_i         ( tcdm_addr_base_i          ),
         .hive_req_o               ( hive_req                  ),
         .hive_rsp_i               ( hive_rsp                  ),
         .data_req_o               ( gen_signals.data_req      ),
@@ -366,6 +367,7 @@ module spatz_cc_wrapper
     if (RVD) begin : gen_reqrsp64_to_obi32
       // RVD=1: Snitch data port 64-bit reqrsp → 32-bit OBI (for L2/peripherals)
       reqrsp64_to_obi32 #(
+        .ObiCfg       ( magia_tile_pkg::obi_amo_cfg              ),
         .reqrsp_req_t ( magia_tile_pkg::spatz_reqrsp64_req_t    ),
         .reqrsp_rsp_t ( magia_tile_pkg::spatz_reqrsp64_rsp_t    ),
         .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t      ),
@@ -381,6 +383,7 @@ module spatz_cc_wrapper
     end else begin : gen_reqrsp32_to_obi32
       // RVD=0: Snitch data port 32-bit reqrsp → 32-bit OBI (for L2/peripherals)
       reqrsp2obi #(
+        .ObiCfg       ( magia_tile_pkg::obi_amo_cfg             ),
         .reqrsp_req_t ( magia_tile_pkg::spatz_reqrsp_req_t     ),
         .reqrsp_rsp_t ( magia_tile_pkg::spatz_reqrsp_rsp_t     ),
         .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t     ),
