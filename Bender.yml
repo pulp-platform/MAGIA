@@ -34,7 +34,7 @@ dependencies:
   cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , rev: 917ecbf908bdaa22c5713bbcff277d142506bb16 } # branch: michaero/astral
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
   fpu_ss            : { git: "https://github.com/pulp-platform/fpu_ss.git"            , rev: 8e2eff774d9d38a1e17a46bd56a0936dac9522f0 } # branch: vi/bender_manifest
-  obi               : { git: "https://github.com/pulp-platform/obi.git"               , rev: 6a724da5c8d6412b88b6948746e04c1adf39d017 }                         
+  obi               : { git: "https://github.com/pulp-platform/obi.git"               , rev: 528dc65303d5ffb02fbc254324c6b53eac0dd6e5 } # branch: lb/fix_atop_resolver                       
   axi               : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: 0.4.4                                }
   axi_obi           : { git: "https://github.com/pulp-platform/axi_obi.git"           , rev: 3f29bd67369a093cf5be4ea3fdac3c6c216424cc } # branch: vi/magia
