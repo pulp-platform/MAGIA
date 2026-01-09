@@ -25,13 +25,13 @@ package:
 dependencies:
   redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 9a1aa14be0b23f0ade84bab57e7e434397ac9876 } # branch: vi/scale_up
   cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: 37a82d337ba60129c333d104c29e816d0698b53b } # branch: lb/magia_core
-  spatz             : { git: "https://github.com/pulp-platform/spatz.git"             , rev: fdeedf0713f7a5fe2133b7a4409023601e96f764 } # branch: lb/magia-spatz_cc
+  spatz             : { git: "https://github.com/pulp-platform/spatz.git"             , rev: 472aa2e7ad4c702a64de751405d97966d12c2638 } # branch: lb/magia-spatz_cc
   idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: a6b190c7991331432afa9a2899d032bc1b176830 } # branch: vi/redmule_scaleup
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: c35d5b0886ab549fb9144c3c14a4682112330e21 } # branch: yt/reqrsp
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 5a48a854573fca5bbabc1cfd4110fa4530a50ed7 } # branch: vi/redmule_scaleup
   cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , rev: 917ecbf908bdaa22c5713bbcff277d142506bb16 } # branch: michaero/astral
-  obi               : { git: "https://github.com/pulp-platform/obi.git"               , rev: 6a724da5c8d6412b88b6948746e04c1adf39d017 }                         
+  obi               : { git: "https://github.com/pulp-platform/obi.git"               , rev: 528dc65303d5ffb02fbc254324c6b53eac0dd6e5 }                         
   axi               : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: 0.4.4                                }
   axi_obi           : { git: "https://github.com/pulp-platform/axi_obi.git"           , rev: 84f21a6524bedcf17a569a62ac01b8a5610819c8 }
