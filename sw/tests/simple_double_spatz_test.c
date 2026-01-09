@@ -16,20 +16,20 @@
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
  *
- * Spatz Test - CV32 launches Spatz and waits with WFE
+ * Double Spatz Test - CV32 launches Spatz task twice consecutively
  * 
  */
 
 #include "magia_tile_utils.h"
 #include "magia_spatz_utils.h"
 #include "event_unit_utils.h"
-#include "simple_spatz_test_task_bin.h"
+#include "simple_double_spatz_test_task_bin.h"
 
 int main(void) {
 
     int errors = 0;
 
-    printf("[CV32] Spatz Test:\n");
+    printf("[CV32] Double Spatz Test:\n");
 
     // ==========================================
     // Initialization of Event Unit and Spatz
@@ -44,18 +44,52 @@ int main(void) {
     spatz_init(SPATZ_BINARY_START);
     
     // ==========================================
-    // Test: Spatz Task
+    // Test 1: First Spatz Task Run
     // ==========================================
-    printf("\n[CV32] Launching SPATZ Task\n");
+    printf("\n[CV32] Launching SPATZ Task (Run 1)\n");
     spatz_run_task(HELLO_WORLD_SIMPLE_TASK);
 
     eu_wait_spatz_wfe(EU_SPATZ_DONE_MASK);
     
     if(spatz_get_exit_code() != 0) {
-        printf("[CV32] SPATZ TASK ENDED with exit code: 0x%03x\n", spatz_get_exit_code());
+        printf("[CV32] SPATZ TASK RUN 1 ENDED with exit code: 0x%03x\n", spatz_get_exit_code());
         errors++;
     } else {
-        printf("[CV32] SPATZ TASK ENDED successfully\n");
+        printf("[CV32] SPATZ TASK RUN 1 ENDED successfully\n");
+    }
+
+    // Disable Spatz clock between tasks
+    printf("\n[CV32] Disabling Spatz clock...\n");
+    spatz_clk_dis();
+
+    // Re-enable Spatz clock
+    printf("[CV32] Re-enabling Spatz clock...\n");
+    spatz_clk_en();
+
+    // ==========================================
+    // Test 2: Second Spatz Task Run
+    // ==========================================
+    printf("\n[CV32] Launching SPATZ Task (Run 2)\n");
+    spatz_run_task(IDMA_SIMPLE_TASK);
+
+    eu_wait_spatz_wfe(EU_SPATZ_DONE_MASK);
+    
+    if(spatz_get_exit_code() != 0) {
+        printf("[CV32] SPATZ TASK RUN 2 ENDED with exit code: 0x%03x\n", spatz_get_exit_code());
+        errors++;
+    } else {
+        printf("[CV32] SPATZ TASK RUN 2 ENDED successfully\n");
+    }
+
+    // ==========================================
+    // Summary
+    // ==========================================
+    if(errors == 0) {
+        printf("\n[CV32] ========================================\n");
+        printf("[CV32] ALL TESTS PASSED (2 runs completed)\n");
+        printf("[CV32] ========================================\n");
+    } else {
+        printf("\n[CV32] TESTS FAILED with %d errors\n", errors);
     }
 
     // Disable Spatz clock
