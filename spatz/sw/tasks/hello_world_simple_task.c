@@ -14,7 +14,7 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  * 
- * Authors: Luca Balboni <luca.balboni10@studio.unibo,it>
+ * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
  *
  * Hello World Task for Spatz_cc
  */
