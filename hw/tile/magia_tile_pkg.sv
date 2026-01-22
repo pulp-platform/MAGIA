@@ -139,15 +139,55 @@ package magia_tile_pkg;
   parameter bit          SPATZ_REGISTER_CORE_REQ           = 1'b1; // Pipeline register on core request
   parameter bit          SPATZ_REGISTER_CORE_RSP           = 1'b1; // Pipeline register on core response
   
-  // Spatz FPU Pipeline Configuration (PipeRegs: stages per operation per format [FP32, FP64, FP16, FP8, FP16ALT, FP8ALT])
-  // Default: Optimized for balanced latency/throughput (Spatz Cluster default configuration)
-  parameter int unsigned SPATZ_FPU_PIPE_FMA_FP32    = 1;   // FMA FP32 pipeline stages
-  parameter int unsigned SPATZ_FPU_PIPE_FMA_FP64    = 2;   // FMA FP64 pipeline stages  
-  parameter int unsigned SPATZ_FPU_PIPE_DIVSQRT_FP32 = 2;   // DIVSQRT FP32 stages (if XDivSqrt=1)
-  parameter int unsigned SPATZ_FPU_PIPE_DIVSQRT_FP64 = 4;   // DIVSQRT FP64 stages (if XDivSqrt=1)
-  parameter int unsigned SPATZ_FPU_PIPE_NONCOMP     = 1;   // Non-computational ops (compare, classify) stages
-  parameter int unsigned SPATZ_FPU_PIPE_CONV        = 2;   // Conversion ops stages
-  parameter int unsigned SPATZ_FPU_PIPE_DOTP        = 2;   // Dot product ops stages
+  // Spatz FPU implementation configuration
+  // Note: FP64 pipeline stages and unit types are set to 0/DISABLED if RVD=0
+  localparam fpnew_pkg::fpu_implementation_t SPATZ_FPUImplementation = '{
+    PipeRegs: // FMA Block
+              '{
+                '{  2,                           // FP32 (additional pipeline for better timing)
+                    SPATZ_RVD_PARAM ? 2 : 0,     // FP64 (disabled if RVD=0)
+                    0,                           // FP16
+                    0,                           // FP8
+                    0,                           // FP16alt
+                    0                            // FP8alt
+                  },
+                '{1, 1, 1, 1, 1, 1},             // DIVSQRT (all formats)
+                '{1, 1, 1, 1, 1, 1},             // NONCOMP (all formats)
+                '{2, 2, 2, 2, 2, 2},             // CONV (all formats)
+                '{5, 5, 5, 5, 5, 5}              // DOTP (all formats - additional pipeline stage)
+                },
+    UnitTypes: '{'{fpnew_pkg::MERGED,
+                   SPATZ_RVD_PARAM ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
+                   fpnew_pkg::MERGED,
+                   fpnew_pkg::MERGED,
+                   fpnew_pkg::MERGED,
+                   fpnew_pkg::MERGED},           // FMA (FP32 always, FP64 only if RVD=1)
+                '{fpnew_pkg::DISABLED,
+                  fpnew_pkg::DISABLED,
+                  fpnew_pkg::DISABLED,
+                  fpnew_pkg::DISABLED,
+                  fpnew_pkg::DISABLED,
+                  fpnew_pkg::DISABLED},          // DIVSQRT (DISABLED for all formats)
+                '{fpnew_pkg::PARALLEL,
+                  SPATZ_RVD_PARAM ? fpnew_pkg::PARALLEL : fpnew_pkg::DISABLED,
+                  fpnew_pkg::PARALLEL,
+                  fpnew_pkg::PARALLEL,
+                  fpnew_pkg::PARALLEL,
+                  fpnew_pkg::PARALLEL},          // NONCOMP (FP32 always, FP64 only if RVD=1)
+                '{fpnew_pkg::MERGED,
+                  SPATZ_RVD_PARAM ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED},            // CONV (FP32 always, FP64 only if RVD=1)
+                '{fpnew_pkg::MERGED,
+                  SPATZ_RVD_PARAM ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED}},           // DOTP (FP32 always, FP64 only if RVD=1)
+    PipeConfig: fpnew_pkg::BEFORE
+  };
 
   // Spatz bootrom parameters
   parameter logic [31:0] SPATZ_BOOT_ADDR          = 32'h1000_0000;  // Spatz bootrom base address

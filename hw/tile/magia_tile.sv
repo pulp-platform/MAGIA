@@ -1363,6 +1363,7 @@ module magia_tile
     .NumSpatzFPUs      ( SPATZ_NUM_FPU                           ),
     .NumSpatzIPUs      ( SPATZ_NUM_IPU                           ),
     .BootAddr          ( magia_tile_pkg::SPATZ_BOOT_ADDR         ),
+    .FPUImplementation ( magia_tile_pkg::SPATZ_FPUImplementation ),
     .RVF               ( 1'b1                                    ),
     .RVD               ( magia_tile_pkg::SPATZ_RVD_PARAM         ),
     .RVV               ( 1'b1                                    ),
