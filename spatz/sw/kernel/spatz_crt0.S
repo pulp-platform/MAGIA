@@ -33,7 +33,7 @@
 
 _start:
     /* Init stack pointer */
-    li      sp, 0x00020000
+    li      sp, 0x0001FFFC
 
     /* Clear ALL integer registers */
     mv x1,  x0

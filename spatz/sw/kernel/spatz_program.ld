@@ -34,7 +34,7 @@ MEMORY
 /* Stack configuration - Spatz uses remaining 16KB after CV32 */
 /* CV32 uses: 0x00010000-0x0001C000 (48KB, from CV32 link.ld) */
 /* Spatz uses: 0x0001C000-0x00020000 (16KB) */
-_stack_start = 0x00020000;  /* Top of Spatz stack (grows downward) */
+_stack_start = 0x0001FFFC;  /* Top of Spatz stack (grows downward) */
 
 SECTIONS
 {
