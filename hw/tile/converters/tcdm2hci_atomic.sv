@@ -33,13 +33,20 @@ module tcdm2hci_atomic
   parameter type hci_req_t  = logic,
   parameter type hci_rsp_t  = logic,
   
+  // OBI channel types
+  parameter type obi_a_chan_t = logic,
+  parameter type obi_r_chan_t = logic,
+  
   // OBI optional types for atomic resolver
   parameter type obi_a_optional_t = logic,
   parameter type obi_r_optional_t = logic,
   
   // OBI configuration for atomic resolver
   parameter obi_pkg::obi_cfg_t SbrPortObiCfg = obi_pkg::ObiDefaultConfig,
-  parameter obi_pkg::obi_cfg_t MgrPortObiCfg = obi_pkg::ObiDefaultConfig
+  parameter obi_pkg::obi_cfg_t MgrPortObiCfg = obi_pkg::ObiDefaultConfig,
+  
+  // Pipeline cut control
+  parameter bit BypassCut = 1'b0
 )(
   input  logic      clk_i,
   input  logic      rst_ni,
@@ -56,8 +63,14 @@ module tcdm2hci_atomic
   // Internal OBI signals between converters
   obi_req_t obi_req;
   obi_rsp_t obi_rsp;
+  
+  // OBI signals after atomic resolution
   obi_req_t obi_resolved_req;
   obi_rsp_t obi_resolved_rsp;
+  
+  // OBI signals after post-atomic cut (pipeline stage)
+  obi_req_t obi_cut_req;
+  obi_rsp_t obi_cut_rsp;
   
   /*******************************************************************/
   /*  Stage 1: TCDM → OBI (with atomic operations preserved)        */
@@ -103,16 +116,42 @@ module tcdm2hci_atomic
   );
   
   /*******************************************************************/
-  /*  Stage 3: OBI → HCI conversion (request and response)          */
+  /*  Stage 3: OBI Cut (optional - controlled by BypassCut param)   */
   /*******************************************************************/
+  
+  generate
+    if (BypassCut) begin : gen_bypass_cut
+      assign obi_cut_req = obi_resolved_req;
+      assign obi_resolved_rsp = obi_cut_rsp;
+    end else begin : gen_enable_cut
+      obi_cut #(
+        .ObiCfg       ( MgrPortObiCfg ),
+        .obi_a_chan_t ( obi_a_chan_t  ),
+        .obi_r_chan_t ( obi_r_chan_t  ),
+        .obi_req_t    ( obi_req_t     ),
+        .obi_rsp_t    ( obi_rsp_t     )
+      ) i_obi_cut_post_atomic (
+        .clk_i           ( clk_i            ),
+        .rst_ni          ( rst_ni           ),
+        .sbr_port_req_i  ( obi_resolved_req ),
+        .sbr_port_rsp_o  ( obi_resolved_rsp ),
+        .mgr_port_req_o  ( obi_cut_req      ),
+        .mgr_port_rsp_i  ( obi_cut_rsp      )
+      );
+    end
+  endgenerate
+  
+  /*******************************************************************/
+  /*  Stage 4: OBI → HCI conversion (request and response)          */
+  /******************************************************************/
   
   // Convert OBI request to HCI request
   obi2hci_req #(
     .obi_req_t ( obi_req_t ),
     .hic_req_t ( hci_req_t )
   ) i_obi2hci_req (
-    .obi_req_i ( obi_resolved_req ),
-    .hci_req_o ( hci_req_o        )
+    .obi_req_i ( obi_cut_req ),
+    .hci_req_o ( hci_req_o   )
   );
   
   // Convert HCI response to OBI response
@@ -120,8 +159,8 @@ module tcdm2hci_atomic
     .hci_rsp_t ( hci_rsp_t ),
     .obi_rsp_t ( obi_rsp_t )
   ) i_hci2obi_rsp (
-    .hci_rsp_i ( hci_rsp_i        ),
-    .obi_rsp_o ( obi_resolved_rsp )
+    .hci_rsp_i ( hci_rsp_i   ),
+    .obi_rsp_o ( obi_cut_rsp )
   );
 
 endmodule : tcdm2hci_atomic

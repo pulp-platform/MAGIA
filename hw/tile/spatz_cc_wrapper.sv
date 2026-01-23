@@ -48,25 +48,7 @@ module spatz_cc_wrapper
   parameter bit          RegisterCoreRsp          = magia_tile_pkg::SPATZ_REGISTER_CORE_RSP,
   parameter logic [31:0] BootAddr                 = magia_tile_pkg::SPATZ_BOOT_ADDR,
   
-  // FPU Implementation Configuration (using package parameters for pipeline stages)
-  parameter fpnew_pkg::fpu_implementation_t FPUImplementation = '{
-    PipeRegs: '{
-      // FMA Block: [FP32, FP64, FP16, FP8, FP16ALT, FP8ALT]
-      '{magia_tile_pkg::SPATZ_FPU_PIPE_FMA_FP32, magia_tile_pkg::SPATZ_FPU_PIPE_FMA_FP64, 0, 0, 0, 0},  // FMA configurable
-      '{XDivSqrt ? magia_tile_pkg::SPATZ_FPU_PIPE_DIVSQRT_FP32 : 0, XDivSqrt ? magia_tile_pkg::SPATZ_FPU_PIPE_DIVSQRT_FP64 : 0, 0, 0, 0, 0},  // DIVSQRT
-      '{magia_tile_pkg::SPATZ_FPU_PIPE_NONCOMP, magia_tile_pkg::SPATZ_FPU_PIPE_NONCOMP, magia_tile_pkg::SPATZ_FPU_PIPE_NONCOMP, magia_tile_pkg::SPATZ_FPU_PIPE_NONCOMP, magia_tile_pkg::SPATZ_FPU_PIPE_NONCOMP, magia_tile_pkg::SPATZ_FPU_PIPE_NONCOMP},  // NONCOMP
-      '{magia_tile_pkg::SPATZ_FPU_PIPE_CONV, magia_tile_pkg::SPATZ_FPU_PIPE_CONV, magia_tile_pkg::SPATZ_FPU_PIPE_CONV, magia_tile_pkg::SPATZ_FPU_PIPE_CONV, magia_tile_pkg::SPATZ_FPU_PIPE_CONV, magia_tile_pkg::SPATZ_FPU_PIPE_CONV},  // CONV
-      '{magia_tile_pkg::SPATZ_FPU_PIPE_DOTP, magia_tile_pkg::SPATZ_FPU_PIPE_DOTP, magia_tile_pkg::SPATZ_FPU_PIPE_DOTP, magia_tile_pkg::SPATZ_FPU_PIPE_DOTP, magia_tile_pkg::SPATZ_FPU_PIPE_DOTP, magia_tile_pkg::SPATZ_FPU_PIPE_DOTP}   // DOTP
-    },
-    UnitTypes: '{
-      '{fpnew_pkg::MERGED, fpnew_pkg::MERGED, fpnew_pkg::MERGED, fpnew_pkg::MERGED, fpnew_pkg::MERGED, fpnew_pkg::MERGED},  // FMA merged
-      '{XDivSqrt ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED, XDivSqrt ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED, fpnew_pkg::DISABLED, fpnew_pkg::DISABLED, fpnew_pkg::DISABLED, fpnew_pkg::DISABLED},  // DIVSQRT
-      '{fpnew_pkg::PARALLEL, fpnew_pkg::PARALLEL, fpnew_pkg::PARALLEL, fpnew_pkg::PARALLEL, fpnew_pkg::PARALLEL, fpnew_pkg::PARALLEL},  // NONCOMP parallel
-      '{fpnew_pkg::MERGED, fpnew_pkg::MERGED, fpnew_pkg::MERGED, fpnew_pkg::MERGED, fpnew_pkg::MERGED, fpnew_pkg::MERGED},  // CONV merged
-      '{fpnew_pkg::MERGED, fpnew_pkg::MERGED, fpnew_pkg::MERGED, fpnew_pkg::MERGED, fpnew_pkg::MERGED, fpnew_pkg::MERGED}   // DOTP merged
-    },
-    PipeConfig: fpnew_pkg::BEFORE  // Pipeline registers BEFORE FPU (Spatz Cluster default)
-  },
+  parameter fpnew_pkg::fpu_implementation_t FPUImplementation = magia_tile_pkg::SPATZ_FPUImplementation,
   
   // Derived parameters - calcolo dinamico basato su N_IPU e N_FPU configurabili
   localparam int unsigned NumSpatzFUs         = (NumSpatzFPUs > NumSpatzIPUs) ? NumSpatzFPUs : NumSpatzIPUs,
@@ -436,12 +418,15 @@ module spatz_cc_wrapper
         .tcdm32_rsp_t         ( magia_tile_pkg::spatz_tcdm32_rsp_t         ),
         .obi32_req_t          ( magia_tile_pkg::spatz_obi32_req_t          ),
         .obi32_rsp_t          ( magia_tile_pkg::spatz_obi32_rsp_t          ),
+        .obi32_a_chan_t       ( magia_tile_pkg::spatz_obi32_a_chan_t       ),
+        .obi32_r_chan_t       ( magia_tile_pkg::spatz_obi32_r_chan_t       ),
         .hci_req_t            ( magia_tile_pkg::core_hci_data_req_t        ),
         .hci_rsp_t            ( magia_tile_pkg::core_hci_data_rsp_t        ),
         .obi32_a_optional_t   ( magia_tile_pkg::spatz_obi32_a_optional_t  ),
         .obi32_r_optional_t   ( magia_tile_pkg::spatz_obi32_r_optional_t  ),
         .SbrPortObiCfg        ( magia_tile_pkg::obi_amo_cfg                ),
-        .MgrPortObiCfg        ( magia_tile_pkg::obi_no_amo_cfg             )
+        .MgrPortObiCfg        ( magia_tile_pkg::obi_no_amo_cfg             ),
+        .BypassCut            ( 1'b1                                       )
       ) i_tcdm64_to_dual_hci32_atomic_snitch (
         .clk_i         ( clk_i                                      ),
         .rst_ni        ( rst_ni                                     ),
@@ -479,12 +464,15 @@ module spatz_cc_wrapper
         .tcdm_rsp_t         ( magia_tile_pkg::spatz_tcdm_rsp_t         ),
         .obi_req_t          ( magia_tile_pkg::core_obi_data_req_t      ),
         .obi_rsp_t          ( magia_tile_pkg::core_obi_data_rsp_t      ),
+        .obi_a_chan_t       ( magia_tile_pkg::core_data_obi_a_chan_t   ),
+        .obi_r_chan_t       ( magia_tile_pkg::core_data_obi_r_chan_t   ),
         .hci_req_t          ( magia_tile_pkg::core_hci_data_req_t      ),
         .hci_rsp_t          ( magia_tile_pkg::core_hci_data_rsp_t      ),
         .obi_a_optional_t   ( magia_tile_pkg::core_data_obi_a_optional_t ),
         .obi_r_optional_t   ( magia_tile_pkg::core_data_obi_r_optional_t ),
         .SbrPortObiCfg      ( magia_tile_pkg::obi_amo_cfg              ),
-        .MgrPortObiCfg      ( magia_tile_pkg::obi_no_amo_cfg           )
+        .MgrPortObiCfg      ( magia_tile_pkg::obi_no_amo_cfg           ),
+        .BypassCut          ( 1'b1                                     )
       ) i_tcdm32_to_hci32_atomic_snitch (
         .clk_i       ( clk_i                                      ),
         .rst_ni      ( rst_ni                                     ),
