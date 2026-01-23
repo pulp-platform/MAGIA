@@ -140,53 +140,52 @@ package magia_tile_pkg;
   parameter bit          SPATZ_REGISTER_CORE_RSP           = 1'b1; // Pipeline register on core response
   
   // Spatz FPU implementation configuration
-  // Note: FP64 pipeline stages and unit types are set to 0/DISABLED if RVD=0
   localparam fpnew_pkg::fpu_implementation_t SPATZ_FPUImplementation = '{
     PipeRegs: // FMA Block
               '{
-                '{  2,                           // FP32 (additional pipeline for better timing)
-                    SPATZ_RVD_PARAM ? 2 : 0,     // FP64 (disabled if RVD=0)
-                    0,                           // FP16
-                    0,                           // FP8
-                    0,                           // FP16alt
-                    0                            // FP8alt
+                '{  3,                           // FP32 FMA
+                    SPATZ_RVD_PARAM ? 3 : 0,     // FP64 FMA
+                    3,                           // FP16
+                    3,                           // FP8
+                    3,                           // FP16alt
+                    3                            // FP8alt
                   },
                 '{1, 1, 1, 1, 1, 1},             // DIVSQRT (all formats)
                 '{1, 1, 1, 1, 1, 1},             // NONCOMP (all formats)
                 '{2, 2, 2, 2, 2, 2},             // CONV (all formats)
-                '{5, 5, 5, 5, 5, 5}              // DOTP (all formats - additional pipeline stage)
+                '{5, 5, 5, 5, 5, 5}              // DOTP
                 },
-    UnitTypes: '{'{fpnew_pkg::MERGED,
-                   SPATZ_RVD_PARAM ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
-                   fpnew_pkg::MERGED,
-                   fpnew_pkg::MERGED,
-                   fpnew_pkg::MERGED,
-                   fpnew_pkg::MERGED},           // FMA (FP32 always, FP64 only if RVD=1)
+  UnitTypes: '{'{ fpnew_pkg::MERGED,
+                  SPATZ_RVD_PARAM ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED},           // FMA 
                 '{fpnew_pkg::DISABLED,
                   fpnew_pkg::DISABLED,
                   fpnew_pkg::DISABLED,
                   fpnew_pkg::DISABLED,
                   fpnew_pkg::DISABLED,
-                  fpnew_pkg::DISABLED},          // DIVSQRT (DISABLED for all formats)
+                  fpnew_pkg::DISABLED},          // DIVSQRT 
                 '{fpnew_pkg::PARALLEL,
                   SPATZ_RVD_PARAM ? fpnew_pkg::PARALLEL : fpnew_pkg::DISABLED,
                   fpnew_pkg::PARALLEL,
                   fpnew_pkg::PARALLEL,
                   fpnew_pkg::PARALLEL,
-                  fpnew_pkg::PARALLEL},          // NONCOMP (FP32 always, FP64 only if RVD=1)
+                  fpnew_pkg::PARALLEL},          // NONCOMP 
                 '{fpnew_pkg::MERGED,
                   SPATZ_RVD_PARAM ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
                   fpnew_pkg::MERGED,
                   fpnew_pkg::MERGED,
                   fpnew_pkg::MERGED,
-                  fpnew_pkg::MERGED},            // CONV (FP32 always, FP64 only if RVD=1)
+                  fpnew_pkg::MERGED},            // CONV 
                 '{fpnew_pkg::MERGED,
                   SPATZ_RVD_PARAM ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
                   fpnew_pkg::MERGED,
                   fpnew_pkg::MERGED,
                   fpnew_pkg::MERGED,
-                  fpnew_pkg::MERGED}},           // DOTP (FP32 always, FP64 only if RVD=1)
-    PipeConfig: fpnew_pkg::BEFORE
+                  fpnew_pkg::MERGED}},           // DOTP 
+    PipeConfig: fpnew_pkg::BEFORE 
   };
 
   // Spatz bootrom parameters
