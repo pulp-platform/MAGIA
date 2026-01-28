@@ -21,6 +21,7 @@
 
 #include "magia_tile_utils.h"
 #include "magia_utils.h"
+#include "magia_sentinel_utils.h"
 #include "fsync_isa_utils.h"
 #include "fsync_api.h"
 #include "cache_fill.h"
