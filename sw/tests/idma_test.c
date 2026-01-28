@@ -99,8 +99,8 @@ int main(void) {
 #endif
   idma_set_std3_rep3_in(dst_std_3, src_std_3, reps_3);
 
-  idma_start_in();
   printf("iDMA moving data from L2 to L1...\n");
+  idma_start_in();
 #ifdef IRQ_EN
   asm volatile("wfi" ::: "memory");
   printf("Detected IRQ...\n");
@@ -173,11 +173,10 @@ int main(void) {
 #endif
   idma_set_std3_rep3_in(dst_std_3, src_std_3, reps_3);
 
+  printf("iDMA moving concurrently data from L1 to L2 and from L2 to L1...\n");
   idma_start_out();
-
   idma_start_in();
 
-  printf("iDMA moving concurrently data from L1 to L2 and from L2 to L1...\n");
 #ifdef IRQ_EN
   asm volatile("wfi" ::: "memory");
   printf("Detected IRQ...\n");
@@ -185,9 +184,9 @@ int main(void) {
   wait_print(2*WAIT_CYCLES);
 #endif
 #else
+  printf("iDMA moving data from L1 to L2...\n");
   idma_start_out();
 
-  printf("iDMA moving data from L1 to L2...\n");
 #ifdef IRQ_EN
   asm volatile("wfi" ::: "memory");
   printf("Detected IRQ...\n");

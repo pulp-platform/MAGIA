@@ -27,6 +27,9 @@
 
 #define FP_TH (0.1f)
 
+#define C_EXP_HEX (0x428A3D71)
+#define FP_TH_HEX (0x0011)
+
 #define abs_diff(x, y) (((x) > (y)) ? ((x) - (y)) : ((y) - (x)))
 
 inline uint32_t f_add(volatile uint32_t op_a, volatile uint32_t op_b){
@@ -39,30 +42,29 @@ inline uint32_t f_add(volatile uint32_t op_a, volatile uint32_t op_b){
 }
 
 int main(void) {
-  // uint32_t exit_code;
-  
   // volatile float a, b, c;
   // a = A_VAL;
   // b = B_VAL;
   // c = a+b;
 
   // if (abs_diff(c, C_EXP) > FP_TH){
-  //   exit_code = FAIL_EXIT_CODE;
   //   printf("Test FAILED\n");
+  //   return FAIL_EXIT_CODE;
   // }else{
-  //   exit_code = PASS_EXIT_CODE;
   //   printf("Test PASSED\n");
+  //   return PASS_EXIT_CODE;
   // }
-
-  // mmio16(TEST_END_ADDR) = exit_code;
 
   uint32_t a, b, c;
   a = 0x414570A4; // Binary for 12.34f
   b = 0x42631EB8; // Binary for 56.78f
   c = f_add(a, b);
   printf("Float operation result: 0x%0x [expected: 0x428A3D71(69.12f)]\n", c);
-
-  mmio16(TEST_END_ADDR) = DEFAULT_EXIT_CODE;
-
-  return 0;
+  if (abs_diff(c, C_EXP_HEX) > FP_TH_HEX){
+    printf("Test FAILED\n");
+    return FAIL_EXIT_CODE;
+  }else{
+    printf("Test PASSED\n");
+    return PASS_EXIT_CODE;
+  }
 }
