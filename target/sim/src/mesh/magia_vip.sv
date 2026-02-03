@@ -141,15 +141,15 @@ module magia_vip
       tile_cnt = 0;
       //eoc = 1'b1;
       for (int i = 0; i < magia_tb_pkg::N_TILES; i++)
-        if (i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + 2*i+1][3] == 1'b1)
+        if (i_l2_mem.i_l2_mem.mem[32'hCCFF_0000 + 2*i+1][3] == 1'b1)
           tile_cnt++;
       #10000;
     end while(tile_cnt<magia_tb_pkg::N_TILES);
     
     if(tile_cnt == magia_tb_pkg::N_TILES) begin
       for (int i = 0; i < magia_tb_pkg::N_TILES; i++) begin
-        if({i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + 2*i+1],i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + 2*i]} != 16'h800) begin
-            $display("TILE[%d] ERRORS: %d", i, {i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + 2*i+1],i_l2_mem.i_l2_mem.mem[32'hCC03_0000 + 2*i]}[10:0]);
+        if({i_l2_mem.i_l2_mem.mem[32'hCCFF_0000 + 2*i+1],i_l2_mem.i_l2_mem.mem[32'hCCFF_0000 + 2*i]} != 16'h800) begin
+            $display("TILE[%d] ERRORS: %d", i, {i_l2_mem.i_l2_mem.mem[32'hCCFF_0000 + 2*i+1],i_l2_mem.i_l2_mem.mem[32'hCCFF_0000 + 2*i]}[10:0]);
             error++;
         end
       end
@@ -493,7 +493,7 @@ module magia_vip
       i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
 `else
       assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_core.wb_valid ?
-      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_core.regfile_wdata : '0;
+      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_core.instr_rdata_id : '0;
 `endif
       always @(curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j]) begin: instr_wb_reporter
         if (curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] == 32'h5AA00013) begin

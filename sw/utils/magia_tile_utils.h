@@ -46,7 +46,7 @@
 #define L1_SIZE         (0x000E0000)
 #define L1_TILE_OFFSET  (0x00100000)
 #define L2_BASE         (0xCC000000)
-#define TEST_END_ADDR   (0xCC030000)
+#define TEST_END_ADDR   (0xCCFF0000)
 
 #define DEFAULT_EXIT_CODE (0xDEFC)
 #define PASS_EXIT_CODE    (0xAAAA)
