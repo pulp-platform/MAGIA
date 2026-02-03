@@ -169,9 +169,11 @@ module magia_tile_vip
   endtask: elf_run
 
   task automatic wait_for_eoc(output bit[31:0] exit_code);
-    while ({i_l2_mem.i_l2_mem.mem[32'hCC03_0001][3]} == 0)
+    i_l2_mem.i_l2_mem.mem[32'hCCFF_0000] = 8'h00;
+    i_l2_mem.i_l2_mem.mem[32'hCCFF_0001] = 8'h00;
+    while ({i_l2_mem.i_l2_mem.mem[32'hCCFF_0001][3]} == 0)
       #10000;
-    if({i_l2_mem.i_l2_mem.mem[32'hCC03_0001], i_l2_mem.i_l2_mem.mem[32'hCC03_0000]} != 16'h800)
+    if({i_l2_mem.i_l2_mem.mem[32'hCCFF_0001], i_l2_mem.i_l2_mem.mem[32'hCCFF_0000]} != 16'h800)
       exit_code = 32'd1;
     else
       exit_code = 32'd0;
@@ -259,7 +261,7 @@ end
   time end_sentinel[$];
   time sentinel_latency;
   assign curr_instr_wb = i_magia_tile.i_cv32e40p_core.wb_valid ?
-  i_magia_tile.i_cv32e40p_core.regfile_wdata : '0;
+  i_magia_tile.i_cv32e40p_core.instr_rdata_id : '0;
   always @(curr_instr_wb) begin: instr_wb_reporter
     if (curr_instr_wb == 32'h5AA00013) begin
       start_sentinel.push_back($time);
