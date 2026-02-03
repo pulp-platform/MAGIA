@@ -21,7 +21,7 @@ __DYNAMIC  =  0;
 MEMORY
 {
     instrram    : ORIGIN = 0xcc000000, LENGTH = 0x8000
-    dataram     : ORIGIN = 0xcc010000, LENGTH = 0x30000
+    dataram     : ORIGIN = 0xcc010000, LENGTH = 0xF00000
     stack       : ORIGIN = 0x00010000, LENGTH = 0xC000 /* 48K - CV32 stack only */
 }
 
