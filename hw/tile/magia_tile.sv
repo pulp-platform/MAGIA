@@ -1296,10 +1296,10 @@ module magia_tile
   magia_event_unit #(
     .NB_CORES         ( 1                                          ), // Single core system
     .NB_SW_EVT        ( 1                                          ), // Minimum 1 SW event to avoid indexing issues (unused but required)
-    .NB_BARR          ( 0                                          ), // No barriers needed with single core
-    .NB_HW_MUT        ( 0                                          ), // No mutexes needed with single core
+    .NB_BARR          ( 2                                          ), // No barriers needed with single core
+    .NB_HW_MUT        ( 1                                          ), // No mutexes needed with single core
     .MUTEX_MSG_W      ( 32                                         ), // Keep default even if unused
-    .DISP_FIFO_DEPTH  ( 0                                          ), // No task dispatcher needed
+    .DISP_FIFO_DEPTH  ( 1                                          ), // No task dispatcher needed
     .EVNT_WIDTH       ( 8                                          ), // SOC event width (keep default)
     .SOC_FIFO_DEPTH   ( 8                                          )  // SOC FIFO depth (keep default)
   ) i_magia_event_unit (

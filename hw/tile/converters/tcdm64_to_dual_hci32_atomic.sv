@@ -29,6 +29,8 @@ module tcdm64_to_dual_hci32_atomic
   parameter type tcdm32_rsp_t = logic,  // 32-bit TCDM response type
   parameter type obi32_req_t  = logic,  // 32-bit OBI request type
   parameter type obi32_rsp_t  = logic,  // 32-bit OBI response type
+  parameter type obi32_a_chan_t = logic, // 32-bit OBI address channel type
+  parameter type obi32_r_chan_t = logic, // 32-bit OBI response channel type
   parameter type hci_req_t    = logic,  // 32-bit HCI request type
   parameter type hci_rsp_t    = logic,  // 32-bit HCI response type
   
@@ -38,7 +40,8 @@ module tcdm64_to_dual_hci32_atomic
   
   // OBI configuration for atomic resolvers
   parameter obi_pkg::obi_cfg_t SbrPortObiCfg = obi_pkg::ObiDefaultConfig,
-  parameter obi_pkg::obi_cfg_t MgrPortObiCfg = obi_pkg::ObiDefaultConfig
+  parameter obi_pkg::obi_cfg_t MgrPortObiCfg = obi_pkg::ObiDefaultConfig,
+  parameter bit BypassCut = 1'b0
 )(
   input  logic       clk_i,
   input  logic       rst_ni,
@@ -88,12 +91,15 @@ module tcdm64_to_dual_hci32_atomic
     .tcdm_rsp_t       ( tcdm32_rsp_t        ),
     .obi_req_t        ( obi32_req_t         ),
     .obi_rsp_t        ( obi32_rsp_t         ),
+    .obi_a_chan_t     ( obi32_a_chan_t      ),
+    .obi_r_chan_t     ( obi32_r_chan_t      ),
     .hci_req_t        ( hci_req_t           ),
     .hci_rsp_t        ( hci_rsp_t           ),
     .obi_a_optional_t ( obi32_a_optional_t  ),
     .obi_r_optional_t ( obi32_r_optional_t  ),
     .SbrPortObiCfg    ( SbrPortObiCfg       ),
-    .MgrPortObiCfg    ( MgrPortObiCfg       )
+    .MgrPortObiCfg    ( MgrPortObiCfg       ),
+    .BypassCut        ( BypassCut           )
   ) i_tcdm2hci_atomic_lo (
     .clk_i       ( clk_i           ),
     .rst_ni      ( rst_ni          ),
@@ -109,12 +115,15 @@ module tcdm64_to_dual_hci32_atomic
     .tcdm_rsp_t       ( tcdm32_rsp_t        ),
     .obi_req_t        ( obi32_req_t         ),
     .obi_rsp_t        ( obi32_rsp_t         ),
+    .obi_a_chan_t     ( obi32_a_chan_t      ),
+    .obi_r_chan_t     ( obi32_r_chan_t      ),
     .hci_req_t        ( hci_req_t           ),
     .hci_rsp_t        ( hci_rsp_t           ),
     .obi_a_optional_t ( obi32_a_optional_t  ),
     .obi_r_optional_t ( obi32_r_optional_t  ),
     .SbrPortObiCfg    ( SbrPortObiCfg       ),
-    .MgrPortObiCfg    ( MgrPortObiCfg       )
+    .MgrPortObiCfg    ( MgrPortObiCfg       ),
+    .BypassCut        ( BypassCut           )
   ) i_tcdm2hci_atomic_hi (
     .clk_i       ( clk_i           ),
     .rst_ni      ( rst_ni          ),
