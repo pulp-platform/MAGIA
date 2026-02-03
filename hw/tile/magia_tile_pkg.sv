@@ -416,7 +416,7 @@ package magia_tile_pkg;
 
     
   // Spatz ICache parameters (dedicated icache for Spatz CC)
-  parameter int unsigned SPATZ_ICACHE_LINE_WIDTH = 128;                                 // Spatz i$ cache line width in bits
+  parameter int unsigned SPATZ_ICACHE_LINE_WIDTH = 256;                                 // Spatz i$ cache line width (should be investigated which is the best value)
   parameter int unsigned SPATZ_ICACHE_LINE_COUNT = 32;                                  // Spatz i$ number of cache lines
   parameter int unsigned SPATZ_ICACHE_WAYS       = 2;                                   // Spatz i$ number of ways (2-way set associative)
   localparam int unsigned SPATZ_L0_EARLY_TAG_W   = snitch_pkg::PAGE_SHIFT - $clog2(SPATZ_ICACHE_LINE_WIDTH/8); // L0 early tag width
