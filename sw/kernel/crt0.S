@@ -72,7 +72,7 @@ _fini:
 
 exit:
  csrr    a0, mhartid 
- andi    a1, a0, 0x7ff
+ andi    s0, s0, 0x7ff
  li      a1, 0xCCff0000
  li      a2, 0x800
  xor     s0, s0, a2
