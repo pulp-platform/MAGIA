@@ -426,7 +426,7 @@ module spatz_cc_wrapper
         .obi32_r_optional_t   ( magia_tile_pkg::spatz_obi32_r_optional_t  ),
         .SbrPortObiCfg        ( magia_tile_pkg::obi_amo_cfg                ),
         .MgrPortObiCfg        ( magia_tile_pkg::obi_no_amo_cfg             ),
-        .BypassCut            ( 1'b1                                       )
+        .BypassCut            ( 1'b0                                       )
       ) i_tcdm64_to_dual_hci32_atomic_snitch (
         .clk_i         ( clk_i                                      ),
         .rst_ni        ( rst_ni                                     ),
@@ -472,7 +472,7 @@ module spatz_cc_wrapper
         .obi_r_optional_t   ( magia_tile_pkg::core_data_obi_r_optional_t ),
         .SbrPortObiCfg      ( magia_tile_pkg::obi_amo_cfg              ),
         .MgrPortObiCfg      ( magia_tile_pkg::obi_no_amo_cfg           ),
-        .BypassCut          ( 1'b1                                     )
+        .BypassCut          ( 1'b0                                     )
       ) i_tcdm32_to_hci32_atomic_snitch (
         .clk_i       ( clk_i                                      ),
         .rst_ni      ( rst_ni                                     ),

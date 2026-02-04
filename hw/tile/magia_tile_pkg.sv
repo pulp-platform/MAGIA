@@ -138,16 +138,55 @@ package magia_tile_pkg;
   parameter bit          SPATZ_REGISTER_OFFLOAD_RSP        = 1'b0; // Pipeline register on offload response
   parameter bit          SPATZ_REGISTER_CORE_REQ           = 1'b1; // Pipeline register on core request
   parameter bit          SPATZ_REGISTER_CORE_RSP           = 1'b1; // Pipeline register on core response
-  
-  // Spatz FPU Pipeline Configuration (PipeRegs: stages per operation per format [FP32, FP64, FP16, FP8, FP16ALT, FP8ALT])
-  // Default: Optimized for balanced latency/throughput (Spatz Cluster default configuration)
-  parameter int unsigned SPATZ_FPU_PIPE_FMA_FP32    = 1;   // FMA FP32 pipeline stages
-  parameter int unsigned SPATZ_FPU_PIPE_FMA_FP64    = 2;   // FMA FP64 pipeline stages  
-  parameter int unsigned SPATZ_FPU_PIPE_DIVSQRT_FP32 = 2;   // DIVSQRT FP32 stages (if XDivSqrt=1)
-  parameter int unsigned SPATZ_FPU_PIPE_DIVSQRT_FP64 = 4;   // DIVSQRT FP64 stages (if XDivSqrt=1)
-  parameter int unsigned SPATZ_FPU_PIPE_NONCOMP     = 1;   // Non-computational ops (compare, classify) stages
-  parameter int unsigned SPATZ_FPU_PIPE_CONV        = 2;   // Conversion ops stages
-  parameter int unsigned SPATZ_FPU_PIPE_DOTP        = 2;   // Dot product ops stages
+
+  // Spatz FPU implementation configuration
+  localparam fpnew_pkg::fpu_implementation_t SPATZ_FPUImplementation = '{
+    PipeRegs: // FMA Block
+              '{
+                '{  3,                           // FP32 FMA
+                    SPATZ_RVD_PARAM ? 3 : 0,     // FP64 FMA
+                    3,                           // FP16
+                    3,                           // FP8
+                    3,                           // FP16alt
+                    3                            // FP8alt
+                  },
+                '{1, 1, 1, 1, 1, 1},             // DIVSQRT (all formats)
+                '{1, 1, 1, 1, 1, 1},             // NONCOMP (all formats)
+                '{2, 2, 2, 2, 2, 2},             // CONV (all formats)
+                '{5, 5, 5, 5, 5, 5}              // DOTP
+                },
+  UnitTypes: '{'{ fpnew_pkg::MERGED,
+                  SPATZ_RVD_PARAM ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED},           // FMA 
+                '{fpnew_pkg::DISABLED,
+                  fpnew_pkg::DISABLED,
+                  fpnew_pkg::DISABLED,
+                  fpnew_pkg::DISABLED,
+                  fpnew_pkg::DISABLED,
+                  fpnew_pkg::DISABLED},          // DIVSQRT 
+                '{fpnew_pkg::PARALLEL,
+                  SPATZ_RVD_PARAM ? fpnew_pkg::PARALLEL : fpnew_pkg::DISABLED,
+                  fpnew_pkg::PARALLEL,
+                  fpnew_pkg::PARALLEL,
+                  fpnew_pkg::PARALLEL,
+                  fpnew_pkg::PARALLEL},          // NONCOMP 
+                '{fpnew_pkg::MERGED,
+                  SPATZ_RVD_PARAM ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED},            // CONV 
+                '{fpnew_pkg::MERGED,
+                  SPATZ_RVD_PARAM ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED}},           // DOTP 
+    PipeConfig: fpnew_pkg::BEFORE 
+  };
 
   // Spatz bootrom parameters
   parameter logic [31:0] SPATZ_BOOT_ADDR          = 32'h1000_0000;  // Spatz bootrom base address
@@ -377,7 +416,7 @@ package magia_tile_pkg;
 
     
   // Spatz ICache parameters (dedicated icache for Spatz CC)
-  parameter int unsigned SPATZ_ICACHE_LINE_WIDTH = 128;                                 // Spatz i$ cache line width in bits
+  parameter int unsigned SPATZ_ICACHE_LINE_WIDTH = 256;                                 // Spatz i$ cache line width (setted to 256 for now but should be investigated!!!)
   parameter int unsigned SPATZ_ICACHE_LINE_COUNT = 32;                                  // Spatz i$ number of cache lines
   parameter int unsigned SPATZ_ICACHE_WAYS       = 2;                                   // Spatz i$ number of ways (2-way set associative)
   localparam int unsigned SPATZ_L0_EARLY_TAG_W   = snitch_pkg::PAGE_SHIFT - $clog2(SPATZ_ICACHE_LINE_WIDTH/8); // L0 early tag width

@@ -23,3 +23,10 @@ spatz/sw/bin/*.o
 
 spatz/sw/headers_bin/*.h
 
+command.log
+innovus.cmd*
+innovus.log*
+
+
+
+
