@@ -18,7 +18,7 @@
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
  *  
  * All initialization (stack, regs, vector, BSS) done in spatz_crt0.S  
- * Minimal Boot ROM - only read FUNC_PTR and jump
+ * Minimal Boot ROM - only read TASKBIN_ADDR and jump
  */
 
 #define TASKBIN_ADDR 0x00001708  // OBI slave ctrl exchange register
@@ -28,7 +28,7 @@
   .option norvc
 
 _start:
-  // Read dispatcher loop address from TASKBIN_REG (set by CV32)
+  // Read dispatcher loop address from TASKBIN_ADDR (set by CV32)
   li      t0, TASKBIN_ADDR
   lw      t1, 0(t0)
   
