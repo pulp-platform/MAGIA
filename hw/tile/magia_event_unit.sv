@@ -25,10 +25,10 @@ import magia_tile_pkg::*;
   // MAGIA Event Unit Parameters - Optimized for single-core system
   parameter int unsigned NB_CORES = 1,              // Single core system
   parameter int unsigned NB_SW_EVT = 1,             // Minimal SW events for basic functionality
-  parameter int unsigned NB_BARR  = 0,              // Barrier units disabled (no sync needed)
-  parameter int unsigned NB_HW_MUT = 0,             // Hardware mutexes disabled (no contention)
+  parameter int unsigned NB_BARR  = 2,              // Minimum 2 barriers (workaround: $clog2(1)=0 causes issues)
+  parameter int unsigned NB_HW_MUT = 2,             // Minimum 2 mutexes (workaround: $clog2(1)=0 causes issues)
   parameter int unsigned MUTEX_MSG_W = 32,          // Mutex message width (unused but kept for compatibility)
-  parameter int unsigned DISP_FIFO_DEPTH = 0,       // Task dispatcher disabled (no distribution)
+  parameter int unsigned DISP_FIFO_DEPTH = 1,       // Minimal dispatcher FIFO (workaround for synthesis)
   parameter int unsigned EVNT_WIDTH = 8,            // SOC event width (external events)
   parameter int unsigned SOC_FIFO_DEPTH = 8         // SOC event FIFO depth (external events)
 )
@@ -76,7 +76,7 @@ import magia_tile_pkg::*;
 
   // Create internal interface instances
   XBAR_PERIPH_BUS #(.ID_WIDTH(NB_CORES+1)) eu_direct_link[NB_CORES-1:0]();
-  XBAR_PERIPH_BUS #(.ID_WIDTH(NB_CORES+1)) speriph_slave();  // Tied off
+  XBAR_PERIPH_BUS #(.ID_WIDTH(NB_CORES+1)) speriph_slave();
 
   // Internal signals
   logic soc_periph_evt_ready_internal;
@@ -151,7 +151,7 @@ import magia_tile_pkg::*;
     .soc_periph_evt_valid_i   ( 1'b0                          ),
     .soc_periph_evt_ready_o   ( soc_periph_evt_ready_internal ),
     .soc_periph_evt_data_i    ( '0                            ),
-    .speriph_slave            ( speriph_slave.Slave           ),
+    .speriph_slave            ( speriph_slave                 ),
     .eu_direct_link           ( eu_direct_link                )
   );
  
