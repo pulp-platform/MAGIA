@@ -63,7 +63,7 @@ ARCH_FLAGS  += -menable-experimental-extensions
 
 # Compiler flags (RVD=$(SPATZ_RVD), VLEN=$(SPATZ_VLEN), N_IPU=$(SPATZ_N_IPU), N_FPU=$(SPATZ_N_FPU), XDivSqrt=$(SPATZ_XDIVSQRT), Xdma=$(SPATZ_XDMA), RVF=$(SPATZ_RVF), RVV=$(SPATZ_RVV))
 CFLAGS       = $(ARCH_FLAGS) -static -nostartfiles -nostdlib
-CFLAGS      += -O2 -g -Wall -Wextra
+CFLAGS      += -O3 -g -Wall -Wextra
 CFLAGS      += -fno-common -ffunction-sections -fdata-sections -fPIC
 CFLAGS      += -fno-builtin-memset -fno-builtin-memcpy
 CFLAGS      += -mcmodel=medany
