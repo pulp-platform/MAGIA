@@ -24,7 +24,7 @@
 #include "magia_spatz_utils.h"
 #include "spatz_workers.h"
 
-#define EXCHANGE_REG_ADDR (SPATZ_EXCHANGE_REG)
+#define DATA_ADDR (SPATZ_DATA)
 #define NUM_ITER       2
 #define NUM_TARGETS    3  // Self + 2 remote tiles
 
@@ -35,8 +35,8 @@ typedef struct {
 } atomic_params_t;
 
 int atomic_remote_task(void) {
-  // Read parameter structure pointer from EXCHANGE_REG
-  uint32_t params_ptr = mmio32(EXCHANGE_REG_ADDR);
+  // Read parameter structure pointer from DATA register
+  uint32_t params_ptr = mmio32(DATA_ADDR);
   volatile atomic_params_t *params = (volatile atomic_params_t *)params_ptr;
   
   uint32_t hartid = params->hartid;

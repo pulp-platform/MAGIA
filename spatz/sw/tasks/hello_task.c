@@ -24,7 +24,7 @@
 #include "magia_spatz_utils.h"
 #include "spatz_workers.h"
 
-#define EXCHANGE_REG_ADDR (SPATZ_EXCHANGE_REG)
+#define DATA_ADDR (SPATZ_DATA)
 
 // Parameter structure
 typedef struct {
@@ -34,8 +34,8 @@ typedef struct {
 // Main entry point
 int hello_task(void) {
     
-    // Read parameter structure pointer from EXCHANGE_REG
-    uint32_t params_ptr = mmio32(EXCHANGE_REG_ADDR);
+    // Read parameter structure pointer from DATA register
+    uint32_t params_ptr = mmio32(DATA_ADDR);
     volatile hello_params_t *params = (volatile hello_params_t *)params_ptr;
     
     uint32_t tile_id = params->tile_id;

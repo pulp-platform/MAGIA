@@ -25,7 +25,7 @@
  *   3. Bootrom waits for MEIP interrupt via WFI
  *   4. CV32 writes entry point to FUNC_PTR (0x1704)
  *   5. CV32 triggers START_TRIGGER (0x1700) → MEIP interrupt
- *   6. Bootrom reads FUNC_PTR and jumps to user program (typically 0xCC010000 in L2)
+ *   6. Bootrom reads FUNC_PTR and jumps to user program 
  */
 
 SEARCH_DIR(.)

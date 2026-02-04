@@ -21,15 +21,15 @@
  * Minimal Boot ROM - only read FUNC_PTR and jump
  */
 
-#define EXCHANGE_REG_ADDR 0x00001704  // OBI slave ctrl exchange register
+#define TASKBIN_ADDR 0x00001708  // OBI slave ctrl exchange register
 
   .section .text.bootrom
   .global _start
   .option norvc
 
 _start:
-  // Read dispatcher loop address from EXCHANGE_REG (set by CV32)
-  li      t0, EXCHANGE_REG_ADDR
+  // Read dispatcher loop address from TASKBIN_REG (set by CV32)
+  li      t0, TASKBIN_ADDR
   lw      t1, 0(t0)
   
   // Jump to _start in spatz binary (does all init)

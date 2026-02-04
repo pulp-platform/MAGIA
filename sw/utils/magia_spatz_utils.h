@@ -24,10 +24,12 @@
 #include <stdint.h>
 #include "magia_tile_utils.h"
 
-#define SPATZ_CLK_EN        (SPATZ_CTRL_BASE + 0x00)
-#define SPATZ_EXCHANGE_REG  (SPATZ_CTRL_BASE + 0x04)
-#define SPATZ_START         (SPATZ_CTRL_BASE + 0x08)
-#define SPATZ_DONE          (SPATZ_CTRL_BASE + 0x0C)
+#define SPATZ_CLK_EN   (SPATZ_CTRL_BASE + 0x00)
+#define SPATZ_START    (SPATZ_CTRL_BASE + 0x04)
+#define SPATZ_TASKBIN  (SPATZ_CTRL_BASE + 0x08)
+#define SPATZ_DATA     (SPATZ_CTRL_BASE + 0x0C)
+#define SPATZ_RETURN   (SPATZ_CTRL_BASE + 0x10)
+#define SPATZ_DONE     (SPATZ_CTRL_BASE + 0x14)
 
 #define mmio32(x) (*(volatile uint32_t *)(x))
 
@@ -40,7 +42,7 @@ static inline void spatz_clk_dis(void) {
 }
 
 static inline void spatz_set_func(uint32_t addr) {
-    mmio32(SPATZ_EXCHANGE_REG) = addr;
+    mmio32(SPATZ_TASKBIN) = addr;
 }
 
 static inline void spatz_trigger_en_irq(void) {
@@ -56,7 +58,7 @@ static inline void spatz_done(void) {
 }
 
 static inline uint32_t spatz_get_exit_code(void) {
-    return mmio32(SPATZ_EXCHANGE_REG);
+    return mmio32(SPATZ_RETURN);
 }
 
 static inline void spatz_run_task(uint32_t spatz_task_addr) {
@@ -66,11 +68,11 @@ static inline void spatz_run_task(uint32_t spatz_task_addr) {
 
 static inline void spatz_pass_params(uint32_t params_ptr) {
     // Wait for Spatz to save task address and clear START
-    // (crt0 reads task addr from EXCHANGE_REG, clears START, then jumps)
+    // (crt0 reads task addr from SPATZ_TASKBIN, clears START, then jumps)
     while(mmio32(SPATZ_START) != 0);
     
-    // Now safe to write parameter pointer to EXCHANGE_REG
-    mmio32(SPATZ_EXCHANGE_REG) = params_ptr;
+    // Now safe to write parameter pointer to SPATZ_DATA
+    mmio32(SPATZ_DATA) = params_ptr;
 }
 
 static inline void spatz_run_task_with_params(uint32_t spatz_task_addr, uint32_t params_ptr) {

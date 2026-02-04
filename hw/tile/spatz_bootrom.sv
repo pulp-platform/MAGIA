@@ -21,7 +21,7 @@ module spatz_bootrom #(
   const logic [RomSize-1:0][DataWidth-1:0] mem = {
     32'h00030067,
     32'h0002a303,
-    32'h70428293,
+    32'h70828293,
     32'h000012b7
   };
 
