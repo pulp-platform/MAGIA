@@ -22,6 +22,7 @@
 
 package magia_tile_pkg;
   import reqrsp_pkg::*;  // Import reqrsp package for AMO types used in REQRSP_TYPEDEF_ALL
+  import snitch_pma_pkg::*;  // Import snitch PMA package for cacheable regions configuration
 
   `include "hci/typedef.svh"
   `include "hwpe-ctrl/typedef.svh"
@@ -71,6 +72,26 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_START            = 32'hC000_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                  = 32'h3FFF_FFFF;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_END              = L2_ADDR_START + L2_SIZE; 
+
+  // Instruction region for Spatz code (cacheable region)
+  localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_ADDR_START      = 32'hCC00_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_SIZE            = 32'h0000_8000;  // 32KB
+
+  localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_PMA_MASK        = 32'hFFFF_8000; 
+
+  // Snitch PMA Configuration - defines cacheable regions for instruction fetches
+  function automatic snitch_pma_pkg::rule_t [snitch_pma_pkg::NrMaxRules-1:0] get_snitch_cached_regions();
+    automatic snitch_pma_pkg::rule_t [snitch_pma_pkg::NrMaxRules-1:0] cached_regions;
+    cached_regions = '{default: '0};
+    cached_regions[0] = '{base: INSTRRAM_ADDR_START, mask: INSTRRAM_PMA_MASK};
+    return cached_regions;
+  endfunction
+
+  localparam snitch_pma_pkg::snitch_pma_t SPATZ_SNITCH_PMA_CFG = '{
+    NrCachedRegionRules: 1,
+    CachedRegion: get_snitch_cached_regions(),
+    default: 0
+  };
 
 
 //SPATZ PARAMETERS from Makefile defines
