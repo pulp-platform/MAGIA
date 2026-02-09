@@ -124,6 +124,10 @@ module magia_vip
       irq[i]     = '0;
     fetch_enable = 1'b0;
     boot_addr    = entry_addr;
+    for (int i = 0; i < magia_tb_pkg::N_TILES; i++) begin
+      i_l2_mem.i_l2_mem.mem[32'hCCFF_0000 + 2*i]   = 8'h00;
+      i_l2_mem.i_l2_mem.mem[32'hCCFF_0000 + 2*i+1] = 8'h00;
+    end
     #1000;
   endtask: init
 
@@ -136,10 +140,6 @@ module magia_vip
     bit eoc = 1'b0;
     int tile_cnt;
     int error = 0;
-    for (int i = 0; i < magia_tb_pkg::N_TILES; i++) begin
-      i_l2_mem.i_l2_mem.mem[32'hCCFF_0000 + 2*i]   = 8'h00;
-      i_l2_mem.i_l2_mem.mem[32'hCCFF_0000 + 2*i+1] = 8'h00;
-    end
 
     do begin
       tile_cnt = 0;
