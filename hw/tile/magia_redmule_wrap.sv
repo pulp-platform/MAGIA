@@ -141,16 +141,16 @@ module magia_redmule_wrap
   `HCI_ASSIGN_FROM_INTF(tcdm, data_req_o, data_rsp_i);
   
   // Convert struct-based ports to interface-based ports for HWPE-ctrl
-  assign ctrl_req_i.req    = target.req;
-  assign ctrl_req_i.add    = target.add;
-  assign ctrl_req_i.wen    = target.wen;
-  assign ctrl_req_i.be     = target.be;
-  assign ctrl_req_i.data   = target.data;
-  assign ctrl_req_i.id     = target.id;
-  assign target.gnt        = ctrl_rsp_o.gnt;
-  assign target.r_data     = ctrl_rsp_o.r_data;
-  assign target.r_valid    = ctrl_rsp_o.r_valid;
-  assign target.r_id       = ctrl_rsp_o.r_id;
+  assign target.req        = ctrl_req_i.req;
+  assign target.add        = ctrl_req_i.add;
+  assign target.wen        = ctrl_req_i.wen;
+  assign target.be         = ctrl_req_i.be;
+  assign target.data       = ctrl_req_i.data;
+  assign target.id         = ctrl_req_i.id;
+  assign ctrl_rsp_o.gnt    = target.gnt;
+  assign ctrl_rsp_o.r_data = target.r_data;
+  assign ctrl_rsp_o.r_valid = target.r_valid;
+  assign ctrl_rsp_o.r_id   = target.r_id;
 
   // Instantiate redmule_top with interface-based ports
   redmule_top #(
