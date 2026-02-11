@@ -816,11 +816,6 @@ module magia_tile
     .busy_o              ( redmule_busy                                                ),
     .evt_o               ( redmule_evt                                                 ),
 
-    .w_stream_i          (                                                             ), // Not connected
-    .x_stream_i          (                                                             ), // Not connected
-    .w_stream_o          (                                                             ), // Not connected
-    .x_stream_o          (                                                             ), // Not connected
-
 `ifdef CV32E40X
     .x_issue_req_i       ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX].issue_req   ),
     .x_issue_resp_o      ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX].issue_resp  ),
