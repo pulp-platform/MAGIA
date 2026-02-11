@@ -30,9 +30,11 @@ BUILD_DIR      ?= sim/work
 ifneq (,$(wildcard /etc/iis.version))
     QUESTA ?= questa-2025.1
     BENDER ?= bender
+	BASE_PYTHON ?= python
 else
     QUESTA ?=
     BENDER ?= ./bender
+	BASE_PYTHON ?= python3
 endif
 BENDER_DIR     ?= .
 ISA            ?= riscv
@@ -128,7 +130,7 @@ VSIM_LIBS=work
 $(STIM_INSTR) $(STIM_DATA): $(BIN)
 	objcopy --srec-len 1 --output-target=srec $(BIN) $(BIN).s19 &&	\
 	scripts/parse_s19.pl $(BIN).s19 > $(BIN).txt &&					\
-	python scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
+	$(BASE_PYTHON) scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
 	cd $(TEST_DIR)/$(test) &&										\
 	ln -sfn $(ROOT_DIR)/$(INI_PATH) $(VSIM_INI) &&						\
 	ln -sfn $(ROOT_DIR)/$(WORK_PATH) $(VSIM_LIBS)
@@ -158,9 +160,6 @@ IDMA_ADD_IDS ?= rw_axi_rw_obi
 
 # Parameters used for FlooNoC
 FLOONOC_ROOT ?= $(shell $(BENDER) path floo_noc)
-
-# Setup python3 venv and install dependencies
-BASE_PYTHON ?= python
 
 .PHONY: python_venv python_deps
 
@@ -318,7 +317,7 @@ objdump:
 	$(OBJDUMP) -d -l -s $(BIN) > $(ODUMP)
 
 itb:
-	python scripts/objdump2itb.py $(ODUMP) > $(ITB)
+	$(BASE_PYTHON) scripts/objdump2itb.py $(ODUMP) > $(ITB)
 
 OP     ?= gemm
 fp_fmt ?= FP16

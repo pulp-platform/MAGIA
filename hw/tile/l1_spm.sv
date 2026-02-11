@@ -26,20 +26,34 @@ module l1_spm #(
   parameter int unsigned ID_W      = 1,     // ID width
   parameter              SIM_INIT  = "ones" // Simulation initialization value
 )(
-  input logic        clk_i,
-  input logic        rst_ni,
-  hci_mem_intf.slave tcdm_slave[N_BANK] // Memory interface
+  input logic         clk_i,
+  input logic         rst_ni,
+  hci_core_intf.target tcdm_slave[N_BANK] // Memory interface
 );
 
   for (genvar i = 0; i < N_BANK; i++) begin: gen_tcdm_bank
     logic[ID_W-1:0] rsp_id_d, rsp_id_q;
+    logic           r_valid_q;
 
     assign rsp_id_d           = tcdm_slave[i].id;
     assign tcdm_slave[i].r_id = rsp_id_q;
 
-    always_ff @(posedge clk_i, negedge rst_ni) begin: rsp_id_register
-      if (~rst_ni) rsp_id_q <= '0;
-      else         rsp_id_q <= rsp_id_d;
+    always_ff @(posedge clk_i or negedge rst_ni)
+    begin
+      if(~rst_ni)
+        rsp_id_q <= '0;
+      else
+        rsp_id_q <= rsp_id_d;
+    end
+
+    always_ff @(posedge clk_i or negedge rst_ni)
+    begin
+      if(~rst_ni)
+        r_valid_q <= 1'b0;
+      else if(r_valid_q)
+        r_valid_q <= ~tcdm_slave[i].r_ready; // Clear when ready
+      else
+        r_valid_q <= tcdm_slave[i].req & tcdm_slave[i].gnt;
     end
 
     tc_sram #(
@@ -64,7 +78,13 @@ module l1_spm #(
       .rdata_o ( tcdm_slave[i].r_data                     )
     );
 
-    assign tcdm_slave[i].gnt = 1'b1;
+    assign tcdm_slave[i].gnt     = 1'b1;
+    assign tcdm_slave[i].r_valid = r_valid_q;
+    assign tcdm_slave[i].r_user  = '0;
+    assign tcdm_slave[i].r_opc   = 1'b0;
+    assign tcdm_slave[i].r_ecc   = '0;
+    assign tcdm_slave[i].egnt    = '0;
+    assign tcdm_slave[i].r_evalid = '0;
   end
 
 endmodule: l1_spm

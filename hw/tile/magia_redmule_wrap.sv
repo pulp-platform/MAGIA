@@ -1,0 +1,194 @@
+/*
+ * Copyright (C) 2024 ETH Zurich and University of Bologna
+ *
+ * Licensed under the Solderpad Hardware License, Version 0.51 
+ * (the "License"); you may not use this file except in compliance 
+ * with the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * SPDX-License-Identifier: SHL-0.51
+ *
+ * Authors: Francesco Conti <f.conti@unibo.it>
+ * 
+ * MAGIA RedMulE Wrapper
+ * 
+ * This wrapper wraps redmule_top to expose struct-based HCI and HWPE-ctrl
+ * interfaces instead of the interface-based ports used by redmule_top.
+ */
+
+`include "hci_helpers.svh"
+
+module magia_redmule_wrap
+  import fpnew_pkg::*;
+  import redmule_pkg::*;
+  import hci_package::*;
+  import hwpe_ctrl_package::*;
+  import hwpe_stream_package::*;
+  import magia_tile_pkg::*;
+  import magia_pkg::*;
+#(
+  parameter int unsigned  DataW                  = magia_tile_pkg::REDMULE_DW,
+  parameter fp_format_e   FpFormat               = FP16,
+  parameter int unsigned  Height                 = MaxDim,
+  parameter int unsigned  Width                  = MaxDim,
+  parameter int unsigned  NumPipeRegs            = MaxPipeRegs-1,
+  parameter pipe_config_t PipeConfig             = DISTRIBUTED,
+  parameter int unsigned  EccChunkSize           = 32,
+  parameter bit           LatchBuffers           = 0,
+  parameter fpnew_pkg::fmt_logic_t  FpFmtConfig  = 6'b001101,
+  parameter fpnew_pkg::ifmt_logic_t IntFmtConfig = 4'b1000,
+  parameter ctrl_intf_e   CtrlIntfConfig         = XIF,
+  parameter logic [6:0]   McnfigOpCode           = 7'b0001011,
+  parameter logic [6:0]   MarithOpCode           = 7'b0001011,
+  parameter logic [6:0]   MopcntOpCode           = 7'b0001011,
+  parameter logic [2:0]   McnfigFunct3           = 3'b000,
+  parameter logic [2:0]   MarithFunct3           = 3'b001,
+  parameter logic [2:0]   MopcntFunct3           = 3'b010,
+  parameter logic [1:0]   McnfigFunct2           = 2'b00,
+  parameter logic [1:0]   MarithFunct2           = 2'b00,
+  parameter logic [1:0]   MopcntFunct2           = 2'b00,
+  parameter int unsigned  XifNumHarts            = 1,
+  parameter int unsigned  XifIdWidth             = 1,
+  parameter int unsigned  XifIssueRegisterSplit  = 0,
+  parameter type          x_issue_req_t          = logic,
+  parameter type          x_issue_resp_t         = logic,
+  parameter type          x_register_t           = logic,
+  parameter type          x_commit_t             = logic,
+  parameter type          x_result_t             = logic,
+  parameter type          redmule_data_req_t     = magia_tile_pkg::redmule_data_req_t,
+  parameter type          redmule_data_rsp_t     = magia_tile_pkg::redmule_data_rsp_t,
+  parameter type          redmule_ctrl_req_t     = magia_tile_pkg::redmule_ctrl_req_t,
+  parameter type          redmule_ctrl_rsp_t     = magia_tile_pkg::redmule_ctrl_rsp_t,
+  parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '{
+    DW:  DataW,
+    AW:  magia_pkg::ADDR_W,
+    BW:  hci_package::DEFAULT_BW,
+    UW:  magia_tile_pkg::REDMULE_UW,
+    IW:  hci_package::DEFAULT_IW,
+    EW:  hci_package::DEFAULT_EW,
+    EHW: hci_package::DEFAULT_EHW
+  }
+)(
+  input  logic                    clk_i,
+  input  logic                    rst_ni,
+  input  logic                    test_mode_i,
+  output logic                    busy_o,
+  output logic                    evt_o,
+  // External W stream
+  hwpe_stream_intf_stream.sink    w_stream_i,
+  // External X stream
+  hwpe_stream_intf_stream.sink    x_stream_i,
+  // Broadcasted W stream
+  hwpe_stream_intf_stream.source  w_stream_o,
+  // Broadcasted X stream
+  hwpe_stream_intf_stream.source  x_stream_o,
+  // XIF ports (unused if CtrlIntfConfig = HWPE_TARGET)
+  input  x_issue_req_t            x_issue_req_i,
+  output x_issue_resp_t           x_issue_resp_o,
+  input  logic                    x_issue_valid_i,
+  output logic                    x_issue_ready_o,
+  input  x_register_t             x_register_i,
+  input  logic                    x_register_valid_i,
+  output logic                    x_register_ready_o,
+  input  x_commit_t               x_commit_i,
+  input  logic                    x_commit_valid_i,
+  output x_result_t               x_result_o,
+  output logic                    x_result_valid_o,
+  input  logic                    x_result_ready_i,
+  // Struct-based HCI data ports
+  output redmule_data_req_t       data_req_o,
+  input  redmule_data_rsp_t       data_rsp_i,
+  // Struct-based HWPE-ctrl ports
+  input  redmule_ctrl_req_t       ctrl_req_i,
+  output redmule_ctrl_rsp_t       ctrl_rsp_o
+);
+
+  // Internal interface instances for HCI
+  `HCI_INTF(tcdm, clk_i);
+  
+  // Internal interface instance for HWPE-ctrl
+  hwpe_ctrl_intf_periph #( 
+    .ID_WIDTH ( hci_package::DEFAULT_IW )
+  ) target (
+    .clk ( clk_i )
+  );
+
+  // Convert struct-based ports to interface-based ports for HCI
+  `HCI_ASSIGN_FROM_INTF(tcdm, data_req_o, data_rsp_i);
+  
+  // Convert struct-based ports to interface-based ports for HWPE-ctrl
+  assign ctrl_req_i.req    = target.req;
+  assign ctrl_req_i.add    = target.add;
+  assign ctrl_req_i.wen    = target.wen;
+  assign ctrl_req_i.be     = target.be;
+  assign ctrl_req_i.data   = target.data;
+  assign ctrl_req_i.id     = target.id;
+  assign target.gnt        = ctrl_rsp_o.gnt;
+  assign target.r_data     = ctrl_rsp_o.r_data;
+  assign target.r_valid    = ctrl_rsp_o.r_valid;
+  assign target.r_id       = ctrl_rsp_o.r_id;
+
+  // Instantiate redmule_top with interface-based ports
+  redmule_top #(
+    .DataW                  ( DataW                ),
+    .FpFormat               ( FpFormat             ),
+    .Height                 ( Height               ),
+    .Width                  ( Width                ),
+    .NumPipeRegs            ( NumPipeRegs          ),
+    .PipeConfig             ( PipeConfig           ),
+    .EccChunkSize           ( EccChunkSize         ),
+    .LatchBuffers           ( LatchBuffers         ),
+    .FpFmtConfig            ( FpFmtConfig          ),
+    .IntFmtConfig           ( IntFmtConfig         ),
+    .CtrlIntfConfig         ( CtrlIntfConfig       ),
+    .McnfigOpCode           ( McnfigOpCode         ),
+    .MarithOpCode           ( MarithOpCode         ),
+    .MopcntOpCode           ( MopcntOpCode         ),
+    .McnfigFunct3           ( McnfigFunct3         ),
+    .MarithFunct3           ( MarithFunct3         ),
+    .MopcntFunct3           ( MopcntFunct3         ),
+    .McnfigFunct2           ( McnfigFunct2         ),
+    .MarithFunct2           ( MarithFunct2         ),
+    .MopcntFunct2           ( MopcntFunct2         ),
+    .XifNumHarts            ( XifNumHarts          ),
+    .XifIdWidth             ( XifIdWidth           ),
+    .XifIssueRegisterSplit  ( XifIssueRegisterSplit),
+    .x_issue_req_t          ( x_issue_req_t        ),
+    .x_issue_resp_t         ( x_issue_resp_t       ),
+    .x_register_t           ( x_register_t         ),
+    .x_commit_t             ( x_commit_t           ),
+    .x_result_t             ( x_result_t           ),
+    .`HCI_SIZE_PARAM(tcdm)  ( `HCI_SIZE_PARAM(tcdm))
+  ) i_redmule_top (
+    .clk_i               ( clk_i               ),
+    .rst_ni              ( rst_ni              ),
+    .test_mode_i         ( test_mode_i         ),
+    .busy_o              ( busy_o              ),
+    .evt_o               ( evt_o               ),
+    .w_stream_i          ( w_stream_i          ),
+    .x_stream_i          ( x_stream_i          ),
+    .w_stream_o          ( w_stream_o          ),
+    .x_stream_o          ( x_stream_o          ),
+    .x_issue_req_i       ( x_issue_req_i       ),
+    .x_issue_resp_o      ( x_issue_resp_o      ),
+    .x_issue_valid_i     ( x_issue_valid_i     ),
+    .x_issue_ready_o     ( x_issue_ready_o     ),
+    .x_register_i        ( x_register_i        ),
+    .x_register_valid_i  ( x_register_valid_i  ),
+    .x_register_ready_o  ( x_register_ready_o  ),
+    .x_commit_i          ( x_commit_i          ),
+    .x_commit_valid_i    ( x_commit_valid_i    ),
+    .x_result_o          ( x_result_o          ),
+    .x_result_valid_o    ( x_result_valid_o    ),
+    .x_result_ready_i    ( x_result_ready_i    ),
+    .tcdm                ( tcdm                ),
+    .target              ( target              )
+  );
+
+endmodule
