@@ -1,6 +1,4 @@
 overrides:
-  hci: { path: "working_dir/hci" } # Temporary override by Bender using `bender clone` command
-  redmule: { path: "working_dir/redmule" } # Temporary override by Bender using `bender clone` command
   fpnew              : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: a8e0cba6dd50f357ece73c2c955d96efc3c6c315 }
   cv32e40p           : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: 37a82d337ba60129c333d104c29e816d0698b53b }
   cv32e40x           : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: a90101211048ba1a16cedbe4db963ab6e12569d7 }

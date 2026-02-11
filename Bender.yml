@@ -24,7 +24,7 @@ package:
     - "Luca Balboni (luca.balboni10@studio.unibo.it)"
 
 dependencies:
-  redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 17ac4199b49f63d1fe5a38cb560558b1f512635c } # branch: fc/mm
+  redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 826236f66176f4f225c65f01e7b03ad098ac201b } # branch: fc/mm
   cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: a90101211048ba1a16cedbe4db963ab6e12569d7 } # branch: vi/redmule_scaleup
   cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: 37a82d337ba60129c333d104c29e816d0698b53b } 
   idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: a6b190c7991331432afa9a2899d032bc1b176830 } # branch: vi/redmule_scaleup
