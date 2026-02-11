@@ -21,19 +21,20 @@
 
 module obi2hci_req #(
   parameter type obi_req_t = logic,
-  parameter type hic_req_t = logic
+  parameter type hci_req_t = logic
 )(
   input  obi_req_t obi_req_i,
-  output hic_req_t hci_req_o
+  output hci_req_t hci_req_o
 );
 
-  assign hci_req_o.req   = obi_req_i.req;
-  assign hci_req_o.add   = obi_req_i.a.addr;
-  assign hci_req_o.wen   = ~obi_req_i.a.we;
-  assign hci_req_o.data  = obi_req_i.a.wdata;
-  assign hci_req_o.be    = obi_req_i.a.be;
-  assign hci_req_o.boffs = '0;
-  assign hci_req_o.lrdy  = 1'b1;
-  assign hci_req_o.user  = '0;
+  assign hci_req_o.req  = obi_req_i.req;
+  assign hci_req_o.add  = obi_req_i.a.addr;
+  assign hci_req_o.wen  = ~obi_req_i.a.we;
+  assign hci_req_o.data = obi_req_i.a.wdata;
+  assign hci_req_o.be   = obi_req_i.a.be;
+  assign hci_req_o.user = '0;
+  assign hci_req_o.id   = '0;
+  assign hci_req_o.ecc  = '0;
+  assign hci_req_o.ereq = '0;
 
 endmodule: obi2hci_req
