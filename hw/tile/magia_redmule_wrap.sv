@@ -80,14 +80,6 @@ module magia_redmule_wrap
   input  logic                    test_mode_i,
   output logic                    busy_o,
   output logic                    evt_o,
-  // External W stream
-  hwpe_stream_intf_stream.sink    w_stream_i,
-  // External X stream
-  hwpe_stream_intf_stream.sink    x_stream_i,
-  // Broadcasted W stream
-  hwpe_stream_intf_stream.source  w_stream_o,
-  // Broadcasted X stream
-  hwpe_stream_intf_stream.source  x_stream_o,
   // XIF ports (unused if CtrlIntfConfig = HWPE_TARGET)
   input  x_issue_req_t            x_issue_req_i,
   output x_issue_resp_t           x_issue_resp_o,
@@ -118,6 +110,32 @@ module magia_redmule_wrap
   ) target (
     .clk ( clk_i )
   );
+
+  // Internal interface instances for HWPE streams (dummy, unused)
+  hwpe_stream_intf_stream w_stream_i (
+    .clk ( clk_i )
+  );
+  hwpe_stream_intf_stream x_stream_i (
+    .clk ( clk_i )
+  );
+  hwpe_stream_intf_stream w_stream_o (
+    .clk ( clk_i )
+  );
+  hwpe_stream_intf_stream x_stream_o (
+    .clk ( clk_i )
+  );
+
+  // Tie off dummy HWPE stream inputs
+  assign w_stream_i.valid = '0;
+  assign w_stream_i.data  = '0;
+  assign w_stream_i.strb  = '0;
+  assign x_stream_i.valid = '0;
+  assign x_stream_i.data  = '0;
+  assign x_stream_i.strb  = '0;
+
+  // Tie off dummy HWPE stream outputs
+  assign w_stream_o.ready = '1;
+  assign x_stream_o.ready = '1;
 
   // Convert struct-based ports to interface-based ports for HCI
   `HCI_ASSIGN_FROM_INTF(tcdm, data_req_o, data_rsp_i);
