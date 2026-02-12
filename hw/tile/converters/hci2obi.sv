@@ -30,7 +30,7 @@ module hci2obi_rsp #(
   assign obi_rsp_o.gnt                 = hci_rsp_i.gnt;
   assign obi_rsp_o.rvalid              = hci_rsp_i.r_valid;
   assign obi_rsp_o.r.rdata             = hci_rsp_i.r_data;
-  assign obi_rsp_o.r.rid               = '0;
+  assign obi_rsp_o.r.rid               = hci_rsp_i.r_id;
   assign obi_rsp_o.r.err               = hci_rsp_i.r_opc;
   assign obi_rsp_o.r.r_optional.ruser  = '0;
   assign obi_rsp_o.r.r_optional.exokay = 1'b0;

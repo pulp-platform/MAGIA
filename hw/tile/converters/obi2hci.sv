@@ -36,5 +36,7 @@ module obi2hci_req #(
   assign hci_req_o.id   = '0;
   assign hci_req_o.ecc  = '0;
   assign hci_req_o.ereq = '0;
+  assign hci_req_o.r_ready = 1'b1;
+  assign hci_req_o.r_eready = '1;
 
 endmodule: obi2hci_req
