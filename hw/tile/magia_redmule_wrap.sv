@@ -35,8 +35,8 @@ module magia_redmule_wrap
 #(
   parameter int unsigned  DataW                  = magia_tile_pkg::REDMULE_DW,
   parameter fp_format_e   FpFormat               = FP16,
-  parameter int unsigned  Height                 = MaxDim,
-  parameter int unsigned  Width                  = MaxDim,
+  parameter int unsigned  Height                 = 8,
+  parameter int unsigned  Width                  = 24,
   parameter int unsigned  NumPipeRegs            = MaxPipeRegs-1,
   parameter pipe_config_t PipeConfig             = DISTRIBUTED,
   parameter int unsigned  EccChunkSize           = 32,
@@ -101,8 +101,11 @@ module magia_redmule_wrap
   output redmule_ctrl_rsp_t       ctrl_rsp_o
 );
 
+  localparam hci_size_parameter_t `HCI_SIZE_PARAM(tcdm_filtered) = `HCI_SIZE_PARAM(tcdm);
+
   // Internal interface instances for HCI
   `HCI_INTF(tcdm, clk_i);
+  `HCI_INTF(tcdm_filtered, clk_i);
   
   // Internal interface instance for HWPE-ctrl
   hwpe_ctrl_intf_periph #( 
@@ -137,8 +140,20 @@ module magia_redmule_wrap
   assign w_stream_o.ready = '1;
   assign x_stream_o.ready = '1;
 
+  // Filter r_id from tcdm interface
+  hci_core_r_id_filter #(
+    .`HCI_SIZE_PARAM(tcdm_target) ( `HCI_SIZE_PARAM(tcdm) )
+  ) i_tcdm_r_id_filter (
+    .clk_i           ( clk_i         ),
+    .rst_ni          ( rst_ni        ),
+    .clear_i         ( 1'b0          ),
+    .enable_i        ( 1'b1          ),
+    .tcdm_target     ( tcdm          ),
+    .tcdm_initiator  ( tcdm_filtered )
+  );
+
   // Convert struct-based ports to interface-based ports for HCI
-  `HCI_ASSIGN_FROM_INTF(tcdm, data_req_o, data_rsp_i);
+  `HCI_ASSIGN_FROM_INTF(tcdm_filtered, data_req_o, data_rsp_i);
   
   // Convert struct-based ports to interface-based ports for HWPE-ctrl
   assign target.req        = ctrl_req_i.req;
