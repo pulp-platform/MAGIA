@@ -46,16 +46,6 @@ module l1_spm #(
         rsp_id_q <= rsp_id_d;
     end
 
-    always_ff @(posedge clk_i or negedge rst_ni)
-    begin
-      if(~rst_ni)
-        r_valid_q <= 1'b0;
-      else if(r_valid_q)
-        r_valid_q <= ~tcdm_slave[i].r_ready; // Clear when ready
-      else
-        r_valid_q <= tcdm_slave[i].req & tcdm_slave[i].gnt;
-    end
-
     tc_sram #(
       .NumWords    ( N_WORDS  ),
       .DataWidth   ( DATA_W   ),
@@ -79,7 +69,7 @@ module l1_spm #(
     );
 
     assign tcdm_slave[i].gnt     = 1'b1;
-    assign tcdm_slave[i].r_valid = r_valid_q;
+    assign tcdm_slave[i].r_valid = '1;
     assign tcdm_slave[i].r_user  = '0;
     assign tcdm_slave[i].r_opc   = 1'b0;
     assign tcdm_slave[i].r_ecc   = '0;
