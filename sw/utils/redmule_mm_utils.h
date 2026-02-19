@@ -43,12 +43,13 @@
 #define REDMULE_SOFT_CLEAR   0x14
 
 /* RedMulE configuration registers */
-#define REDMULE_REG_X_PTR    0x40
-#define REDMULE_REG_W_PTR    0x44
-#define REDMULE_REG_Z_PTR    0x48
-#define REDMULE_MCFG0_PTR    0x4C
-#define REDMULE_MCFG1_PTR    0x50
-#define REDMULE_ARITH_PTR    0x54
+#define REDMULE_REG_MCNFIG0 0x20
+#define REDMULE_REG_MCNFIG1 0x24
+#define REDMULE_REG_MCNFIG2 0x28
+#define REDMULE_REG_MARITH0 0x2c
+#define REDMULE_REG_MARITH1 0x30
+#define REDMULE_REG_MARITH2 0x34
+#define REDMULE_REG_MOPCNT  0x38
 
 /* Operations and formats */
 #define gemm_ops    0x1
@@ -59,24 +60,21 @@
 
 /* HWPE Register Access Functions */
 static inline void redmule_x_add_set(unsigned int value) {
-  HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_X_PTR);
+  HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_MARITH0);
 }
 
 static inline void redmule_w_add_set(unsigned int value) {
-  HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_W_PTR);
+  HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_MARITH1);
 }
 
 static inline void redmule_z_add_set(unsigned int value) {
-  HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_Z_PTR);
+  HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_MARITH2);
 }
 
-static inline void redmule_mcfg_set(uint32_t mcfg0, uint32_t mcfg1) {
-  HWPE_WRITE(mcfg0, REDMULE_REG_OFFS + REDMULE_MCFG0_PTR);
-  HWPE_WRITE(mcfg1, REDMULE_REG_OFFS + REDMULE_MCFG1_PTR);
-}
-
-static inline void redmule_arith_set(uint32_t arith) {
-  HWPE_WRITE(arith, REDMULE_REG_OFFS + REDMULE_ARITH_PTR);
+static inline void redmule_mcfg_set(uint32_t mcfg0, uint32_t mcfg1, uint32_t mcfg2) {
+  HWPE_WRITE(mcfg0, REDMULE_REG_OFFS + REDMULE_REG_MCNFIG0);
+  HWPE_WRITE(mcfg1, REDMULE_REG_OFFS + REDMULE_REG_MCNFIG1);
+  HWPE_WRITE(mcfg2, REDMULE_REG_OFFS + REDMULE_REG_MCNFIG2);
 }
 
 static inline void hwpe_trigger_job() { 
@@ -129,18 +127,26 @@ static inline void hwpe_wait_for_completion() {
 }
 
 /* RedMulE Configuration Function */
-static inline void redmule_cfg(unsigned int x, unsigned int w, unsigned int z, uint16_t m_size, uint16_t n_size,
-                 uint16_t k_size, uint8_t gemm_op, uint8_t gemm_fmt) {
+static inline void redmule_cfg(
+  unsigned int x,
+  unsigned int w,
+  unsigned int z,
+  uint16_t m_size,
+  uint16_t n_size,
+  uint16_t k_size,
+  uint8_t gemm_op,
+  uint8_t gemm_fmt_in,
+  uint8_t gemm_fmt_out
+) {
 
-  uint32_t mcfg_reg0 = (k_size << 16) | (m_size << 0);
-  uint32_t mcfg_reg1 = n_size << 0;
-  uint32_t arith_reg = (gemm_op << 10) | (gemm_fmt << 7);
+  uint32_t mcfg0 = (k_size << 16) | (m_size << 0);
+  uint32_t mcfg1 = (gemm_fmt_out << 25) | (gemm_fmt_in << 23) | (gemm_op << 20) | (n_size << 0);
+  uint32_t mcfg2 = 0;
 
   redmule_x_add_set((unsigned int)x);
   redmule_w_add_set((unsigned int)w);
   redmule_z_add_set((unsigned int)z);
-  redmule_mcfg_set((unsigned int)mcfg_reg0, (unsigned int)mcfg_reg1);
-  redmule_arith_set((unsigned int)arith_reg);
+  redmule_mcfg_set(mcfg0, mcfg1, mcfg2);
 }
 
 #endif /* REDMULE_MM_UTILS_H */
