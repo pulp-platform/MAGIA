@@ -24,13 +24,13 @@ package:
     - "Luca Balboni (luca.balboni10@studio.unibo.it)"
 
 dependencies:
-  redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 35371357e6c12aa19cbe481638fc5967b382ff00 } # branch: fc/mm
+  redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: e24561fd5c8a1e3adf420d5be49aab3f9be83c1e } # branch: fc/mm
   cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: a90101211048ba1a16cedbe4db963ab6e12569d7 } # branch: vi/redmule_scaleup
   cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: 37a82d337ba60129c333d104c29e816d0698b53b } 
   idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: a6b190c7991331432afa9a2899d032bc1b176830 } # branch: vi/redmule_scaleup
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
-  hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: 7d64db39f1f1e4b7032bcd6e3cbfed8201e13005 } # branch: fc/rdl
-  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 772d4fe63181332066fac5629f02888c3e6b977e } # branch: fc/magia
+  hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , version: 3.0.0                                }
+  hci               : { git: "https://github.com/pulp-platform/hci.git"               , version: 2.3.0                                }
   cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , rev: 917ecbf908bdaa22c5713bbcff277d142506bb16 } # branch: michaero/astral
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
   fpu_ss            : { git: "https://github.com/pulp-platform/fpu_ss.git"            , rev: 8e2eff774d9d38a1e17a46bd56a0936dac9522f0 } # branch: vi/bender_manifest
