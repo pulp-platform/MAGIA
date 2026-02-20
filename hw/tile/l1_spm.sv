@@ -33,7 +33,6 @@ module l1_spm #(
 
   for (genvar i = 0; i < N_BANK; i++) begin: gen_tcdm_bank
     logic[ID_W-1:0] rsp_id_d, rsp_id_q;
-    logic           r_valid_q;
 
     assign rsp_id_d           = tcdm_slave[i].id;
     assign tcdm_slave[i].r_id = rsp_id_q;
