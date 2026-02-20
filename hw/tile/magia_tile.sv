@@ -826,9 +826,9 @@ module magia_tile
     .x_register_ready_o  ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX].register_ready ),
     .x_commit_i          ( xif_coproc_if.coproc_commit[magia_tile_pkg::XIF_REDMULE_IDX]              ),
     .x_commit_valid_i    ( xif_coproc_if.coproc_commit_valid[magia_tile_pkg::XIF_REDMULE_IDX]        ),
-    .x_result_o          ( xif_redmule_if.coproc_result                                              ),
-    .x_result_valid_o    ( xif_redmule_if.coproc_result_valid                                        ),
-    .x_result_ready_i    ( xif_redmule_if.coproc_result_ready                                        ),
+    .x_result_o          ( xif_redmule_if.coproc_result.result                                       ),
+    .x_result_valid_o    ( xif_redmule_if.coproc_result.result_valid                                 ),
+    .x_result_ready_i    ( xif_redmule_if.coproc_result.result_ready                                 ),
 `else
     .x_issue_req_i       (                                                             ), // Not used in HWPE mode
     .x_issue_resp_o      (                                                             ), // Not used in HWPE mode
