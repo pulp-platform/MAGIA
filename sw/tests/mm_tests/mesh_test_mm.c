@@ -39,9 +39,9 @@
 
 #define MHARTID_OFFSET (0x00010000)
 
-#define M_SIZE (96)
-#define N_SIZE (64)
-#define K_SIZE (64)
+#define M_SIZE (24)
+#define N_SIZE (8)
+#define K_SIZE (8)
 
 #define VERBOSE (0)
 
@@ -160,7 +160,7 @@ int main(void) {
   redmule_cfg((unsigned int)(X_BASE + get_hartid()*L1_TILE_OFFSET), 
               (unsigned int)(W_BASE + get_hartid()*L1_TILE_OFFSET), 
               (unsigned int)(Y_BASE + get_hartid()*L1_TILE_OFFSET), 
-              M_SIZE, N_SIZE, K_SIZE, (uint8_t)gemm_ops, (uint8_t)Float16);
+              M_SIZE, N_SIZE, K_SIZE, (uint8_t)gemm_ops, (uint8_t)Float16, (uint8_t)Float16);
 
   hwpe_trigger_job();
 
