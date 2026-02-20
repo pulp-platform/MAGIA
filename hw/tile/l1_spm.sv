@@ -40,7 +40,7 @@ module l1_spm #(
 
     always_ff @(posedge clk_i or negedge rst_ni)
     begin
-      if(~rst_ni)
+      if (~rst_ni)
         rsp_id_q <= '0;
       else
         rsp_id_q <= rsp_id_d;
