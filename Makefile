@@ -30,11 +30,11 @@ BUILD_DIR      ?= sim/work
 ifneq (,$(wildcard /etc/iis.version))
     QUESTA ?= questa-2025.1
     BENDER ?= bender
-	BASE_PYTHON ?= python
+    BASE_PYTHON ?= python
 else
     QUESTA ?=
     BENDER ?= ./bender
-	BASE_PYTHON ?= python3
+    BASE_PYTHON ?= python3
 endif
 BENDER_DIR     ?= .
 ISA            ?= riscv
