@@ -420,6 +420,7 @@ module magia_tile
                                                                              {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_S_FUNC3}},
                                                                              {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_S_FUNC3}} }};
   assign xif_coproc_rules[magia_tile_pkg::XIF_FSYNC_IDX]   = '{sign_list: '{ default: {magia_tile_pkg::FSYNC_OPCODE, magia_tile_pkg::FSYNC_FUNC3} }};
+  assign redmule_evt[0][1] = 1'b0;
 
 `ifdef CV32E40X
   assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_EVT_0] = 1'b0; /* redmule_evt[0][0];  */ // Event Unit manages these interrupts // Only 1 core supported
@@ -814,7 +815,7 @@ module magia_tile
     .test_mode_i         ( test_mode_i                                                 ),
 
     .busy_o              ( redmule_busy                                                ),
-    .evt_o               ( redmule_evt                                                 ),
+    .evt_o               ( redmule_evt[0][0]                                           ),
 
 `ifdef CV32E40X
     .x_issue_req_i       ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX].issue_req   ),

@@ -117,7 +117,7 @@ int main(void) {
     ;
 
   redmule_cfg((unsigned int)X_BASE_1, (unsigned int)W_BASE_1, (unsigned int)Y_BASE_1, 
-              M_SIZE, N_SIZE, K_SIZE, (uint8_t)gemm_ops, (uint8_t)Float16);
+              M_SIZE, N_SIZE, K_SIZE, (uint8_t)gemm_ops, (uint8_t)Float16, (uint8_t)Float16);
 
   // Launch IDMA operations
   printf("Launching IDMA operations...\n");
