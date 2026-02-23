@@ -95,7 +95,7 @@ package magia_tile_pkg;
   parameter int unsigned TS_BIT  = 21;                                                  // TEST_SET_BIT (for Log Interconnect)
   parameter int unsigned IW      = N_HWPE+N_CORE+N_DMA+N_EXT;                           // ID Width HCI
   parameter int unsigned EXPFIFO = 0;                                                   // FIFO Depth for HWPE Interconnect
-  parameter int unsigned DWH     = 544;                                                 // Data Width for HWPE Interconnect: RedMulE Hx(P+1)xBits + Bank width = 8x(3+1)x16+32 
+  parameter int unsigned DWH     = 544;                                                 // Data Width for HWPE Interconnect: RedMulE Hx(P+1)xBits + Bank width for misaligned access = 8x(3+1)x16+32 
   parameter int unsigned AWH     = magia_pkg::ADDR_W;                                   // Address Width for HWPE Interconnect
   parameter int unsigned BWH     = magia_pkg::BYTE_W;                                   // Byte Width for HWPE Interconnect
   parameter int unsigned WWH     = DWH;                                                 // Word Width for HWPE Interconnect
@@ -151,7 +151,7 @@ package magia_tile_pkg;
   parameter int unsigned EVENT_UNIT_IRQ_WIDTH = 5;                                      // Width of Event Unit IRQ ID signals (supports up to 32 different event types)
 
   // Parameters used by RedMulE
-  parameter int unsigned REDMULE_DW   = DWH;                                            // RedMulE Data Width
+  parameter int unsigned REDMULE_DW   = DWH-32;                                         // RedMulE Data Width
   parameter int unsigned REDMULE_ID_W = magia_pkg::ID_W + 
                                         magia_pkg::ID_W_OFFSET;                         // RedMulE ID Width
   parameter int unsigned REDMULE_UW   = UWH;                                            // RedMulE User Width

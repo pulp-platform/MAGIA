@@ -161,7 +161,7 @@ int main(void) {
     ;
 
   redmule_cfg((unsigned int)X_BASE, (unsigned int)W_BASE, (unsigned int)Y_BASE, 
-              M_SIZE, N_SIZE, K_SIZE, (uint8_t)gemm_ops, (uint8_t)Float16);
+              M_SIZE, N_SIZE, K_SIZE, (uint8_t)gemm_ops, (uint8_t)Float16, (uint8_t)Float16);
 
   printf("Testing matrix multiplication with RedMulE...\n");
   hwpe_trigger_job();

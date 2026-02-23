@@ -37,9 +37,9 @@
 #define Y_BASE (L1_BASE + 0x0001A048)
 #define Z_BASE (L2_BASE + 0x00042000)
 
-#define M_SIZE (24)
-#define N_SIZE (8)
-#define K_SIZE (8)
+#define M_SIZE (96)
+#define N_SIZE (64)
+#define K_SIZE (64)
 
 #define VERBOSE (0)
 
