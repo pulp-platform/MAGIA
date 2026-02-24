@@ -366,7 +366,7 @@ hw-all: hw-clean hw-lib hw-compile hw-opt
 # Nonfree components
 MAGIA_NONFREE_REMOTE ?= git@iis-git.ee.ethz.ch:pulp-restricted/magia-nonfree
 MAGIA_NONFREE_DIR ?= nonfree
-MAGIA_NONFREE_COMMIT ?= main
+MAGIA_NONFREE_COMMIT ?= fc/redmule-update
 
 .PHONY: magia-nonfree-init
 MAGIA_NONFREE_DEPS ?= 1
