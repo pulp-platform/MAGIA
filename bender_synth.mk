@@ -24,5 +24,9 @@ synth_targs += -t synopsys
 #	synth_defs += -D REDMULE_HWPE_SYNTH
 #endif
 
+ifeq ($(mesh_dv), 0)
+synth_defs += -D TARGET_STANDALONE_TILE
+endif
+
 synth_defs += -D REDMULE_COMPLEX_SYNTH
 synth_defs += -D SYNTHESIS
