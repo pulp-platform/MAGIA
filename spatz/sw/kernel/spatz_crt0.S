@@ -21,11 +21,12 @@
  *
  */
 
-#define START_ADDR        0x00001704
-#define TASKBIN_ADDR      0x00001708
-#define DATA_ADDR         0x0000170C
-#define RETURN_ADDR       0x00001710
-#define DONE_ADDR         0x00001714
+#define READY_ADDR        0x00001704
+#define START_ADDR        0x00001708
+#define TASKBIN_ADDR      0x0000170C
+#define DATA_ADDR         0x00001710
+#define RETURN_ADDR       0x00001714
+#define DONE_ADDR         0x00001718
 #define MSTATUS_VS        0x200        // Vector Status [9:8] = 01
 #define MSTATUS_MIE       0x8          // Machine Interrupt Enable
 #define MIE_MEIE          0x800        // External interrupt enable
@@ -94,7 +95,19 @@ _start:
     li      t0, MSTATUS_MIE
     csrs    mstatus, t0
     
-    /* Fall through to dispatcher loop */
+    /* Signal ready to CV32 - now ready to receive interrupts */
+    li      t0, READY_ADDR
+    li      t1, 1
+    sw      t1, 0(t0)
+
+    /* First WFI - after this we deassert READY */
+    wfi
+    
+    /* Deassert READY after first wakeup (only once) */
+    li      t0, READY_ADDR
+    sw      zero, 0(t0)
+    
+    /* Fall through to main dispatcher loop */
 
 dispatcher_loop:
     /* Wait for interrupt from CV32 */

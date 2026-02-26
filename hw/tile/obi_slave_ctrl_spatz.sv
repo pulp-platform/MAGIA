@@ -40,15 +40,17 @@ module obi_slave_ctrl_spatz
 
   // Register offsets
   localparam logic [3:0] CLK_EN_OFFSET   = 4'h0;  // +0x00
-  localparam logic [3:0] START_OFFSET    = 4'h4;  // +0x04
-  localparam logic [3:0] TASKBIN_OFFSET  = 4'h8;  // +0x08
-  localparam logic [3:0] DATA_OFFSET     = 4'hC;  // +0x0C
-  localparam logic [4:0] RETURN_OFFSET   = 5'h10; // +0x10
-  localparam logic [4:0] DONE_OFFSET     = 5'h14; // +0x14
+  localparam logic [3:0] READY_OFFSET    = 4'h4;  // +0x04
+  localparam logic [3:0] START_OFFSET    = 4'h8;  // +0x08
+  localparam logic [3:0] TASKBIN_OFFSET  = 4'hC;  // +0x0C
+  localparam logic [4:0] DATA_OFFSET     = 5'h10; // +0x10
+  localparam logic [4:0] RETURN_OFFSET   = 5'h14; // +0x14
+  localparam logic [4:0] DONE_OFFSET     = 5'h18; // +0x18
 
   // Registers
   logic        clk_en_q;
   logic        start_q;
+  logic        ready_q;
   logic [31:0] taskbin_q;
   logic [31:0] data_q;
   logic [31:0] return_q;
@@ -66,7 +68,7 @@ module obi_slave_ctrl_spatz
   
   // Check if address is in valid range
   assign addr_valid = (obi_req_i.a.addr >= BaseAddr) && 
-                      (obi_req_i.a.addr < (BaseAddr + 24));  // 6 registers * 4 bytes
+                      (obi_req_i.a.addr < (BaseAddr + 28));  // 7 registers * 4 bytes
   
   // Grant only if address is valid
   assign obi_rsp_o.gnt = obi_req_i.req && addr_valid;
@@ -77,6 +79,7 @@ module obi_slave_ctrl_spatz
   // ============================================
   logic        clk_en_d;
   logic        start_d;
+  logic        ready_d;
   logic [31:0] taskbin_d;
   logic [31:0] data_d;
   logic [31:0] return_d;
@@ -86,6 +89,7 @@ module obi_slave_ctrl_spatz
     // Default: keep current values
     clk_en_d  = clk_en_q;
     start_d   = start_q;
+    ready_d   = ready_q;
     taskbin_d = taskbin_q;
     data_d    = data_q;
     return_d  = return_q;
@@ -95,6 +99,7 @@ module obi_slave_ctrl_spatz
     if (obi_req_i.req && obi_req_i.a.we && addr_valid) begin
       case (addr_offset)
         CLK_EN_OFFSET:  clk_en_d  = obi_req_i.a.wdata[0];
+        READY_OFFSET:   ready_d   = obi_req_i.a.wdata[0];  // Spatz sets to 1 when ready for interrupts
         START_OFFSET:   start_d   = obi_req_i.a.wdata[0];  // CV32 sets to 1, Spatz clears to 0
         TASKBIN_OFFSET: taskbin_d = obi_req_i.a.wdata;     // Preserved register
         DATA_OFFSET:    data_d    = obi_req_i.a.wdata;     // Preserved register
@@ -111,6 +116,7 @@ module obi_slave_ctrl_spatz
     if (!rst_ni) begin
       clk_en_q  <= 1'b0;
       start_q   <= 1'b0;
+      ready_q   <= 1'b0;
       taskbin_q <= 32'h0;
       data_q    <= 32'h0;
       return_q  <= 32'h0;
@@ -118,6 +124,7 @@ module obi_slave_ctrl_spatz
     end else begin
       clk_en_q  <= clk_en_d;
       start_q   <= start_d;
+      ready_q   <= ready_d;
       taskbin_q <= taskbin_d;
       data_q    <= data_d;
       return_q  <= return_d;
@@ -135,6 +142,7 @@ module obi_slave_ctrl_spatz
     if (obi_req_i.req && !obi_req_i.a.we && addr_valid) begin
       case (addr_offset)
         CLK_EN_OFFSET:  rdata_d = {31'h0, clk_en_q};
+        READY_OFFSET:   rdata_d = {31'h0, ready_q};
         START_OFFSET:   rdata_d = {31'h0, start_q};
         TASKBIN_OFFSET: rdata_d = taskbin_q;
         DATA_OFFSET:    rdata_d = data_q;

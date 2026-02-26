@@ -29,26 +29,29 @@ The OBI slave exposes the following registers (base address: `SPATZ_CTRL_BASE = 
 | Register Name    | Offset | Address    | Description                                                                                              |
 |------------------|--------|------------|----------------------------------------------------------------------------------------------------------|
 | `SPATZ_CLK_EN`   | 0x00   | 0x00001700 | Clock enable (write 1 to enable, 0 to disable Spatz CC clock)                                           |
-| `SPATZ_START`    | 0x04   | 0x00001704 | Trigger register: write 1 to send interrupt to Spatz CC, Snitch clears it to 0                          |
-| `SPATZ_TASKBIN`  | 0x08   | 0x00001708 | Task binary address: CV32 writes task entry point address, Snitch reads it                              |
-| `SPATZ_DATA`     | 0x0C   | 0x0000170C | Data/parameter pointer: CV32 writes pointer to task parameters, Snitch reads it                          |
-| `SPATZ_RETURN`   | 0x10   | 0x00001710 | Return value: Snitch writes task exit code (0=success, non-zero=error/exception), CV32 reads it         |
-| `SPATZ_DONE`     | 0x14   | 0x00001714 | Done flag: Snitch writes 1 when task completes, generates 1-cycle pulse to Event Unit, auto-clears      |
+| `SPATZ_READY`    | 0x04   | 0x00001704 | Ready flag: Spatz writes 1 when ready for interrupts, 0 after first task; CV32 polls before triggering  |
+| `SPATZ_START`    | 0x08   | 0x00001708 | Trigger register: write 1 to send interrupt to Spatz CC, Snitch clears it to 0                          |
+| `SPATZ_TASKBIN`  | 0x0C   | 0x0000170C | Task binary address: CV32 writes task entry point address, Snitch reads it                              |
+| `SPATZ_DATA`     | 0x10   | 0x00001710 | Data/parameter pointer: CV32 writes pointer to task parameters, Snitch reads it                          |
+| `SPATZ_RETURN`   | 0x14   | 0x00001714 | Return value: Snitch writes task exit code (0=success, non-zero=error/exception), CV32 reads it         |
+| `SPATZ_DONE`     | 0x18   | 0x00001718 | Done flag: Snitch writes 1 when task completes, generates 1-cycle pulse to Event Unit, auto-clears      |
 
 **Register Behavior:**
-- **CLK_EN, START, TASKBIN, DATA, RETURN**: Preserved registers - values persist until overwritten
+- **CLK_EN, START, READY, TASKBIN, DATA, RETURN**: Preserved registers - values persist until overwritten
 - **DONE**: Pulse register - auto-clears after one cycle, used to trigger Event Unit
 
 **Signal Flow:**
 1. CV32 writes task address to `SPATZ_TASKBIN`
-2. CV32 writes 1 to `SPATZ_START` → triggers external interrupt to Spatz CC (Snitch core)
-3. Snitch core wakes from WFI, reads task address from `SPATZ_TASKBIN`, clears `SPATZ_START` to 0
-4. CV32 waits for `SPATZ_START` to become 0 (Snitch has saved task address)
-5. CV32 writes parameter pointer to `SPATZ_DATA` (optional, only if task needs parameters)
-6. Snitch executes task, which reads parameters from address in `SPATZ_DATA`
-7. Task completes and writes exit code to `SPATZ_RETURN`, then writes 1 to `SPATZ_DONE`
-8. `SPATZ_DONE` generates 1-cycle pulse to Event Unit, CV32 wakes from WFE/polling
-9. CV32 reads exit code from `SPATZ_RETURN` (0 = success)
+2. CV32 enables clock via `SPATZ_CLK_EN = 1`
+3. CV32 waits for `SPATZ_READY` to become 1 (Spatz initialization complete, in WFI loop)
+4. CV32 writes 1 to `SPATZ_START` → triggers external interrupt to Spatz CC (Snitch core)
+5. Snitch core wakes from WFI, reads task address from `SPATZ_TASKBIN`, clears `SPATZ_START` to 0
+6. CV32 waits for `SPATZ_START` to become 0 (Snitch has saved task address)
+7. CV32 writes parameter pointer to `SPATZ_DATA` (optional, only if task needs parameters)
+8. Snitch executes task, which reads parameters from address in `SPATZ_DATA`
+9. Task completes and writes exit code to `SPATZ_RETURN`, then writes 1 to `SPATZ_DONE`
+10. `SPATZ_DONE` generates 1-cycle pulse to Event Unit, CV32 wakes from WFE/polling
+11. CV32 reads exit code from `SPATZ_RETURN` (0 = success)
 
 ## 🚀 Quick Start
 
@@ -177,7 +180,7 @@ Defined in `hw/tile/magia_tile_pkg.sv`. See [Spatz documentation](https://github
 3. **OBI Slave Interface (Control Registers):**
    - Spatz CC exposes an **OBI slave interface** (`obi_slave_ctrl_spatz`) for CV32 control
    - Base address: `0x00001700`
-   - Contains 6 control registers: `SPATZ_CLK_EN`, `SPATZ_START`, `SPATZ_TASKBIN`, `SPATZ_DATA`, `SPATZ_RETURN`, `SPATZ_DONE`
+   - Contains 7 control registers: `SPATZ_CLK_EN`, `SPATZ_READY`, `SPATZ_START`, `SPATZ_TASKBIN`, `SPATZ_DATA`, `SPATZ_RETURN`, `SPATZ_DONE`
    - CV32 accesses these registers via OBI to command Spatz CC operation
 
 ---
@@ -188,18 +191,21 @@ Defined in `hw/tile/magia_tile_pkg.sv`. See [Spatz documentation](https://github
 ### Operation Sequence
 
 1. **CV32 enables clock** (`SPATZ_CLK_EN = 1`)
-2. **CV32 writes task address** to `SPATZ_TASKBIN`
-3. **CV32 triggers execution** (`SPATZ_START = 1` → interrupt to Snitch)
-4. **Snitch wakes**, reads task address from `SPATZ_TASKBIN`, clears `SPATZ_START` to 0
-5. **CV32 waits** for `SPATZ_START` to become 0 (Snitch saved task address)
-6. **CV32 writes parameter pointer** to `SPATZ_DATA` (optional, if task needs parameters)
-7. **Snitch executes task**, task reads parameters from `SPATZ_DATA`, writes exit code to `SPATZ_RETURN`
-8. **Snitch sets** `SPATZ_DONE = 1` (1-cycle pulse to Event Unit)
-9. **CV32 reads result** from `SPATZ_RETURN` and optionally disables clock
+2. **CV32 writes task address** to `SPATZ_TASKBIN` (before or after clock enable)
+3. **CV32 waits for READY** (`SPATZ_READY` becomes 1 → Spatz initialized and in WFI loop)
+4. **CV32 triggers execution** (`SPATZ_START = 1` → interrupt to Snitch)
+5. **Snitch wakes**, reads task address from `SPATZ_TASKBIN`, clears `SPATZ_START` to 0
+6. **CV32 waits** for `SPATZ_START` to become 0 (Snitch saved task address)
+7. **CV32 writes parameter pointer** to `SPATZ_DATA` (optional, if task needs parameters)
+8. **Snitch executes task**, task reads parameters from `SPATZ_DATA`, writes exit code to `SPATZ_RETURN`
+9. **Snitch sets** `SPATZ_DONE = 1` (1-cycle pulse to Event Unit)
+10. **CV32 reads result** from `SPATZ_RETURN` and optionally disables clock
 
 **Exit Codes:**
 - `0x000`: Success
 - `0x1XX`: Exception (XX = mcause[7:0])
+
+**Note:** The `SPATZ_READY` register prevents race conditions by ensuring Spatz has completed initialization and entered the WFI loop before CV32 triggers the first interrupt.
 
 ---
 
@@ -213,7 +219,7 @@ void spatz_clk_en(void);                                 // Enable Spatz clock
 void spatz_clk_dis(void);                                // Disable Spatz clock
 
 // Initialization and task control
-void spatz_init(uint32_t addr);                          // Initialize: writes addr to TASKBIN, enables clock
+void spatz_init(uint32_t addr);                          // Initialize: writes addr to TASKBIN, enables clock, waits for READY
 void spatz_run_task(uint32_t addr);                      // Write task address to TASKBIN and trigger START=1
 void spatz_pass_params(uint32_t params_ptr);             // Write parameter pointer to DATA (waits for START=0)
 void spatz_run_task_with_params(uint32_t addr, uint32_t params_ptr);  // Combined: run task + pass params
@@ -225,7 +231,7 @@ uint32_t spatz_get_exit_code(void);                      // Read exit code from 
 The bootROM is **extremely minimal** (only 3 instructions) to minimize hardware impact and ROM area. It performs only:
 ```assembly
 // Read dispatcher entry point from TASKBIN register (set by CV32)
-li      t0, TASKBIN_ADDR      // 0x00001708
+li      t0, TASKBIN_ADDR      // 0x0000170C
 lw      t1, 0(t0)
 jr      t1  // Jump to spatz_crt0.S _start
 ```
@@ -243,13 +249,26 @@ The **spatz_crt0.S** runtime performs complete initialization and enters the tas
 4. **BSS Clearing:** Zero-initialize `.bss` section
 5. **Trap Handler Setup:** Install `_trap_handler` at `mtvec`
 6. **Interrupt Enable:** Enable external interrupts (`MIE.MEIE`) and global interrupts (`mstatus.MIE`)
+7. **Signal READY:** Write 1 to `SPATZ_READY` register to signal CV32 that initialization is complete
 
 **Dispatcher Loop:**
 ```assembly
+    wfi                      // First WFI - wait for first interrupt
+    
+    // Deassert READY after first wakeup (only once)
+    li      t0, READY_ADDR
+    sw      zero, 0(t0)
+    
 dispatcher_loop:
-    wfi                      // Wait for interrupt from CV32
+    wfi                      // Wait for subsequent interrupts from CV32
     j       dispatcher_loop  // Loop back after task completion
 ```
+
+**READY Synchronization:**
+- After completing initialization, Spatz writes `READY = 1`
+- CV32's `spatz_init()` polls `READY` until it becomes 1 before proceeding
+- After the first WFI wakeup, Spatz clears `READY = 0` (only once)
+- This prevents race conditions where CV32 might trigger an interrupt before Spatz enters WFI
 
 **Trap Handler (`_trap_handler`):**
 - **Interrupts** (mcause[31]=1): 

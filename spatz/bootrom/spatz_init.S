@@ -21,7 +21,7 @@
  * Minimal Boot ROM - only read TASKBIN_ADDR and jump
  */
 
-#define TASKBIN_ADDR 0x00001708  // OBI slave ctrl exchange register
+#define TASKBIN_ADDR 0x0000170C  // OBI slave ctrl exchange register
 
   .section .text.bootrom
   .global _start
