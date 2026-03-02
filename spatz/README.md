@@ -74,9 +74,11 @@ int main(void) {
     //Task with parameters via SPATZ_DATA register (optional)
     typedef struct { uint32_t addr; uint32_t size; } params_t;
     params_t params = {.addr = DATA_BASE, .size = 1024};
+
+    spatz_pass_params((uint32_t)&params);  // Optional: pass params pointer via SPATZ_DATA
     
     spatz_run_task(ANOTHER_TASK); // ANOTHER_TASK defined in auto-generated header
-    spatz_pass_params((uint32_t)&params);  // Optional: pass params pointer via SPATZ_DATA
+ 
     eu_wait_spatz_wfe(EU_SPATZ_DONE_MASK);
     
     if (spatz_get_exit_code() != 0) {
@@ -195,8 +197,8 @@ Defined in `hw/tile/magia_tile_pkg.sv`. See [Spatz documentation](https://github
 3. **CV32 waits for READY** (`SPATZ_READY` becomes 1 → Spatz initialized and in WFI loop)
 4. **CV32 triggers execution** (`SPATZ_START = 1` → interrupt to Snitch)
 5. **Snitch wakes**, reads task address from `SPATZ_TASKBIN`, clears `SPATZ_START` to 0
-6. **CV32 waits** for `SPATZ_START` to become 0 (Snitch saved task address)
-7. **CV32 writes parameter pointer** to `SPATZ_DATA` (optional, if task needs parameters)
+6. **CV32 writes parameter pointer** to `SPATZ_DATA` (optional, if task needs parameters)
+7. **CV32 waits** for `SPATZ_START` to become 0 (Snitch saved task address)
 8. **Snitch executes task**, task reads parameters from `SPATZ_DATA`, writes exit code to `SPATZ_RETURN`
 9. **Snitch sets** `SPATZ_DONE = 1` (1-cycle pulse to Event Unit)
 10. **CV32 reads result** from `SPATZ_RETURN` and optionally disables clock
