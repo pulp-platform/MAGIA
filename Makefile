@@ -62,7 +62,7 @@ compile_script_synth ?= scripts/synth_compile.tcl
 compile_flag         ?= -suppress 2583 -suppress 13314 -suppress 3009
 
 questa_compile_flag  += -t 1ns -suppress 3009
-questa_opt_flag      += -suppress 3009 -debugdb +acc=npr
+questa_opt_flag      += -suppress 3009 -debugdb +acc
 questa_opt_fast_flag += -suppress 3009
 questa_run_flag      += -t 1ns -debugDB -suppress 3009
 questa_run_fast_flag += -t 1ns -suppress 3009
