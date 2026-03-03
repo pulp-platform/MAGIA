@@ -220,6 +220,8 @@ module magia_redmule_wrap
     .x_result_o          ( x_result_o          ),
     .x_result_valid_o    ( x_result_valid_o    ),
     .x_result_ready_i    ( x_result_ready_i    ),
+    .sync_o              (                     ),
+    .sync_i              ( 1'b0                ),
     .tcdm                ( tcdm                ),
     .target              ( target              )
   );
