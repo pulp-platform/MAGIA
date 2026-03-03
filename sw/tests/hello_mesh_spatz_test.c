@@ -47,8 +47,8 @@ int main(void) {
   
   printf("Starting Spatz Hello World task (tile_id=%d)...\n", my_hartid);
   
-  spatz_run_task(HELLO_TASK);
   spatz_pass_params(param_base);
+  spatz_run_task(HELLO_TASK);
   
   // Wait for Spatz completion using WFE
   printf("Waiting for Spatz completion...\n");

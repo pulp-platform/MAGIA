@@ -95,10 +95,8 @@ int main(void) {
     
     printf("Starting Spatz dot product...\n");
     
-    // Launch Spatz task with parameters via EXCHANGE_REG
-    spatz_run_task(DOTP_TASK);
     spatz_pass_params(param_base);
-    
+    spatz_run_task(DOTP_TASK);
     // Wait for Spatz completion
     eu_wait_spatz_wfe(EU_SPATZ_DONE_MASK);
     

@@ -64,9 +64,9 @@ int main(void) {
   
   printf("[Tile %d] Starting Spatz task\n", hartid);
   
-  // Launch Spatz task with parameters via EXCHANGE_REG
-  spatz_run_task(ATOMIC_REMOTE_TASK);
   spatz_pass_params(param_base);
+  spatz_run_task(ATOMIC_REMOTE_TASK);
+  
   
   printf("[Tile %d] Waiting for Spatz completion...\n", hartid);
   

@@ -127,8 +127,8 @@ int main(void) {
     
     uint32_t spatz_start = cv32e40p_get_cycles();
     
-    spatz_run_task(DOTP_TASK);
     spatz_pass_params(param_base);
+    spatz_run_task(DOTP_TASK);
     
     eu_wait_spatz_polling(EU_SPATZ_DONE_MASK);
     
