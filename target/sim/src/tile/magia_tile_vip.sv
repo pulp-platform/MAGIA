@@ -23,7 +23,7 @@ module magia_tile_vip
   import magia_tile_pkg::*;
   import magia_pkg::*;
   import magia_tile_tb_pkg::*;
-  import floo_axi_mesh_1x2_noc_pkg::*;
+  import floo_axi_nw_mesh_1x2_noc_pkg::*;
 #(
   // Timing
   parameter time         CLK_PERIOD = 5ns,
@@ -218,21 +218,21 @@ int errors = -1;
 bit stdio_ready  = 0;
 bit stderr_ready = 0;
 always @(posedge clk) begin: print_monitor
-  if ((i_magia_tile.axi_xbar_data_out_req.aw.addr == 32'hFFFF0000) && (i_magia_tile.axi_xbar_data_out_req.aw_valid)) stderr_ready = 1'b1;
-  if ((i_magia_tile.axi_xbar_data_out_req.aw.addr == 32'hFFFF0004) && (i_magia_tile.axi_xbar_data_out_req.aw_valid)) stdio_ready  = 1'b1;
-  if ((i_magia_tile.axi_xbar_data_out_req.w_valid) && stderr_ready) begin
+  if ((i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0000) && (i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw_valid)) stderr_ready = 1'b1;
+  if ((i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0004) && (i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw_valid)) stdio_ready  = 1'b1;
+  if ((i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w_valid) && stderr_ready) begin
     // NOTE: This is stupid! But unless we keep track of the outstanding AXI writes (which would require some logic) this should work,
     //       unless other modules (not related to the print function) transfer bytes (instead of words) to the L2
-    if (i_magia_tile.axi_xbar_data_out_req.w.data < 256 && i_magia_tile.axi_xbar_data_out_req.w.data > 0) begin
-      errors       = i_magia_tile.axi_xbar_data_out_req.w.data;
+    if (i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data < 256 && i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data > 0) begin
+      errors       = i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data;
       stderr_ready = 1'b0;
     end
   end
-  if ((i_magia_tile.axi_xbar_data_out_req.w_valid) && stdio_ready) begin
+  if ((i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w_valid) && stdio_ready) begin
     // NOTE: This is stupid! But unless we keep track of the outstanding AXI writes (which would require some logic) this should work,
     //       unless other modules (not related to the print function) transfer bytes (instead of words) to the L2
-    if (i_magia_tile.axi_xbar_data_out_req.w.data < 256 && i_magia_tile.axi_xbar_data_out_req.w.data > 0) begin
-      $write("%c", i_magia_tile.axi_xbar_data_out_req.w.data);
+    if (i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data < 256 && i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data > 0) begin
+      $write("%c", i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data);
       stdio_ready = 1'b0;
     end
   end

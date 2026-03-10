@@ -24,7 +24,7 @@ module magia_tile_fixture;
   import magia_tile_pkg::*;
   import magia_pkg::*;
   import magia_tile_tb_pkg::*;
-  import floo_axi_mesh_1x2_noc_pkg::*;
+  import floo_axi_nw_mesh_1x2_noc_pkg::*;
 
 /*******************************************************/
 /**        Internal Signal Definitions Beginning      **/
