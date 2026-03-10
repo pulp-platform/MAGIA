@@ -26,7 +26,7 @@ module magia_l2_mem_wrapper
   `ifndef TARGET_STANDALONE_TILE
   import magia_noc_pkg::*;
   `else
-  import floo_axi_mesh_1x2_noc_pkg::*;
+  import floo_axi_nw_mesh_1x2_noc_pkg::*;
   `endif
   import floo_pkg::*;
 #(
