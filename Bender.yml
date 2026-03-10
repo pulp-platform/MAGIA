@@ -24,7 +24,7 @@ package:
 
 dependencies:
   redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 9a1aa14be0b23f0ade84bab57e7e434397ac9876 } # branch: vi/scale_up
-  cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: 37a82d337ba60129c333d104c29e816d0698b53b } # branch: lb/magia_core
+  cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: f5241403d5d65dbe1fffacd7035dd7ae1359c8ef } # branch: lb/magia_core
   spatz             : { git: "https://github.com/pulp-platform/spatz.git"             , rev: 2a524191c8a6472d83fe69ce3a24f90bee5b4ef0 } # branch: lb/magia-spatz_cc
   idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: a6b190c7991331432afa9a2899d032bc1b176830 } # branch: vi/redmule_scaleup
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
