@@ -33,7 +33,7 @@ BENDER_DIR     ?= .
 ISA            ?= riscv
 ARCH           ?= rv
 XLEN           ?= 32
-XTEN           ?= imfcxpulpv2
+XTEN           ?= imcxgap9
 ABI            ?= ilp
 XABI           ?= f
 
