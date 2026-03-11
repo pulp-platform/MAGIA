@@ -52,19 +52,19 @@ package magia_tile_pkg;
 
   // Address map
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START = 32'h0000_0100;
-  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_SIZE       = 32'h0000_0100; 
+  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_SIZE       = 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_END   = REDMULE_CTRL_ADDR_START + REDMULE_CTRL_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_START    = REDMULE_CTRL_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_SIZE          = 32'h0000_0400;
   localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_END      = IDMA_CTRL_ADDR_START + IDMA_CTRL_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_START   = IDMA_CTRL_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_SIZE         = 32'h0000_0100; 
+  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_SIZE         = 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_END     = FSYNC_CTRL_ADDR_START + FSYNC_CTRL_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_START   = FSYNC_CTRL_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_SIZE         = 32'h0000_1000; 
+  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_SIZE         = 32'h0000_1000;
   localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_END     = EVENT_UNIT_ADDR_START + EVENT_UNIT_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_ADDR_START   = EVENT_UNIT_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_SIZE         = 32'h0000_0100; 
+  localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_SIZE         = 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_ADDR_END     = SPATZ_CTRL_ADDR_START + SPATZ_CTRL_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = SPATZ_CTRL_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE           = 32'h0000_E800;
@@ -332,8 +332,10 @@ package magia_tile_pkg;
   localparam int unsigned N_BIT_SBR   = $clog2(N_SBR);                                  // Number of bits required to identify each slave
 
   // Parameters used by AXI
-  parameter int unsigned AXI_DATA_ID_W  = 2;                                            // Width of AXI data IDs (4 xbar slave ports)
-  parameter int unsigned AXI_ID_W       = 2;                                            // Width of the AXI Unified Communication Channel ID
+  parameter int unsigned AXI_DATA_ID_W  = 3;                                            // Width of the AXI Data ID (3 bits for 5 slave ports on crossbar: 2^3=8)
+  parameter int unsigned AXI_INSTR_ID_W = 3;                                            // Width of the AXI Instruction ID (3 bits for 5 slave ports on crossbar)
+  parameter int unsigned AXI_ID_W       = 3;                                            // Width of the AXI Unified Communication Channel ID (3 bits for 5 slave ports)
+  localparam int unsigned AXI_MST_ID_W  = 6;                                            // Width of master port ID (slave 3b + prepend 3b for 5 ports)
   parameter int unsigned AXI_DATA_U_W   = magia_pkg::USR_W;                             // Width of the AXI Data User
   parameter int unsigned AXI_INSTR_U_W  = magia_pkg::USR_W;                             // Width of the AXI Instruction User
   parameter int unsigned AXI_U_W        = magia_pkg::USR_W;                             // Width of the AXI Unified Communication Channel User

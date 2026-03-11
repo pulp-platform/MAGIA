@@ -237,13 +237,13 @@ typedef logic[0:0] axi_wide_data_slv_user_t;
   localparam axi_cfg_t AxiCfgN = '{    AddrWidth: 32,
     DataWidth: 32,
     UserWidth: 1,
-    InIdWidth: 4,
-    OutIdWidth: 2};
+    InIdWidth: 6,
+    OutIdWidth: 3};
 localparam axi_cfg_t AxiCfgW = '{    AddrWidth: 32,
     DataWidth: 256,
     UserWidth: 1,
-    InIdWidth: 2,
-    OutIdWidth: 2};
+    InIdWidth: 3,
+    OutIdWidth: 3};
 `FLOO_TYPEDEF_NW_CHAN_ALL(axi, req, rsp, wide,             axi_narrow_data_slv, axi_wide_data_slv, AxiCfgN, AxiCfgW, hdr_t)
 
 `FLOO_TYPEDEF_NW_LINK_ALL(req, rsp, wide, req, rsp, wide)
