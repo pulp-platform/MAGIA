@@ -78,10 +78,12 @@ package magia_tile_pkg;
   // Parameters used by the HCI
   parameter int unsigned N_HWPE  = 1;                                                   // Number of HWPEs attached to the port
   parameter int unsigned N_CORE  = 1;                                                   // Number of Core ports
-  parameter int unsigned N_DMA   = 2;                                                   // Number of DMA ports (1 for the read channel and 1 for the write channel)
-  typedef enum logic{
-    HCI_DMA_CH_READ_IDX  = 1'b0,
-    HCI_DMA_CH_WRITE_IDX = 1'b1
+  parameter int unsigned N_DMA   = 4;                                                   // Number of DMA ports (1 out read channel, 1 out write channel, 1 in read channel and 1 in write channel)
+  typedef enum logic[1:0]{
+    HCI_DMA_OUT_CH_READ_IDX  = 2'b00,
+    HCI_DMA_OUT_CH_WRITE_IDX = 2'b01,
+    HCI_DMA_IN_CH_READ_IDX   = 2'b10,
+    HCI_DMA_IN_CH_WRITE_IDX  = 2'b11
   } hci_idma_ch_idx_e;                                                                  // Index of the HCI DMA read and write channels
   parameter int unsigned N_EXT   = 0;                                                   // Number of External ports - LEAVE TO 0 UNLESS YOU KNOW WHAT YOU ARE DOING
   parameter int unsigned AWC     = magia_pkg::ADDR_W;                                   // Address width core   (slave ports)
@@ -151,11 +153,11 @@ package magia_tile_pkg;
   parameter int unsigned EVENT_UNIT_IRQ_WIDTH = 5;                                      // Width of Event Unit IRQ ID signals (supports up to 32 different event types)
 
   // Parameters used by RedMulE
-  parameter int unsigned REDMULE_DW   = DWH-32;                                         // RedMulE Data Width
-  parameter int unsigned REDMULE_ID_W = magia_pkg::ID_W + 
-                                        magia_pkg::ID_W_OFFSET;                         // RedMulE ID Width
-  parameter int unsigned REDMULE_UW   = UWH;                                            // RedMulE User Width
-  
+  parameter int unsigned REDMULE_DW         = DWH-32;                                   // RedMulE Data Width 
+  parameter int unsigned REDMULE_ID_W       = magia_pkg::ID_W + 
+                                              magia_pkg::ID_W_OFFSET;                   // RedMulE ID Width
+  parameter int unsigned REDMULE_UW         = UWH;                                      // RedMulE User Width
+
   // Parameters used by OBI
   parameter int unsigned AUSER_WIDTH  = 1;                                              // Width of the auser signal (see OBI documentation): not used by the CV32E40X
   parameter int unsigned WUSER_WIDTH  = 1;                                              // Width of the wuser signal (see OBI documentation): not used by the CV32E40X
@@ -191,12 +193,12 @@ package magia_tile_pkg;
   // Parameters used by the iDMA
   localparam int unsigned iDMA_NumDims            = 3;                                  // iDMA Number of dimensions
   localparam int unsigned NumDim                  = iDMA_NumDims;                       // Needed by the iDMA typedef (wtf?)
-  parameter int unsigned iDMA_DataWidth           = magia_pkg::DATA_W;                  // iDMA Data Width
+  parameter int unsigned iDMA_DataWidth           = magia_pkg::WIDE_DATA_W;             // iDMA Data Width
   parameter int unsigned iDMA_AddrWidth           = magia_pkg::ADDR_W;                  // iDMA Address Width
   parameter int unsigned iDMA_UserWidth           = AXI_DATA_U_W;                       // iDMA AXI User Width
-  parameter int unsigned iDMA_StrbWidth           = magia_pkg::STRB_W;                  // iDMA AXI Strobe Width
+  parameter int unsigned iDMA_StrbWidth           = magia_pkg::WIDE_STRB_W;             // iDMA AXI Strobe Width
   parameter int unsigned iDMA_AxiIdWidth          = AXI_DATA_ID_W;                      // iDMA AXI ID Width
-  parameter int unsigned iDMA_NumAxInFlight       = 2;                                  // iDMA Number of transaction that can be in-flight concurrently
+  parameter int unsigned iDMA_NumAxInFlight       = 16;                                 // iDMA Number of transaction that can be in-flight concurrently
   parameter int unsigned iDMA_BufferDepth         = 3;                                  // iDMA depth of the internal reorder buffer: '2' - minimal possible configuration; '3' - efficiently handle misaligned transfers (recommended)
   parameter int unsigned iDMA_TFLenWidth          = 32;                                 // iDMA With of a transfer: max transfer size is `2**TFLenWidth` bytes
   parameter int unsigned iDMA_MemSysDepth         = 0;                                  // iDMA depth of the memory system the backend is attached to
@@ -208,7 +210,7 @@ package magia_tile_pkg;
   parameter int unsigned iDMA_PrintFifoInfo       = 0;                                  // iDMA Print the info of the FIFO configuration
   parameter int unsigned iDMA_NumRegs             = 1;                                  // iDMA Number of configuration register ports
   parameter int unsigned iDMA_NumStreams          = 1;                                  // iDMA Number of streams (max 16)
-  parameter int unsigned iDMA_JobFifoDepth        = 2;                                  // iDMA Stream FIFO depth
+  parameter int unsigned iDMA_JobFifoDepth        = 16;                                 // iDMA Stream FIFO depth
   parameter int unsigned iDMA_IdCounterWidth      = 32;                                 // iDMA Width of the transfer id (max 32-bit)
   parameter int unsigned iDMA_RepWidth            = 32;                                 // iDMA Width of the reps field
   localparam logic[iDMA_NumDims-1:0][31:0] 
@@ -307,8 +309,8 @@ package magia_tile_pkg;
   parameter bit          FSYNC_STALL               = 1;                                 // Fractal Sync Stall during synchronization
 
   // Parameters of the AXI XBAR
-  parameter int unsigned AxiXbarNoSlvPorts     = 4;                                     // Number of Slave Ports (iDMA, Core Data, Core I$ and ext)
-  parameter int unsigned AxiXbarNoMstPorts     = 2;                                     // Number of Master Ports (to ext and to internal L1 from ext)
+  parameter int unsigned AxiXbarNoSlvPorts     = 3;                                     // Number of Slave Ports (Core Data, Core I$ and ext)
+  parameter int unsigned AxiXbarNoMstPorts     = 2;                                     // Number of Master Ports (OBI XBAR and ext)
   localparam int unsigned AxiXbarSlvAxiIDWidth = AXI_DATA_ID_W;                         // Number of bits to indentify each Slave Port
   parameter int unsigned AxiXbarMaxWTrans      = 16;                                    // Maximum number of outstanding transactions per write
   parameter int unsigned AxiXbarMaxMstTrans    = AxiXbarMaxWTrans;                      // Maximum number of outstanding transactions per master
@@ -476,11 +478,15 @@ package magia_tile_pkg;
   } axi_mem_array_idx_e;
 
   typedef enum logic[1:0]{
-    AXI_EXT_IDX        = 3,
-    AXI_IDMA_IDX       = 2,
-    AXI_CORE_DATA_IDX  = 1,
-    AXI_CORE_INSTR_IDX = 0
-  } axi_xbar_idx_e;
+    AXI_SLV_CORE_INSTR_IDX = 2,
+    AXI_SLV_CORE_DATA_IDX  = 1,
+    AXI_SLV_EXT_IDX        = 0
+  } axi_xbar_slv_idx_e;
+
+  typedef enum logic{
+    AXI_MST_OBI_IDX = 1,
+    AXI_MST_EXT_IDX = 0
+  } axi_xbar_mst_idx_e;
 
   typedef struct packed {
     logic[N_SIGN-1:0][SIGN_W-1:0] sign_list;
@@ -490,9 +496,9 @@ package magia_tile_pkg;
 
   `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic[IW-1:0])
   `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic[DWH-1:0], logic[IW-1:0])
-  
-  `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic[UWH-1:0], logic[0:0], logic[0:0], logic[0:0])
-  `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic[DWH-1:0], logic[UWH-1:0], logic[0:0], logic[0:0], logic[0:0])
+
+  `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic[UWH-1:0], logic[IW-1:0], logic[0:0], logic[0:0])
+  `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic[DWH-1:0], logic[UWH-1:0],  logic[IW-1:0], logic[0:0], logic[0:0])
 
   localparam obi_pkg::obi_optional_cfg_t obi_amo_optional_cfg = obi_pkg::obi_all_optional_config(AUSER_WIDTH, WUSER_WIDTH, RUSER_WIDTH, MID_WIDTH, ACHK_WIDTH, RCHK_WIDTH);
   localparam obi_pkg::obi_cfg_t          obi_amo_cfg          = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, OBI_ID_WIDTH, obi_amo_optional_cfg);
@@ -512,8 +518,8 @@ package magia_tile_pkg;
   `OBI_TYPEDEF_DEFAULT_REQ_T(core_obi_instr_req_t, core_instr_obi_a_chan_t)
   `OBI_TYPEDEF_RSP_T(core_obi_instr_rsp_t, core_instr_obi_r_chan_t)
 
-  `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic[UWH-1:0], logic[0:0], logic[0:0], logic[0:0])
-  `HCI_TYPEDEF_RSP_T(core_hci_data_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0], logic[0:0], logic[0:0], logic[0:0])
+  `HCI_TYPEDEF_REQ_T(core_hci_data_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic[UWH-1:0], logic[IW-1:0], logic[0:0], logic[0:0])
+  `HCI_TYPEDEF_RSP_T(core_hci_data_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0], logic[IW-1:0], logic[0:0], logic[0:0])
 
   `AXI_TYPEDEF_ALL_CT(core_axi_data, core_axi_data_req_t, core_axi_data_rsp_t, logic[magia_pkg::ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[AXI_U_W-1:0])
   `AXI_TYPEDEF_ALL_CT(core_axi_instr, core_axi_instr_req_t, core_axi_instr_rsp_t, logic[magia_pkg::ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[AXI_U_W-1:0])
@@ -525,20 +531,11 @@ package magia_tile_pkg;
   `IDMA_TYPEDEF_FULL_ND_REQ_T(idma_nd_req_t, idma_be_req_t, logic[iDMA_RepWidth-1:0], logic[iDMA_StrideWidth-1:0])
 
   `AXI_TYPEDEF_ALL_CT(idma_axi, idma_axi_req_t, idma_axi_rsp_t, logic[iDMA_AddrWidth-1:0], logic[iDMA_AxiIdWidth-1:0], logic[iDMA_DataWidth-1:0], logic[iDMA_StrbWidth-1:0], logic[iDMA_UserWidth-1:0])
-  
-  parameter obi_pkg::obi_optional_cfg_t OptionalCfg = obi_pkg::ObiMinimalOptionalConfig;
-  parameter obi_pkg::obi_cfg_t obi_cfg = '{
-       OptionalCfg : OptionalCfg,
-       AddrWidth   : iDMA_AddrWidth, 
-       DataWidth   : iDMA_DataWidth,
-       IdWidth     : iDMA_AxiIdWidth,
-       UseRReady   : 1'b0,
-       CombGnt     : 1'b0,
-       Integrity   : 1'b0,
-       BeFull      : 1'b1
-  };
 
-  `OBI_TYPEDEF_ALL(idma_obi, obi_cfg)
+  localparam obi_pkg::obi_optional_cfg_t obi_idma_optional_cfg = obi_pkg::obi_all_optional_config(AUSER_WIDTH, WUSER_WIDTH, RUSER_WIDTH, MID_WIDTH, ACHK_WIDTH, RCHK_WIDTH);
+  localparam obi_pkg::obi_cfg_t          obi_idma_cfg          = obi_pkg::obi_default_cfg(iDMA_AddrWidth, iDMA_DataWidth, iDMA_AxiIdWidth, obi_idma_optional_cfg);
+
+  `OBI_TYPEDEF_ALL(idma_obi, obi_idma_cfg)
 
   typedef struct packed {
     struct packed {
@@ -561,8 +558,8 @@ package magia_tile_pkg;
   `AXI_ALIAS(core_axi_data, axi_xbar_slv, core_axi_data_req_t, axi_xbar_slv_req_t, core_axi_data_rsp_t, axi_xbar_slv_rsp_t)
   `AXI_ALIAS(core_axi_data, axi_xbar_mst, core_axi_data_req_t, axi_xbar_mst_req_t, core_axi_data_rsp_t, axi_xbar_mst_rsp_t)
 
-  `HCI_TYPEDEF_REQ_T(idma_hci_req_t, logic[AWC-1:0], logic[DW_LIC-1:0], logic[SW_LIC-1:0], logic[UWH-1:0], logic[0:0], logic[0:0], logic[0:0])
-  `HCI_TYPEDEF_RSP_T(idma_hci_rsp_t, logic[DW_LIC-1:0], logic[UWH-1:0], logic[0:0], logic[0:0], logic[0:0])
+  `HCI_TYPEDEF_REQ_T(idma_hci_req_t, logic[iDMA_AddrWidth-1:0], logic[iDMA_DataWidth-1:0], logic[iDMA_StrbWidth-1:0], logic[iDMA_UserWidth-1:0], logic[IW-1:0], logic[0:0], logic[0:0])
+  `HCI_TYPEDEF_RSP_T(idma_hci_rsp_t, logic[iDMA_DataWidth-1:0], logic[iDMA_UserWidth-1:0], logic[IW-1:0], logic[0:0], logic[0:0])
   
   localparam axi_pkg::xbar_cfg_t axi_xbar_cfg = '{
     NoSlvPorts          : AxiXbarNoSlvPorts,
