@@ -29,6 +29,8 @@ package magia_tile_pkg;
   `include "register_interface/typedef.svh"
   `include "idma/typedef.svh"
   `include "fractal_sync/typedef.svh"
+  `include "reqrsp_interface/typedef.svh"
+  `include "tcdm_interface/typedef.svh"
 
   `include "../include/alias.svh"
 
@@ -50,34 +52,182 @@ package magia_tile_pkg;
 
   // Address map
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START = 32'h0000_0100;
-  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_SIZE       = 32'h0000_0100; 
+  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_SIZE       = 32'h0000_00FF; 
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_END   = REDMULE_CTRL_ADDR_START + REDMULE_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_START    = REDMULE_CTRL_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_SIZE          = 32'h0000_0400;
+  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_START    = REDMULE_CTRL_ADDR_END + 1;
+  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_SIZE          = 32'h0000_03FF;
   localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_END      = IDMA_CTRL_ADDR_START + IDMA_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_START   = IDMA_CTRL_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_SIZE         = 32'h0000_0100; 
+  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_START   = IDMA_CTRL_ADDR_END + 1;
+  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_SIZE         = 32'h0000_00FF; 
   localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_END     = FSYNC_CTRL_ADDR_START + FSYNC_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_START   = FSYNC_CTRL_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_SIZE         = 32'h0000_1000; 
+  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_START   = FSYNC_CTRL_ADDR_END + 1;
+  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_SIZE         = 32'h0000_0FFF; 
   localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_END     = EVENT_UNIT_ADDR_START + EVENT_UNIT_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = EVENT_UNIT_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE           = 32'h0000_E900;  // Calculated to make RESERVED_ADDR_END = 0x0001_0000
+  localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_ADDR_START   = EVENT_UNIT_ADDR_END + 1;
+  localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_SIZE         = 32'h0000_00FF; 
+  localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_ADDR_END     = SPATZ_CTRL_ADDR_START + SPATZ_CTRL_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = SPATZ_CTRL_ADDR_END + 1;
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE           = 32'h0000_E7FF;  // Calculated to make RESERVED_ADDR_END = 0x0001_0000
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END       = RESERVED_ADDR_START + RESERVED_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START        = RESERVED_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE              = 32'h0001_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START        = RESERVED_ADDR_END +1;
+  localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE              = 32'h0000_FFFF;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_END          = STACK_ADDR_START + STACK_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_START           = STACK_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] L1_SIZE                 = 32'h000E_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_START           = STACK_ADDR_END + 1;
+  localparam logic [magia_pkg::ADDR_W-1:0] L1_SIZE                 = 32'h000D_FFFF;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_END             = L1_ADDR_START + L1_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_TILE_OFFSET          = 32'h0010_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_START           = 32'hC000_0000;
-  localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                 = 32'h4000_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                 = 32'h3FFF_FFFF;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_END             = L2_ADDR_START + L2_SIZE;
+
+  // Instruction region for Spatz code (cacheable region)
+  localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_ADDR_START      = 32'hCC00_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_SIZE            = 32'h0000_8000;  // 32KB
+
+  localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_PMA_MASK        = 32'hFFFF_8000;
+
+  // Snitch PMA Configuration - defines cacheable regions for instruction fetches
+  function automatic snitch_pma_pkg::rule_t [snitch_pma_pkg::NrMaxRules-1:0] get_snitch_cached_regions();
+    automatic snitch_pma_pkg::rule_t [snitch_pma_pkg::NrMaxRules-1:0] cached_regions;
+    cached_regions = '{default: '0};
+    cached_regions[0] = '{base: INSTRRAM_ADDR_START, mask: INSTRRAM_PMA_MASK};
+    return cached_regions;
+  endfunction
+
+  localparam snitch_pma_pkg::snitch_pma_t SPATZ_SNITCH_PMA_CFG = '{
+    NrCachedRegionRules: 1,
+    CachedRegion: get_snitch_cached_regions(),
+    default: 0
+  };
+
+  //SPATZ PARAMETERS from Makefile defines
+  //SPATZ_RVD (Double-width vector extension support)
+  `ifdef SPATZ_RVD
+    localparam bit SPATZ_RVD_PARAM = `SPATZ_RVD;
+  `else
+    localparam bit SPATZ_RVD_PARAM = 1'b0;
+  `endif
+  
+  //SPATZ_N_IPU and SPATZ_N_FPU
+  `ifdef SPATZ_N_IPU
+    localparam int unsigned SPATZ_NUM_IPU = `SPATZ_N_IPU;
+  `else
+    localparam int unsigned SPATZ_NUM_IPU = 1;
+  `endif
+  
+  `ifdef SPATZ_N_FPU
+    localparam int unsigned SPATZ_NUM_FPU = `SPATZ_N_FPU;
+  `else
+    localparam int unsigned SPATZ_NUM_FPU = 4;
+  `endif
+  
+  //SPATZ_XDIVSQRT (FP division/sqrt enable)
+  `ifdef SPATZ_XDIVSQRT
+    localparam bit SPATZ_XDIVSQRT_PARAM = `SPATZ_XDIVSQRT;
+  `else
+    localparam bit SPATZ_XDIVSQRT_PARAM = 1'b0;
+  `endif
+  
+  //SPATZ_XDMA (DMA inside Spatz_cc)
+  `ifdef SPATZ_XDMA
+    localparam bit SPATZ_XDMA_PARAM = `SPATZ_XDMA;
+  `else
+    localparam bit SPATZ_XDMA_PARAM = 1'b0;
+  `endif
+  
+  //SPATZ_RVF (Single-precision FP support)
+  `ifdef SPATZ_RVF
+    localparam bit SPATZ_RVF_PARAM = `SPATZ_RVF;
+  `else
+    localparam bit SPATZ_RVF_PARAM = 1'b1;
+  `endif
+  
+  //SPATZ_RVV (Vector extension support)
+  `ifdef SPATZ_RVV
+    localparam bit SPATZ_RVV_PARAM = `SPATZ_RVV;
+  `else
+    localparam bit SPATZ_RVV_PARAM = 1'b1;
+  `endif
+  
+  // Spatz CC parameters (must be defined before HCI parameters)
+  localparam int unsigned SPATZ_NUM_FU            = (SPATZ_NUM_FPU > SPATZ_NUM_IPU) ? SPATZ_NUM_FPU : SPATZ_NUM_IPU;  // Max of FPU and IPU
+  localparam int unsigned SPATZ_TCDM_PORTS        = SPATZ_NUM_FU + 1;  // N_FU + 1 TCDM ports (N_FU vector + 1 snitch)
+  localparam int unsigned SPATZ_HCI_PORTS         = SPATZ_RVD_PARAM ? (SPATZ_TCDM_PORTS * 2) : SPATZ_TCDM_PORTS;  // RVD=1: 2xTCDM HCI32, RVD=0: 1xTCDM HCI32
+
+  // Spatz CC outstanding transactions and timing parameters
+  parameter int unsigned SPATZ_NUM_INT_OUTSTANDING_LOADS   = 1;   // Snitch core outstanding loads
+  parameter int unsigned SPATZ_NUM_INT_OUTSTANDING_MEM     = 4;   // Snitch core outstanding memory ops
+  parameter int unsigned SPATZ_NUM_SPATZ_OUTSTANDING_LOADS = 4;   // Spatz vector unit outstanding loads
+  parameter bit          SPATZ_XDIVSQRT                    = SPATZ_XDIVSQRT_PARAM; // From Makefile define (0=disabled, 1=enabled)
+  parameter bit          SPATZ_XDMA                        = SPATZ_XDMA_PARAM;     // From Makefile define (0=disabled, 1=enabled)
+  parameter bit          SPATZ_RVF                         = SPATZ_RVF_PARAM;      // From Makefile define (single-precision FP)
+  parameter bit          SPATZ_RVV                         = SPATZ_RVV_PARAM;      // From Makefile define (vector extension)
+  parameter bit          SPATZ_REGISTER_OFFLOAD_RSP        = 1'b0; // Pipeline register on offload response
+  parameter bit          SPATZ_REGISTER_CORE_REQ           = 1'b1; // Pipeline register on core request
+  parameter bit          SPATZ_REGISTER_CORE_RSP           = 1'b1; // Pipeline register on core response
+  
+  // Spatz FPU implementation configuration
+  localparam fpnew_pkg::fpu_implementation_t SPATZ_FPUImplementation = '{
+    PipeRegs: // FMA Block
+              '{
+                '{  3,                           // FP32 FMA
+                    SPATZ_RVD_PARAM ? 3 : 0,     // FP64 FMA
+                    3,                           // FP16
+                    3,                           // FP8
+                    3,                           // FP16alt
+                    3                            // FP8alt
+                  },
+                '{1, 1, 1, 1, 1, 1},             // DIVSQRT (all formats)
+                '{1, 1, 1, 1, 1, 1},             // NONCOMP (all formats)
+                '{2, 2, 2, 2, 2, 2},             // CONV (all formats)
+                '{5, 5, 5, 5, 5, 5}              // DOTP
+                },
+  UnitTypes: '{'{ fpnew_pkg::MERGED,
+                  SPATZ_RVD_PARAM ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED},           // FMA 
+                '{fpnew_pkg::DISABLED,
+                  fpnew_pkg::DISABLED,
+                  fpnew_pkg::DISABLED,
+                  fpnew_pkg::DISABLED,
+                  fpnew_pkg::DISABLED,
+                  fpnew_pkg::DISABLED},          // DIVSQRT 
+                '{fpnew_pkg::PARALLEL,
+                  SPATZ_RVD_PARAM ? fpnew_pkg::PARALLEL : fpnew_pkg::DISABLED,
+                  fpnew_pkg::PARALLEL,
+                  fpnew_pkg::PARALLEL,
+                  fpnew_pkg::PARALLEL,
+                  fpnew_pkg::PARALLEL},          // NONCOMP 
+                '{fpnew_pkg::MERGED,
+                  SPATZ_RVD_PARAM ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED},            // CONV 
+                '{fpnew_pkg::MERGED,
+                  SPATZ_RVD_PARAM ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED,
+                  fpnew_pkg::MERGED}},           // DOTP 
+    PipeConfig: fpnew_pkg::BEFORE 
+  };
+
+  // Spatz bootrom parameters
+  parameter logic [31:0] SPATZ_BOOT_ADDR          = 32'h1000_0000;  // Spatz bootrom base address
+  parameter logic [31:0] SPATZ_BOOTROM_SIZE       = 32'h0000_00FF;
+  
+  // Spatz TCDM parameters
+  parameter int unsigned SPATZ_TCDM_ADDR_WIDTH = $clog2(magia_pkg::N_MEM_BANKS * magia_pkg::N_WORDS_BANK * magia_pkg::DATA_W / 8);  
+  parameter int unsigned SPATZ_TCDM_DATA_WIDTH = SPATZ_RVD_PARAM ? 64 : 32;                  // Spatz TCDM data width
+  parameter int unsigned SPATZ_TCDM_STRB_WIDTH = SPATZ_RVD_PARAM ? 8 : 4;                    // Spatz TCDM strobe width
+
 
   // Parameters used by the HCI
   parameter int unsigned N_HWPE  = 1;                                                   // Number of HWPEs attached to the port
-  parameter int unsigned N_CORE  = 1;                                                   // Number of Core ports
+  parameter int unsigned N_CORE  = 1 + SPATZ_HCI_PORTS;                                 // Number of Core ports: 1 CV32 + Spatz HCI ports (RVD=1: 11 total, RVD=0: 6 total)
   parameter int unsigned N_DMA   = 4;                                                   // Number of DMA ports (1 out read channel, 1 out write channel, 1 in read channel and 1 in write channel)
   typedef enum logic[1:0]{
     HCI_DMA_OUT_CH_READ_IDX  = 2'b00,
@@ -127,7 +277,7 @@ package magia_tile_pkg;
   parameter bit          USE_PMP             = 1'b1;                                    // Enable PMP
   parameter bit          PULP_CLUSTER        = 1'b1;                                    // PULP cluster mode
   parameter bit          FPU                 = 1'b1;                                    // Enable FPU (main feature)
-  parameter bit          ZFINX               = 1'b0;                                    // Zfinx extension (integer FP in GPR) - Must be 0 for standard FPU
+  parameter bit          ZFINX               = 1'b1;                                    // Zfinx extension (integer FP in GPR) - Must be 1 for CV32E40P with FP16/FP16alt
   parameter bit          FP_DIVSQRT          = 1'b1;                                    // FP division and square root
   parameter bit          SHARED_FP           = 1'b0;                                    // Shared FP unit
   parameter bit          SHARED_DSP_MULT     = 1'b0;                                    // Shared DSP multiplier
@@ -169,23 +319,24 @@ package magia_tile_pkg;
   parameter int unsigned MID_WIDTH    = 1;                                              // Width of the mid   signal (manager identifier, see OBI documentation)
   parameter int unsigned OBI_ID_WIDTH = 1;                                              // Width of the id - configuration
 `ifdef CV32E40X
-  parameter int unsigned N_SBR        = 2;                                              // Number of slaves (HCI, AXI XBAR)
+  parameter int unsigned N_SBR        = 4;                                              // Number of slaves (HCI, AXI XBAR, Event_Unit, Spatz_Ctrl)
 `else
-  parameter int unsigned N_SBR        = 5;                                              // Number of slaves (HCI, AXI XBAR, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl) - Event_Unit now via eu_direct_link
+  parameter int unsigned N_SBR        = 7;                                              // Number of OBI slaves (HCI, AXI XBAR, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl, Event_Unit, Spatz_Ctrl)
 `endif  
-  parameter int unsigned N_MGR        = 2;                                              // Number of masters (Core, AXI XBAR)
+  parameter int unsigned N_MGR        = 3;                                              // Number of masters (Core, AXI XBAR, Spatz CC)
   parameter int unsigned N_MAX_TRAN   = 1;                                              // Number of maximum outstanding transactions
 `ifdef CV32E40X
-  parameter int unsigned N_ADDR_RULE  = 4;                                              // Number of address rules (L2, L1, Stack, Reserved)
+  parameter int unsigned N_ADDR_RULE  = 6;                                              // Number of address rules (L2, L1, Stack, Reserved, Event_Unit, Spatz_Ctrl)
 `else
-  parameter int unsigned N_ADDR_RULE  = 7;                                              // Number of address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl) - Event_Unit now via eu_direct_link
+  parameter int unsigned N_ADDR_RULE  = 9;                                              // Number of OBI address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl, Event_Unit, Spatz_Ctrl)
 `endif  
   localparam int unsigned N_BIT_SBR   = $clog2(N_SBR);                                  // Number of bits required to identify each slave
 
   // Parameters used by AXI
-  parameter int unsigned AXI_DATA_ID_W  = 2;                                            // Width of the AXI Data ID (2 bits: Core, iDMA, I$, ext)
-  parameter int unsigned AXI_INSTR_ID_W = 1;                                            // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
-  parameter int unsigned AXI_ID_W       = 2;                                            // Width of the AXI Unified Communication Channel ID
+  parameter int unsigned AXI_DATA_ID_W  = 3;                                            // Width of the AXI Data ID (3 bits for 5 slave ports on crossbar: 2^3=8)
+  parameter int unsigned AXI_INSTR_ID_W = 3;                                            // Width of the AXI Instruction ID (3 bits for 5 slave ports on crossbar)
+  parameter int unsigned AXI_ID_W       = 3;                                            // Width of the AXI Unified Communication Channel ID (3 bits for 5 slave ports)
+  localparam int unsigned AXI_MST_ID_W  = 6;                                            // Width of master port ID (slave 3b + prepend 3b for 5 ports)
   parameter int unsigned AXI_DATA_U_W   = magia_pkg::USR_W;                             // Width of the AXI Data User
   parameter int unsigned AXI_INSTR_U_W  = magia_pkg::USR_W;                             // Width of the AXI Instruction User
   parameter int unsigned AXI_U_W        = magia_pkg::USR_W;                             // Width of the AXI Unified Communication Channel User
@@ -309,8 +460,8 @@ package magia_tile_pkg;
   parameter bit          FSYNC_STALL               = 1;                                 // Fractal Sync Stall during synchronization
 
   // Parameters of the AXI XBAR
-  parameter int unsigned AxiXbarNoSlvPorts     = 3;                                     // Number of Slave Ports (Core Data, Core I$ and ext)
-  parameter int unsigned AxiXbarNoMstPorts     = 2;                                     // Number of Master Ports (OBI XBAR and ext)
+  parameter int unsigned AxiXbarNoSlvPorts     = 5;                                     // Number of Slave Ports (ext, iDMA, Core Data, CV32 I$, Spatz I$)
+  parameter int unsigned AxiXbarNoMstPorts     = 3;                                     // Number of Master Ports (to ext, to internal L1, to Spatz bootrom)
   localparam int unsigned AxiXbarSlvAxiIDWidth = AXI_DATA_ID_W;                         // Number of bits to indentify each Slave Port
   parameter int unsigned AxiXbarMaxWTrans      = 16;                                    // Maximum number of outstanding transactions per write
   parameter int unsigned AxiXbarMaxMstTrans    = AxiXbarMaxWTrans;                      // Maximum number of outstanding transactions per master
@@ -334,6 +485,12 @@ package magia_tile_pkg;
   parameter int unsigned FETCH_DW       = magia_pkg::DATA_W;                            // i$ Fetch interface data width. Power of two; >= 8.
   parameter int unsigned FILL_AW        = magia_pkg::ADDR_W;                            // i$ Fill interface address width. Same as FILL_AW; >= 1.
   parameter int unsigned FILL_DW        = magia_pkg::DATA_W;                            // i$ Fill interface data width. Power of two; >= 8.
+
+  // Spatz ICache parameters (dedicated icache for Spatz CC)
+  parameter int unsigned SPATZ_ICACHE_LINE_WIDTH = 256;                                 // Spatz i$ cache line width (should be investigated which is the best value)
+  parameter int unsigned SPATZ_ICACHE_LINE_COUNT = 32;                                  // Spatz i$ number of cache lines
+  parameter int unsigned SPATZ_ICACHE_WAYS       = 2;                                   // Spatz i$ number of ways (2-way set associative)
+  localparam int unsigned SPATZ_L0_EARLY_TAG_W   = snitch_pkg::PAGE_SHIFT - $clog2(SPATZ_ICACHE_LINE_WIDTH/8); // L0 early tag width
   
   // Parameters used by the FPU
   parameter bit                             FPU_ZFINX          = 0;                     // FPU use Zfinx extension instead of the F ISA extention
@@ -366,9 +523,10 @@ package magia_tile_pkg;
     logic[magia_pkg::ADDR_W-1:0] end_addr;
   } obi_xbar_rule_t;
 
-  typedef enum logic{
-    OBI_EXT_IDX  = 1,
-    OBI_CORE_IDX = 0
+  typedef enum logic[1:0]{
+    OBI_SPATZ_IDX = 2,
+    OBI_EXT_IDX   = 1,
+    OBI_CORE_IDX  = 0
   } obi_xbar_idx_e;
 
   typedef struct packed {
@@ -452,16 +610,20 @@ package magia_tile_pkg;
   } core_cache_instr_rsp_t;
 
 `ifdef CV32E40X
-  typedef enum logic[1:0]{
-    OBI_XBAR_STACK_IDX    = 3,
-    OBI_XBAR_RESERVED_IDX = 2,
-    OBI_XBAR_L1SPM_IDX    = 1,
-    OBI_XBAR_L2_IDX       = 0
+  typedef enum logic[2:0]{
+    OBI_XBAR_STACK_IDX        = 5,
+    OBI_XBAR_SPATZ_CTRL_IDX   = 4,
+    OBI_XBAR_EVENT_UNIT_IDX   = 3,
+    OBI_XBAR_RESERVED_IDX     = 2,
+    OBI_XBAR_L1SPM_IDX        = 1,
+    OBI_XBAR_L2_IDX           = 0
   } obi_mem_array_idx_e;
 `else
-  typedef enum logic[2:0]{
-    OBI_XBAR_STACK_IDX        = 6,
-    OBI_XBAR_RESERVED_IDX     = 5,
+  typedef enum logic[3:0]{
+    OBI_XBAR_STACK_IDX        = 8,
+    OBI_XBAR_RESERVED_IDX     = 7,
+    OBI_XBAR_SPATZ_CTRL_IDX   = 6,
+    OBI_XBAR_EVENT_UNIT_IDX   = 5,
     OBI_XBAR_FSYNC_CTRL_IDX   = 4,
     OBI_XBAR_IDMA_IDX         = 3,
     OBI_XBAR_REDMULE_CTRL_IDX = 2,
@@ -470,22 +632,28 @@ package magia_tile_pkg;
   } obi_mem_array_idx_e;
 `endif
 
-  typedef enum logic[1:0]{
-    AXI_XBAR_STACK_IDX    = 3,
-    AXI_XBAR_RESERVED_IDX = 2,
-    AXI_XBAR_L1SPM_IDX    = 1,
+  typedef enum logic[2:0]{
+    AXI_XBAR_STACK_IDX    = 4,
+    AXI_XBAR_RESERVED_IDX = 3,
+    AXI_XBAR_L1SPM_IDX    = 2,
+    AXI_XBAR_BOOTROM_IDX  = 1, 
     AXI_XBAR_L2_IDX       = 0
   } axi_mem_array_idx_e;
 
-  typedef enum logic[1:0]{
-    AXI_SLV_CORE_INSTR_IDX = 2,
-    AXI_SLV_CORE_DATA_IDX  = 1,
-    AXI_SLV_EXT_IDX        = 0
-  } axi_xbar_slv_idx_e;
 
-  typedef enum logic{
-    AXI_MST_OBI_IDX = 1,
-    AXI_MST_EXT_IDX = 0
+  typedef enum logic[2:0]{
+    AXI_SPATZ_INSTR_IDX =  4,
+    AXI_EXT_IDX          = 3,
+    AXI_IDMA_IDX         = 2,
+    AXI_CORE_DATA_IDX    = 1,
+    AXI_CORE_INSTR_IDX   = 0
+  } axi_xbar_idx_e;
+
+  
+  typedef enum logic[1:0]{
+    AXI_XBAR_MST_EXT_IDX     = 0,
+    AXI_XBAR_MST_INT_IDX     = 1,
+    AXI_XBAR_MST_BOOTROM_IDX = 2
   } axi_xbar_mst_idx_e;
 
   typedef struct packed {
@@ -501,7 +669,15 @@ package magia_tile_pkg;
   `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic[DWH-1:0], logic[UWH-1:0],  logic[IW-1:0], logic[0:0], logic[0:0])
 
   localparam obi_pkg::obi_optional_cfg_t obi_amo_optional_cfg = obi_pkg::obi_all_optional_config(AUSER_WIDTH, WUSER_WIDTH, RUSER_WIDTH, MID_WIDTH, ACHK_WIDTH, RCHK_WIDTH);
-  localparam obi_pkg::obi_cfg_t          obi_amo_cfg          = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, OBI_ID_WIDTH, obi_amo_optional_cfg);
+  localparam obi_pkg::obi_optional_cfg_t obi_no_amo_optional_cfg = '{UseAtop: 1'b0, UseMemtype: 1'b0, UseProt: 1'b0, UseDbg: 1'b0, AUserWidth: AUSER_WIDTH, WUserWidth: WUSER_WIDTH, RUserWidth: RUSER_WIDTH, MidWidth: MID_WIDTH, AChkWidth: ACHK_WIDTH, RChkWidth: RCHK_WIDTH};
+  
+  // OBI full configurations - 32-bit (default)
+  localparam obi_pkg::obi_cfg_t obi_amo_cfg = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, OBI_ID_WIDTH, obi_amo_optional_cfg);
+  localparam obi_pkg::obi_cfg_t obi_no_amo_cfg = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, OBI_ID_WIDTH, obi_no_amo_optional_cfg);
+  
+  // OBI full configurations - 64-bit
+  localparam obi_pkg::obi_cfg_t obi_amo_cfg_64 = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, SPATZ_TCDM_DATA_WIDTH, OBI_ID_WIDTH, obi_amo_optional_cfg);
+  localparam obi_pkg::obi_cfg_t obi_no_amo_cfg_64 = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, SPATZ_TCDM_DATA_WIDTH, OBI_ID_WIDTH, obi_no_amo_optional_cfg);
   localparam bit                         RegisterAmo          = 1;
   
   `OBI_TYPEDEF_ALL_A_OPTIONAL(core_data_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
@@ -524,6 +700,7 @@ package magia_tile_pkg;
   `AXI_TYPEDEF_ALL_CT(core_axi_data, core_axi_data_req_t, core_axi_data_rsp_t, logic[magia_pkg::ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[AXI_U_W-1:0])
   `AXI_TYPEDEF_ALL_CT(core_axi_instr, core_axi_instr_req_t, core_axi_instr_rsp_t, logic[magia_pkg::ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[AXI_U_W-1:0])
 
+  `REG_BUS_TYPEDEF_ALL(reg_dma, logic[magia_pkg::ADDR_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0])
   `REG_BUS_TYPEDEF_ALL(idma_fe_reg, logic[magia_pkg::ADDR_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0])
 
   `IDMA_TYPEDEF_FULL_REQ_T(idma_be_req_t, logic[iDMA_AxiIdWidth-1:0], idma_addr_t, logic[iDMA_TFLenWidth-1:0])
@@ -554,9 +731,9 @@ package magia_tile_pkg;
       idma_obi_a_chan_t a_chan;
     } obi;
   } idma_write_meta_channel_t;
-
-  `AXI_ALIAS(core_axi_data, axi_xbar_slv, core_axi_data_req_t, axi_xbar_slv_req_t, core_axi_data_rsp_t, axi_xbar_slv_rsp_t)
-  `AXI_ALIAS(core_axi_data, axi_xbar_mst, core_axi_data_req_t, axi_xbar_mst_req_t, core_axi_data_rsp_t, axi_xbar_mst_rsp_t)
+ 
+  `AXI_TYPEDEF_ALL_CT(axi_xbar_slv, axi_xbar_slv_req_t, axi_xbar_slv_rsp_t, logic[magia_pkg::ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[AXI_U_W-1:0])
+  `AXI_TYPEDEF_ALL_CT(axi_xbar_mst, axi_xbar_mst_req_t, axi_xbar_mst_rsp_t, logic[magia_pkg::ADDR_W-1:0], logic[AXI_MST_ID_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[AXI_U_W-1:0])
 
   `HCI_TYPEDEF_REQ_T(idma_hci_req_t, logic[iDMA_AddrWidth-1:0], logic[iDMA_DataWidth-1:0], logic[iDMA_StrbWidth-1:0], logic[iDMA_UserWidth-1:0], logic[IW-1:0], logic[0:0], logic[0:0])
   `HCI_TYPEDEF_RSP_T(idma_hci_rsp_t, logic[iDMA_DataWidth-1:0], logic[iDMA_UserWidth-1:0], logic[IW-1:0], logic[0:0], logic[0:0])
@@ -574,12 +751,58 @@ package magia_tile_pkg;
     UniqueIds           : 1'b0,
     AxiAddrWidth        : magia_pkg::ADDR_W,
     AxiDataWidth        : magia_pkg::DATA_W,
-    NoAddrRules         : 3
+    NoAddrRules         : 4
   };
 
   `FSYNC_TYPEDEF_ALL(ht_tile_fsync, logic[FSYNC_AGGR_W-1:0], logic[FSYNC_LVL_W-1:0], logic[FSYNC_ID_W-1:0])
   `FSYNC_TYPEDEF_ALL(vt_tile_fsync, logic[FSYNC_AGGR_W-1:0], logic[FSYNC_LVL_W-1:0], logic[FSYNC_ID_W-1:0])
   `FSYNC_TYPEDEF_ALL(hn_tile_fsync, logic[FSYNC_NBR_AGGR_W-1:0], logic[FSYNC_NBR_LVL_W-1:0], logic[FSYNC_NBR_ID_W-1:0])
   `FSYNC_TYPEDEF_ALL(vn_tile_fsync, logic[FSYNC_NBR_AGGR_W-1:0], logic[FSYNC_NBR_LVL_W-1:0], logic[FSYNC_NBR_ID_W-1:0])
+
+  /*******************************************************************/
+  /*              Spatz Core Complex Wrapper Types                   */
+  /*******************************************************************/
+  
+  // Base types for Spatz TCDM and reqrsp
+  typedef logic [magia_pkg::ADDR_W-1:0]    spatz_addr_t;
+  typedef logic [magia_pkg::DATA_W-1:0]    spatz_data_t;
+  typedef logic [magia_pkg::DATA_W/8-1:0]  spatz_strb_t;
+  typedef logic                            spatz_tcdm_user_t;
+  typedef logic [magia_tile_pkg::SPATZ_TCDM_ADDR_WIDTH-1:0] spatz_tcdm_addr_t;
+  
+  // 64-bit types for TCDM and reqrsp interfaces when RVD=1
+  typedef logic [SPATZ_TCDM_DATA_WIDTH-1:0]     spatz_data64_t;
+  typedef logic [SPATZ_TCDM_STRB_WIDTH-1:0]     spatz_strb64_t;
+  
+  `TCDM_TYPEDEF_ALL(spatz_tcdm, spatz_tcdm_addr_t, spatz_data_t, spatz_strb_t, spatz_tcdm_user_t)
+  `REQRSP_TYPEDEF_ALL(spatz_reqrsp, spatz_addr_t, spatz_data_t, spatz_strb_t)        // 32-bit for Snitch data port (RVD=0, DataWidth=32)
+  `REQRSP_TYPEDEF_ALL(spatz_reqrsp64, spatz_addr_t, spatz_data64_t, spatz_strb64_t)  // 64-bit for Snitch data port (RVD=1, DataWidth=64)
+
+  // TCDM64 types with AMO support (using TCDM_TYPEDEF_ALL macro which includes amo field)
+  typedef logic [magia_pkg::ADDR_W-1:0]        spatz_tcdm64_addr_t;
+  typedef logic [SPATZ_TCDM_DATA_WIDTH-1:0]    spatz_tcdm64_data_t;
+  typedef logic [SPATZ_TCDM_STRB_WIDTH-1:0]    spatz_tcdm64_strb_t;
+  typedef logic                                 spatz_tcdm64_user_t;
+  
+  `TCDM_TYPEDEF_ALL(spatz_tcdm64, spatz_tcdm64_addr_t, spatz_tcdm64_data_t, spatz_tcdm64_strb_t, spatz_tcdm64_user_t)
+  
+  // Alias for backward compatibility with spatz_cc instantiation
+  typedef spatz_tcdm64_req_chan_t spatz_tcdm64_payload_t;
+
+  // TCDM32 types with AMO support (for modular atomic resolver architecture)
+  typedef logic [magia_pkg::ADDR_W-1:0]        spatz_tcdm32_addr_t;
+  typedef logic [31:0]                          spatz_tcdm32_data_t;
+  typedef logic [3:0]                           spatz_tcdm32_strb_t;
+  typedef logic                                 spatz_tcdm32_user_t;
+  
+  `TCDM_TYPEDEF_ALL(spatz_tcdm32, spatz_tcdm32_addr_t, spatz_tcdm32_data_t, spatz_tcdm32_strb_t, spatz_tcdm32_user_t)
+  
+  // OBI 32-bit types for modular atomic architecture  
+  `OBI_TYPEDEF_ALL_A_OPTIONAL(spatz_obi32_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
+  `OBI_TYPEDEF_ALL_R_OPTIONAL(spatz_obi32_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
+  `OBI_TYPEDEF_A_CHAN_T(spatz_obi32_a_chan_t, magia_pkg::ADDR_W, 32, AID_WIDTH, spatz_obi32_a_optional_t)
+  `OBI_TYPEDEF_R_CHAN_T(spatz_obi32_r_chan_t, 32, RID_WIDTH, spatz_obi32_r_optional_t)
+  `OBI_TYPEDEF_DEFAULT_REQ_T(spatz_obi32_req_t, spatz_obi32_a_chan_t)
+  `OBI_TYPEDEF_RSP_T(spatz_obi32_rsp_t, spatz_obi32_r_chan_t)
 
 endpackage: magia_tile_pkg
