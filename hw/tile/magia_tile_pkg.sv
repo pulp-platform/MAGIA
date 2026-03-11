@@ -75,14 +75,6 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                 = 32'h4000_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_END             = L2_ADDR_START + L2_SIZE;
 
-  // Parameters used by AXI
-  parameter int unsigned AXI_DATA_ID_W  = 2;                                            // Width of the AXI Data ID (2 bits: Core, iDMA, I$, ext)
-  parameter int unsigned AXI_INSTR_ID_W = 1;                                            // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
-  parameter int unsigned AXI_ID_W       = 2;                                            // Width of the AXI Unified Communication Channel ID
-  parameter int unsigned AXI_DATA_U_W   = magia_pkg::USR_W;                             // Width of the AXI Data User
-  parameter int unsigned AXI_INSTR_U_W  = magia_pkg::USR_W;                             // Width of the AXI Instruction User
-  parameter int unsigned AXI_U_W        = magia_pkg::USR_W;                             // Width of the AXI Unified Communication Channel User
-  
   // Parameters used by the HCI
   parameter int unsigned N_HWPE  = 1;                                                   // Number of HWPEs attached to the port
   parameter int unsigned N_CORE  = 1;                                                   // Number of Core ports
@@ -114,12 +106,6 @@ package magia_tile_pkg;
   parameter int unsigned SEL_LIC = 1;                                                   // Log interconnect type selector
   localparam int unsigned SWH    = DWH/BWH;                                             // Strobe Width for HWPE Interconnect
   localparam int unsigned WDH    = DWH/WWH;                                             // Number of words per data for HWPE Interconnect
-
-  // Parameters used by RedMulE
-  parameter int unsigned REDMULE_DW         = DWH - 32;                                 // RedMulE Data Width: Hx(P+1)xBits + Bank width = 8x(1+1)x16+32 
-  parameter int unsigned REDMULE_UW         = UWH;                                      // RedMulE User Width
-  parameter int unsigned REDMULE_ID_W       = magia_pkg::ID_W + 
-                                              magia_pkg::ID_W_OFFSET;                   // RedMulE ID Width
 
   // Parameters used by the cv32e40x core
   parameter bit          X_EXT_EN        = 1;                                           // Enable eXtension Interface (X) support, see eXtension Interface
@@ -166,6 +152,44 @@ package magia_tile_pkg;
   // Parameters used by Event Unit
   parameter int unsigned EVENT_UNIT_IRQ_WIDTH = 5;                                      // Width of Event Unit IRQ ID signals (supports up to 32 different event types)
 
+  // Parameters used by RedMulE
+  parameter int unsigned REDMULE_DW         = DWH-32;                                   // RedMulE Data Width 
+  parameter int unsigned REDMULE_ID_W       = magia_pkg::ID_W + 
+                                              magia_pkg::ID_W_OFFSET;                   // RedMulE ID Width
+  parameter int unsigned REDMULE_UW         = UWH;                                      // RedMulE User Width
+
+  // Parameters used by OBI
+  parameter int unsigned AUSER_WIDTH  = 1;                                              // Width of the auser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned WUSER_WIDTH  = 1;                                              // Width of the wuser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned ACHK_WIDTH   = 1;                                              // Width of the achk  signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned RUSER_WIDTH  = 1;                                              // Width of the ruser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned RCHK_WIDTH   = 1;                                              // Width of the rchk  signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned AID_WIDTH    = 1;                                              // Width of the aid   signal (address channel identifier, see OBI documentation)
+  parameter int unsigned RID_WIDTH    = 1;                                              // Width of the rid   signal (response channel identifier, see OBI documentation)
+  parameter int unsigned MID_WIDTH    = 1;                                              // Width of the mid   signal (manager identifier, see OBI documentation)
+  parameter int unsigned OBI_ID_WIDTH = 1;                                              // Width of the id - configuration
+`ifdef CV32E40X
+  parameter int unsigned N_SBR        = 2;                                              // Number of slaves (HCI, AXI XBAR)
+`else
+  parameter int unsigned N_SBR        = 5;                                              // Number of slaves (HCI, AXI XBAR, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl) - Event_Unit now via eu_direct_link
+`endif  
+  parameter int unsigned N_MGR        = 2;                                              // Number of masters (Core, AXI XBAR)
+  parameter int unsigned N_MAX_TRAN   = 1;                                              // Number of maximum outstanding transactions
+`ifdef CV32E40X
+  parameter int unsigned N_ADDR_RULE  = 4;                                              // Number of address rules (L2, L1, Stack, Reserved)
+`else
+  parameter int unsigned N_ADDR_RULE  = 7;                                              // Number of address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl) - Event_Unit now via eu_direct_link
+`endif  
+  localparam int unsigned N_BIT_SBR   = $clog2(N_SBR);                                  // Number of bits required to identify each slave
+
+  // Parameters used by AXI
+  parameter int unsigned AXI_DATA_ID_W  = 2;                                            // Width of the AXI Data ID (2 bits: Core, iDMA, I$, ext)
+  parameter int unsigned AXI_INSTR_ID_W = 1;                                            // Width of the AXI Instruction ID (0 bits: direct Core - I$ connection)
+  parameter int unsigned AXI_ID_W       = 2;                                            // Width of the AXI Unified Communication Channel ID
+  parameter int unsigned AXI_DATA_U_W   = magia_pkg::USR_W;                             // Width of the AXI Data User
+  parameter int unsigned AXI_INSTR_U_W  = magia_pkg::USR_W;                             // Width of the AXI Instruction User
+  parameter int unsigned AXI_U_W        = magia_pkg::USR_W;                             // Width of the AXI Unified Communication Channel User
+
   // Parameters used by the iDMA
   localparam int unsigned iDMA_NumDims            = 3;                                  // iDMA Number of dimensions
   localparam int unsigned NumDim                  = iDMA_NumDims;                       // Needed by the iDMA typedef (wtf?)
@@ -196,30 +220,6 @@ package magia_tile_pkg;
     AXI2OBI = 1'b0,
     OBI2AXI = 1'b1
   } idma_transfer_ch_e;                                                                 // iDMA type of transfer channel
-  
-  // Parameters used by OBI
-  parameter int unsigned AUSER_WIDTH  = 1;                                              // Width of the auser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned WUSER_WIDTH  = 1;                                              // Width of the wuser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned ACHK_WIDTH   = 1;                                              // Width of the achk  signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned RUSER_WIDTH  = 1;                                              // Width of the ruser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned RCHK_WIDTH   = 1;                                              // Width of the rchk  signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned AID_WIDTH    = 1;                                              // Width of the aid   signal (address channel identifier, see OBI documentation)
-  parameter int unsigned RID_WIDTH    = 1;                                              // Width of the rid   signal (response channel identifier, see OBI documentation)
-  parameter int unsigned MID_WIDTH    = 1;                                              // Width of the mid   signal (manager identifier, see OBI documentation)
-  parameter int unsigned OBI_ID_WIDTH = 1;                                              // Width of the id - configuration
-`ifdef CV32E40X
-  parameter int unsigned N_SBR        = 2;                                              // Number of slaves (HCI, AXI XBAR)
-`else
-  parameter int unsigned N_SBR        = 5;                                              // Number of slaves (HCI, AXI XBAR, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl) - Event_Unit now via eu_direct_link
-`endif  
-  parameter int unsigned N_MGR        = 2;                                              // Number of masters (Core, AXI XBAR)
-  parameter int unsigned N_MAX_TRAN   = 1;                                              // Number of maximum outstanding transactions
-`ifdef CV32E40X
-  parameter int unsigned N_ADDR_RULE  = 4;                                              // Number of address rules (L2, L1, Stack, Reserved)
-`else
-  parameter int unsigned N_ADDR_RULE  = 7;                                              // Number of address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl) - Event_Unit now via eu_direct_link
-`endif  
-  localparam int unsigned N_BIT_SBR   = $clog2(N_SBR);                                  // Number of bits required to identify each slave
 
   // Parameters used by the Xif Instruction Dispatcher
   parameter int unsigned N_COPROC         = 4;                                          // RedMulE, iDMA, Fractal Sync and FPU
