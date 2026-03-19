@@ -26,12 +26,13 @@ package:
 dependencies:
   redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 944d4a4d45fe05147cfbf7f872af677578f3b15c } # branch: fc/ooo-mux
   cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: a90101211048ba1a16cedbe4db963ab6e12569d7 } # branch: vi/redmule_scaleup
-  cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: 37a82d337ba60129c333d104c29e816d0698b53b } 
+  cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: f5241403d5d65dbe1fffacd7035dd7ae1359c8ef } # branch: lb/magia_core
+  spatz             : { git: "https://github.com/pulp-platform/spatz.git"             , rev: 2a524191c8a6472d83fe69ce3a24f90bee5b4ef0 } # branch: lb/magia-spatz_cc
   idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: a6b190c7991331432afa9a2899d032bc1b176830 } # branch: vi/redmule_scaleup
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , version: 3.0.0                                }
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , version: 2.3.0                                }
-  cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , rev: 917ecbf908bdaa22c5713bbcff277d142506bb16 } # branch: michaero/astral
+  cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , rev: f88227d287251812b54c77fbfa608aa6dcd92b31 } # branch: lb/magia-spatz
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
   fpu_ss            : { git: "https://github.com/pulp-platform/fpu_ss.git"            , rev: 8e2eff774d9d38a1e17a46bd56a0936dac9522f0 } # branch: vi/bender_manifest
   obi               : { git: "https://github.com/pulp-platform/obi.git"               , rev: 528dc65303d5ffb02fbc254324c6b53eac0dd6e5 } # branch: lb/fix_atop_resolver                       
@@ -69,6 +70,14 @@ sources:
       - hw/tile/converters/hci2obi.sv
       - hw/tile/converters/xif_if2struct.sv
       - hw/tile/converters/obi2hwpe_ctrl.sv
+      - hw/tile/converters/tcdm2hci.sv
+      - hw/tile/converters/tcdm2obi.sv
+      - hw/tile/converters/tcdm2hci_atomic.sv
+      - hw/tile/converters/reqrsp2obi.sv
+      - hw/tile/converters/tcdm64_to_dual_hci32.sv
+      - hw/tile/converters/tcdm64_to_dual_tcdm32.sv
+      - hw/tile/converters/tcdm64_to_dual_hci32_atomic.sv
+      - hw/tile/converters/reqrsp64_to_obi32.sv
       - hw/tile/xbar_periph_bus_if.sv
       - hw/tile/cluster_event_map.sv
       - hw/tile/magia_event_unit.sv
@@ -82,7 +91,11 @@ sources:
       - hw/tile/idma_ctrl_mm.sv
       - hw/tile/fractal_sync_xif_inst_decoder.sv
       - hw/tile/obi_slave_fsync.sv
+      - hw/tile/obi_slave_ctrl_spatz.sv
+      - hw/tile/spatz_bootrom.sv
+      - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
+      - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_redmule_wrap.sv
       - hw/tile/magia_tile.sv
       # MAGIA DV
@@ -119,6 +132,14 @@ sources:
       - hw/tile/converters/hci2obi.sv
       - hw/tile/converters/xif_if2struct.sv
       - hw/tile/converters/obi2hwpe_ctrl.sv
+      - hw/tile/converters/tcdm2hci.sv
+      - hw/tile/converters/tcdm2obi.sv
+      - hw/tile/converters/tcdm2hci_atomic.sv
+      - hw/tile/converters/reqrsp2obi.sv
+      - hw/tile/converters/tcdm64_to_dual_hci32.sv
+      - hw/tile/converters/tcdm64_to_dual_tcdm32.sv
+      - hw/tile/converters/tcdm64_to_dual_hci32_atomic.sv
+      - hw/tile/converters/reqrsp64_to_obi32.sv
       - hw/tile/xbar_periph_bus_if.sv
       - hw/tile/cluster_event_map.sv
       - hw/tile/magia_event_unit.sv
@@ -132,7 +153,11 @@ sources:
       - hw/tile/idma_ctrl_mm.sv
       - hw/tile/fractal_sync_xif_inst_decoder.sv
       - hw/tile/obi_slave_fsync.sv
+      - hw/tile/obi_slave_ctrl_spatz.sv
+      - hw/tile/spatz_bootrom.sv
+      - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
+      - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_redmule_wrap.sv
       - hw/tile/magia_tile.sv
       # MAGIA
@@ -153,6 +178,7 @@ sources:
       - hw/mesh/noc/floo_axi_mesh_8x8_noc.sv
       - hw/mesh/noc/floo_axi_mesh_16x16_noc.sv
       - hw/mesh/noc/floo_axi_mesh_32x32_noc.sv
+      - target/sim/src/tile/floo_axi_mesh_1x2_pkg.sv
       # MAGIA Packages
       - hw/mesh/magia_pkg.sv
       - hw/tile/magia_tile_pkg.sv
@@ -168,6 +194,14 @@ sources:
       - hw/tile/converters/hci2obi.sv
       - hw/tile/converters/xif_if2struct.sv
       - hw/tile/converters/obi2hwpe_ctrl.sv
+      - hw/tile/converters/tcdm2hci.sv
+      - hw/tile/converters/tcdm2obi.sv
+      - hw/tile/converters/tcdm2hci_atomic.sv
+      - hw/tile/converters/reqrsp2obi.sv
+      - hw/tile/converters/tcdm64_to_dual_hci32.sv
+      - hw/tile/converters/tcdm64_to_dual_tcdm32.sv
+      - hw/tile/converters/tcdm64_to_dual_hci32_atomic.sv
+      - hw/tile/converters/reqrsp64_to_obi32.sv
       - hw/tile/xbar_periph_bus_if.sv
       - hw/tile/cluster_event_map.sv
       - hw/tile/magia_event_unit.sv
@@ -181,15 +215,14 @@ sources:
       - hw/tile/idma_ctrl_mm.sv
       - hw/tile/fractal_sync_xif_inst_decoder.sv
       - hw/tile/obi_slave_fsync.sv
+      - hw/tile/obi_slave_ctrl_spatz.sv
+      - hw/tile/spatz_bootrom.sv
+      - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
+      - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_redmule_wrap.sv
       - hw/tile/magia_tile.sv
       # MAGIA
-      - hw/mesh/noc/floo_axi_mesh_2x2_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_4x4_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_8x8_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_16x16_noc.sv
-      - hw/mesh/noc/floo_axi_mesh_32x32_noc.sv
       - hw/mesh/magia.sv
       # Tech
       - pd/sourcecode/tc_sram.sv
