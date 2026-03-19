@@ -45,6 +45,9 @@ jobs:
     steps:
       - name: Check GitLab CI
         uses: pulp-platform/pulp-actions/gitlab-ci@v1
+        env:
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}   # override default SHA, i.e. last commit from main
+          GITHUB_EVENT_NAME: pull_request
         with:
           domain: iis-git.ee.ethz.ch
           repo: github-mirror/magia
