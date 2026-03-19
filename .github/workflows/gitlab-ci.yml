@@ -13,6 +13,9 @@ on:
   pull_request_target:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   # Internal PRs and pushes: run directly with secrets available.
   gitlab-ci-internal:
