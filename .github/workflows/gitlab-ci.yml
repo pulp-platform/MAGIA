@@ -10,38 +10,16 @@ on:
     branches:
       - main
   pull_request:
-  pull_request_target:
   workflow_dispatch:
 
 jobs:
-  # Internal PRs and pushes: run directly with secrets available.
-  gitlab-ci-internal:
-    if: >
-      github.event_name != 'pull_request_target' &&
-      (
-        github.event_name != 'pull_request' ||
-        github.event.pull_request.head.repo.full_name == github.repository
-      )
+  gitlab-ci:
     runs-on: ubuntu-latest
     steps:
       - name: Check GitLab CI
         uses: pulp-platform/pulp-actions/gitlab-ci@v1
-        with:
-          domain: iis-git.ee.ethz.ch
-          repo: github-mirror/magia
-          token: ${{ secrets.GITLAB_TOKEN }}
-          poll-count: 2160
-
-  # Fork PRs: require maintainer approval before secrets are exposed.
-  gitlab-ci-external:
-    if: >
-      github.event_name == 'pull_request_target' &&
-      github.event.pull_request.head.repo.full_name != github.repository
-    runs-on: ubuntu-latest
-    environment: external-prs
-    steps:
-      - name: Check GitLab CI
-        uses: pulp-platform/pulp-actions/gitlab-ci@v1
+        # Skip on forks or pull requests from forks due to missing secrets.
+        if: github.repository == 'pulp-platform/MAGIA' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         with:
           domain: iis-git.ee.ethz.ch
           repo: github-mirror/magia
