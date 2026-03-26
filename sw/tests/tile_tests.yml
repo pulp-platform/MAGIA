@@ -1,0 +1,13 @@
+tile-tests:
+  hello_world:
+    path: .
+    command: make clean all run mesh_dv=0 test=hello_world
+  fpu_test:
+    path: .
+    command: make clean all run mesh_dv=0 test=fpu_test
+  mm_tests/tile_test_mm:
+    path: .
+    command: make clean all run mesh_dv=0 test=mm_tests/tile_test_mm
+  eu_tests/tile_test_event_unit:
+    path: .
+    command: make clean all run mesh_dv=0 test=eu_tests/tile_test_event_unit
