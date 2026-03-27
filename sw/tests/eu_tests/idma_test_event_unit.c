@@ -166,12 +166,12 @@ int main(void) {
   uint32_t transfer_id_o2a = transfer_id_2; // OBI2AXI (L1->L2) already started
   uint32_t transfer_id_a2o = idma_L2ToL1(src_addr, dst_addr, len); // Start AXI2OBI (L2->L1)
 
-  printf("iDMA moving concurrently data from L1 to L2 and from L2 to L1...\n");
-  
   // Clear Event Unit and ensure both masks are enabled
   eu_clear_events(0xFFFFFFFF);
   eu_enable_events(EU_IDMA_ALL_DONE_MASK);
 
+  printf("iDMA moving concurrently data from L1 to L2 and from L2 to L1...\n");
+  
   if (USE_WFE) {
     eu_idma_wait_completion(EU_WAIT_MODE_WFE);
     printf("Detected WFE...\n");
