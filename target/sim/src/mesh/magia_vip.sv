@@ -223,10 +223,11 @@ module magia_vip
         for (int k = 0; k < 2**magia_tb_pkg::L2_ID_W; k++) begin
           if (print_line[k] == 1'b1) begin
             $write("[mhartid %0d] ", i*magia_tb_pkg::N_TILES_X+j);
-            for (int j = 0; j < chars.size(); j++) begin
-              if (chars[j].id == k) begin
-                $write("%c", chars[j].data);
-                chars.delete(j--);
+            for (int ch_idx = 0; ch_idx < chars.size(); ch_idx++) begin
+              if (chars[ch_idx].id == k) begin
+                $write("%c", chars[ch_idx].data);
+                chars.delete(ch_idx);
+                ch_idx--;
               end
             end
             print_line[k] = 1'b0;

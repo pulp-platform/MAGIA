@@ -43,23 +43,26 @@ VERILATOR_ARGS += -Wno-style \
                   -Wno-combdly \
                   -Wno-latch \
                   -Wno-unoptflat \
-				  -Wno-blkandnblk
+				  -Wno-blkandnblk \
+				  -Wno-ENUMVALUE
 
 # activate tracing
 VERILATOR_ARGS += --timing --autoflush --trace-fst --trace-structs --trace-params
 
 # workaround for Bender not liking it if I add directly DPI C sources to the Bender.yml
+CV32E40P_ROOT ?= $(shell $(BENDER) path cv32e40p)
 VERILATOR_DPI = \
-	$(MAGIA_ROOT)/target/sim/tb/tb_lib/remote_bitbang/sim_jtag.c \
-	$(MAGIA_ROOT)/target/sim/tb/tb_lib/remote_bitbang/remote_bitbang.c
+	$(CV32E40P_ROOT)/tb/dm/remote_bitbang/sim_jtag.c \
+	$(CV32E40P_ROOT)/tb/dm/remote_bitbang/remote_bitbang.c
 
 $(VERILATOR_BUILD_DIR):
 	mkdir -p $@
 
 $(VERILATOR_BUILD_DIR)/magia.f: Bender.lock Bender.yml $(VERILATOR_BUILD_DIR)
-	$(BENDER) script verilator -t tech_cells_generic_include_deprecated -t rtl -t verilator -t rtl_sim -t verilator_dpi -t magia_dv -DSYNTHESIS -DVERILATOR > $@
+	$(BENDER) script verilator -t tech_cells_generic_include_deprecated -t rtl -t verilator -t rtl_sim -t verilator_dpi -t magia_dv -t simulation -DSYNTHESIS -DVERILATOR > $@
 	echo $(VERILATOR_DPI) >> $@
 	sed -i '/pad_functional\.sv/d' $@
+	sed -i '/apb_test\.sv/d' $@
 
 .PHONY: clean-verilator-bender
 clean-verilator-bender:
