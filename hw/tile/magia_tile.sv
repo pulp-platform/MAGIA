@@ -898,7 +898,13 @@ module magia_tile
     EW:  hci_package::DEFAULT_EW,
     EHW: hci_package::DEFAULT_EHW
   };
-  `HCI_INTF_ARRAY(hci_ext_if, sys_clk, 0:magia_tile_pkg::N_EXT-1);
+  generate;
+    if (N_EXT > 0) begin
+      `HCI_INTF_ARRAY(hci_ext_if, sys_clk, 0:magia_tile_pkg::N_EXT-1);
+    end else if (N_EXT == 0) begin
+      `HCI_INTF_ARRAY(hci_ext_if, sys_clk, 0:0);
+    end
+  endgenerate
 
   cv32e40x_if_xif xif_redmule_if ();
 
