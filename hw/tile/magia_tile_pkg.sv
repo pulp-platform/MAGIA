@@ -127,7 +127,7 @@ package magia_tile_pkg;
   parameter bit          USE_PMP             = 1'b1;                                    // Enable PMP
   parameter bit          PULP_CLUSTER        = 1'b1;                                    // PULP cluster mode
   parameter bit          FPU                 = 1'b1;                                    // Enable FPU (main feature)
-  parameter bit          ZFINX               = 1'b0;                                    // Zfinx extension (integer FP in GPR) - Must be 0 for standard FPU
+  parameter bit          ZFINX               = 1'b1;                                    // Zfinx extension (integer FP in GPR) - Must be 0 for standard FPU
   parameter bit          FP_DIVSQRT          = 1'b1;                                    // FP division and square root
   parameter bit          SHARED_FP           = 1'b0;                                    // Shared FP unit
   parameter bit          SHARED_DSP_MULT     = 1'b0;                                    // Shared DSP multiplier
@@ -336,7 +336,7 @@ package magia_tile_pkg;
   parameter int unsigned FILL_DW        = magia_pkg::DATA_W;                            // i$ Fill interface data width. Power of two; >= 8.
   
   // Parameters used by the FPU
-  parameter bit                             FPU_ZFINX          = 0;                     // FPU use Zfinx extension instead of the F ISA extention
+  parameter bit                             FPU_ZFINX          = 1;                     // FPU use Zfinx extension instead of the F ISA extention
   parameter int unsigned                    FPU_BUFFER_DEPTH   = 8;                     // FPU FIFO depth that buffers instructions coming from core
   parameter bit                             FPU_BUFFER_FT      = 0;                     // FPU FIFO fall through that buffers instructions coming from core
   parameter bit                             FPU_OOO            = 1;                     // FPU enable out-of-order execution
