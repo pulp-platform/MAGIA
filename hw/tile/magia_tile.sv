@@ -430,8 +430,6 @@ module magia_tile
   assign obi_xbar_en_default_idx = '1; // Routing to the AXI Xbar all requests with an address outside the range of the internal L1 and the external L2
   assign obi_xbar_default_idx    = '0;
 
-  assign axi_xbar_slv_req[magia_tile_pkg::AXI_IDMA_IDX]       = idma_axi_req_out;
-  assign idma_axi_rsp_out                                     = axi_xbar_slv_rsp[magia_tile_pkg::AXI_IDMA_IDX];
   assign axi_xbar_slv_req[magia_tile_pkg::AXI_CORE_DATA_IDX]  = core_l2_data_req;
   assign core_l2_data_rsp                                     = axi_xbar_slv_rsp[magia_tile_pkg::AXI_CORE_DATA_IDX];
   assign axi_xbar_slv_req[magia_tile_pkg::AXI_CORE_INSTR_IDX] = core_l2_instr_req;

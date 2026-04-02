@@ -333,10 +333,10 @@ package magia_tile_pkg;
   localparam int unsigned N_BIT_SBR   = $clog2(N_SBR);                                  // Number of bits required to identify each slave
 
   // Parameters used by AXI
-  parameter int unsigned AXI_DATA_ID_W  = 3;                                            // Width of the AXI Data ID (3 bits for 5 slave ports on crossbar: 2^3=8)
+  parameter int unsigned AXI_DATA_ID_W  = 2;                                            // Width of the AXI Data ID (2 bits for 4 slave ports on crossbar: 2^2=4)
   parameter int unsigned AXI_INSTR_ID_W = 3;                                            // Width of the AXI Instruction ID (3 bits for 5 slave ports on crossbar)
-  parameter int unsigned AXI_ID_W       = 3;                                            // Width of the AXI Unified Communication Channel ID (3 bits for 5 slave ports)
-  localparam int unsigned AXI_MST_ID_W  = 6;                                            // Width of master port ID (slave 3b + prepend 3b for 5 ports)
+  parameter int unsigned AXI_ID_W       = 2;                                            // Width of the AXI Unified Communication Channel ID (2 bits for 4 slave ports)
+  localparam int unsigned AXI_MST_ID_W  = 4;                                            // Width of master port ID (slave 2b + prepend 2b for 4 ports)
   parameter int unsigned AXI_DATA_U_W   = magia_pkg::USR_W;                             // Width of the AXI Data User
   parameter int unsigned AXI_INSTR_U_W  = magia_pkg::USR_W;                             // Width of the AXI Instruction User
   parameter int unsigned AXI_U_W        = magia_pkg::USR_W;                             // Width of the AXI Unified Communication Channel User
@@ -460,7 +460,7 @@ package magia_tile_pkg;
   parameter bit          FSYNC_STALL               = 1;                                 // Fractal Sync Stall during synchronization
 
   // Parameters of the AXI XBAR
-  parameter int unsigned AxiXbarNoSlvPorts     = 5;                                     // Number of Slave Ports (ext, iDMA, Core Data, CV32 I$, Spatz I$)
+  parameter int unsigned AxiXbarNoSlvPorts     = 4;                                     // Number of Slave Ports (ext, Core Data, CV32 I$, Spatz I$)
   parameter int unsigned AxiXbarNoMstPorts     = 3;                                     // Number of Master Ports (to ext, to internal L1, to Spatz bootrom)
   localparam int unsigned AxiXbarSlvAxiIDWidth = AXI_DATA_ID_W;                         // Number of bits to indentify each Slave Port
   parameter int unsigned AxiXbarMaxWTrans      = 16;                                    // Maximum number of outstanding transactions per write
@@ -641,12 +641,11 @@ package magia_tile_pkg;
   } axi_mem_array_idx_e;
 
 
-  typedef enum logic[2:0]{
-    AXI_SPATZ_INSTR_IDX =  4,
-    AXI_EXT_IDX          = 3,
-    AXI_IDMA_IDX         = 2,
-    AXI_CORE_DATA_IDX    = 1,
-    AXI_CORE_INSTR_IDX   = 0
+  typedef enum logic[1:0]{
+    AXI_SPATZ_INSTR_IDX = 3,
+    AXI_EXT_IDX         = 2,
+    AXI_CORE_DATA_IDX   = 1,
+    AXI_CORE_INSTR_IDX  = 0
   } axi_xbar_idx_e;
 
   
