@@ -430,12 +430,12 @@ module magia_tile
   assign obi_xbar_en_default_idx = '1; // Routing to the AXI Xbar all requests with an address outside the range of the internal L1 and the external L2
   assign obi_xbar_default_idx    = '0;
 
-  assign axi_xbar_slv_req[magia_tile_pkg::AXI_CORE_DATA_IDX]  = core_l2_data_req;
-  assign core_l2_data_rsp                                     = axi_xbar_slv_rsp[magia_tile_pkg::AXI_CORE_DATA_IDX];
-  assign axi_xbar_slv_req[magia_tile_pkg::AXI_CORE_INSTR_IDX] = core_l2_instr_req;
-  assign core_l2_instr_rsp                                    = axi_xbar_slv_rsp[magia_tile_pkg::AXI_CORE_INSTR_IDX];
-  assign axi_xbar_slv_req[magia_tile_pkg::AXI_SPATZ_INSTR_IDX] = spatz_icache_axi_req;
-  assign spatz_icache_axi_rsp                                  = axi_xbar_slv_rsp[magia_tile_pkg::AXI_SPATZ_INSTR_IDX];
+  assign axi_xbar_slv_req[magia_tile_pkg::AXI_SLV_CORE_DATA_IDX]  = core_l2_data_req;
+  assign core_l2_data_rsp                                         = axi_xbar_slv_rsp[magia_tile_pkg::AXI_SLV_CORE_DATA_IDX];
+  assign axi_xbar_slv_req[magia_tile_pkg::AXI_SLV_CORE_INSTR_IDX] = core_l2_instr_req;
+  assign core_l2_instr_rsp                                        = axi_xbar_slv_rsp[magia_tile_pkg::AXI_SLV_CORE_INSTR_IDX];
+  assign axi_xbar_slv_req[magia_tile_pkg::AXI_SLV_SPATZ_INSTR_IDX] = spatz_icache_axi_req;
+  assign spatz_icache_axi_rsp                                      = axi_xbar_slv_rsp[magia_tile_pkg::AXI_SLV_SPATZ_INSTR_IDX];
   
   assign obi_xbar_slv_req[magia_tile_pkg::OBI_CORE_IDX] = core_obi_data_req;
   assign core_obi_data_rsp                              = obi_xbar_slv_rsp[magia_tile_pkg::OBI_CORE_IDX];
@@ -694,8 +694,8 @@ module magia_tile
     .clk_i                  ( sys_clk                                           ),
     .rst_ni                 ( rst_ni                                            ),
     .testmode_i             ( test_mode_i                                       ),
-    .axi_req_i              ( axi_xbar_mst_req[magia_tile_pkg::AXI_XBAR_MST_INT_IDX] ),
-    .axi_rsp_o              ( axi_xbar_mst_rsp[magia_tile_pkg::AXI_XBAR_MST_INT_IDX] ),
+    .axi_req_i              ( axi_xbar_mst_req[magia_tile_pkg::AXI_MST_OBI_IDX] ),
+    .axi_rsp_o              ( axi_xbar_mst_rsp[magia_tile_pkg::AXI_MST_OBI_IDX] ),
     .obi_req_o              ( ext_obi_data_req                                  ),
     .obi_rsp_i              ( ext_obi_data_rsp                                  ),
     .req_aw_id_o            (                                                   ),
@@ -1747,10 +1747,10 @@ module magia_tile
     .rst_ni               ( rst_ni                                            ),
     .test_enable_i        ( test_mode_i                                       ),
     .sram_cfg_i           ( '0                                                ),
-    .axi_narrow_in_req_i  ( axi_xbar_mst_req[magia_tile_pkg::AXI_XBAR_MST_EXT_IDX] ),
-    .axi_narrow_in_rsp_o  ( axi_xbar_mst_rsp[magia_tile_pkg::AXI_XBAR_MST_EXT_IDX] ),
-    .axi_narrow_out_req_o ( axi_xbar_slv_req[magia_tile_pkg::AXI_EXT_IDX] ),
-    .axi_narrow_out_rsp_i ( axi_xbar_slv_rsp[magia_tile_pkg::AXI_EXT_IDX] ),
+    .axi_narrow_in_req_i  ( axi_xbar_mst_req[magia_tile_pkg::AXI_MST_EXT_IDX] ),
+    .axi_narrow_in_rsp_o  ( axi_xbar_mst_rsp[magia_tile_pkg::AXI_MST_EXT_IDX] ),
+    .axi_narrow_out_req_o ( axi_xbar_slv_req[magia_tile_pkg::AXI_SLV_EXT_IDX] ),
+    .axi_narrow_out_rsp_i ( axi_xbar_slv_rsp[magia_tile_pkg::AXI_SLV_EXT_IDX] ),
     .axi_wide_in_req_i    ( idma_axi_req_out                                  ),
     .axi_wide_in_rsp_o    ( idma_axi_rsp_out                                  ),
     .axi_wide_out_req_o   ( idma_axi_req_in                                   ),
@@ -2122,8 +2122,8 @@ module magia_tile
   ) i_axi_to_reg_bootrom (
     .clk_i      ( sys_clk                                                     ),
     .rst_ni     ( rst_ni                                                      ),
-    .axi_req_i  ( axi_xbar_mst_req[magia_tile_pkg::AXI_XBAR_MST_BOOTROM_IDX]  ),
-    .axi_rsp_o  ( axi_xbar_mst_rsp[magia_tile_pkg::AXI_XBAR_MST_BOOTROM_IDX]  ),
+    .axi_req_i  ( axi_xbar_mst_req[magia_tile_pkg::AXI_MST_BOOTROM_IDX]  ),
+    .axi_rsp_o  ( axi_xbar_mst_rsp[magia_tile_pkg::AXI_MST_BOOTROM_IDX]  ),
     .reg_req_o  ( bootrom_reg_req                                             ),
     .reg_rsp_i  ( bootrom_reg_rsp                                             ),
     .reg_id_o   ( bootrom_reg_id                                              ),

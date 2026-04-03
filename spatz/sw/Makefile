@@ -16,7 +16,9 @@
 # Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
 # Spatz Programs Makefile for MAGIA Tile
 
-LLVM_PATH := /sw/scratch/luca.balboni10/SPATZ/install/llvm
+LLVM_FALLBACK := /sw/scratch/luca.balboni10/SPATZ/install/llvm
+LLVM_FROM_PATH := $(shell dirname $$(dirname $$(which clang 2>/dev/null)) 2>/dev/null)
+LLVM_PATH ?= $(if $(LLVM_FROM_PATH),$(LLVM_FROM_PATH),$(LLVM_FALLBACK))
 
 # Configuration from top-level Makefile
 SPATZ_RVD      ?= 0   # 0: ELEN=32, 1: ELEN=64
