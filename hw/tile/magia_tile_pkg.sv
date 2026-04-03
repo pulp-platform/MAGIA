@@ -333,10 +333,8 @@ package magia_tile_pkg;
   localparam int unsigned N_BIT_SBR   = $clog2(N_SBR);                                  // Number of bits required to identify each slave
 
   // Parameters used by AXI
-  parameter int unsigned AXI_DATA_ID_W  = 2;                                            // Width of the AXI Data ID (2 bits for 4 slave ports on crossbar: 2^2=4)
-  parameter int unsigned AXI_INSTR_ID_W = 3;                                            // Width of the AXI Instruction ID (3 bits for 5 slave ports on crossbar)
-  parameter int unsigned AXI_ID_W       = 2;                                            // Width of the AXI Unified Communication Channel ID (2 bits for 4 slave ports)
-  localparam int unsigned AXI_MST_ID_W  = 4;                                            // Width of master port ID (slave 2b + prepend 2b for 4 ports)
+  parameter int unsigned AXI_DATA_ID_W  = 2;                                            // Width of AXI data IDs (4 xbar slave ports)
+  parameter int unsigned AXI_ID_W       = 2;                                            // Width of the AXI Unified Communication Channel ID
   parameter int unsigned AXI_DATA_U_W   = magia_pkg::USR_W;                             // Width of the AXI Data User
   parameter int unsigned AXI_INSTR_U_W  = magia_pkg::USR_W;                             // Width of the AXI Instruction User
   parameter int unsigned AXI_U_W        = magia_pkg::USR_W;                             // Width of the AXI Unified Communication Channel User
@@ -642,17 +640,17 @@ package magia_tile_pkg;
 
 
   typedef enum logic[1:0]{
-    AXI_SPATZ_INSTR_IDX = 3,
-    AXI_EXT_IDX         = 2,
-    AXI_CORE_DATA_IDX   = 1,
-    AXI_CORE_INSTR_IDX  = 0
-  } axi_xbar_idx_e;
+    AXI_SLV_SPATZ_INSTR_IDX = 3,
+    AXI_SLV_EXT_IDX         = 2,
+    AXI_SLV_CORE_DATA_IDX   = 1,
+    AXI_SLV_CORE_INSTR_IDX  = 0
+  } axi_xbar_slv_idx_e;
 
   
   typedef enum logic[1:0]{
-    AXI_XBAR_MST_EXT_IDX     = 0,
-    AXI_XBAR_MST_INT_IDX     = 1,
-    AXI_XBAR_MST_BOOTROM_IDX = 2
+    AXI_MST_EXT_IDX     = 0,
+    AXI_MST_OBI_IDX     = 1,
+    AXI_MST_BOOTROM_IDX = 2
   } axi_xbar_mst_idx_e;
 
   typedef struct packed {
@@ -732,7 +730,6 @@ package magia_tile_pkg;
   } idma_write_meta_channel_t;
  
   `AXI_TYPEDEF_ALL_CT(axi_xbar_slv, axi_xbar_slv_req_t, axi_xbar_slv_rsp_t, logic[magia_pkg::ADDR_W-1:0], logic[AXI_ID_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[AXI_U_W-1:0])
-  `AXI_TYPEDEF_ALL_CT(axi_xbar_mst, axi_xbar_mst_req_t, axi_xbar_mst_rsp_t, logic[magia_pkg::ADDR_W-1:0], logic[AXI_MST_ID_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[AXI_U_W-1:0])
 
   `HCI_TYPEDEF_REQ_T(idma_hci_req_t, logic[iDMA_AddrWidth-1:0], logic[iDMA_DataWidth-1:0], logic[iDMA_StrbWidth-1:0], logic[iDMA_UserWidth-1:0], logic[IW-1:0], logic[0:0], logic[0:0])
   `HCI_TYPEDEF_RSP_T(idma_hci_rsp_t, logic[iDMA_DataWidth-1:0], logic[iDMA_UserWidth-1:0], logic[IW-1:0], logic[0:0], logic[0:0])
