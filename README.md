@@ -2,7 +2,7 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE.APACHE)
 [![SHL-0.51 license](https://img.shields.io/badge/license-SHL--0.51-green)](LICENSE.SHL)
 
-This repo contains MAGIA (**M**esh **A**rchitecture for **G**enerative **I**ntelligence **A**cceleration), an open-source large-scale accelerator designed for Generative Artificial Intelligence (GenAI). MAGIA is a network of tiles that have at their heart [RedMulE](https://github.com/pulp-platform/redmule) for General Matrix Multiply (GeMM) acceleration, [iDMA](https://github.com/pulp-platform/iDMA) for fast and efficient data movement and an L1 scratchpad memory (SPM). Tiles are connected to a mesh Network-on-Chip (NoC) - [FlooNoC](https://github.com/pulp-platform/FlooNoC) - used for communication, and a dedicated network for synchronization - [FractalSync](https://github.com/VictorIsachi/fractal_sync). MAGIA is designed to support matrices of sizes that vary by orders of magnitude, and also sparse matrix multiplication. 
+This repo contains MAGIA (**M**esh **A**rchitecture for **G**enerative **I**ntelligence **A**cceleration), an open-source large-scale accelerator designed for Generative Artificial Intelligence (GenAI). MAGIA is a network of tiles that have at their heart [RedMulE](https://github.com/pulp-platform/redmule) for General Matrix Multiply (GeMM) acceleration, [iDMA](https://github.com/pulp-platform/iDMA) for fast and efficient data movement, [Spatz Core Complex (Spatz CC)](https://github.com/pulp-platform/spatz) for vector workloads acceleration, and an L1 scratchpad memory (SPM). Tiles are connected to a mesh Network-on-Chip (NoC) - [FlooNoC](https://github.com/pulp-platform/FlooNoC) - used for communication, and a dedicated network for synchronization - [FractalSync](https://github.com/VictorIsachi/fractal_sync). Each tile is equipped with an [Event Unit](https://github.com/pulp-platform/event_unit_flex) for tile synchronization and event aggregation. MAGIA is designed to support matrices of sizes that vary by orders of magnitude, and also sparse matrix multiplication.
 
 MAGIA is developed as part of the [PULP (Parallel Ultra-Low Power)](https://pulp-platform.org/) project, a joint effort between ETH Zurich and the University of Bologna.
 
@@ -24,7 +24,6 @@ By default, the `python` in your `$PATH` is used. You can specify the version by
 
 The following *optional* parameters can be specified:
 
-`core`: **CV32E40X**|**CV32E40P** (**Default**: CV32E40X). Selects between the cv32e40x core with Xif programming interface and cv32e40p with memory mapped interface.
 
 `mesh_dv`: **0**|**1** (**Default**: 1). 0 simulation of a single tile; 1 simulation of the entire mesh.
 
@@ -38,7 +37,7 @@ The following *optional* parameters can be specified:
 
 **1)** Setup the *environment* (`MAGIA` folder):
 ```bash
-source setup_env.sh <core>
+source setup_env.sh
 ```
 **2)** Install *python dependencies* (`MAGIA` folder):
 ```bash
@@ -50,7 +49,7 @@ make bender
 ```
 **4)** Clone the *dependencies* and generate the *compilation script* (`MAGIA` folder):
 ```bash
-make update-ips > update-ips.log <core> <mesh_dv>
+make update-ips > update-ips.log <mesh_dv>
 ```
 **4\*)** Apply FlooNoC *patch* - **currently FlooNoC requires this step but should not need it in the future** (`MAGIA` folder):
 ```bash
@@ -58,27 +57,27 @@ make floonoc-patch
 ```
 **5)** *Build* the hardware (`MAGIA` folder):
 ```bash
-make build-hw > build-hw.log <core> <mesh_dv> <fast_sim>
+make build-hw > build-hw.log <mesh_dv> <fast_sim>
 ```
 **6)** *Compile* the test code (`MAGIA` folder):
 ```bash
-make all <test> <core>
+make all <test>
 ```
 **7)** *Run* test (`MAGIA` folder):
 ```bash
-make run <test> <core> <gui> <mesh_dv>
+make run <test> <gui> <mesh_dv>
 ```
 
 **Full example**:
 ```bash
 make python_venv
-source setup_env.sh CV32E40P
+source setup_env.sh
 make python_deps
 make bender
-make update-ips > update-ips.log core=CV32E40P
-make build-hw > build-hw.log core=CV32E40P fast_sim=1
-make all test=fsync_test core=CV32E40P
-make run test=fsync_test core=CV32E40P
+make update-ips > update-ips.log 
+make build-hw > build-hw.log fast_sim=1
+make all test=fsync_test
+make run test=fsync_test
 ```
 
 ## ⚙️ Architecture
@@ -86,212 +85,61 @@ make run test=fsync_test core=CV32E40P
 ![](doc/MAGIA.png)
 
 ### Tile
-The central piece of the architecture is the MAGIA tile containing a GeMM accelerator, a DMA engine, a multi-banked L1 SPM and a lightweight control core. The L1 features interleaved memory banks that compose the Tightly-Coupled Data Memory (TCDM). Each tile has access to the global L2 and to a subset of other tiles’ L1, accessing the latter via on-chip remote direct memory access (RDMA). Inter-tile and global communication is carried out through a 2-channel 32-bit [AXI4](https://github.com/pulp-platform/axi) crossbar (XBAR). External tiles and the core access the L1 through an OpenBus Interface ([OBI](https://github.com/pulp-platform/obi)) XBAR and an atomic memory operation (AMO) hardware module.
+The central piece of the architecture is the MAGIA tile containing a GeMM accelerator, a Vector Processor, a DMA engine, a multi-banked L1 SPM, an Event Unit, and a lightweight control core. The L1 features interleaved memory banks that compose the Tightly-Coupled Data Memory (TCDM). Each tile has access to the global L2 and to a subset of other tiles' L1, accessing the latter via on-chip remote direct memory access (RDMA). Inter-tile and global communication is carried out through AXI-based narrow (32-bit) and wide (256-bit) NoC channels in [FlooNoC](https://github.com/pulp-platform/FlooNoC). External tiles and the core access the L1 through an OpenBus Interface ([OBI](https://github.com/pulp-platform/obi)) XBAR.
 
-Each tile is controlled by a [cv32e40x](https://github.com/pulp-platform/cv32e40x). The system has been extended with custom instructions to program and control the iDMA, RedMulE, and FractalSync. These instructions are implemented using eXtension Interface (Xif). A dedicated dispatcher routs instructions not meant for the core to the appropriate module.
+Each tile is controlled by a [cv32e40p](https://github.com/pulp-platform/cv32e40p). Control of iDMA, RedMulE, FractalSync, and Spatz CC control registers follows a memory-mapped model, with the Event Unit handling event aggregation for system control.
 
 ### Mesh
-Replicating the MAGIA tile, we scale up to a homogeneous two-dimensional (2D) mesh of compute tiles. The NoC allows access to the global west-side L2 via a number of interfaces equal to the number of rows. The mesh features a 2D XY topology with 32-bit physical links. The conversion between the AXI4 protocol, used by the compute tiles, and the network-level protocol is performed by Network Interfaces (NIs) between each tile and the near router.
+Replicating the MAGIA tile, we scale up to a homogeneous two-dimensional (2D) mesh of compute tiles. The NoC allows access to the global west-side L2 through row-side interfaces, while tiles exchange traffic through FlooNoC router. The mesh uses XY routing and carries both AXI narrow channels (32-bit) and AXI wide channels (256-bit), with protocol conversion handled by per-tile Network Interfaces (NIs).
 
 Rendez-vous among tiles are managed through the FractalSync (FS) mechanism and the dedicated network.
 
 ### Memory map
-L1 size: 1 MB per tile (896kB Usable - 64kB Stack, 64kB Reserved (e.g. synchronization)).
+This map reflects the RTL memory-mapped layout defined in `hw/tile/magia_tile_pkg.sv`.
 
-L2 size: 1 GB.
+- `tile_base = mhartid * 0x0010_0000`
 
-| Region           | Range                                         | Notes                                                                      |
-|------------------|-----------------------------------------------|----------------------------------------------------------------------------|
-| *Reserved*       | \[0x0000_0000:0x0000_FFFF\]+*ID*\*0x0010_0000 | *ID* is the **mhartid** of the Tile                                        |
-| *Stack*          | \[0x0001_0000:0x0001_FFFF\]                   | \[0x0001_0000:0x0001_FFFF\]+*ID*\*0x0010_0000, *ID* > 0, are **forbidden** |
-| *L1*             | \[0x0002_0000:0x000F_FFFF\]+*ID*\*0x0010_0000 | Up to 3072 tiles                                                           |
-| *L2*             | \[0xC000_0000:0xFFFF_FFFF\]                   |                                                                            |
-| *Instructions*   | \[0xCC00_0000:0xCC00_8000\]                   |                                                                            |
-| *Data*           | \[0xCC01_0000:0xCC04_0000\]                   |                                                                            |
-| *L2 Base*        | 0xCC00_0000                                   |                                                                            |
-| *Test End*       | 0xCC03_0000                                   |                                                                            |
-| *String (utoa)*  | 0x0000_0000+*ID*\*0x0010_0000                 |                                                                            |
-| *Print (stderr)* | 0xFFFF_0000                                   |                                                                            |
-| *Print (stdio)*  | 0xFFFF_0004                                   |                                                                            |
-| *Synch.*         | 0x0000_F000+*ID*\*0x0010_0000                 |                                                                            |
+Per-tile local map (offset from `tile_base`, starts at `0x0000_0000`):
+
+| Region            | Local Range             | Global Range (`tile_base + offset`) |
+|-------------------|-------------------------|--------------------------------------|
+| *RedMulE CTRL*    | `0x0000_0100-0x0000_01FF` | `tile_base + 0x0000_0100 ... 0x0000_01FF` |
+| *iDMA CTRL*       | `0x0000_0200-0x0000_05FF` | `tile_base + 0x0000_0200 ... 0x0000_05FF` |
+| *FractalSync CTRL*| `0x0000_0600-0x0000_06FF` | `tile_base + 0x0000_0600 ... 0x0000_06FF` |
+| *Event Unit*      | `0x0000_0700-0x0000_16FF` | `tile_base + 0x0000_0700 ... 0x0000_16FF` |
+| *Spatz CTRL*      | `0x0000_1700-0x0000_17FF` | `tile_base + 0x0000_1700 ... 0x0000_17FF` |
+| *Reserved*        | `0x0000_0000-0x0000_FFFF` | `tile_base + 0x0000_0000 ... 0x0000_FFFF` |
+| *Stack*           | `0x0001_0000-0x0001_FFFF` | `tile_base + 0x0001_0000 ... 0x0001_FFFF` |
+| *L1 SPM*          | `0x0002_0000-0x000F_FFFF` | `tile_base + 0x0002_0000 ... 0x000F_FFFF` |
+
+Shared/global map:
+
+| Region            | Range                   | Notes |
+|-------------------|-------------------------|-------|
+| *Spatz BootROM*   | `0x1000_0000-0x1000_00FF` | Tile AXI xbar bootrom target |
+| *L2*              | `0xC000_0000-0xFFFF_FFFF` | Global L2 window |
+| *Instructions*    | `0xCC00_0000-0xCC00_7FFF` | Instruction sub-region inside L2 |
+
+Software/test utility addresses (used by SW runtime and testbench VIP):
+
+| Region            | Address                                    | Notes |
+|-------------------|--------------------------------------------|-------|
+| *Test End*        | `0xCCFF_0000`                              | Exit code location used by SW runtime/tests |
+| *String (utoa)*   | `tile_base + 0x0000_1800`                  | String scratch location (`RESERVED_START + STR_OFFSET`) |
+| *Print (stderr)*  | `0xFFFF_0000`                              | Memory-mapped stderr sink in simulation VIP |
+| *Print (stdio)*   | `0xFFFF_0004`                              | Memory-mapped stdio sink in simulation VIP |
+| *Synch.*          | `tile_base + 0x0000_F000`                  | Derived from `RESERVED_START + SYNC_OFFSET` |
 
 ## 🖥️ Programming model
-The systems supports the RV32IMA ISA and provies a set of **C functions** to program RedMulE, the iDMA and FractalSync. The Single Program Multiple Data (SPMD) model is used to program the system with control flow determined by the `mhartid [uint32_t]` returned by the `get_hartid();` function.
+The flow is memory-mapped (MM): software configures and starts accelerators by writing control registers in each tile address space.
 
-### RedMulE instructions
+- Execution model: SPMD over tiles, with `mhartid` selecting `tile_base = mhartid * 0x0010_0000`.
+- Control path: CV32E40P accesses RedMulE, iDMA, FractalSync, Event Unit, and Spatz control registers via MMIO.
+- Data path: iDMA moves data between L1 and external memory, while compute engines consume/produce data in L1.
+- Synchronization: Event Unit and FractalSync provide interrupt/event and barrier mechanisms for inter-tile coordination.
 
-Performing *Y = (X x W) + Y*, where Y, X and W are *M x K*, *M x N* and *N x K* matrices respectively, can be done with the following functions:
-
-```c
-/* Configure sizes of matrices.
- * k_size [uint16_t]: Number of columns of Y and W.
- * m_size [uint16_t]: Number of rows of Y and X.
- * n_size [uint16_t]: Number of columns of X and rows of W. 
- */  
-redmule_mcnfig(k_size, m_size, n_size);
-
-/* Provide locations of matrices and start matrix multiplication.
- * y_base [uint32_t]: Source address of W.
- * w_base [uint32_t]: Source address of W.
- * x_base [uint32_t]: Source address of X.
- */
-redmule_marith(y_base, w_base, x_base);
-```
-
-### iDMA instructions
-
-Data transfers can occur concurently with GeMM operations. Furthermore, trasfters from and to the L1 can overlap. To start a transfer you must first configurre the iDMA transfer channel, setup transfer parameters (e.g. source address, destination address, length, stride 2, etc.) and then indicate transfer request.
-
-```c
-/* Configure the iDMA for input (i.e. external to L1) data transfers.
- */  
-idma_conf_in();
-
-/* Configure the iDMA for output (i.e. L1 to external) data transfers.
- */
-idma_conf_out();
-
-/* Setup for input data transfers.
- * dst_addr [uint32_t]: Destination address of the input data transfer.
- * src_addr [uint32_t]: Source address of the input data trasfer.
- * len      [uint32_t]: Length of the input data transfer.
- */
-idma_set_addr_len_in(dst_addr, src_addr, len);
-
-/* Setup for output data transfers.
- * dst_addr [uint32_t]: Destination address of the output data transfer.
- * src_addr [uint32_t]: Source address of the output data trasfer.
- * len      [uint32_t]: Length of the output data transfer.
- */
-idma_set_addr_len_out(dst_addr, src_addr, len);
-
-/* Setup for input data transfers.
- * dst_std_2 [uint32_t]: Destination stride 2 of the input data transfer.
- * src_std_2 [uint32_t]: Source stride 2 of the input data trasfer.
- * reps_2    [uint32_t]: Repetitions 2 of the input data transfer.
- */
-idma_set_std2_rep2_in(dst_std_2, src_std_2, reps_2);
-
-/* Setup for output data transfers.
- * dst_std_2 [uint32_t]: Destination stride 2 of the output data transfer.
- * src_std_2 [uint32_t]: Source stride 2 of the output data trasfer.
- * reps_2    [uint32_t]: Repetitions 2 of the output data transfer.
- */
-idma_set_std2_rep2_out(dst_std_2, src_std_2, reps_2);
-
-/* Setup for input data transfers.
- * dst_std_3 [uint32_t]: Destination stride 3 of the input data transfer.
- * src_std_3 [uint32_t]: Source stride 3 of the input data trasfer.
- * reps_3    [uint32_t]: Repetitions 3 of the input data transfer.
- */
-idma_set_std3_rep3_in(dst_std_3, src_std_3, reps_3);
-
-/* Setup for output data transfers.
- * dst_std_3 [uint32_t]: Destination stride 3 of the output data transfer.
- * src_std_3 [uint32_t]: Source stride 3 of the output data trasfer.
- * reps_3    [uint32_t]: Repetitions 3 of the output data transfer.
- */
-idma_set_std3_rep3_out(dst_std_3, src_std_3, reps_3);
-
-/* Start input data transfer.
- */  
-idma_start_in();
-
-/* Start output data transfer.
- */
-idma_start_out();
-```
-
-### FractalSync instructions
-
-Synchronizing tiles via barriers can be achieved by the instruction below. Arbitrary sets of tiles can be synchronized, with each tile participating in one barrier at a time.
-
-```c
-/* Request barrier synchronization.
- * id        [uint32_t]: ID of the synchronization barrier - specific to each node of the synchronization tree.
- * aggregate [uint32_t]: Aggregate pattern of synchronization.
- */  
-fsync(id, aggregate);
-```
-
-A set of instructions for common synchronization patterns - implmented with the above `fsync()` - is also available.
-
-```c
-/*
- * Synchonize each tile with its immediate neighbor to the right, starting from leftmost tile.
- * As an example, the first row in a KxK mesh will have the following synchonization pattern:
- * 0<->1 2<->3 4 ... (K-3) (K-2)<->(K-1)
- */
-fsync_h_nbr();
-
-/*
- * Synchonize each tile with its immediate neighbor to the right, starting from second leftmost tile.
- * The edges of the mesh synchronize among themselves in a ring fashion.
- * As an example, the first row in a KxK mesh will have the following synchonization pattern:
- * 0 1<->2 3<->4 ... (K-3)<->(K-2) (K-1)
- * ^---------------------------------^
- */
-fsync_h_tor_nbr();
-
-/*
- * Synchonize each tile with its immediate neighbor to the bottom, starting from upmost tile.
- * As an example, the first column in a KxK mesh will have the following synchonization pattern:
- * 0
- * |
- * K
- * 
- * 2K
- * |
- * 3K
- * 
- * 4K
- * ...
- * (K-3)K
- *
- * (K-2)K
- * |
- * (K-1)K
- */
-fsync_v_nbr();
-
-/*
- * Synchonize each tile with its immediate neighbor to the bottom, starting from second upmost tile.
- * The edges of the mesh synchronize among themselves in a ring fashion.
- * As an example, the first column in a KxK mesh will have the following synchonization pattern:
- * 0 <
- * 
- * K <------
- * |        |
- * 2K       |
- *          |
- * 3K       |
- * |        |
- * 4K       |
- * ...      |
- * (K-3)K   |
- * |        |
- * (K-2)K   |
- *          |
- * (K-1)K <-
- */
-fsync_v_tor_nbr();
-
-/*
- * Synchonize all tiles within the same row.
- */
-fsync_rows();
-
-/*
- * Synchonize all tiles within the same column.
- */
-fsync_cols();
-
-/*
- * Synchonize all tiles in the mesh.
- */
-fsync_global();
-```
-
+Software APIs for MM control are under `sw/utils/` (for example `redmule_mm_utils.h`, `idma_mm_utils.h`, `fsync_mm_api.h`, `magia_spatz_utils.h` and `event_unit_utils.h`).
+For Spatz Core Complex programming flow (runtime handshake, task loading, and execution model), see [spatz/README.md](spatz/README.md).
 ## 🧰 Changing number of tiles
 **Supported Mesh Configurations**: `2x2`, `4x4`, `8x8`, `16x16`, `32x32`
 
