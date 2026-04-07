@@ -21,7 +21,7 @@
 
 # Paths to folders
 ROOT_DIR       := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
-core           ?= CV32E40X
+core           ?= CV32E40P
 
 MAGIA_DIR  ?= $(shell pwd)
 
