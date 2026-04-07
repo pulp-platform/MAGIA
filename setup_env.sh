@@ -16,7 +16,7 @@ export PATH=/home/visachi/.local/bin:$PATH
 export XLEN=32
 if [[ "$core" == "CV32E40P" ]]; then
   echo "Exporting ISA extentions: I, M, C, GAP9"
-  export XTEN=imcxgap9
+  export XTEN=imfc
 else
   echo "Exporting ISA extentions: I, M, A, F, C"
   export XTEN=imafc

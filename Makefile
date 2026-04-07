@@ -37,13 +37,14 @@ else
     BASE_PYTHON ?= python3
 endif
 BENDER_DIR     ?= .
-ISA            ?= riscv
 ARCH           ?= rv
 XLEN           ?= 32
 ifeq ($(core), CV32E40X)
-  XTEN         = imafc
-else
-  XTEN         = imcxgap9
+  XTEN = imafc
+  ISA = riscv
+else 
+  XTEN = imfc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfhmin
+  ISA = cv32e40p
 endif
 ABI            ?= ilp
 XABI           ?= f
@@ -111,11 +112,21 @@ INC += -Ispatz/sw/headers_bin
 BOOTSCRIPT := sw/kernel/crt0.S
 LINKSCRIPT := sw/kernel/link.ld
 
-CC=$(ISA)$(XLEN)-unknown-elf-gcc
+ifeq ($(core), CV32E40X)
+  CC=$(ISA)$(XLEN)-unknow-elf-gcc
+  OBJDUMP=$(ISA)$(XLEN)-unknown-elf-objdump
+else
+  CC= riscv64-unknown-elf-gcc
+  OBJDUMP=riscv64-unknown-elf-objdump
+endif
 LD=$(CC)
-OBJDUMP=$(ISA)$(XLEN)-unknown-elf-objdump
-CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
-LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
+ifeq ($(core), CV32E40X) 
+  CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
+  CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
+else 
+  CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -U__riscv__  -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
+  LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -U__riscv__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
+endif
 
 # Spatz embedded binary support (via header)
 SPATZ_SW_DIR   := spatz/sw
