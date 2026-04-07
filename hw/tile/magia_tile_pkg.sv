@@ -247,7 +247,7 @@ package magia_tile_pkg;
   parameter int unsigned TS_BIT  = 21;                                                  // TEST_SET_BIT (for Log Interconnect)
   parameter int unsigned IW      = N_HWPE+N_CORE+N_DMA+N_EXT;                           // ID Width HCI
   parameter int unsigned EXPFIFO = 0;                                                   // FIFO Depth for HWPE Interconnect
-  parameter int unsigned DWH     = 544;                                                 // Data Width for HWPE Interconnect: RedMulE Hx(P+1)xBits + Bank width for misaligned access = 8x(3+1)x16+32 
+  parameter int unsigned DWH     = 288;                                                 // Data Width for HWPE Interconnect: RedMulE Hx(P+1)xBits + Bank width for misaligned access = 8x(1+1)x16+32 
   parameter int unsigned AWH     = magia_pkg::ADDR_W;                                   // Address Width for HWPE Interconnect
   parameter int unsigned BWH     = magia_pkg::BYTE_W;                                   // Byte Width for HWPE Interconnect
   parameter int unsigned WWH     = DWH;                                                 // Word Width for HWPE Interconnect

@@ -35,8 +35,8 @@ module magia_redmule_wrap
 #(
   parameter int unsigned  DataW                  = magia_tile_pkg::REDMULE_DW,
   parameter fp_format_e   FpFormat               = FP16,
-  parameter int unsigned  Height                 = 16,
-  parameter int unsigned  Width                  = 24,            // fixme: possibly decrease to 16
+  parameter int unsigned  Height                 = 8,
+  parameter int unsigned  Width                  = 8,            // fixme: possibly decrease to 16
   parameter int unsigned  NumPipeRegs            = 1,
   parameter pipe_config_t PipeConfig             = DISTRIBUTED,
   parameter int unsigned  EccChunkSize           = 32,
