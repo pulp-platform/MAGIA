@@ -106,8 +106,9 @@ For further details see source code.
 
 regs Kusti, 23.10.2004
 */
+#define NULL 0
 
-void putf(char *null, char c) {
+void putf(void *null, char c) {
   *(volatile int *) (0xFFFF0004) = (int)c;
 }
 
@@ -377,7 +378,7 @@ static char a2u(char ch, const char **src, int base, unsigned int *nump)
     return ch;
 }
 
-static void putchw(void *putp, putcf putf__, struct param *p)
+static void putchw(void *putp, putcf putf, struct param *p)
 {
     char ch;
     int n = p->width;
@@ -429,7 +430,7 @@ static void putchw(void *putp, putcf putf__, struct param *p)
     }
 }
 
-void tfp_format(void *putp, putcf putf__, const char *fmt, va_list va)
+void tfp_format(void *putp, putcf putf, const char *fmt, va_list va)
 {
     struct param p;
 #ifdef PRINTF_LONG_SUPPORT
@@ -602,10 +603,10 @@ void tfp_format(void *putp, putcf putf__, const char *fmt, va_list va)
 }
 
 #if TINYPRINTF_DEFINE_TFP_PRINTF
-static putcf stdout_putf;
-static void *stdout_putp;
+static putcf stdout_putf = putf;
+static void *stdout_putp = NULL;
 
-void init_printf(void *putp, putcf putf__)
+void init_printf(void *putp, putcf putf)
 {
     stdout_putf = putf;
     stdout_putp = putp;
