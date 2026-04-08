@@ -51,6 +51,7 @@ module tcdm64_to_dual_hci32 #(
   /*******************************************************************/
   
   tcdm64_to_dual_tcdm32 #(
+    .FIFO_DEPTH   ( 4             ),  // Match Snitch's NUM_INT_OUTSTANDING_MEM
     .tcdm64_req_t ( tcdm64_req_t  ),
     .tcdm64_rsp_t ( tcdm64_rsp_t  ),
     .tcdm32_req_t ( tcdm32_req_t  ),

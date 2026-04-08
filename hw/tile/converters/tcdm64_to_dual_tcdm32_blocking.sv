@@ -4,7 +4,7 @@
  * Licensed under the Solderpad Hardware License, Version 0.51
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -21,113 +21,88 @@
  */
 
 module tcdm64_to_dual_tcdm32 #(
-  parameter int unsigned FIFO_DEPTH = 4,  // Match Snitch's NUM_INT_OUTSTANDING_MEM
-  parameter type tcdm64_req_t = logic,
-  parameter type tcdm64_rsp_t = logic,
-  parameter type tcdm32_req_t = logic,
-  parameter type tcdm32_rsp_t = logic,
-  // Local parameter matching fifo_v3 definition
-  parameter int unsigned ADDR_DEPTH = (FIFO_DEPTH > 1) ? $clog2(FIFO_DEPTH) : 1
+  parameter type tcdm64_req_t = logic,  // 64-bit TCDM request type
+  parameter type tcdm64_rsp_t = logic,  // 64-bit TCDM response type
+  parameter type tcdm32_req_t = logic,  // 32-bit TCDM request type
+  parameter type tcdm32_rsp_t = logic   // 32-bit TCDM response type
 )(
   input  logic         clk_i,
   input  logic         rst_ni,
   
+  // TCDM 64-bit side (Snitch data port)
   input  tcdm64_req_t  tcdm_req_i,
   output tcdm64_rsp_t  tcdm_rsp_o,
   
-  output tcdm32_req_t  tcdm_req_lo_o,
+  // TCDM 32-bit side (Two parallel TCDM ports)
+  output tcdm32_req_t  tcdm_req_lo_o,  // Lower 32-bit word (bits [31:0])
   input  tcdm32_rsp_t  tcdm_rsp_lo_i,
-  output tcdm32_req_t  tcdm_req_hi_o,
+  output tcdm32_req_t  tcdm_req_hi_o,  // Upper 32-bit word (bits [63:32])
   input  tcdm32_rsp_t  tcdm_rsp_hi_i
 );
 
   /*******************************************************************/
-  /*                  FIFO for Access Patterns                       */
+  /*   TCDM64 → Dual TCDM32: Minimal State (2 Registers Only)       */
   /*******************************************************************/
   
-  // Request analysis (combinatorial)
-  logic strb_is_zero, is_load, access_lo, access_hi;
+  // Request analysis signals
+  logic strb_is_zero;
+  logic is_load;
+  logic access_lo, access_hi;
   
+  // Decode request type
   assign strb_is_zero = (tcdm_req_i.q.strb == 8'h00);
   assign is_load = !tcdm_req_i.q.write;
+  
+  // Determine which banks to access:
+  // - Normal operation: access banks based on strobe bits
+  // - Load with strb=0: access BOTH banks (full 64-bit read)
+  // - Store with strb=0: access NO banks (no-op)
   assign access_lo = |tcdm_req_i.q.strb[3:0] || (strb_is_zero && is_load);
   assign access_hi = |tcdm_req_i.q.strb[7:4] || (strb_is_zero && is_load);
   
-  // FIFO signals
-  logic       fifo_full, fifo_empty;
-  logic       fifo_push, fifo_pop;
-  logic [1:0] fifo_wdata, fifo_rdata;
-  logic [ADDR_DEPTH-1:0] fifo_usage;  // Match fifo_v3 usage_o width
-  
-  // FIFO push: when request is accepted
-  assign fifo_push = tcdm_req_i.q_valid && tcdm_rsp_o.q_ready;
-  
-  // FIFO pop: when response is sent
-  assign fifo_pop = tcdm_rsp_o.p_valid;
-  
-  // FIFO data: {access_hi, access_lo}
-  assign fifo_wdata = {access_hi, access_lo};
-  
-  // Instantiate common_cells FIFO
-  fifo_v3 #(
-    .FALL_THROUGH (1'b1       ),
-    .DEPTH        (FIFO_DEPTH ),
-    .DATA_WIDTH   (2          )
-  ) i_access_pattern_fifo (
-    .clk_i     (clk_i      ),
-    .rst_ni    (rst_ni     ),
-    .flush_i   (1'b0       ),
-    .testmode_i(1'b0       ),
-    .data_i    (fifo_wdata ),
-    .push_i    (fifo_push  ),
-    .full_o    (fifo_full  ),
-    .data_o    (fifo_rdata ),
-    .pop_i     (fifo_pop   ),
-    .empty_o   (fifo_empty ),
-    .usage_o   (fifo_usage )
-  );
-  
-  // Read from FIFO (for response phase)
-  logic access_lo_rsp, access_hi_rsp;
-  assign {access_hi_rsp, access_lo_rsp} = fifo_rdata;
-  
-  /*******************************************************************/
-  /*                   Response Generation                           */
-  /*******************************************************************/
-  
+  logic access_lo_q, access_hi_q;
+    // Response arrives when BOTH accessed banks have responded
   logic rsp_arriving;
   always_comb begin
     rsp_arriving = 1'b0;
     
-    if (!fifo_empty) begin
-      if (access_lo_rsp && access_hi_rsp) begin
-        rsp_arriving = tcdm_rsp_lo_i.p_valid && tcdm_rsp_hi_i.p_valid;
-      end else if (access_lo_rsp) begin
-        rsp_arriving = tcdm_rsp_lo_i.p_valid;
-      end else if (access_hi_rsp) begin
-        rsp_arriving = tcdm_rsp_hi_i.p_valid;
-      end
+    if (access_lo_q && access_hi_q) begin
+      rsp_arriving = tcdm_rsp_lo_i.p_valid && tcdm_rsp_hi_i.p_valid;
+    end else if (access_lo_q) begin
+      rsp_arriving = tcdm_rsp_lo_i.p_valid;
+    end else if (access_hi_q) begin
+      rsp_arriving = tcdm_rsp_hi_i.p_valid;
     end
   end
   
-  assign tcdm_rsp_o.p_valid = rsp_arriving;
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      access_lo_q <= 1'b0;
+      access_hi_q <= 1'b0;
+    end else if (tcdm_req_i.q_valid && tcdm_rsp_o.q_ready) begin
+      // Latch access pattern for new requests
+      access_lo_q <= access_lo;
+      access_hi_q <= access_hi;
+    end else if (tcdm_rsp_o.p_valid) begin
+      // Reset when response completes without new request
+      access_lo_q <= 1'b0;
+      access_hi_q <= 1'b0;
+    end
+  end
   
-  assign tcdm_rsp_o.p.data = {
-    access_hi_rsp ? tcdm_rsp_hi_i.p.data : 32'h0,
-    access_lo_rsp ? tcdm_rsp_lo_i.p.data : 32'h0
-  };
+  // Address generation for dual banks
+  logic [31:0] addr_base;
+  logic [31:0] addr_lo, addr_hi;
+  
+  assign addr_base = {tcdm_req_i.q.addr[31:3], 3'b000};  // Align to 8-byte boundary
+  assign addr_lo = addr_base;                             // Lower 32-bit word [31:0]
+  assign addr_hi = addr_base + 32'd4;                     // Upper 32-bit word [63:32]
   
   /*******************************************************************/
-  /*                   Request Generation                            */
+  /*                  TCDM32 Request Outputs                         */
   /*******************************************************************/
   
-  // Address generation
-  logic [31:0] addr_base, addr_lo, addr_hi;
-  assign addr_base = {tcdm_req_i.q.addr[31:3], 3'b000};
-  assign addr_lo = addr_base;
-  assign addr_hi = addr_base + 32'd4;
-  
-  // Lower bank request
+  // Lower bank (LO) request generation
   always_comb begin
     tcdm_req_lo_o.q_valid = 1'b0;
     tcdm_req_lo_o.q.addr  = '0;
@@ -145,6 +120,7 @@ module tcdm64_to_dual_tcdm32 #(
       tcdm_req_lo_o.q.data  = tcdm_req_i.q.data[31:0];
       tcdm_req_lo_o.q.user  = tcdm_req_i.q.user;
       
+      // Strobe handling: load with strb=0 reads full 32-bit word
       if (strb_is_zero && is_load)
         tcdm_req_lo_o.q.strb = 4'hF;
       else
@@ -152,7 +128,7 @@ module tcdm64_to_dual_tcdm32 #(
     end
   end
   
-  // Upper bank request
+  // Upper bank (HI) request generation
   always_comb begin
     tcdm_req_hi_o.q_valid = 1'b0;
     tcdm_req_hi_o.q.addr  = '0;
@@ -170,6 +146,7 @@ module tcdm64_to_dual_tcdm32 #(
       tcdm_req_hi_o.q.data  = tcdm_req_i.q.data[63:32];
       tcdm_req_hi_o.q.user  = tcdm_req_i.q.user;
       
+      // Strobe handling: load with strb=0 reads full 32-bit word
       if (strb_is_zero && is_load)
         tcdm_req_hi_o.q.strb = 4'hF;
       else
@@ -178,24 +155,38 @@ module tcdm64_to_dual_tcdm32 #(
   end
   
   /*******************************************************************/
-  /*                   Ready Signal (Grant)                          */
+  /*              TCDM64 Response & Grant                            */
   /*******************************************************************/
   
+  // Ready signal: accept request when target banks are ready
   always_comb begin
     tcdm_rsp_o.q_ready = 1'b0;
-    
-    // Block only if FIFO is full
-    if (fifo_full) begin
+    //Block if there's a pending response to ensure in-order completion
+    if(access_lo_q || access_hi_q) begin
       tcdm_rsp_o.q_ready = 1'b0;
     end else if (access_lo && access_hi) begin
+      // Both banks accessed: need both ready
       tcdm_rsp_o.q_ready = tcdm_rsp_lo_i.q_ready && tcdm_rsp_hi_i.q_ready;
     end else if (access_lo) begin
+      // Only LO bank accessed
       tcdm_rsp_o.q_ready = tcdm_rsp_lo_i.q_ready;
     end else if (access_hi) begin
+      // Only HI bank accessed
       tcdm_rsp_o.q_ready = tcdm_rsp_hi_i.q_ready;
     end else if (strb_is_zero && !is_load) begin
+      // Store with strb=0: no memory access needed, accept immediately
       tcdm_rsp_o.q_ready = 1'b1;
     end
   end
+  
+  // Response valid: asserted when all accessed banks have responded
+  assign tcdm_rsp_o.p_valid = rsp_arriving;
+  
+  // Response data: recombine 32-bit responses into 64-bit word
+  // Uses registered access pattern to handle asynchronous bank responses
+  assign tcdm_rsp_o.p.data = {
+    access_hi_q ? tcdm_rsp_hi_i.p.data : 32'h0,
+    access_lo_q ? tcdm_rsp_lo_i.p.data : 32'h0
+  };
 
 endmodule : tcdm64_to_dual_tcdm32
