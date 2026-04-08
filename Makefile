@@ -287,12 +287,12 @@ endif
 
 # Define for Spatz target
 bender_defs  += -D TARGET_SPATZ
-SPATZ_RVD      ?= 0   # 0: 32-bit TCDM (ELEN=32), 1: 64-bit TCDM (ELEN=64)
-SPATZ_VLEN     ?= 256 # Vector length in bits (128, 256, 512, ...)
+SPATZ_RVD      ?= 1   # 0: 32-bit TCDM (ELEN=32), 1: 64-bit TCDM (ELEN=64)
+SPATZ_VLEN     ?= 512 # Vector length in bits (128, 256, 512, ...)
 SPATZ_NRVREG   ?= 32  # Number of vector registers (RISC-V standard=32)
 SPATZ_NR_VRF_BANKS ?= 4  # Number of VRF banks (banking parallelism: 2, 4, 8)
 SPATZ_N_IPU    ?= 1   # Number of Integer Processing Units (1-8)
-SPATZ_N_FPU    ?= 4   # Number of Floating Point Units (1-8)
+SPATZ_N_FPU    ?= 8   # Number of Floating Point Units (1-8)
 SPATZ_NR_PARALLEL_INSTR ?= 4  # Number of parallel vector instructions (scoreboard depth)
 SPATZ_XDIVSQRT ?= 0   # 0: FP div/sqrt disabled, 1: enabled (increases area)
 SPATZ_XDMA     ?= 0   # 0: DMA disabled, 1: enabled
