@@ -19,10 +19,6 @@ synth_targs += -t asic
 synth_targs += -t synopsys
 synth_targs += -t spatz
 
-ifeq ($(mesh_dv), 0)
-synth_defs += -D TARGET_STANDALONE_TILE
-endif
-
 synth_defs += -D REDMULE_HWPE_SYNTH
 synth_defs += -D SYNTHESIS
 synth_defs += -D TARGET_SPATZ
