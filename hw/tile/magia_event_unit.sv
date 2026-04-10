@@ -119,6 +119,8 @@ import magia_tile_pkg::*;
   assign obi_rsp_o.rvalid      = speriph_slave.r_valid;
   assign obi_rsp_o.r.rdata     = speriph_slave.r_rdata;
   assign obi_rsp_o.r.err       = speriph_slave.r_opc;  // r_opc: 0=OK, 1=ERROR
+  assign obi_rsp_o.r.rid       = '0;   // No ID tracking for event unit
+  assign obi_rsp_o.r.r_optional = '0;  // Optional fields set to zero to prevent X
   
 
   // Event Unit Flex instantiation
