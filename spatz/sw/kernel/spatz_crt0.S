@@ -75,6 +75,14 @@ _start:
     li      t0, MSTATUS_VS
     csrs    mstatus, t0
 
+    /* Initialize ALL 32 Vector Registers (VRF) to zero */
+
+    vsetvli t0, zero, e32, m8, ta, ma   // LMUL=8 → each vmv.v.i writes 8 registers
+    vmv.v.i v0,  0    // Initialize v0-v7   (register group 0)
+    vmv.v.i v8,  0    // Initialize v8-v15  (register group 1)
+    vmv.v.i v16, 0    // Initialize v16-v23 (register group 2)
+    vmv.v.i v24, 0    // Initialize v24-v31 (register group 3)
+
     /* Clear BSS section */
     la      a0, __bss_start
     la      a1, __bss_end
