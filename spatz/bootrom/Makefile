@@ -16,8 +16,16 @@
 # Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
 # Spatz Initialization ROM Makefile for MAGIA Tile
 
-# Using Spatz LLVM toolchain
-LLVM_PATH := /sw/scratch/luca.balboni10/SPATZ/install/llvm
+ifdef SPATZ_LLVM_PATH
+    LLVM_PATH := $(SPATZ_LLVM_PATH)
+else
+    CLANG_FROM_PATH := $(shell dirname $$(dirname $$(which clang 2>/dev/null)) 2>/dev/null)
+    ifeq ($(shell test -x "$(CLANG_FROM_PATH)/bin/clang" && echo 1),1)
+        LLVM_PATH := $(CLANG_FROM_PATH)
+    else
+        LLVM_PATH := /srv/home/luca.balboni10/LLVM/install/llvm
+    endif
+endif
 
 # Configuration from top-level Makefile
 SPATZ_RVD      ?= 0   # 0: ELEN=32, 1: ELEN=64
