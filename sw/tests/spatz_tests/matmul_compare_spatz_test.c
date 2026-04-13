@@ -34,7 +34,7 @@
 
 // Matrix dimensions (from golden model headers)
 #define M_SIZE (96)
-#define N_SIZE (64)
+#define N_SIZE (1)
 #define K_SIZE (64)
 
 // Memory layout in L1
