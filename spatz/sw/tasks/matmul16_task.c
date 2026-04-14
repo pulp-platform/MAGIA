@@ -14,8 +14,6 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  * 
- * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- *
  * FP16 Matrix Multiplication using RISC-V Vector Extension
  * Computes C = A × B where C is M×K, A is M×N, B is N×K
  */
