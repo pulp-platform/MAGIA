@@ -60,7 +60,7 @@ module core_data_demux_eu_direct
   
   assign use_eu_direct = core_data_req_i.req && 
                         (core_data_req_i.addr >= EVENT_UNIT_ADDR_START) &&
-                        (core_data_req_i.addr <= EVENT_UNIT_ADDR_END);
+                        (core_data_req_i.addr < EVENT_UNIT_ADDR_END);
 
   // Grant occurs when request is accepted by the selected path
   assign request_granted = core_data_req_i.req && core_data_rsp_o.gnt;
