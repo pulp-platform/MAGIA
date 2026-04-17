@@ -87,16 +87,12 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_PMA_MASK        = 32'hFFFF_8000;
 
   // Snitch PMA Configuration - defines cacheable regions for instruction fetches
-  function automatic snitch_pma_pkg::rule_t [snitch_pma_pkg::NrMaxRules-1:0] get_snitch_cached_regions();
-    automatic snitch_pma_pkg::rule_t [snitch_pma_pkg::NrMaxRules-1:0] cached_regions;
-    cached_regions = '{default: '0};
-    cached_regions[0] = '{base: INSTRRAM_ADDR_START, mask: INSTRRAM_PMA_MASK};
-    return cached_regions;
-  endfunction
-
   localparam snitch_pma_pkg::snitch_pma_t SPATZ_SNITCH_PMA_CFG = '{
     NrCachedRegionRules: 1,
-    CachedRegion: get_snitch_cached_regions(),
+    CachedRegion: '{
+      0: '{base: INSTRRAM_ADDR_START, mask: INSTRRAM_PMA_MASK},
+      default: '0
+    },
     default: 0
   };
 
