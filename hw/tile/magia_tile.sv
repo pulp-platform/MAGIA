@@ -159,11 +159,11 @@ module magia_tile
   magia_tile_pkg::core_obi_data_req_t core_obi_data_req;
   magia_tile_pkg::core_obi_data_rsp_t core_obi_data_rsp;
 
-  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_req;
-  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_rsp;
+  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_req; // cv32e40p: Index 0 -> L2, Index 1 -> L1SPM, Index 2 -> RedMulE_Ctrl, Index 3 -> iDMA, Index 4 -> FSync_Ctrl, Index 5 -> Event_Unit, Index 6 -> Spatz_Ctrl
+  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_rsp; // cv32e40p: Index 0 -> L2, Index 1 -> L1SPM, Index 2 -> RedMulE_Ctrl, Index 3 -> iDMA, Index 4 -> FSync_Ctrl, Index 5 -> Event_Unit, Index 6 -> Spatz_Ctrl
 
-  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_cut_req;
-  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_cut_rsp;
+  magia_tile_pkg::core_obi_data_req_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_cut_req; // cv32e40p: Index 0 -> L2, Index 1 -> L1SPM, Index 2 -> RedMulE_Ctrl, Index 3 -> iDMA, Index 4 -> FSync_Ctrl, Index 5 -> Event_Unit, Index 6 -> Spatz_Ctrl
+  magia_tile_pkg::core_obi_data_rsp_t[magia_tile_pkg::N_SBR-1:0] core_mem_data_cut_rsp; // cv32e40p: Index 0 -> L2, Index 1 -> L1SPM, Index 2 -> RedMulE_Ctrl, Index 3 -> iDMA, Index 4 -> FSync_Ctrl, Index 5 -> Event_Unit, Index 6 -> Spatz_Ctrl
 
   magia_tile_pkg::core_obi_data_req_t core_l1_data_amo_req;
   magia_tile_pkg::core_obi_data_rsp_t core_l1_data_amo_rsp;
