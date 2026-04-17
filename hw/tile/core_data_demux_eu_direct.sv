@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
+ * Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
  *
  * Licensed under the Solderpad Hardware License, Version 0.51 
  * (the "License"); you may not use this file except in compliance 
@@ -60,7 +60,7 @@ module core_data_demux_eu_direct
   
   assign use_eu_direct = core_data_req_i.req && 
                         (core_data_req_i.addr >= EVENT_UNIT_ADDR_START) &&
-                        (core_data_req_i.addr <= EVENT_UNIT_ADDR_END);
+                        (core_data_req_i.addr < EVENT_UNIT_ADDR_END);
 
   // Grant occurs when request is accepted by the selected path
   assign request_granted = core_data_req_i.req && core_data_rsp_o.gnt;
