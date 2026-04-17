@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 ETH Zurich and University of Bologna
+ * Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
  *
  * Licensed under the Solderpad Hardware License, Version 0.51 
  * (the "License"); you may not use this file except in compliance 
@@ -14,6 +14,8 @@
  * limitations under the License.
  * SPDX-License-Identifier: SHL-0.51
 /*
+ * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
+ *
  * Spatz Boot ROM Linker Script for MAGIA Tile
  * 
  * Maps bootrom to 0x10000000 (outside L2 range to avoid AXI address decode overlap).

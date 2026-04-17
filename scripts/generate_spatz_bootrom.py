@@ -30,7 +30,7 @@ def generate_bootrom_sv(bin_file, output_file):
         words.append(word)
     
     # Generate SystemVerilog module (like spatz_cluster)
-    sv_content = f'''// Copyright 2024 ETH Zurich and University of Bologna.
+    sv_content = f'''// Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT.
 // Solderpad Hardware License, Version 0.51, see LICENSE for details.
 // SPDX-License-Identifier: SHL-0.51
 //
