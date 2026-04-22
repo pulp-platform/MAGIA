@@ -1,6 +1,6 @@
 overrides:
   fpnew              : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: a8e0cba6dd50f357ece73c2c955d96efc3c6c315 }
-  cv32e40p          : { git: "https://github.com/FondazioneChipsIT/cv32e40p.git"      , rev: 7e48663                                  } # branch: lg/pulp_cluster
+  cv32e40p           : { git: "https://github.com/FondazioneChipsIT/cv32e40p.git"      , rev: 7e48663                                  } # branch: lg/pulp_cluster
   cv32e40x           : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: a90101211048ba1a16cedbe4db963ab6e12569d7 }
   axi                : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
   obi                : { git: "https://github.com/pulp-platform/obi.git"               , rev: 528dc65303d5ffb02fbc254324c6b53eac0dd6e5 }

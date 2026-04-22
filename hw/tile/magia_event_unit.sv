@@ -58,16 +58,16 @@ import magia_tile_pkg::*;
   input  logic [NB_CORES-1:0]       dbg_req_i,
   output logic [NB_CORES-1:0]       core_dbg_req_o,
 
-  // EU Direct Link interface 
-  input  logic                      eu_direct_req_i,
-  input  logic [31:0]               eu_direct_addr_i,
-  input  logic                      eu_direct_wen_i,
-  input  logic [31:0]               eu_direct_wdata_i,
-  input  logic [3:0]                eu_direct_be_i,
-  output logic                      eu_direct_gnt_o,
-  output logic                      eu_direct_rvalid_o,
-  output logic [31:0]               eu_direct_rdata_o,
-  output logic                      eu_direct_err_o,
+  // EU Direct Link interface (one per core)
+  input  logic [NB_CORES-1:0]       eu_direct_req_i,
+  input  logic [NB_CORES-1:0][31:0] eu_direct_addr_i,
+  input  logic [NB_CORES-1:0]       eu_direct_wen_i,
+  input  logic [NB_CORES-1:0][31:0] eu_direct_wdata_i,
+  input  logic [NB_CORES-1:0][3:0]  eu_direct_be_i,
+  output logic [NB_CORES-1:0]       eu_direct_gnt_o,
+  output logic [NB_CORES-1:0]       eu_direct_rvalid_o,
+  output logic [NB_CORES-1:0][31:0] eu_direct_rdata_o,
+  output logic [NB_CORES-1:0]       eu_direct_err_o,
 
    // OBI slave connection
   input  core_obi_data_req_t        obi_req_i,
@@ -81,21 +81,23 @@ import magia_tile_pkg::*;
   // Internal signals
   logic soc_periph_evt_ready_internal;
   
-  // Convert abstract eu_direct interface to XBAR_PERIPH_BUS
+  // Convert abstract eu_direct interface to XBAR_PERIPH_BUS (one per core)
   // eu_direct_addr_i already contains relative offset (subtracted by demux)
-  assign eu_direct_link[0].req   = eu_direct_req_i;
-  assign eu_direct_link[0].add   = eu_direct_addr_i;
-  assign eu_direct_link[0].wen   = eu_direct_wen_i;
-  assign eu_direct_link[0].wdata = eu_direct_wdata_i;
-  assign eu_direct_link[0].be    = eu_direct_be_i;
-  assign eu_direct_link[0].id    = '0;
+  generate
+    for (genvar k = 0; k < NB_CORES; k++) begin : gen_eu_direct_link
+      assign eu_direct_link[k].req   = eu_direct_req_i[k];
+      assign eu_direct_link[k].add   = eu_direct_addr_i[k];
+      assign eu_direct_link[k].wen   = eu_direct_wen_i[k];
+      assign eu_direct_link[k].wdata = eu_direct_wdata_i[k];
+      assign eu_direct_link[k].be    = eu_direct_be_i[k];
+      assign eu_direct_link[k].id    = '0;
 
-  // Convert XBAR_PERIPH_BUS response to abstract interface
-  // Event Unit handles all power management and grant logic internally
-  assign eu_direct_gnt_o    = eu_direct_link[0].gnt;
-  assign eu_direct_rvalid_o = eu_direct_link[0].r_valid;
-  assign eu_direct_rdata_o  = eu_direct_link[0].r_rdata;
-  assign eu_direct_err_o    = eu_direct_link[0].r_opc;  // r_opc: 0=OK, 1=ERROR
+      assign eu_direct_gnt_o[k]    = eu_direct_link[k].gnt;
+      assign eu_direct_rvalid_o[k] = eu_direct_link[k].r_valid;
+      assign eu_direct_rdata_o[k]  = eu_direct_link[k].r_rdata;
+      assign eu_direct_err_o[k]    = eu_direct_link[k].r_opc;
+    end
+  endgenerate
 
   // Address range check and offset calculation
   localparam logic [magia_pkg::ADDR_W-1:0] EU_BASE_ADDR = magia_tile_pkg::EVENT_UNIT_ADDR_START;

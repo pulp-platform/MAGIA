@@ -26,80 +26,96 @@ module eu_direct_cut
   parameter type eu_direct_rsp_t = logic,
   parameter bit  Bypass          = 1'b0,
   parameter bit  BypassReq       = Bypass,
-  parameter bit  BypassRsp       = Bypass
+  parameter bit  BypassRsp       = Bypass,
+  parameter int  unsigned NB_CORES = 1
 )(
   input  logic           clk_i,
   input  logic           rst_ni,
 
-  input  eu_direct_req_t sbr_req_i,
-  output eu_direct_rsp_t sbr_rsp_o,
+  input  eu_direct_req_t sbr_req_i [NB_CORES],
+  output eu_direct_rsp_t sbr_rsp_o [NB_CORES],
 
-  output eu_direct_req_t mgr_req_o,
-  input  eu_direct_rsp_t mgr_rsp_i
+  output eu_direct_req_t mgr_req_o [NB_CORES],
+  input  eu_direct_rsp_t mgr_rsp_i [NB_CORES]
 );
 
-  // Request payload (exclude req signal for valid/ready)
+  // ============================
+  // Payload typedefs
+  // ============================
   typedef struct packed {
     logic[magia_pkg::ADDR_W-1:0] addr;
     logic                        wen;
     logic[magia_pkg::DATA_W-1:0] wdata;
     logic[3:0]                   be;
   } eu_req_payload_t;
-  
-  eu_req_payload_t sbr_req_payload, mgr_req_payload;
-  
-  assign sbr_req_payload.addr  = sbr_req_i.addr;
-  assign sbr_req_payload.wen   = sbr_req_i.wen;
-  assign sbr_req_payload.wdata = sbr_req_i.wdata;
-  assign sbr_req_payload.be    = sbr_req_i.be;
-  
-  assign mgr_req_o.addr  = mgr_req_payload.addr;
-  assign mgr_req_o.wen   = mgr_req_payload.wen;
-  assign mgr_req_o.wdata = mgr_req_payload.wdata;
-  assign mgr_req_o.be    = mgr_req_payload.be;
 
-  // Request spill register
-  spill_register #(
-    .T      ( eu_req_payload_t ),
-    .Bypass ( BypassReq        )
-  ) i_req_spill (
-    .clk_i   ( clk_i              ),
-    .rst_ni  ( rst_ni             ),
-    .valid_i ( sbr_req_i.req      ),
-    .ready_o ( sbr_rsp_o.gnt      ),
-    .data_i  ( sbr_req_payload    ),
-    .valid_o ( mgr_req_o.req      ),
-    .ready_i ( mgr_rsp_i.gnt      ),
-    .data_o  ( mgr_req_payload    )
-  );
-
-  // Response payload (exclude rvalid for valid/ready)
   typedef struct packed {
     logic[magia_pkg::DATA_W-1:0] rdata;
     logic                        err;
   } eu_rsp_payload_t;
-  
-  eu_rsp_payload_t sbr_rsp_payload, mgr_rsp_payload;
-  
-  assign mgr_rsp_payload.rdata = mgr_rsp_i.rdata;
-  assign mgr_rsp_payload.err   = mgr_rsp_i.err;
-  
-  assign sbr_rsp_o.rdata = sbr_rsp_payload.rdata;
-  assign sbr_rsp_o.err   = sbr_rsp_payload.err;
 
-  // Response spill register
-  spill_register #(
-    .T      ( eu_rsp_payload_t ),
-    .Bypass ( BypassRsp        )
-  ) i_rsp_spill (
-    .clk_i   ( clk_i              ),
-    .rst_ni  ( rst_ni             ),
-    .valid_i ( mgr_rsp_i.rvalid   ),
-    .ready_o (                    ),
-    .data_i  ( mgr_rsp_payload    ),
-    .valid_o ( sbr_rsp_o.rvalid   ),
-    .ready_i ( 1'b1               ),
-    .data_o  ( sbr_rsp_payload    )
-  );
+
+  // ============================
+  // Per-core logic
+  // ============================
+  for (genvar i = 0; i < NB_CORES; i++) begin : GEN_EU_CUT
+
+    // ----------------------------
+    // Request path
+    // ----------------------------
+    eu_req_payload_t sbr_req_payload;
+    eu_req_payload_t mgr_req_payload;
+
+    assign sbr_req_payload.addr  = sbr_req_i[i].addr;
+    assign sbr_req_payload.wen   = sbr_req_i[i].wen;
+    assign sbr_req_payload.wdata = sbr_req_i[i].wdata;
+    assign sbr_req_payload.be    = sbr_req_i[i].be;
+
+    assign mgr_req_o[i].addr  = mgr_req_payload.addr;
+    assign mgr_req_o[i].wen   = mgr_req_payload.wen;
+    assign mgr_req_o[i].wdata = mgr_req_payload.wdata;
+    assign mgr_req_o[i].be    = mgr_req_payload.be;
+
+    spill_register #(
+      .T      ( eu_req_payload_t ),
+      .Bypass ( BypassReq        )
+    ) i_req_spill (
+      .clk_i   ( clk_i               ),
+      .rst_ni  ( rst_ni              ),
+      .valid_i ( sbr_req_i[i].req    ),
+      .ready_o ( sbr_rsp_o[i].gnt    ),
+      .data_i  ( sbr_req_payload     ),
+      .valid_o ( mgr_req_o[i].req    ),
+      .ready_i ( mgr_rsp_i[i].gnt    ),
+      .data_o  ( mgr_req_payload     )
+    );
+
+    // ----------------------------
+    // Response path
+    // ----------------------------
+    eu_rsp_payload_t sbr_rsp_payload;
+    eu_rsp_payload_t mgr_rsp_payload;
+
+    assign mgr_rsp_payload.rdata = mgr_rsp_i[i].rdata;
+    assign mgr_rsp_payload.err   = mgr_rsp_i[i].err;
+
+    assign sbr_rsp_o[i].rdata = sbr_rsp_payload.rdata;
+    assign sbr_rsp_o[i].err   = sbr_rsp_payload.err;
+
+    spill_register #(
+      .T      ( eu_rsp_payload_t ),
+      .Bypass ( BypassRsp        )
+    ) i_rsp_spill (
+      .clk_i   ( clk_i               ),
+      .rst_ni  ( rst_ni              ),
+      .valid_i ( mgr_rsp_i[i].rvalid ),
+      .ready_o (                     ),
+      .data_i  ( mgr_rsp_payload     ),
+      .valid_o ( sbr_rsp_o[i].rvalid ),
+      .ready_i ( 1'b1                ),
+      .data_o  ( sbr_rsp_payload     )
+    );
+
+  end
 
 endmodule
