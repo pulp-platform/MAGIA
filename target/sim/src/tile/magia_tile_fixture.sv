@@ -74,7 +74,7 @@ module magia_tile_fixture;
 
   logic[magia_pkg::N_IRQ-1:0]        irq;
 
-  logic                              debug_req;
+  logic[magia_tile_pkg::N_CLUSTER_CORES:0] debug_req;
   logic                              debug_havereset;
   logic                              debug_running;
   logic                              debug_halted;

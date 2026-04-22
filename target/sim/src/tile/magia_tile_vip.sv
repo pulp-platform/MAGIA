@@ -75,7 +75,7 @@ module magia_tile_vip
 
   output logic[magia_pkg::N_IRQ-1:0]        irq,
 
-  output logic                              debug_req,
+  output logic[magia_tile_pkg::N_CLUSTER_CORES:0] debug_req,
   input  logic                              debug_havereset,
   input  logic                              debug_running,
   input  logic                              debug_halted,
@@ -102,7 +102,7 @@ module magia_tile_vip
   assign dm_exception_addr       = '0;
   assign mhartid                 = '0;
   assign mimpid_patch            = '0;
-  assign debug_req               = 1'b0;
+  assign debug_req               = '0;
   assign wu_wfe                  = 1'b0;
   assign ht_fsync_if_o[0].wake   = 1'b0;
   assign ht_fsync_if_o[0].lvl    = '0;

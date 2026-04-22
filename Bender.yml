@@ -92,6 +92,8 @@ sources:
       - hw/tile/fractal_sync_xif_inst_decoder.sv
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
+      - hw/tile/obi_slave_ctrl_cluster.sv
+      - hw/tile/tile_csr.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
@@ -154,6 +156,8 @@ sources:
       - hw/tile/fractal_sync_xif_inst_decoder.sv
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
+      - hw/tile/obi_slave_ctrl_cluster.sv
+      - hw/tile/tile_csr.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
@@ -216,6 +220,8 @@ sources:
       - hw/tile/fractal_sync_xif_inst_decoder.sv
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
+      - hw/tile/obi_slave_ctrl_cluster.sv
+      - hw/tile/tile_csr.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
