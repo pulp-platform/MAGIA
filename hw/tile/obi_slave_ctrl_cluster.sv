@@ -1,8 +1,15 @@
 module obi_slave_ctrl_cluster
   import magia_tile_pkg::*;
 #(
-   parameter logic [31:0] BaseAddr  = 32'h00001700,  // Base address for Cluster control registers
-   parameter int unsigned BOOT_ADDR = 32'hCC000000
+   parameter logic [31:0] BaseAddr       = 32'h00001700,  // Base address for Cluster control registers
+   parameter int unsigned BOOT_ADDR      = 32'hCC000000,  // (unused) kept for interface compatibility
+   // Boot address for PULP cluster cores. The PULP binary is linked at
+   // 0xC0000000 and its reset vector (`jal _start`) sits at offset 0x80
+   // (see sw/kernel_pulp/crt0.S `.vectors .org 0x80`). The CV32E40P core
+   // starts fetching directly from boot_addr_i with no implicit offset,
+   // so the boot address must point to 0xC0000080 (same pattern as the
+   // main CV32 core which boots at 0xCC000080).
+   parameter int unsigned PULP_BOOT_ADDR = 32'hC0000080
 )  (
   input  logic                                             clk_i,
   input  logic                                             rst_ni,
@@ -55,7 +62,7 @@ assign obi_rsp_o.r.r_optional = '0;
 // Register write logic (combinational)
 // ============================================
 logic  done_d;
-logic [magia_tile_pkg::N_BIT_CLUSTER_CORES-1:0]  nb_recv_end_reqs_d;
+logic [magia_tile_pkg::N_BIT_CLUSTER_CORES:0]  nb_recv_end_reqs_d;
 logic  done_clear;
 
 // Done is sticky: clears only when software reads the CLUSTER_DONE register
@@ -130,10 +137,12 @@ assign done_o     = done_q;
 assign fetch_en_o = {magia_tile_pkg::N_CLUSTER_CORES{fetch_en_q}};
 assign clk_en_o   = '1;
 
-// Static boot address for all cluster cores (can be made configurable via register in future)
+// Static boot address for all cluster cores.
+// Points to the PULP instruction image (0xC0000000), distinct from the
+// CV32 main core boot address (0xCC000000).
 generate
   for (genvar i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin : gen_boot_addr
-    assign boot_addr_o[i] = BOOT_ADDR;
+    assign boot_addr_o[i] = PULP_BOOT_ADDR;
   end
 endgenerate
 

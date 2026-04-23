@@ -18,15 +18,24 @@
 import numpy as np
 import sys
 
-# Instructions start at 0xcc00_0000
-# Data starts at 0xcc01_0000
-# Stack starts at 0x0001_0000
-# We only keep last 2 bytes so memory will be filled with no offset.
-# The CPU will also reference it as to not have any offset.
-MEM_START  = 0xcc000000
+# Default memory layout: main-core ELF at 0xCC000000.
+# Override with optional argv[4] (instr base) and argv[5] (data base)
+# for the PULP cluster-core ELF which lives at 0xC0000000 / 0xC0100000.
+DEFAULT_MEM_START  = 0xcc000000
+DEFAULT_DATA_OFFSET = 0x10000  # data = instr_base + 0x10000 (main) or explicit
+
+if len(sys.argv) >= 5:
+    MEM_START = int(sys.argv[4], 16)
+else:
+    MEM_START = DEFAULT_MEM_START
+
+if len(sys.argv) >= 6:
+    DATA_BASE = int(sys.argv[5], 16)
+else:
+    DATA_BASE = MEM_START + DEFAULT_DATA_OFFSET
+
 INSTR_SIZE = 0x8000
 INSTR_END  = MEM_START + INSTR_SIZE
-DATA_BASE  = MEM_START + 0x10000
 DATA_SIZE  = 0x30000
 DATA_END   = DATA_BASE + DATA_SIZE
 STACK_BASE = 0x10000

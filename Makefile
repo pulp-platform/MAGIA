@@ -58,6 +58,8 @@ XABI           ?= f
 TEST_DIR  := sw/tests
 # Auto-detect test location in any subdirectory
 TEST_SUBDIR = $(filter-out .,$(shell find $(TEST_DIR) -name "$(test).c" -printf "%P\n" 2>/dev/null | head -1 | xargs dirname 2>/dev/null))
+# Legacy single-binary test source. Ignored (and may be empty) when the
+# two-binary flow is selected (see TWO_BINARY detection below).
 TEST_SRCS  = $(TEST_DIR)/$(if $(TEST_SUBDIR),$(TEST_SUBDIR)/)$(test).c
 
 compile_script       ?= scripts/compile.tcl
@@ -78,6 +80,9 @@ gui           ?= 0
 ipstools      ?= 0
 inst_hex_name ?= build/stim_instr.txt 
 data_hex_name ?= build/stim_data.txt 
+# PULP cluster-core image (two-binary flow). Empty => legacy single-binary.
+pulp_inst_hex_name ?= build/stim_instr_pulp.txt
+pulp_data_hex_name ?= build/stim_data_pulp.txt
 inst_entry    ?= 0xCC000000
 data_entry    ?= 0xCC010000
 boot_addr     ?= 0xCC000080
@@ -109,8 +114,33 @@ INC += -Isw/inc
 INC += -Isw/utils
 INC += -Ispatz/sw/headers_bin
 
-BOOTSCRIPT := sw/kernel/crt0.S
-LINKSCRIPT := sw/kernel/link.ld
+# ----------------------------------------------------------------------------
+# Kernel runtime selection (bootscript + linker script).
+#
+# Two modes are supported:
+#
+#   * Legacy single-binary (default): one ELF is produced from $(test).c
+#     using sw/kernel/{crt0.S,link.ld}. CV32 main and PULP cluster cores
+#     share the same instruction image at 0xCC000000.
+#
+#   * Two-binary mode: if the test directory $(TEST_DIR)/$(test)/ contains
+#     BOTH main.c and pulp_main.c, then two ELFs are produced:
+#       - verif      : main-core ELF at 0xCC000000 (uses sw/kernel_main/)
+#       - verif_pulp : PULP cluster-core ELF at 0xC0000000 (uses sw/kernel_pulp/)
+#     Both stimulus files are loaded by the testbench.
+# ----------------------------------------------------------------------------
+TEST_DIR_PATH := $(TEST_DIR)/$(test)
+TWO_BINARY    := $(if $(and $(wildcard $(TEST_DIR_PATH)/main.c),$(wildcard $(TEST_DIR_PATH)/pulp_main.c)),1,0)
+
+ifeq ($(TWO_BINARY),1)
+  BOOTSCRIPT      := sw/kernel_main/crt0.S
+  LINKSCRIPT      := sw/kernel_main/link.ld
+  PULP_BOOTSCRIPT := sw/kernel_pulp/crt0.S
+  PULP_LINKSCRIPT := sw/kernel_pulp/link.ld
+else
+  BOOTSCRIPT      := sw/kernel/crt0.S
+  LINKSCRIPT      := sw/kernel/link.ld
+endif
 
 ifeq ($(core), CV32E40X)
 	CC=$(ISA)$(XLEN)-unknown-elf-gcc
@@ -145,6 +175,15 @@ ODUMP=$(TEST_BUILD_DIR)/build/verif.objdump
 ITB=$(TEST_BUILD_DIR)/build/verif.itb
 STIM_INSTR=$(TEST_BUILD_DIR)/build/stim_instr.txt
 STIM_DATA=$(TEST_BUILD_DIR)/build/stim_data.txt
+# PULP-side artifacts (used only when TWO_BINARY=1)
+PULP_CRT=$(TEST_BUILD_DIR)/build/crt0_pulp.o
+PULP_OBJ=$(TEST_BUILD_DIR)/build/verif_pulp.o
+PULP_BIN=$(TEST_BUILD_DIR)/build/verif_pulp
+PULP_DUMP=$(TEST_BUILD_DIR)/build/verif_pulp.dump
+PULP_ODUMP=$(TEST_BUILD_DIR)/build/verif_pulp.objdump
+PULP_ITB=$(TEST_BUILD_DIR)/build/verif_pulp.itb
+PULP_STIM_INSTR=$(TEST_BUILD_DIR)/build/stim_instr_pulp.txt
+PULP_STIM_DATA=$(TEST_BUILD_DIR)/build/stim_data_pulp.txt
 VSIM_INI=modelsim.ini
 VSIM_LIBS=work
 
@@ -187,7 +226,35 @@ endif
 
 $(OBJ):
 	mkdir -p $(TEST_BUILD_DIR)/build
+ifeq ($(TWO_BINARY),1)
+	@echo "[CV32] Compiling main core source: $(TEST_DIR_PATH)/main.c"
+	$(CC) $(CC_OPTS) -c $(TEST_DIR_PATH)/main.c $(FLAGS) $(INC) -o $(OBJ)
+else
 	$(CC) $(CC_OPTS) -c $(TEST_SRCS) $(FLAGS) $(INC) -o $(OBJ)
+endif
+
+# ---------------------------------------------------------------------------
+# PULP cluster-core ELF (only when TWO_BINARY=1)
+# ---------------------------------------------------------------------------
+ifeq ($(TWO_BINARY),1)
+$(PULP_CRT):
+	mkdir -p $(TEST_BUILD_DIR)/build
+	$(CC) $(CC_OPTS) -c $(PULP_BOOTSCRIPT) -o $(PULP_CRT)
+
+$(PULP_OBJ):
+	mkdir -p $(TEST_BUILD_DIR)/build
+	@echo "[PULP] Compiling cluster source: $(TEST_DIR_PATH)/pulp_main.c"
+	$(CC) $(CC_OPTS) -c $(TEST_DIR_PATH)/pulp_main.c $(FLAGS) $(INC) -o $(PULP_OBJ)
+
+$(PULP_BIN): $(PULP_CRT) $(PULP_OBJ)
+	@echo "[PULP-LINK] Linking PULP cluster-core ELF (0xC0000000)"
+	$(LD) $(LD_OPTS) -o $(PULP_BIN) $(PULP_CRT) $(PULP_OBJ) -T$(PULP_LINKSCRIPT)
+
+$(PULP_STIM_INSTR) $(PULP_STIM_DATA): $(PULP_BIN)
+	objcopy --srec-len 1 --output-target=srec $(PULP_BIN) $(PULP_BIN).s19 && \
+	scripts/parse_s19.pl $(PULP_BIN).s19 > $(PULP_BIN).txt &&                \
+	$(BASE_PYTHON) scripts/s19tomem.py $(PULP_BIN).txt $(PULP_STIM_INSTR) $(PULP_STIM_DATA) c0000000 c0100000
+endif
 
 SHELL := /bin/bash
 
@@ -208,15 +275,28 @@ python_deps:
     $(BASE_PYTHON) -m pip install -r requirements.txt
 
 # Generate instructions and data stimuli
+ifeq ($(TWO_BINARY),1)
+all: $(STIM_INSTR) $(STIM_DATA) $(PULP_STIM_INSTR) $(PULP_STIM_DATA) dis objdump itb pulp_dis pulp_objdump pulp_itb
+else
 all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb
+endif
 
 # Run the simulation
+# In two-binary mode we also forward the PULP image via +PULP_INST_HEX/+PULP_DATA_HEX.
+# In legacy single-binary mode these plusargs are empty and the VIP simply skips the preload.
+ifeq ($(TWO_BINARY),1)
+  PULP_PLUSARGS := +PULP_INST_HEX=$(pulp_inst_hex_name) +PULP_DATA_HEX=$(pulp_data_hex_name)
+else
+  PULP_PLUSARGS :=
+endif
+
 run: $(CRT)
 ifeq ($(gui), 0)
 	cd $(TEST_BUILD_DIR);                                                                		 \
 	$(QUESTA) vsim -c vopt_tb $(questa_run_fast_flag) -l transcript -do "run -a"                 \
 	+INST_HEX=$(inst_hex_name)                                                                   \
 	+DATA_HEX=$(data_hex_name)                                                                   \
+	$(PULP_PLUSARGS)                                                                             \
 	+INST_ENTRY=$(inst_entry)                                                                    \
 	+DATA_ENTRY=$(data_entry)                                                                    \
 	+BOOT_ADDR=$(boot_addr)                                                                      \
@@ -231,6 +311,7 @@ else
 	-do "source $(WAVES)"                                                                        \
 	+INST_HEX=$(inst_hex_name)                                                                   \
 	+DATA_HEX=$(data_hex_name)                                                                   \
+	$(PULP_PLUSARGS)                                                                             \
 	+INST_ENTRY=$(inst_entry)                                                                    \
 	+DATA_ENTRY=$(data_entry)                                                                    \
 	+BOOT_ADDR=$(boot_addr)                                                                      \
@@ -371,7 +452,7 @@ clean-sdk:
 	rm -rf $(SW)/pulp-sdk
 
 clean:
-	rm -rf $(TEST_BUILD_DIR)
+	rm -rf $(TEST_BUILD_DIR)/build
 	@if [ -d "$(SPATZ_SW_DIR)" ]; then \
 		echo "[CLEAN] Cleaning Spatz..."; \
 		$(MAKE) -C $(SPATZ_SW_DIR) clean; \
@@ -385,6 +466,16 @@ objdump:
 
 itb:
 	$(BASE_PYTHON) scripts/objdump2itb.py $(ODUMP) > $(ITB)
+
+# PULP-side disassembly helpers (two-binary flow).
+pulp_dis:
+	$(OBJDUMP) -d -S $(PULP_BIN) > $(PULP_DUMP)
+
+pulp_objdump:
+	$(OBJDUMP) -d -l -s $(PULP_BIN) > $(PULP_ODUMP)
+
+pulp_itb:
+	$(BASE_PYTHON) scripts/objdump2itb.py $(PULP_ODUMP) > $(PULP_ITB)
 
 OP     ?= gemm
 fp_fmt ?= FP16

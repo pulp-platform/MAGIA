@@ -23,6 +23,8 @@ module magia_tb;
 
   string                            inst_hex;
   string                            data_hex;
+  string                            pulp_inst_hex;
+  string                            pulp_data_hex;
   bit[31:0]                         boot_addr;
   bit[magia_tb_pkg::N_TILES*16-1:0] exit_code;
 
@@ -30,13 +32,20 @@ module magia_tb;
 
   initial begin
     // Fetch plusargs or use safe (fail-fast) defaults
-    if (!$value$plusargs("INST_HEX=%s" ,   inst_hex))  inst_hex  = "";
-    if (!$value$plusargs("DATA_HEX=%s" ,   data_hex))  data_hex  = "";
-    if (!$value$plusargs("BOOT_ADDR=%h",   boot_addr)) boot_addr = 0;
+    if (!$value$plusargs("INST_HEX=%s" ,      inst_hex))      inst_hex      = "";
+    if (!$value$plusargs("DATA_HEX=%s" ,      data_hex))      data_hex      = "";
+    if (!$value$plusargs("PULP_INST_HEX=%s" , pulp_inst_hex)) pulp_inst_hex = "";
+    if (!$value$plusargs("PULP_DATA_HEX=%s" , pulp_data_hex)) pulp_data_hex = "";
+    if (!$value$plusargs("BOOT_ADDR=%h",      boot_addr))     boot_addr     = 0;
 
-    // Preload data (dummy L2 MEM) and instructions (I$)
+    // Preload main-core image (CV32 ELF @ 0xCC000000)
     fixture.vip.inst_preload(inst_hex);
     fixture.vip.data_preload(data_hex);
+
+    // Optional: preload PULP cluster-core image (PULP ELF @ 0xC0000000)
+    // Empty plusarg => legacy single-binary flow (no extra preload).
+    fixture.vip.pulp_inst_preload(pulp_inst_hex);
+    fixture.vip.pulp_data_preload(pulp_data_hex);
 
     // Wait for reset
     fixture.vip.wait_for_reset();

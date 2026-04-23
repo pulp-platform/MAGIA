@@ -117,6 +117,21 @@ module magia_vip
     $readmemh(image, i_l2_mem.i_l2_mem.mem);
   endtask: data_preload
 
+  // Optional: preload a SECOND instruction image (used for the PULP
+  // cluster-core ELF linked at 0xC0000000 in the two-binary flow).
+  // The hex file is expected to contain `@<absolute_byte_addr>` directives
+  // so $readmemh places it into the same L2 backing storage at a
+  // non-overlapping range with respect to the main-core image.
+  task automatic pulp_inst_preload(input string image);
+    if (image != "")
+      $readmemh(image, i_l2_mem.i_l2_mem.mem);
+  endtask: pulp_inst_preload
+
+  task automatic pulp_data_preload(input string image);
+    if (image != "")
+      $readmemh(image, i_l2_mem.i_l2_mem.mem);
+  endtask: pulp_data_preload
+
   task wait_for_reset;
     @(posedge rst_n);
     @(posedge clk);
