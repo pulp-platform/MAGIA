@@ -8,3 +8,4 @@ mako
 hjson
 tabulate
 matplotlib
+setuptools==80.9.0
