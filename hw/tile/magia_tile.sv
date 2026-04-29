@@ -355,6 +355,9 @@ module magia_tile
   logic [magia_tile_pkg::N_CLUSTER_CORES:0][magia_tile_pkg::EVENT_UNIT_IRQ_WIDTH-1:0] eu_core_irq_ack_id;
   logic [magia_tile_pkg::N_CLUSTER_CORES:0]                                           eu_core_clk_en;
   logic [magia_tile_pkg::N_CLUSTER_CORES:0]                                           eu_core_dbg_req;
+  // Per-core 32-bit irq vector for CV32E40P. EU IRQ is mapped to MEI (bit 11),
+  // all other bits forced to 0 to avoid X-propagation through irq_i.
+  logic [magia_tile_pkg::N_CLUSTER_CORES:0][31:0]                                     core_irq_vec;
 
   // Core data demux signals
   magia_tile_pkg::core_data_req_t core_data_req_to_xbar;
@@ -1319,6 +1322,8 @@ module magia_tile
     .COREV_CLUSTER       ( 1                                   ),
     .FPU                 ( FPU                                 ),
     .ZFINX               ( magia_tile_pkg::ZFINX               ),
+    .FPU_ADDMUL_LAT      ( 1                                   ), // Match C_LAT_FP32=1 in fpnew wrapper
+    .FPU_OTHERS_LAT      ( 1                                   ), // Match C_LAT_NONCOMP=1 in fpnew wrapper
     .NUM_MHPMCOUNTERS    ( 29                                  )
   ) i_cv32e40p_core (
     // Clock and Reset
@@ -1329,7 +1334,7 @@ module magia_tile
     .pulp_clock_en_i        ( sys_clk_en            ),
     .scan_cg_en_i           ( test_mode_i           ),
     .boot_addr_i            ( boot_addr_i           ),
-    //.mtvec_addr_i           ( 32'h0         ),
+    .mtvec_addr_i           ( boot_addr_i           ),  // mtvec defaults to boot vector; SW can override via csrw
     .dm_halt_addr_i         ( magia_tile_pkg::DM_HALT_ADDR),
     .hart_id_i              ( mhartid_i             ),
     .dm_exception_addr_i    ( magia_tile_pkg::DM_HALT_ADDR + 16'h000C), //to be checked
@@ -1348,8 +1353,8 @@ module magia_tile
     .data_wdata_o           ( core_data_req.wdata   ),
     .data_we_o              ( core_data_req.we      ),
     .data_rdata_i           ( core_data_rsp.rdata   ),
-    // Interrupts
-    .irq_i                  ( eu_core_irq_req[0]    ),
+    // Interrupts (irq_i is [31:0]; EU IRQ goes to MEI bit 11, others 0)
+    .irq_i                  ( core_irq_vec[0]       ),
     .irq_ack_o              ( eu_core_irq_ack[0]    ),
     .irq_id_o               ( eu_core_irq_ack_id[0] ),
     // Debug interface
@@ -2033,18 +2038,30 @@ module magia_tile
 /*******************************************************/
 
   // Event array assignments for proper 2D array structure
-  assign acc_events_array[0]     = {redmule_evt[0][1], redmule_evt[0][0], redmule_busy, spatz_done};
-  assign dma_events_array[0]     = {idma_obi2axi_done, idma_axi2obi_done};
-  assign timer_events_array[0]   = 2'b00;
-  assign other_events_array[0]   = {idma_obi2axi_busy, idma_axi2obi_busy, idma_obi2axi_start, idma_axi2obi_start, idma_obi2axi_error, idma_axi2obi_error, fsync_error, fsync_done, spatz_start,cluster_done, 22'b0};  // iDMA status events [31:28]|iDMA errors [27:26]|Fsync [25:24]|Spatz start [23]|Reserved [22:0]
+  // Per-tile shared HW event lines (RedMulE, Spatz, iDMA, FSync, cluster_done).
+  // These are broadcast identically to ALL cores in the tile (CV32 @ idx 0 +
+  // cluster cores @ idx 1..N). Each core then selects which lines to observe
+  // via its OWN EU_CORE_MASK / EU_CORE_IRQ_MASK (per-core slice of the event
+  // unit, accessed through the per-core eu_direct_link demux). This mirrors
+  // the GVSoC/SDK model where eu_redmule_wait/eu_idma_wait/eu_pulp_wait are
+  // valid both from the control core and from any cluster core.
+  logic [3:0]  acc_events_shared;
+  logic [1:0]  dma_events_shared;
+  logic [1:0]  timer_events_shared;
+  logic [31:0] other_events_shared;
 
-  // Tie-off event arrays for cluster cores (indices 1..N)
+  assign acc_events_shared   = {redmule_evt[0][1], redmule_evt[0][0], redmule_busy, spatz_done};
+  assign dma_events_shared   = {idma_obi2axi_done, idma_axi2obi_done};
+  assign timer_events_shared = 2'b00;
+  assign other_events_shared = {idma_obi2axi_busy, idma_axi2obi_busy, idma_obi2axi_start, idma_axi2obi_start, idma_obi2axi_error, idma_axi2obi_error, fsync_error, fsync_done, spatz_start, cluster_done, 22'b0};  // iDMA status [31:28] | iDMA errors [27:26] | Fsync [25:24] | Spatz start [23] | cluster_done [22] | Reserved [21:0]
+
+  // Broadcast event lines to CV32 (idx 0) and to every cluster core (idx 1..N).
   generate
-    for (genvar i = 1; i <= magia_tile_pkg::N_CLUSTER_CORES; i++) begin : gen_cluster_eu_events
-      assign acc_events_array[i]   = '0;
-      assign dma_events_array[i]   = '0;
-      assign timer_events_array[i] = '0;
-      assign other_events_array[i] = '0;
+    for (genvar i = 0; i <= magia_tile_pkg::N_CLUSTER_CORES; i++) begin : gen_eu_events_broadcast
+      assign acc_events_array[i]   = acc_events_shared;
+      assign dma_events_array[i]   = dma_events_shared;
+      assign timer_events_array[i] = timer_events_shared;
+      assign other_events_array[i] = other_events_shared;
     end
   endgenerate
 
@@ -2057,6 +2074,18 @@ module magia_tile
   generate
     for (genvar i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin : gen_eu_core_busy
       assign eu_core_busy[i+1] = ~cluster_core_sleep[i];
+    end
+  endgenerate
+
+  // Build the per-core 32-bit irq_i vector. The EU IRQ request is mapped to
+  // the Machine External Interrupt (bit 11), which is the only standard
+  // RISC-V interrupt bit for external devices and is enabled by IRQ_MASK in
+  // CV32E40P. All other bits are forced to 0 to prevent X-propagation
+  // (otherwise an unconnected [31:0] input would be 'z, get masked to X by
+  // IRQ_MASK, and corrupt the controller FSM during cv.elw).
+  generate
+    for (genvar i = 0; i <= magia_tile_pkg::N_CLUSTER_CORES; i++) begin : gen_core_irq_vec
+      assign core_irq_vec[i] = {20'b0, eu_core_irq_req[i], 11'b0};
     end
   endgenerate
 
@@ -2302,6 +2331,8 @@ generate
         .COREV_CLUSTER       ( 1                                   ),
         .FPU                 ( FPU                                 ),
         .ZFINX               ( magia_tile_pkg::ZFINX               ),
+        .FPU_ADDMUL_LAT      ( 1                                   ), // Match C_LAT_FP32=1 in fpnew wrapper
+        .FPU_OTHERS_LAT      ( 1                                   ), // Match C_LAT_NONCOMP=1 in fpnew wrapper
         .NUM_MHPMCOUNTERS    ( 29                                  )
       ) i_cv32e40p_core (
         // Clock and Reset
@@ -2312,7 +2343,7 @@ generate
         .pulp_clock_en_i        ( eu_core_clk_en[i+1]        ),
         .scan_cg_en_i           ( test_mode_i                 ),
         .boot_addr_i            ( cluster_boot_addr[i]        ),  // From tile CSR, dynamic per tile
-        //.mtvec_addr_i           ( 32'h0         ),
+        .mtvec_addr_i           ( cluster_boot_addr[i]        ),  // mtvec defaults to boot vector; SW can override via csrw
         .dm_halt_addr_i         ( magia_tile_pkg::DM_HALT_ADDR),
         .hart_id_i              ( 2 * magia_pkg::N_TILES + mhartid_i * magia_tile_pkg::N_CLUSTER_CORES + i ),
         .dm_exception_addr_i    ( magia_tile_pkg::DM_HALT_ADDR + 16'h000C), //to be checked
@@ -2331,8 +2362,8 @@ generate
         .data_gnt_i             ( cluster_data_rsp[i].gnt              ),
         .data_rvalid_i          ( cluster_data_rsp[i].rvalid           ),
         .data_rdata_i           ( cluster_data_rsp[i].rdata            ),
-        // Interrupts
-        .irq_i                  ( eu_core_irq_req[i+1]               ),
+        // Interrupts (irq_i is [31:0]; EU IRQ goes to MEI bit 11, others 0)
+      .irq_i                  ( core_irq_vec[i+1]                  ),
         .irq_ack_o              ( eu_core_irq_ack[i+1]               ),
         .irq_id_o               ( eu_core_irq_ack_id[i+1]            ),
         // Debug interface

@@ -128,17 +128,28 @@ typedef enum {
 // LOW-LEVEL HAL (PULP-compatible evt_read32)
 //=============================================================================
 
-// evt_read32: blocking read with p.elw instruction
+// evt_read32: blocking read with elw instruction
+// CV32E40P (CORE-V toolchain) uses the `cv.elw` mnemonic, while older PULP
+// toolchains (e.g. RI5CY / pulp-gcc) use `p.elw`. The Makefile passes
+// `-D__cv32e40p__` when core=CV32E40P, so we switch on that symbol.
 static inline unsigned int evt_read32(unsigned int base, unsigned int offset) {
     unsigned int value;
     unsigned int addr = base + offset;
-    // Direct p.elw inline assembly for PULP cores (RI5CY, CV32E40P)
+#if defined(__cv32e40p__) || defined(CV32E40P)
+    __asm__ __volatile__ (
+        "cv.elw %0, 0(%1)"
+        : "=r" (value)
+        : "r" (addr)
+        : "memory"
+    );
+#else
     __asm__ __volatile__ (
         "p.elw %0, 0(%1)"
         : "=r" (value)
         : "r" (addr)
         : "memory"
     );
+#endif
     return value;
 }
 

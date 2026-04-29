@@ -42,12 +42,18 @@ XLEN           ?= 32
 ifeq ($(core), CV32E40X)
   XTEN = imafc
   ISA = riscv
+  ABI            ?= ilp
+  XABI           ?= f
 else
-  XTEN = imfc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfhmin
+  # CV32E40P configured with ZFINX=1 in RTL: FP ops use the GPRs (no F register
+  # file). Toolchain must therefore use Zfinx (and Zhinxmin for FP16) and the
+  # plain ilp32 ABI; using `f` in march or ilp32f ABI would emit instructions
+  # that target the (non-existent) F regs.
+  XTEN = imc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfinx_zhinxmin
   ISA = cv32e40p
+  ABI            ?= ilp
+  XABI           ?=
 endif
-ABI            ?= ilp
-XABI           ?= f
 
 #ifeq ($(REDMULE_COMPLEX),1)
 #	TEST_SRCS := sw/redmule_complex.c
@@ -55,7 +61,17 @@ XABI           ?= f
 #	TEST_SRCS := sw/redmule.c
 #endif
 
-TEST_DIR  := sw/tests
+# Set cluster=1 to run tests from sw/cluster_tests/ (two-binary PULP flow).
+# Default: cluster=0 uses sw/tests/ (legacy single-binary, backward compatible).
+cluster       ?= 0
+num_clusters  ?= 16   # number of PULP cluster tiles (N_TILES for 4x4 mesh)
+
+ifeq ($(cluster),1)
+  TEST_DIR := sw/tests/cluster_tests
+else
+  TEST_DIR := sw/tests
+endif
+
 # Auto-detect test location in any subdirectory
 TEST_SUBDIR = $(filter-out .,$(shell find $(TEST_DIR) -name "$(test).c" -printf "%P\n" 2>/dev/null | head -1 | xargs dirname 2>/dev/null))
 # Legacy single-binary test source. Ignored (and may be empty) when the
@@ -291,9 +307,16 @@ else
 endif
 
 run: $(CRT)
+# Before simulation: wipe any leftover traces from a previous run, then
+# recreate the per-tile directory tree so it's visible from the start.
+# Trace files are moved in at the end (see after vsim).
+ifeq ($(TWO_BINARY),1)
+	@rm -rf $(TEST_BUILD_DIR)/traces $(TEST_BUILD_DIR)/trace_core_*.log
+	@bash $(ROOT_DIR)/scripts/setup_traces.sh $(TEST_BUILD_DIR) $(num_clusters)
+endif
 ifeq ($(gui), 0)
 	cd $(TEST_BUILD_DIR);                                                                		 \
-	$(QUESTA) vsim -c vopt_tb $(questa_run_fast_flag) -l transcript -do "run -a"                 \
+	$(QUESTA) vsim -c vopt_tb $(questa_run_fast_flag) -l transcript                              \
 	+INST_HEX=$(inst_hex_name)                                                                   \
 	+DATA_HEX=$(data_hex_name)                                                                   \
 	$(PULP_PLUSARGS)                                                                             \
@@ -303,7 +326,8 @@ ifeq ($(gui), 0)
 	$(foreach i, $(shell seq 0 $(shell echo $$(($(num_cores)-1)))),                              \
 		+log_file_$(i)=$(log_path_$(i))                                                            \
 	)                                                                                            \
-	+itb_file=$(itb_file)
+	+itb_file=$(itb_file)                                                                        \
+	-do "run -a"
 else
 	cd $(TEST_BUILD_DIR);                                                                		 \
 	$(QUESTA) vsim vopt_tb $(questa_run_flag) -l transcript                                      \
@@ -319,6 +343,11 @@ else
 		+log_file_$(i)=$(log_path_$(i))                                                            \
 	)                                                                                            \
 	+itb_file=$(itb_file)
+endif
+# After simulation: move trace files into their per-tile subdirectories.
+# Called inline (not via sub-make) so test=/cluster= context is preserved.
+ifeq ($(TWO_BINARY),1)
+	@bash $(ROOT_DIR)/scripts/sort_traces.sh $(TEST_BUILD_DIR) $(num_clusters)
 endif
 
 # Download bender
@@ -476,6 +505,18 @@ pulp_objdump:
 
 pulp_itb:
 	$(BASE_PYTHON) scripts/objdump2itb.py $(PULP_ODUMP) > $(PULP_ITB)
+
+# Trace directory helpers.
+#   setup-traces: pre-creates the traces/tile_N/{main,cluster}/ tree so it is
+#                 visible as soon as the simulation starts (called by 'run').
+#   sort-traces : after sim, moves trace_core_<hartid>.log into the matching
+#                 tile subdir (called by 'run'; also usable manually).
+.PHONY: setup-traces sort-traces
+setup-traces:
+	@bash $(ROOT_DIR)/scripts/setup_traces.sh $(TEST_BUILD_DIR) $(num_clusters)
+
+sort-traces:
+	@bash $(ROOT_DIR)/scripts/sort_traces.sh $(TEST_BUILD_DIR) $(num_clusters)
 
 OP     ?= gemm
 fp_fmt ?= FP16

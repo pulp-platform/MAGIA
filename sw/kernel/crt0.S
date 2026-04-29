@@ -61,8 +61,8 @@ _main_core_entry:
   li      a1, 0                       # main core uses slot 0 (top)
 
 _common_init:
-  # Enable CV32E40P mstatus.MIE
-  li      t0, 0x1
+  # Enable CV32E40P mstatus.MIE (bit 3 = 0x8, not bit 0)
+  li      t0, 0x8
   csrrs   zero, mstatus, t0
   # Enable CV32E40P SW interrupt (mie[3])
   li      t0, 0x8
