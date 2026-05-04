@@ -52,11 +52,19 @@
 #define REDMULE_REG_MOPCNT  0x38
 
 /* Operations and formats */
-#define gemm_ops    0x1
 #define Float16     0x1
 #define Float16Alt  0x2
 #define Float8      0x3
 #define Float8Alt   0x4
+
+#define gemm_ops    0x1
+#define matmul_ops  0x0
+#define addmax      0x2
+#define addmin      0x3
+#define mulmax      0x4
+#define mulmin      0x5
+#define maxmin      0x6
+#define minmax      0x7
 
 /* HWPE Register Access Functions */
 static inline void redmule_x_add_set(unsigned int value) {

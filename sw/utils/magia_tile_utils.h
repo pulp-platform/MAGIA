@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include "tinyprintf.h"
 
+
 #define NUM_L1_BANKS (32)
 #define WORDS_BANK   (8192)
 #define BITS_WORD    (32)
@@ -38,7 +39,9 @@
 #define FSYNC_END       (0x000006FF)
 #define EVENT_UNIT_BASE (0x00000700)
 #define EVENT_UNIT_END  (0x000016FF)
-#define RESERVED_START  (0x00001700)   
+#define SPATZ_CTRL_BASE (0x00001700)
+#define SPATZ_CTRL_END  (0x000017FF)
+#define RESERVED_START  (0x00001800)   
 #define RESERVED_END    (0x0000FFFF)   
 #define STACK_START     (0x00010000)
 #define STACK_END       (0x0001FFFF)
@@ -126,8 +129,8 @@ static inline void ccount_en(){
 #ifdef CV32E40X
     asm volatile("csrrci zero, 0x320, 0x1" ::);
 #else
-    uint32_t pcmr = 1;
-    asm volatile("csrw 0x7e1, %0" ::"r"(pcmr));
+    asm volatile("csrw 0x7E0, %0" :: "r"(0x1));
+    asm volatile("csrw 0x7E1, %0" :: "r"(0x1));
 #endif
 }
 
@@ -135,8 +138,7 @@ static inline void ccount_dis(){
 #ifdef CV32E40X
     asm volatile("csrrsi zero, 0x320, 0x1" ::);
 #else
-    uint32_t pcmr = 0;
-    asm volatile("csrw 0x7e1, %0" ::"r"(pcmr));
+    asm volatile("csrw 0x7E1, %0" :: "r"(0x0)); 
 #endif
 }
 
@@ -146,8 +148,7 @@ static inline uint32_t get_cyclel(){
     asm volatile("csrr %0, cycle"
                  :"=r"(cyclel):);
 #else
-    asm volatile("csrr %0, 0x780"
-                 :"=r"(cyclel):);
+    asm volatile("csrr %0, 0x780" : "=r"(cyclel));
 #endif
     return cyclel;
 }
@@ -190,68 +191,6 @@ uint32_t get_time(){
     uint32_t timeh = get_timeh();
     if (timeh) return 0;
     return timel;
-}
-
-// Additional Flex-V CSR access functions based on CSR table
-static inline uint32_t get_mstatus(){
-    uint32_t mstatus;
-    asm volatile("csrr %0, 0x300" :"=r"(mstatus):); // MSTATUS (0x300)
-    return mstatus;
-}
-
-static inline void set_mstatus(uint32_t value){
-    asm volatile("csrw 0x300, %0" ::"r"(value)); // MSTATUS (0x300)
-}
-
-static inline uint32_t get_mtvec(){
-    uint32_t mtvec;
-    asm volatile("csrr %0, 0x305" :"=r"(mtvec):); // MTVEC (0x305)
-    return mtvec;
-}
-
-static inline void set_mtvec(uint32_t value){
-    asm volatile("csrw 0x305, %0" ::"r"(value)); // MTVEC (0x305)
-}
-
-static inline uint32_t get_mepc(){
-    uint32_t mepc;
-    asm volatile("csrr %0, 0x341" :"=r"(mepc):); // MEPC (0x341)
-    return mepc;
-}
-
-static inline void set_mepc(uint32_t value){
-    asm volatile("csrw 0x341, %0" ::"r"(value)); // MEPC (0x341)
-}
-
-static inline uint32_t get_mcause(){
-    uint32_t mcause;
-    asm volatile("csrr %0, 0x342" :"=r"(mcause):); // MCAUSE (0x342)
-    return mcause;
-}
-
-static inline uint32_t get_privlv(){
-    uint32_t privlv;
-    asm volatile("csrr %0, 0xc10" :"=r"(privlv):); // PRIVLV (0xC10)
-    return privlv;
-}
-
-static inline uint32_t get_uhartid(){
-    uint32_t uhartid;
-    asm volatile("csrr %0, 0x014" :"=r"(uhartid):); // UHARTID (0x014)
-    return uhartid;
-}
-
-// Flex-V performance counter control
-static inline void perf_counter_enable(){
-    uint32_t pcer = 3; // Enable cycles (bit 0) and instruction count (bit 1)
-    uint32_t pcmr = 1; // Enable global performance counter
-    asm volatile("csrw 0x7e0, %0" ::"r"(pcer)); // PCER_MACHINE (0x7E0)
-    asm volatile("csrw 0x7e1, %0" ::"r"(pcmr)); // PCMR_MACHINE (0x7E1)
-}
-
-static inline void perf_counter_disable(){
-    uint32_t pcmr = 0; // Disable global performance counter
-    asm volatile("csrw 0x7e1, %0" ::"r"(pcmr)); // PCMR_MACHINE (0x7E1)
 }
 
 #endif /*MAGIA_TILE_UTILS_H*/

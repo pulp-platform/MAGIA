@@ -15,8 +15,8 @@ export PATH=/usr/local/anaconda3-2023.07/condabin:$PATH
 export PATH=/home/visachi/.local/bin:$PATH
 export XLEN=32
 if [[ "$core" == "CV32E40P" ]]; then
-  echo "Exporting ISA extentions: I, M, F, C, XPULP_V2"
-  export XTEN=imfcxpulpv2
+echo "Exporting ISA extentions: I, M, C, GAP9"
+export XTEN=imcxgap9
 else
   echo "Exporting ISA extentions: I, M, A, F, C"
   export XTEN=imafc
