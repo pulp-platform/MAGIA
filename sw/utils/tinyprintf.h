@@ -139,7 +139,8 @@ void putf(char *null, char c) {
 /* Optional external types dependencies */
 
 #if TINYPRINTF_DEFINE_TFP_SPRINTF
-# include <sys/types.h>  /* size_t */
+// Define size_t for embedded environment (no sys/types.h)
+typedef unsigned int size_t;
 #endif
 
 /* Declarations */
