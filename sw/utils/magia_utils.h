@@ -84,21 +84,21 @@ char* utoa(unsigned int value, unsigned int base, char* result) {
 
 char* bs(uint32_t x) {
     uint32_t hartid = get_hartid();
-    char *address = STR_BASE + L1_TILE_OFFSET*hartid;
+    char *address = (char *)(uintptr_t)(STR_BASE + L1_TILE_OFFSET * hartid);
 
     return utoa(x, 2, address);
 }
 
 char* ds(uint32_t x) {
     uint32_t hartid = get_hartid();
-    char *address = STR_BASE + L1_TILE_OFFSET*hartid;
+    char *address = (char *)(uintptr_t)(STR_BASE + L1_TILE_OFFSET * hartid);
 
     return utoa(x, 10, address);
 }
 
 char* hs(uint32_t x) {
     uint32_t hartid = get_hartid();
-    char *address = STR_BASE + L1_TILE_OFFSET*hartid;
+    char *address = (char *)(uintptr_t)(STR_BASE + L1_TILE_OFFSET * hartid);
 
     return utoa(x, 16, address);
 }
