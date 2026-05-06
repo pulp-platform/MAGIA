@@ -62,7 +62,7 @@ typedef struct packed {
 } sam_rule_t;
 
 localparam sam_rule_t[SamNumRules-1:0] Sam = '{
-'{idx: '{x: 0, y: 3, port_id: 0}, start_addr: 32'hf0000000, end_addr: 32'h100000000},// L2_3_sam_idx
+'{idx: '{x: 0, y: 3, port_id: 0}, start_addr: 32'hf0000000, end_addr: 32'hffffffff},// L2_3_sam_idx
 '{idx: '{x: 0, y: 2, port_id: 0}, start_addr: 32'he0000000, end_addr: 32'hf0000000},// L2_2_sam_idx
 '{idx: '{x: 0, y: 1, port_id: 0}, start_addr: 32'hd0000000, end_addr: 32'he0000000},// L2_1_sam_idx
 '{idx: '{x: 0, y: 0, port_id: 0}, start_addr: 32'hc0000000, end_addr: 32'hd0000000},// L2_0_sam_idx
@@ -99,7 +99,7 @@ localparam sam_rule_t[SamNumRules-1:0] Sam = '{
   typedef logic[31:0] axi_narrow_data_mst_addr_t;
 typedef logic[31:0] axi_narrow_data_mst_data_t;
 typedef logic[3:0] axi_narrow_data_mst_strb_t;
-typedef logic[1:0] axi_narrow_data_mst_id_t;
+typedef logic[2:0] axi_narrow_data_mst_id_t;
 typedef logic[0:0] axi_narrow_data_mst_user_t;
 `AXI_TYPEDEF_ALL_CT(axi_narrow_data_mst,             axi_narrow_data_mst_req_t,             axi_narrow_data_mst_rsp_t,             axi_narrow_data_mst_addr_t,             axi_narrow_data_mst_id_t,             axi_narrow_data_mst_data_t,             axi_narrow_data_mst_strb_t,             axi_narrow_data_mst_user_t)
 
@@ -107,7 +107,7 @@ typedef logic[0:0] axi_narrow_data_mst_user_t;
   typedef logic[31:0] axi_narrow_data_slv_addr_t;
 typedef logic[31:0] axi_narrow_data_slv_data_t;
 typedef logic[3:0] axi_narrow_data_slv_strb_t;
-typedef logic[3:0] axi_narrow_data_slv_id_t;
+typedef logic[5:0] axi_narrow_data_slv_id_t;
 typedef logic[0:0] axi_narrow_data_slv_user_t;
 `AXI_TYPEDEF_ALL_CT(axi_narrow_data_slv,             axi_narrow_data_slv_req_t,             axi_narrow_data_slv_rsp_t,             axi_narrow_data_slv_addr_t,             axi_narrow_data_slv_id_t,             axi_narrow_data_slv_data_t,             axi_narrow_data_slv_strb_t,             axi_narrow_data_slv_user_t)
 
@@ -115,7 +115,7 @@ typedef logic[0:0] axi_narrow_data_slv_user_t;
   typedef logic[31:0] axi_wide_data_mst_addr_t;
 typedef logic[255:0] axi_wide_data_mst_data_t;
 typedef logic[31:0] axi_wide_data_mst_strb_t;
-typedef logic[1:0] axi_wide_data_mst_id_t;
+typedef logic[2:0] axi_wide_data_mst_id_t;
 typedef logic[0:0] axi_wide_data_mst_user_t;
 `AXI_TYPEDEF_ALL_CT(axi_wide_data_mst,             axi_wide_data_mst_req_t,             axi_wide_data_mst_rsp_t,             axi_wide_data_mst_addr_t,             axi_wide_data_mst_id_t,             axi_wide_data_mst_data_t,             axi_wide_data_mst_strb_t,             axi_wide_data_mst_user_t)
 
@@ -123,7 +123,7 @@ typedef logic[0:0] axi_wide_data_mst_user_t;
   typedef logic[31:0] axi_wide_data_slv_addr_t;
 typedef logic[255:0] axi_wide_data_slv_data_t;
 typedef logic[31:0] axi_wide_data_slv_strb_t;
-typedef logic[1:0] axi_wide_data_slv_id_t;
+typedef logic[2:0] axi_wide_data_slv_id_t;
 typedef logic[0:0] axi_wide_data_slv_user_t;
 `AXI_TYPEDEF_ALL_CT(axi_wide_data_slv,             axi_wide_data_slv_req_t,             axi_wide_data_slv_rsp_t,             axi_wide_data_slv_addr_t,             axi_wide_data_slv_id_t,             axi_wide_data_slv_data_t,             axi_wide_data_slv_strb_t,             axi_wide_data_slv_user_t)
 

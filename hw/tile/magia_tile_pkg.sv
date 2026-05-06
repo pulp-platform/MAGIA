@@ -223,7 +223,7 @@ package magia_tile_pkg;
 
   // Parameters used by the HCI
   parameter int unsigned N_HWPE  = 1;                                                   // Number of HWPEs attached to the port
-  parameter int unsigned N_CORE  = 1 + SPATZ_HCI_PORTS;                                 // Number of Core ports: 1 CV32 + Spatz HCI ports (RVD=1: 11 total, RVD=0: 6 total)
+  parameter int unsigned N_CORE  = 1 + SPATZ_HCI_PORTS;                                 // Number of core-side HCI ports (CV32 + Spatz TCDM ports)
   parameter int unsigned N_DMA   = 4;                                                   // Number of DMA ports (1 out read channel, 1 out write channel, 1 in read channel and 1 in write channel)
   typedef enum logic[1:0]{
     HCI_DMA_OUT_CH_READ_IDX  = 2'b00,
@@ -654,7 +654,6 @@ package magia_tile_pkg;
     AXI_XBAR_BOOTROM_IDX  = 1, 
     AXI_XBAR_L2_IDX       = 0
   } axi_mem_array_idx_e;
-
 
   typedef enum logic[2:0]{
     AXI_SLV_CLUSTER_INSTR_IDX = 4,

@@ -503,6 +503,7 @@ module magia_tile
   assign spatz_icache_axi_rsp                                      = axi_xbar_slv_rsp[magia_tile_pkg::AXI_SLV_SPATZ_INSTR_IDX];
   assign axi_xbar_slv_req[magia_tile_pkg::AXI_SLV_CLUSTER_INSTR_IDX] = cluster_l2_instr_req;
   assign cluster_l2_instr_rsp                                      = axi_xbar_slv_rsp[magia_tile_pkg::AXI_SLV_CLUSTER_INSTR_IDX];
+
   assign obi_xbar_slv_req[magia_tile_pkg::OBI_CORE_IDX] = core_obi_data_req;
   assign core_obi_data_rsp                              = obi_xbar_slv_rsp[magia_tile_pkg::OBI_CORE_IDX];
   assign obi_xbar_slv_req[magia_tile_pkg::OBI_EXT_IDX]  = ext_obi_data_req;
@@ -1132,7 +1133,7 @@ module magia_tile
       `HCI_ASSIGN_TO_INTF(hci_core_if[i+1], spatz_hci_req[i], spatz_hci_rsp[i])                                 // Spatz CC HCI ports
     end
   endgenerate
-  `HCI_ASSIGN_TO_INTF(hci_redmule_if[0],                                    redmule_data_req,       redmule_data_rsp)       // Only 1 RedMulE supported
+  `HCI_ASSIGN_TO_INTF(hci_redmule_if[0],                                redmule_data_req,   redmule_data_rsp)   // Only 1 RedMulE supported
   `HCI_ASSIGN_TO_INTF(hci_dma_if[magia_tile_pkg::HCI_DMA_OUT_CH_READ_IDX],  idma_hci_read_req_out,  idma_hci_read_rsp_out)  // iDMA out HCI read channel
   `HCI_ASSIGN_TO_INTF(hci_dma_if[magia_tile_pkg::HCI_DMA_OUT_CH_WRITE_IDX], idma_hci_write_req_out, idma_hci_write_rsp_out) // iDMA out HCI write channel
   `HCI_ASSIGN_TO_INTF(hci_dma_if[magia_tile_pkg::HCI_DMA_IN_CH_READ_IDX],   idma_hci_read_req_in,   idma_hci_read_rsp_in)   // iDMA in HCI read channel
@@ -2276,8 +2277,8 @@ module magia_tile
   ) i_axi_to_reg_bootrom (
     .clk_i      ( sys_clk                                                     ),
     .rst_ni     ( rst_ni                                                      ),
-    .axi_req_i  ( axi_xbar_mst_req[magia_tile_pkg::AXI_MST_BOOTROM_IDX]  ),
-    .axi_rsp_o  ( axi_xbar_mst_rsp[magia_tile_pkg::AXI_MST_BOOTROM_IDX]  ),
+    .axi_req_i  ( axi_xbar_mst_req[magia_tile_pkg::AXI_MST_BOOTROM_IDX]       ),
+    .axi_rsp_o  ( axi_xbar_mst_rsp[magia_tile_pkg::AXI_MST_BOOTROM_IDX]       ),
     .reg_req_o  ( bootrom_reg_req                                             ),
     .reg_rsp_i  ( bootrom_reg_rsp                                             ),
     .reg_id_o   ( bootrom_reg_id                                              ),
