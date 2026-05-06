@@ -118,6 +118,14 @@
 #define EU_SPATZ_START_MASK          (1 << EU_SPATZ_START_BIT)
 #define EU_SPATZ_ALL_MASK            (EU_SPATZ_DONE_MASK | EU_SPATZ_START_MASK)
 
+// PULP cluster done event (other_events_i bit 22 = cluster_done from obi_slave_ctrl_cluster)
+// cluster_done is a sticky-level: goes high when all N cluster cores have written to
+// PULP_DONE; cleared when SW reads PULP_DONE (read-to-clear in the CSR).
+// WFE is safe: the signal is low before cluster_start(), so the core will sleep;
+// after waking, SW must read PULP_DONE to de-assert the RTL signal.
+#define EU_CLUSTER_DONE_BIT          22
+#define EU_CLUSTER_DONE_MASK         (1 << EU_CLUSTER_DONE_BIT)
+
 // Wait modes
 typedef enum {
     EU_WAIT_MODE_POLLING = 0,

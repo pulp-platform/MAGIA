@@ -31,8 +31,8 @@ _start:
   andi    a1, a0, 0x1f
   srli    a0, a0, 5
 
-  # Enable CV32E40P mstatus.MIE
-  li      t0, 0x1
+  # Enable CV32E40P mstatus.MIE (bit 3 = 0x8, not bit 0)
+  li      t0, 0x8
   csrrs   zero, mstatus, t0
   # Enable CV32E40P SW interrupt (mie[3])
   li      t0, 0x8

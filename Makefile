@@ -179,7 +179,9 @@ SPATZ_SW_DIR   := spatz/sw
 
 # Auto-detect which Spatz tasks are used by looking for *_TASK symbols in CV32 code
 # Example: HELLO_WORLD_TASK → hello_world_task
-SPATZ_TASKS := $(shell grep -oP '\b(?!SPATZ_)[A-Z][A-Z0-9_]*_TASK\b' $(TEST_SRCS) 2>/dev/null | tr '[:upper:]' '[:lower:]' | awk '!seen[$$0]++')
+# For two-binary tests the actual CV32 source is main.c, not the legacy stub.
+_SPATZ_SRC_TO_GREP := $(if $(filter 1,$(TWO_BINARY)),$(TEST_DIR_PATH)/main.c,$(TEST_SRCS))
+SPATZ_TASKS := $(shell grep -oP '\b(?!SPATZ_)[A-Z][A-Z0-9_]*_TASK\b' $(_SPATZ_SRC_TO_GREP) 2>/dev/null | tr '[:upper:]' '[:lower:]' | awk '!seen[$$0]++')
 
 # Setup build object dirs
 TEST_BUILD_DIR = $(TEST_DIR)/$(if $(TEST_SUBDIR),$(TEST_SUBDIR)/)$(test)

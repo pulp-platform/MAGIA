@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include "magia_tile_utils.h"
+#include "cluster_utils.h"
 
 /* Result slot: 4 bytes per cluster core.
  * Cluster cores write 0xFEEDxxxx where xx = error count. */
@@ -17,13 +18,15 @@
 #define FPU_RESULT_MASK  (0xFFFF0000u)
 
 int main(void) {
+    /* Arm EU before kicking the cluster to avoid missing the event. */
+    cluster_init_eu();
+
     /* Release the PULP cluster cores. */
     printf("fpu_cluster_test: releasing PULP cluster cores...\n");
-    mmio32(PULP_FETCH_EN) = 1;
+    cluster_start();
 
-    /* Wait until all 8 cluster cores have exited (crt0 sets PULP_DONE). */
-    while (!(mmio32(PULP_DONE) & 1))
-        ;
+    /* Sleep (cv.elw) until all cluster cores have exited. */
+    cluster_wait_eu();
 
     /* Read back per-core results from L2 and report. */
     unsigned int total_errors = 0;

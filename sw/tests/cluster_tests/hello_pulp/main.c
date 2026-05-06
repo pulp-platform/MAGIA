@@ -6,12 +6,14 @@
  *
  * Flow:
  *   1) Print a "hello" banner.
- *   2) Kick the PULP cluster cores by writing PULP_FETCH_EN=1.
- *   3) Wait on PULP_DONE until all cluster cores have reported.
- *   4) Print the "done" message.
+ *   2) Arm the Event Unit for cluster-done WFE (EU bit 22).
+ *   3) Kick the PULP cluster cores via cluster_start().
+ *   4) Sleep in WFE until all cluster cores have reported (cluster_wait_eu()).
+ *   5) Print the "done" message.
  */
 
 #include "magia_tile_utils.h"
+#include "cluster_utils.h"
 
 static inline uint32_t get_mhartid(void) {
     uint32_t id;
@@ -24,12 +26,15 @@ int main(void) {
 
     printf("[Main core %u] Hello World!\n", hartid);
 
-    /* Release the PULP cluster cores of this tile. */
-    mmio32(PULP_FETCH_EN) = 1;
+    /* Arm EU before kicking the cluster to avoid missing the event. */
+    cluster_init_eu();
 
-    /* Wait until every cluster core of this tile has signalled exit. */
-    while (!(mmio32(PULP_DONE) & 1))
-        ;
+    /* Release the PULP cluster cores of this tile. */
+    cluster_start();
+
+    /* Sleep (cv.elw) until every cluster core of this tile has signalled
+     * exit; cluster_wait_eu() also clears PULP_DONE (read-to-clear). */
+    cluster_wait_eu();
 
     printf("[Main core %u] All %d cluster cores done!\n",
            hartid, PULP_CORE_COUNT);

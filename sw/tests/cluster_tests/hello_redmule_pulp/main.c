@@ -10,14 +10,14 @@
  *   2) The CV32 main core runs RedMulE once (sanity check), then waits
  *      for completion via Event Unit WFE (p.elw on its own EU slice).
  *   3) The CV32 main core re-loads Y (so the bias is fresh again),
- *      then kicks the 8 PULP cluster cores via PULP_FETCH_EN.
+ *      then kicks the 8 PULP cluster cores via cluster_start().
  *   4) Each PULP cluster core (see pulp_main.c) tries to ACQUIRE the
  *      RedMulE HWPE; the HWPE returns -1 if busy so the cluster cores
  *      naturally serialize. Whoever wins runs RedMulE on the same
  *      buffers and waits via WFE on its OWN EU slice (per-core mask).
  *   5) When all 8 cluster cores have hit crt0 exit, PULP_DONE goes
- *      high, the CV32 main wakes up, verifies Y == Z (golden), prints
- *      and exits.
+ *      high; the CV32 main wakes from WFE (EU bit 22), verifies
+ *      Y == Z (golden), prints and exits.
  *
  * This exercises the RTL fix that broadcasts redmule_evt[*]/redmule_busy
  * to every cluster core's EU slice (acc_events_array[i] for i=0..N).
@@ -25,6 +25,7 @@
 
 #include <stdint.h>
 #include "magia_tile_utils.h"
+#include "cluster_utils.h"
 #include "redmule_mm_utils.h"
 #include "event_unit_utils.h"
 #include "idma_mm_utils.h"
@@ -182,12 +183,14 @@ int main(void) {
 
   unsigned int err_main = 0;
 
-  printf("Releasing PULP cluster cores...\n");
-  mmio32(PULP_FETCH_EN) = 1;
+  /* Arm EU for cluster-done WFE before kicking the cluster. */
+  cluster_init_eu();
 
-  /* Step 3: wait for all cluster cores to exit (crt0 sets PULP_DONE). */
-  while (!(mmio32(PULP_DONE) & 1))
-    ;
+  printf("Releasing PULP cluster cores...\n");
+  cluster_start();
+
+  /* Step 3: sleep (cv.elw) until all cluster cores have exited. */
+  cluster_wait_eu();
 
   /* Step 4: verify the cluster's RedMulE pass also produced the right Y. */
   unsigned int err_pulp = 0;

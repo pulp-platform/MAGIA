@@ -21,23 +21,19 @@ __DYNAMIC  =  0;
 MEMORY
 {
     instrram    : ORIGIN = 0xcc000000, LENGTH = 0x8000
-    dataram     : ORIGIN = 0xcc010000, LENGTH = 0xF00000
-    stack       : ORIGIN = 0x00010000, LENGTH = 0x10000 /* 64K stack region */
+    dataram     : ORIGIN = 0xcc010000, LENGTH = 0xF00000  /* MAGIA: data at 0xCC010000 */
+    stack       : ORIGIN = 0x00010000, LENGTH = 0x0C000   /* CV32/PULP stacks below Spatz [0x1C000, 0x20000) */
 }
 
 /* Stack information variables.
- * Layout (mirrors magia-sdk targets/pulp/link.ld):
- *   - Each hart gets _stack_slice_size bytes.
- *   - Slot 0 (top) is reserved for the CV32 main core.
- *   - Slots 1..PULP_CORE_COUNT are used by PULP cluster cores
- *     (local_id 0..PULP_CORE_COUNT-1 maps to slot local_id+1).
- *   - crt0 computes: sp = stack - local_id * _stack_slice_size
- *     so the main core uses the topmost slice and each PULP core
- *     gets its own dedicated slice below.
- */
+ * Spatz owns [0x1C000, 0x20000) in the tile SPM (_stack_start = 0x1FFF8 in
+ * spatz_program.ld); this region stops at 0x1C000 to avoid overlap.
+ * Each hart gets _stack_slice_size bytes; crt0 computes:
+ *   sp = stack - local_id * _stack_slice_size
+ * Slot 0 = CV32 main core, slots 1..8 = PULP cluster cores. */
 _stack_slice_size = 0x800;                       /* 2 KB per hart */
 _stack_hart_count = 9;                           /* 1 main + 8 PULP cores */
-_min_stack        = _stack_slice_size * _stack_hart_count;  /* 18 KB */
+_min_stack        = _stack_slice_size * _stack_hart_count;  /* 18 KB total */
 _stack_len        = LENGTH(stack);
 _stack_start      = ORIGIN(stack) + LENGTH(stack);
 ASSERT(_min_stack <= _stack_len, "Configured stacks exceed stack memory");
@@ -45,13 +41,19 @@ ASSERT(_min_stack <= _stack_len, "Configured stacks exceed stack memory");
 /* We have to align each sector to word boundaries as our current s19->slm
  * conversion scripts are not able to handle non-word aligned sections. */
 
+PHDRS
+{
+    text PT_LOAD;
+    data PT_LOAD;
+}
+
 SECTIONS
 {
     .vectors :
     {
         . = ALIGN(4);
         KEEP(*(.vectors))
-    } > instrram
+    } > instrram :text
 
     .text : {
         . = ALIGN(4);
@@ -71,18 +73,18 @@ SECTIONS
         *(.lit)
         *(.shdata)
         _endtext = .;
-    }  > instrram
+    }  > instrram :text
 
     /* Spatz embedded binary - inlined from header file */
     /* Positioned right after CV32 .text in instrram */
-    
+
     . = ALIGN(4);
     _spatz_binary_start = .;
-    
+
     .spatz_binary : {
         KEEP(*(.spatz_binary))
-    } > instrram
-    
+    } > instrram :text
+
     _spatz_binary_end = .;
     _spatz_binary_size = _spatz_binary_end - _spatz_binary_start;
 
@@ -95,7 +97,7 @@ SECTIONS
       PROVIDE_HIDDEN (__preinit_array_start = .);
       KEEP (*(.preinit_array))
       PROVIDE_HIDDEN (__preinit_array_end = .);
-    } > dataram
+    } > dataram :data
 
     .init_array     :
     {
@@ -103,7 +105,7 @@ SECTIONS
       KEEP (*(SORT(.init_array.*)))
       KEEP (*(.init_array ))
       PROVIDE_HIDDEN (__init_array_end = .);
-    } > dataram
+    } > dataram :data
 
     .fini_array     :
     {
@@ -111,19 +113,7 @@ SECTIONS
       KEEP (*(SORT(.fini_array.*)))
       KEEP (*(.fini_array ))
       PROVIDE_HIDDEN (__fini_array_end = .);
-    } > dataram
-
-    .rodata : {
-        . = ALIGN(4);
-        *(.rodata);
-        *(.rodata.*)
-    } > dataram
-
-    .shbss :
-    {
-        . = ALIGN(4);
-        *(.shbss)
-    } > dataram
+    } > dataram :data
 
     .data : {
         . = ALIGN(4);
@@ -133,7 +123,19 @@ SECTIONS
         *(.data.*)
         edata  =  .;
         _edata  =  .;
-    } > dataram
+    } > dataram :data
+
+    .rodata : {
+        . = ALIGN(4);
+        *(.rodata);
+        *(.rodata.*)
+    } > dataram :data
+
+    .shbss :
+    {
+        . = ALIGN(4);
+        *(.shbss)
+    } > dataram :data
 
     .bss :
     {
@@ -145,12 +147,10 @@ SECTIONS
         *(.sbss.*)
         *(COMMON)
         _bss_end = .;
-    } > dataram
+    } > dataram :data
 
-    /* Place the stack at the TOP of the stack memory region so that
-     * `stack` resolves to the highest address. crt0 then subtracts
-     * local_id * _stack_slice_size to give each hart its own slice.
-     */
+    /* Stack placed at the TOP of the CV32/PULP region so crt0 can compute
+     * per-hart SP = stack - local_id * _stack_slice_size. */
     .stack ORIGIN(stack) + LENGTH(stack) - _min_stack (NOLOAD): {
         . = ALIGN(4);
         _stack_bottom = .;
@@ -158,6 +158,6 @@ SECTIONS
         . = ALIGN(4);
         stack = . ;
         _stack = . ;
-    } > stack
+    } > stack :NONE
 
 }

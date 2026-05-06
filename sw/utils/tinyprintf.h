@@ -603,8 +603,19 @@ void tfp_format(void *putp, putcf putf, const char *fmt, va_list va)
 }
 
 #if TINYPRINTF_DEFINE_TFP_PRINTF
-static putcf stdout_putf = putf;
+static putcf stdout_putf = NULL;
 static void *stdout_putp = NULL;
+
+static inline putcf tfp_default_putf(void)
+{
+#if defined(__riscv)
+    putcf fn;
+    __asm__ volatile ("lla %0, putf" : "=r"(fn));
+    return fn;
+#else
+    return putf;
+#endif
+}
 
 void init_printf(void *putp, putcf putf)
 {
@@ -616,7 +627,8 @@ void tfp_printf(char *fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
-    tfp_format(stdout_putp, stdout_putf, fmt, va);
+    putcf out = stdout_putf ? stdout_putf : tfp_default_putf();
+    tfp_format(stdout_putp, out, fmt, va);
     va_end(va);
 }
 #endif
