@@ -1026,10 +1026,13 @@ module magia_tile
   magia_redmule_wrap #(
 `ifdef CV32E40X
     .CtrlIntfConfig  ( redmule_pkg::XIF            ),
+    .XifIdWidth      ( magia_tile_pkg::X_ID_W      ),
 `else
     .CtrlIntfConfig  ( redmule_pkg::HWPE_TARGET    ),
 `endif
-    .XifIdWidth      ( magia_tile_pkg::X_ID_W      )
+    .Height          ( magia_tile_pkg::REDMULE_HEIGHT    ),
+    .Width           ( magia_tile_pkg::REDMULE_WIDTH     ),
+    .NumPipeRegs     ( magia_tile_pkg::REDMULE_NUM_PIPE_REGS )
   ) i_redmule_wrap (
     .clk_i               ( sys_clk                                                     ),
     .rst_ni              ( rst_ni                                                      ),
