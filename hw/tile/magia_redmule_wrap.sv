@@ -35,8 +35,8 @@ module magia_redmule_wrap
 #(
   parameter int unsigned  DataW                  = magia_tile_pkg::REDMULE_DW,
   parameter fp_format_e   FpFormat               = FP16,
-  parameter int unsigned  Height                 = 16,
-  parameter int unsigned  Width                  = 24,            // fixme: possibly decrease to 16
+  parameter int unsigned  Height                 = 8,
+  parameter int unsigned  Width                  = 8,
   parameter int unsigned  NumPipeRegs            = 1,
   parameter pipe_config_t PipeConfig             = DISTRIBUTED,
   parameter int unsigned  EccChunkSize           = 32,
@@ -225,5 +225,20 @@ module magia_redmule_wrap
     .tcdm                ( tcdm                ),
     .target              ( target              )
   );
+
+  /////////////////////////////////////////////////////////////////////////////
+  // Assertions
+  /////////////////////////////////////////////////////////////////////////////
+
+  `ifndef SYNTHESIS
+  // RedMulE expects: DataW = Height × (NumPipeRegs + 1) × fp_width(FpFormat)
+  localparam int unsigned EXPECTED_DATAW = Height * (NumPipeRegs + 1) * fpnew_pkg::fp_width(FpFormat);
+    initial begin
+      if (DataW != EXPECTED_DATAW) begin
+        $error("[REDMULE_WRAP] DataW parameter mismatch! Expected %0d (Height=%0d x (NumPipeRegs=%0d + 1) x fp_width(%s)=%0d), got %0d", 
+               EXPECTED_DATAW, Height, NumPipeRegs, FpFormat.name(), fpnew_pkg::fp_width(FpFormat), DataW);
+      end
+    end
+  `endif
 
 endmodule
