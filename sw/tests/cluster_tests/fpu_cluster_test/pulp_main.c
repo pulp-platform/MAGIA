@@ -71,17 +71,12 @@ int main(void) {
     float c_mul = a * two;
     if (abs_diff(c_mul, MUL_EXP) > FP_TH) errors++;
 
-    /* Only core 0 prints to avoid UART interleaving. */
-    if (local_id == 0) {
-        if (errors == 0) {
-            printf("[PULP FPU] core %u: all 3 ops PASS\n", local_id);
-        } else {
-            printf("[PULP FPU] core %u: %u errors (add=%s sub=%s mul=%s)\n",
-                   local_id, errors,
-                   (abs_diff(c_add, ADD_EXP) <= FP_TH) ? "OK" : "FAIL",
-                   (abs_diff(c_sub, SUB_EXP) <= FP_TH) ? "OK" : "FAIL",
-                   (abs_diff(c_mul, MUL_EXP) <= FP_TH) ? "OK" : "FAIL");
-        }
+    if (errors != 0) {
+        printf("[PULP FPU] core %u: %u errors (add=%s sub=%s mul=%s)\n",
+               local_id, errors,
+               (abs_diff(c_add, ADD_EXP) <= FP_TH) ? "OK" : "FAIL",
+               (abs_diff(c_sub, SUB_EXP) <= FP_TH) ? "OK" : "FAIL",
+               (abs_diff(c_mul, MUL_EXP) <= FP_TH) ? "OK" : "FAIL");
     }
 
     /* Write result to L2 slot for this core. */

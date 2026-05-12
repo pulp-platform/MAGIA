@@ -67,9 +67,8 @@ typedef struct {
 typedef uint16_t fp16_t;
 
 int main(void) {
-    // Enable cycle counter (generic for both CV32E40P and CV32E40X)
-    ccount_en();
-    
+    // NOTE: ccount_en() removed — csrw 0x7E0 (PCER) is not implemented in
+    // this CV32E40P instantiation and causes a permanent pipeline stall.
 
     // Initialize input matrices from golden model headers
     printf("Initializing matrices from golden model...\n");
@@ -107,17 +106,12 @@ int main(void) {
     
     printf("Starting RedMulE computation...\n");
     
-    uint32_t redmule_start = get_cycle();
-    
     // Trigger job
     hwpe_trigger_job();
     
     // Wait for HWPE completion using the polling method
     hwpe_wait_for_completion();
-    
-    uint32_t redmule_cycles = get_cycle() - redmule_start;
 
-    printf("RedMule cycles: %u\n", redmule_cycles);
     printf("RedMule completed.\n\n");
     
     // =====================================================
@@ -147,15 +141,12 @@ int main(void) {
     
     printf("Starting Spatz computation...\n");
     
-    uint32_t spatz_start = get_cycle();
     spatz_pass_params(MATMUL_PARAM_BASE);
-    spatz_run_task(MATMUL16_TASK);   
+    spatz_run_task(MATMUL16_TASK);
 
     eu_wait_spatz_polling(EU_SPATZ_DONE_MASK);
     
-    uint32_t spatz_cycles = get_cycle() - spatz_start;
-    
-    printf("Spatz cycles: %u\n\n", spatz_cycles);
+    printf("Spatz completed.\n\n");
 
     // =====================================================
     // Result Verification
@@ -185,11 +176,6 @@ int main(void) {
       printf("FAILURE: RedMule and Spatz differ in %d elements\n", mismatch_errors);
     }
     
-    printf("\n");
-    printf("Performance Summary:\n");
-    printf("RedMule cycles: %u\n", redmule_cycles);
-    printf("Spatz cycles:   %u\n", spatz_cycles);
-
   return mismatch_errors;
 
 }

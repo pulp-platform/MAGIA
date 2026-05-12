@@ -30,8 +30,8 @@
 
 #define X_BASE (L1_BASE + 0x00012048)
 #define Y_BASE (L1_BASE + 0x00016048)
-#define Z_BASE (L2_BASE + 0x00001000)
-#define W_BASE (L2_BASE + 0x00005000)
+#define Z_BASE (L2_BASE + 0x00042000)  /* offset safe: clear of instrram (0xCC000000..0xCC007FFF) and dataram header */
+#define W_BASE (L2_BASE + 0x00046000)
 
 #define M_SIZE (96)
 #define N_SIZE (64)
@@ -95,13 +95,16 @@ int main(void) {
   printf("reps_3: 0x%8x\n", reps_3);
 #endif
 
-  // Clear Event Unit and ensure A2O mask is enabled
+  // Clear Event Unit and arm A2O mask before starting the transfer.
   eu_clear_events(0xFFFFFFFF);
   eu_enable_events(EU_IDMA_A2O_DONE_MASK);
   
   printf("iDMA moving data from L2 to L1...\n");
   uint32_t transfer_id_1 = idma_L2ToL1(src_addr, dst_addr, len);
   
+
+  uint32_t transfer_id_1 = idma_L2ToL1(src_addr, dst_addr, len);
+  printf("iDMA moving data from L2 to L1...\n");
 
   if (USE_WFE) {
     eu_idma_wait_a2o_completion(EU_WAIT_MODE_WFE);
@@ -136,13 +139,14 @@ int main(void) {
   printf("src_std_3: 0x%8x\n", src_std_3);
   printf("reps_3: 0x%8x\n", reps_3);
 #endif
- 
-  // Clear Event Unit and ensure O2A mask is enabled
+
+  // Clear Event Unit and arm O2A mask before starting the transfer.
   eu_clear_events(0xFFFFFFFF);
   eu_enable_events(EU_IDMA_O2A_DONE_MASK);
 
-  printf("iDMA moving data from L1 to L2...\n");
   uint32_t transfer_id_2 = idma_L1ToL2(src_addr, dst_addr, len);
+
+  printf("iDMA moving data from L1 to L2...\n");
 
 
   if (USE_WFE) {
@@ -153,31 +157,34 @@ int main(void) {
   }
 
 #ifdef CONCURRENT
-  // Setup concurrent transfer L2->L1 to Y_BASE
-  dst_addr = (uint32_t)Y_BASE;
-  src_addr = (uint32_t)Z_BASE;
-  len      = (uint32_t)(M_SIZE*N_SIZE*2); // 2 Bytes per element
+  // Setup concurrent transfers: L2->L1 to Y_BASE and L1->L2 to W_BASE.
+  uint32_t a2o_dst_addr = (uint32_t)Y_BASE;
+  uint32_t a2o_src_addr = (uint32_t)Z_BASE;
+  uint32_t o2a_dst_addr = (uint32_t)W_BASE;
+  uint32_t o2a_src_addr = (uint32_t)X_BASE;
+  len                   = (uint32_t)(M_SIZE*N_SIZE*2); // 2 Bytes per element
 #if VERBOSE > 10
-  printf("dst_addr: 0x%8x (Y_BASE)\n", dst_addr);
-  printf("src_addr: 0x%8x (Z_BASE)\n", src_addr);
+  printf("a2o_dst_addr: 0x%8x (Y_BASE)\n", a2o_dst_addr);
+  printf("a2o_src_addr: 0x%8x (Z_BASE)\n", a2o_src_addr);
+  printf("o2a_dst_addr: 0x%8x (W_BASE)\n", o2a_dst_addr);
+  printf("o2a_src_addr: 0x%8x (X_BASE)\n", o2a_src_addr);
   printf("len: %0d\n", len);
 #endif
 
-  // Start both transfers concurrently
-  uint32_t transfer_id_o2a = transfer_id_2; // OBI2AXI (L1->L2) already started
-  uint32_t transfer_id_a2o = idma_L2ToL1(src_addr, dst_addr, len); // Start AXI2OBI (L2->L1)
-
-  // Clear Event Unit and ensure both masks are enabled
+  // Arm both masks before launching both directions.
   eu_clear_events(0xFFFFFFFF);
   eu_enable_events(EU_IDMA_ALL_DONE_MASK);
+
+  uint32_t transfer_id_o2a = idma_L1ToL2(o2a_src_addr, o2a_dst_addr, len);
+  uint32_t transfer_id_a2o = idma_L2ToL1(a2o_src_addr, a2o_dst_addr, len);
 
   printf("iDMA moving concurrently data from L1 to L2 and from L2 to L1...\n");
   
   if (USE_WFE) {
-    eu_idma_wait_completion(EU_WAIT_MODE_WFE);
+    eu_multi_wait_all(0, 1, 1, 0, EU_WAIT_MODE_WFE);
     printf("Detected WFE...\n");
   } else {
-    eu_idma_wait_completion(EU_WAIT_MODE_POLLING);
+    eu_multi_wait_all(0, 1, 1, 0, EU_WAIT_MODE_POLLING);
   }
 #endif
 

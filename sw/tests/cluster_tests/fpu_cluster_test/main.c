@@ -17,12 +17,21 @@
 #define FPU_RESULT_MAGIC (0xFEED0000u)
 #define FPU_RESULT_MASK  (0xFFFF0000u)
 
+static inline uint32_t get_mhartid(void) {
+    uint32_t hartid;
+    asm volatile("csrr %0, mhartid" : "=r"(hartid));
+    return hartid;
+}
+
 int main(void) {
+    int print_summary = (get_mhartid() == 0);
+
     /* Arm EU before kicking the cluster to avoid missing the event. */
     cluster_init_eu();
 
     /* Release the PULP cluster cores. */
-    printf("fpu_cluster_test: releasing PULP cluster cores...\n");
+    if (print_summary)
+        printf("[fpu_cluster_test] running %d PULP cores\n", PULP_CORE_COUNT);
     cluster_start();
 
     /* Sleep (cv.elw) until all cluster cores have exited. */
@@ -30,27 +39,33 @@ int main(void) {
 
     /* Read back per-core results from L2 and report. */
     unsigned int total_errors = 0;
-    for (int i = 0; i < PULP_CORE_COUNT; i++) {
-        uint32_t word = mmio32(FPU_RESULT_BASE + 4 * i);
+    unsigned int passed_cores = 0;
+    for (int core_idx = 0; core_idx < PULP_CORE_COUNT; core_idx++) {
+        uint32_t word = mmio32(FPU_RESULT_BASE + 4 * core_idx);
         if ((word & FPU_RESULT_MASK) != FPU_RESULT_MAGIC) {
-            /* Slot was not written — core did not reach the result store. */
-            printf("  core %d: MISSING (slot=0x%08x)\n", i, word);
+            if (print_summary)
+                printf("[fpu_cluster_test] core %d MISSING slot=0x%08x\n", core_idx, word);
             total_errors++;
         } else {
             unsigned int errs = word & 0xFFFFu;
             if (errs == 0) {
-                printf("  core %d: PASS\n", i);
+                passed_cores++;
             } else {
-                printf("  core %d: FAIL (%u FPU mismatches)\n", i, errs);
+                if (print_summary)
+                    printf("[fpu_cluster_test] core %d FAIL %u mismatches\n", core_idx, errs);
                 total_errors += errs;
             }
         }
     }
 
-    if (total_errors == 0)
-        printf("fpu_cluster_test: all cores PASS\n");
-    else
-        printf("fpu_cluster_test: FAILED with %u errors\n", total_errors);
+    if (print_summary) {
+        if (total_errors == 0)
+            printf("[fpu_cluster_test] PASS: %u/%d cores, 3 ops/core\n",
+                   passed_cores, PULP_CORE_COUNT);
+        else
+            printf("[fpu_cluster_test] FAIL: %u errors, %u/%d cores passed\n",
+                   total_errors, passed_cores, PULP_CORE_COUNT);
+    }
 
     return (int)total_errors;
 }
