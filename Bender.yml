@@ -32,7 +32,7 @@ dependencies:
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , version: 3.0.0                                }
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , version: 2.3.0                                }
-  cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , rev: f88227d287251812b54c77fbfa608aa6dcd92b31 } # branch: lb/magia-spatz
+  cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , version: 0.2.0                                }
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
   fpu_ss            : { git: "https://github.com/pulp-platform/fpu_ss.git"            , rev: 8e2eff774d9d38a1e17a46bd56a0936dac9522f0 } # branch: vi/bender_manifest
   obi               : { git: "https://github.com/pulp-platform/obi.git"               , rev: 528dc65303d5ffb02fbc254324c6b53eac0dd6e5 } # branch: lb/fix_atop_resolver                       
@@ -98,6 +98,7 @@ sources:
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
       - hw/tile/eu_direct_cut.sv
+      - hw/tile/magia_tile_icache_wrap.sv
       - hw/tile/magia_redmule_wrap.sv
       - hw/tile/magia_tile.sv
       # MAGIA DV
@@ -162,6 +163,7 @@ sources:
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
       - hw/tile/eu_direct_cut.sv
+      - hw/tile/magia_tile_icache_wrap.sv
       - hw/tile/magia_redmule_wrap.sv
       - hw/tile/magia_tile.sv
       # MAGIA

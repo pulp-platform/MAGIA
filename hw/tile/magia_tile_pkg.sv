@@ -475,7 +475,7 @@ package magia_tile_pkg;
   parameter int unsigned L0_LINE_COUNT  = 32;                                           // i$ L0 Cache Line Count
   parameter int unsigned LINE_WIDTH     = 128;                                          // i$ Cache Line Width; >= 64
   parameter int unsigned LINE_COUNT     = 32;                                           // i$ The number of cache lines per set. Power of two; >= 2.
-  parameter int unsigned SET_COUNT      = 32;                                           // i$ The set associativity of the cache. Power of two; >= 1.
+  parameter int unsigned WAY_COUNT      = 32;                                           // i$ The set associativity of the cache. Power of two; >= 1.
   parameter int unsigned L0_PARITY_W    = 0;                                            // i$ Parity of the L0 cache
   parameter int unsigned L1_PARITY_W    = L0_PARITY_W;                                  // i$ Parity of the L1 cache
   parameter int unsigned FETCH_AW       = magia_pkg::ADDR_W;                            // i$ Fetch interface address width. Same as FETCH_AW; >= 1.
