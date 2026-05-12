@@ -1578,14 +1578,12 @@ module magia_tile
 /**                    i$ Beginning                   **/
 /*******************************************************/
 
-  pulp_icache_wrap #(
+  magia_tile_icache_wrap #(
   .NumFetchPorts       ( magia_tile_pkg::NR_FETCH_PORTS       ),
   .L0_LINE_COUNT       ( magia_tile_pkg::L0_LINE_COUNT        ),
   .LINE_WIDTH          ( magia_tile_pkg::LINE_WIDTH           ),
   .LINE_COUNT          ( magia_tile_pkg::LINE_COUNT           ),
-  .SET_COUNT           ( magia_tile_pkg::SET_COUNT            ),
-  .L1DataParityWidth   ( magia_tile_pkg::L0_PARITY_W          ),
-  .L0DataParityWidth   ( magia_tile_pkg::L1_PARITY_W          ),
+  .WAY_COUNT           ( magia_tile_pkg::WAY_COUNT            ),
   .FetchAddrWidth      ( magia_tile_pkg::FETCH_AW             ),
   .FetchDataWidth      ( magia_tile_pkg::FETCH_DW             ),
   .AxiAddrWidth        ( magia_tile_pkg::FILL_AW              ),
@@ -2067,7 +2065,7 @@ module magia_tile
     .L0_LINE_COUNT      ( 8                                                  ), // L0 cache lines
     .LINE_WIDTH         ( magia_tile_pkg::SPATZ_ICACHE_LINE_WIDTH            ), // 256 bits
     .LINE_COUNT         ( magia_tile_pkg::SPATZ_ICACHE_LINE_COUNT            ), // 32 lines
-    .SET_COUNT          ( magia_tile_pkg::SPATZ_ICACHE_WAYS                  ), // 2-way set associative
+    .WAY_COUNT          ( magia_tile_pkg::SPATZ_ICACHE_WAYS                  ), // 2-way set associative
     .FETCH_AW           ( magia_pkg::ADDR_W                                  ), // Address width
     .FETCH_DW           ( 32                                                 ), // 32-bit instructions
     .FILL_AW            ( magia_pkg::ADDR_W                                  ), // AXI address width
