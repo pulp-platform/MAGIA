@@ -88,6 +88,17 @@ SECTIONS
     _spatz_binary_end = .;
     _spatz_binary_size = _spatz_binary_end - _spatz_binary_start;
 
+    /* PULP embedded binary - inlined from header file (magia-sdk flow).
+       CV32E40P stores mtvec as mtvec_addr_i[31:8], so keep the PULP
+       boot address and trap base in the same 256-byte page. */
+    .pulp_binary ALIGN(256) : {
+        _pulp_binary_start = .;
+        KEEP(*(.pulp_binary))
+        _pulp_binary_end = .;
+    } > instrram :text
+
+    _pulp_binary_size = _pulp_binary_end - _pulp_binary_start;
+
     /*--------------------------------------------------------------------*/
     /* Global constructor/destructor segment                              */
     /*--------------------------------------------------------------------*/

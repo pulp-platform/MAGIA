@@ -42,6 +42,7 @@
 #include "magia_spatz_utils.h"
 #include "event_unit_utils.h"
 
+#include "hello_spatz_pulp_pulp_task_bin.h"
 #include "hello_spatz_pulp_task_bin.h"   /* generated: SPATZ_BINARY_START, VECSUM16_TASK */
 
 /* -------------------------------------------------------------------------
@@ -140,7 +141,7 @@ int main(void) {
     cluster_init_eu();
 
     printf("[CV32] Releasing PULP cluster cores...\n");
-    cluster_start();
+    cluster_start(PULP_BINARY_START, 0xFFu);
     cluster_wait_eu();
 
     /* ------------------------------------------------------------------

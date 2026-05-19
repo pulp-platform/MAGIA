@@ -17,10 +17,9 @@
  * Authors: Niccolò Giuliani, Fondazione Chips-IT
  */
 
+
+
 /*
- * Tile CSR wrapper — single OBI port, GVSoC-compatible register map.
- * Internally demuxes to obi_slave_ctrl_spatz and obi_slave_ctrl_cluster.
- *
  * Register map (offsets from BaseAddr):
  *   0x00–0x18  Spatz registers   (handled by obi_slave_ctrl_spatz)
  *   0x40–0x44  PULP/Cluster regs (handled by obi_slave_ctrl_cluster)
@@ -29,10 +28,7 @@ module tile_csr
   import magia_tile_pkg::*;
 #(
    parameter logic [31:0] BaseAddr       = 32'h00001700,
-   parameter int unsigned BOOT_ADDR      = 32'hCC000000,
-   // PULP cluster cores reset vector: point to the `j _start` at offset
-   // 0x80 in the PULP ELF (linked at 0xC0000000).
-   parameter int unsigned PULP_BOOT_ADDR = 32'hC0000080
+   parameter int unsigned BOOT_ADDR      = 32'hCC000000
 )  (
   input  logic                                        clk_i,
   input  logic                                        rst_ni,
@@ -82,9 +78,7 @@ module tile_csr
   // Cluster control registers (offset 0x40–0x44)
   // ============================================
   obi_slave_ctrl_cluster #(
-    .BaseAddr       ( BaseAddr + 32'h40 ),
-    .BOOT_ADDR      ( BOOT_ADDR         ),
-    .PULP_BOOT_ADDR ( PULP_BOOT_ADDR    )
+    .BaseAddr       ( BaseAddr + 32'h40 )
   ) i_cluster_ctrl (
     .clk_i       ( clk_i              ),
     .rst_ni      ( rst_ni             ),

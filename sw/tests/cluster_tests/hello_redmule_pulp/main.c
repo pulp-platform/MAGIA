@@ -48,6 +48,7 @@
 #include "redmule_mm_utils.h"
 #include "event_unit_utils.h"
 #include "idma_mm_utils.h"
+#include "hello_redmule_pulp_pulp_task_bin.h"
 
 #include "x_input.h"
 #include "w_input.h"
@@ -61,6 +62,9 @@
 #define X_BASE (L1_BASE + 0x00012048)
 #define W_BASE (L1_BASE + 0x00016048)
 #define Y_BASE (L1_BASE + 0x0001A048)
+/* Backup slot for y_inp: read by the PULP cluster task via absolute
+   L1 addressing (see pulp_task/hello_redmule_pulp_task.c). */
+#define Y_BIAS_BACKUP_BASE (L1_BASE + 0x0001B048)
 
 static inline uint32_t get_mhartid(void) {
   uint32_t id;
@@ -179,34 +183,43 @@ static unsigned int redmule_run_and_verify(void) {
 int main(void) {
   enable_fpu();
 
-  /* Step 1 (sanity check on the CV32 main) is skipped on purpose:
-     it interacts badly with the iDMA + HWPE timing on tiles 14/15
-     under mesh_dv=1, even though the actual RedMulE workload (run
-     by the cluster cores in pulp_main.c) is what we want to test.
+  /* Step 1: CV32 main runs RedMulE once as a sanity check AND to leave
+     the HWPE in a fully-initialized state for the cluster cores.
+     Without an actual trigger+done cycle on the CV32 side, the cluster
+     cores read garbage (0xFFFFFFFE) from REDMULE_ACQUIRE and spin
+     forever in `while ((id = hwpe_acquire_job()) < 0)`.
 
-     We still need to populate X, W, Y in this tile's L1 SPM so the
-     cluster cores have valid operands; just no programming /
-     trigger / verify on the CV32 side. */
-  idma_load_l2_to_l1((uint32_t)x_inp, X_BASE, M_SIZE * N_SIZE * 2);
-  idma_load_l2_to_l1((uint32_t)w_inp, W_BASE, N_SIZE * K_SIZE * 2);
+     This step also implicitly populates X, W, Y in this tile's L1 SPM
+     (via redmule_run_and_verify -> idma_load_l2_to_l1), so the cluster
+     cores have valid operands when they re-run the matmul.
+
+     NOTE: under mesh_dv=1 this used to race with iDMA on tiles 14/15;
+     if that regresses, gate the call with a mesh_dv check or revert
+     to soft_clear-only + extend the CV32-side hwpe_cg_enable to write
+     a real CG-enable register once one is exposed by the wrapper. */
+  unsigned int err_main = redmule_run_and_verify();
+  printf("CV32 main RedMulE sanity-check: %0d errors\n", err_main);
+
+  /* Reload Y so the bias slot is fresh again for the cluster pass
+     (the sanity-check above overwrote Y with the computed result). */
   idma_load_l2_to_l1((uint32_t)y_inp, Y_BASE, M_SIZE * K_SIZE * 2);
 
-  /* Bring the RedMulE HWPE out of clock-gate and reset its FSM.
-     pulp_main.c assumes the HWPE is "in a clean state" when the cluster
-     cores start contending on REDMULE_ACQUIRE; without this they read
-     garbage (0xFFFFFFFE) from the gated peripheral and spin forever
-     in `while ((id = hwpe_acquire_job()) < 0)`. We do NOT trigger a
-     sanity job here: just enable+clear, then release the cluster. */
-  hwpe_cg_enable();
-  hwpe_soft_clear();
-
-  unsigned int err_main = 0;
+  /* Also DMA y_inp into a dedicated L1 backup slot. The PULP task
+     copies from this absolute L1 address into Y_BASE before each
+     RedMulE run (see reload_bias() in the pulp_task). We CANNOT let
+     the PULP task reference `y_inp[]` directly: the PULP ELF is
+     linked with ORIGIN=0 (position-independent embed) and GCC
+     materializes `&y_inp` as the literal link-time address (~0x6f4),
+     which at runtime lands inside the tile's MMIO range (0x700+ =
+     Event Unit), hanging the core on a fake sleep register. */
+  idma_load_l2_to_l1((uint32_t)y_inp, Y_BIAS_BACKUP_BASE,
+                     M_SIZE * K_SIZE * 2);
 
   /* Arm EU for cluster-done WFE before kicking the cluster. */
   cluster_init_eu();
 
   printf("Releasing PULP cluster cores...\n");
-  cluster_start();
+  cluster_start(PULP_BINARY_START, 0xFFu);
 
   /* Step 3: sleep (cv.elw) until all cluster cores have exited. */
   cluster_wait_eu();

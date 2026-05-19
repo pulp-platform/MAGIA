@@ -2364,7 +2364,7 @@ generate
         .data_rvalid_i          ( cluster_data_rsp[i].rvalid           ),
         .data_rdata_i           ( cluster_data_rsp[i].rdata            ),
         // Interrupts (irq_i is [31:0]; EU IRQ goes to MEI bit 11, others 0)
-      .irq_i                  ( core_irq_vec[i+1]                  ),
+        .irq_i                  ( core_irq_vec[i+1]                  ),
         .irq_ack_o              ( eu_core_irq_ack[i+1]               ),
         .irq_id_o               ( eu_core_irq_ack_id[i+1]            ),
         // Debug interface

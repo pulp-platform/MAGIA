@@ -33,6 +33,7 @@
 
 #include "magia_tile_utils.h"
 #include "cluster_utils.h"
+#include "hello_pulp_pulp_task_bin.h"
 
 static inline uint32_t get_mhartid(void) {
     uint32_t id;
@@ -49,7 +50,7 @@ int main(void) {
     cluster_init_eu();
 
     /* Release the PULP cluster cores of this tile. */
-    cluster_start();
+    cluster_start(PULP_BINARY_START, 0xFFu);
 
     /* Sleep (cv.elw) until every cluster core of this tile has signalled
      * exit; cluster_wait_eu() also clears PULP_DONE (read-to-clear). */

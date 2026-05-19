@@ -61,21 +61,19 @@ endif
 #	TEST_SRCS := sw/redmule.c
 #endif
 
-# Set cluster=1 to run tests from sw/cluster_tests/ (two-binary PULP flow).
-# Default: cluster=0 uses sw/tests/ (legacy single-binary, backward compatible).
-cluster       ?= 0
-num_clusters  ?= 16   # number of PULP cluster tiles (N_TILES for 4x4 mesh)
+# Auto-detect test location under sw/tests/ recursively — no cluster= flag needed.
+# A directory named $(test) is searched first (handles both sw/tests/<test>/ and
+# sw/tests/cluster_tests/<test>/); single-file tests fall back to sw/tests/$(test).c.
+# cluster= is still accepted for backward compatibility but its value is ignored.
+cluster       ?= 0   # accepted for backward compat — value is ignored
+num_clusters  ?= 16  # number of PULP cluster tiles (N_TILES for 4x4 mesh)
 
-ifeq ($(cluster),1)
-  TEST_DIR := sw/tests/cluster_tests
-else
-  TEST_DIR := sw/tests
-endif
-
-# Auto-detect test location in any subdirectory
-TEST_SUBDIR = $(filter-out .,$(shell find $(TEST_DIR) -name "$(test).c" -printf "%P\n" 2>/dev/null | head -1 | xargs dirname 2>/dev/null))
-# Legacy single-binary test source. Ignored (and may be empty) when the
-# two-binary flow is selected (see TWO_BINARY detection below).
+_FOUND_TEST_DIR  := $(shell find sw/tests -maxdepth 5 -type d -name "$(test)" 2>/dev/null | head -1)
+TEST_DIR          = $(if $(_FOUND_TEST_DIR),$(patsubst %/,%,$(dir $(_FOUND_TEST_DIR))),sw/tests)
+TEST_SUBDIR       = $(filter-out .,$(shell find $(TEST_DIR) -name "$(test).c" -printf "%P\n" 2>/dev/null | head -1 | xargs dirname 2>/dev/null))
+# CV32-side test source. For cluster tests with a pulp_task/ subdirectory the
+# entrypoint is main.c (handled in the $(OBJ) rule); for plain single-binary
+# tests this matches the legacy $(test).c naming convention.
 TEST_SRCS  = $(TEST_DIR)/$(if $(TEST_SUBDIR),$(TEST_SUBDIR)/)$(test).c
 
 compile_script       ?= scripts/compile.tcl
@@ -96,9 +94,6 @@ gui           ?= 0
 ipstools      ?= 0
 inst_hex_name ?= build/stim_instr.txt 
 data_hex_name ?= build/stim_data.txt 
-# PULP cluster-core image (two-binary flow). Empty => legacy single-binary.
-pulp_inst_hex_name ?= build/stim_instr_pulp.txt
-pulp_data_hex_name ?= build/stim_data_pulp.txt
 inst_entry    ?= 0xCC000000
 data_entry    ?= 0xCC010000
 boot_addr     ?= 0xCC000080
@@ -129,41 +124,39 @@ INC += -Isw
 INC += -Isw/inc
 INC += -Isw/utils
 INC += -Ispatz/sw/headers_bin
+INC += -Isw/kernel_pulp/headers_bin
 
 # ----------------------------------------------------------------------------
-# Kernel runtime selection (bootscript + linker script).
+# Kernel runtime selection — magia-sdk single-binary flow.
 #
-# Two modes are supported:
-#
-#   * Legacy single-binary (default): one ELF is produced from $(test).c
-#     using sw/kernel/{crt0.S,link.ld}. CV32 main and PULP cluster cores
-#     share the same instruction image at 0xCC000000.
-#
-#   * Two-binary mode: if the test directory $(TEST_DIR)/$(test)/ contains
-#     BOTH main.c and pulp_main.c, then two ELFs are produced:
-#       - verif      : main-core ELF at 0xCC000000 (uses sw/kernel_main/)
-#       - verif_pulp : PULP cluster-core ELF at 0xC0000000 (uses sw/kernel_pulp/)
-#     Both stimulus files are loaded by the testbench.
+# A single CV32 ELF is always produced via sw/kernel/{crt0.S,link.ld}.
+# If the test directory contains a `pulp_task/` subdirectory with at least
+# one .c source, the PULP cluster sources are compiled into a separate
+# position-independent ELF (sw/kernel_pulp/{pulp_crt0.S,pulp_program.ld}),
+# converted to a flat binary, and packed into
+#   sw/kernel_pulp/headers_bin/<test>_pulp_task_bin.h
+# which the CV32 main.c `#include`s. The linker (sw/kernel/link.ld) KEEPs
+# that array inside the `.pulp_binary` section, right after the optional
+# Spatz binary in instrram (0xCC000000...).  This mirrors what is done for
+# Spatz tasks via spatz/sw/Makefile and the `.spatz_binary` section.
 # ----------------------------------------------------------------------------
-TEST_DIR_PATH := $(TEST_DIR)/$(test)
-TWO_BINARY    := $(if $(and $(wildcard $(TEST_DIR_PATH)/main.c),$(wildcard $(TEST_DIR_PATH)/pulp_main.c)),1,0)
+TEST_DIR_PATH       := $(if $(_FOUND_TEST_DIR),$(_FOUND_TEST_DIR),sw/tests/$(test))
+PULP_TASK_DIR_PATH  := $(TEST_DIR_PATH)/pulp_task
+PULP_TASKS          := $(if $(wildcard $(PULP_TASK_DIR_PATH)/*.c),$(notdir $(basename $(wildcard $(PULP_TASK_DIR_PATH)/*.c))),)
 
-ifeq ($(TWO_BINARY),1)
-  BOOTSCRIPT      := sw/kernel_main/crt0.S
-  LINKSCRIPT      := sw/kernel_main/link.ld
-  PULP_BOOTSCRIPT := sw/kernel_pulp/crt0.S
-  PULP_LINKSCRIPT := sw/kernel_pulp/link.ld
-else
-  BOOTSCRIPT      := sw/kernel/crt0.S
-  LINKSCRIPT      := sw/kernel/link.ld
-endif
+BOOTSCRIPT := sw/kernel/crt0.S
+LINKSCRIPT := sw/kernel/link.ld
+
+PULP_SW_DIR := sw/kernel_pulp
 
 ifeq ($(core), CV32E40X)
 	CC=$(ISA)$(XLEN)-unknown-elf-gcc
   OBJDUMP=$(ISA)$(XLEN)-unknown-elf-objdump
+  NM=$(ISA)$(XLEN)-unknown-elf-nm
 else
 	CC=riscv64-unknown-elf-gcc
   OBJDUMP=riscv64-unknown-elf-objdump
+  NM=riscv64-unknown-elf-nm
 endif
 LD=$(CC)
 ifeq ($(core), CV32E40X)
@@ -179,8 +172,8 @@ SPATZ_SW_DIR   := spatz/sw
 
 # Auto-detect which Spatz tasks are used by looking for *_TASK symbols in CV32 code
 # Example: HELLO_WORLD_TASK → hello_world_task
-# For two-binary tests the actual CV32 source is main.c, not the legacy stub.
-_SPATZ_SRC_TO_GREP := $(if $(filter 1,$(TWO_BINARY)),$(TEST_DIR_PATH)/main.c,$(TEST_SRCS))
+# When PULP tasks are embedded, the actual CV32 source is main.c.
+_SPATZ_SRC_TO_GREP := $(if $(PULP_TASKS),$(TEST_DIR_PATH)/main.c,$(TEST_SRCS))
 SPATZ_TASKS := $(shell grep -oP '\b(?!SPATZ_)[A-Z][A-Z0-9_]*_TASK\b' $(_SPATZ_SRC_TO_GREP) 2>/dev/null | tr '[:upper:]' '[:lower:]' | awk '!seen[$$0]++')
 
 # Setup build object dirs
@@ -190,18 +183,12 @@ OBJ=$(TEST_BUILD_DIR)/build/verif.o
 BIN=$(TEST_BUILD_DIR)/build/verif
 DUMP=$(TEST_BUILD_DIR)/build/verif.dump
 ODUMP=$(TEST_BUILD_DIR)/build/verif.objdump
+# PULP cluster disassembly with global (runtime) addresses (only when PULP_TASKS set)
+PULP_ELF=$(PULP_SW_DIR)/bin/$(test)_pulp_task_bin.elf
+PULP_DUMP_GLOBAL=$(TEST_BUILD_DIR)/build/$(test)_pulp_task_global.dump
 ITB=$(TEST_BUILD_DIR)/build/verif.itb
 STIM_INSTR=$(TEST_BUILD_DIR)/build/stim_instr.txt
 STIM_DATA=$(TEST_BUILD_DIR)/build/stim_data.txt
-# PULP-side artifacts (used only when TWO_BINARY=1)
-PULP_CRT=$(TEST_BUILD_DIR)/build/crt0_pulp.o
-PULP_OBJ=$(TEST_BUILD_DIR)/build/verif_pulp.o
-PULP_BIN=$(TEST_BUILD_DIR)/build/verif_pulp
-PULP_DUMP=$(TEST_BUILD_DIR)/build/verif_pulp.dump
-PULP_ODUMP=$(TEST_BUILD_DIR)/build/verif_pulp.objdump
-PULP_ITB=$(TEST_BUILD_DIR)/build/verif_pulp.itb
-PULP_STIM_INSTR=$(TEST_BUILD_DIR)/build/stim_instr_pulp.txt
-PULP_STIM_DATA=$(TEST_BUILD_DIR)/build/stim_data_pulp.txt
 VSIM_INI=modelsim.ini
 VSIM_LIBS=work
 
@@ -225,11 +212,26 @@ spatz-header:
 		echo "[SPATZ] No Spatz tasks detected - skipping Spatz compilation"; \
 	fi
 
+# Build PULP cluster binary (magia-sdk style): produces
+#   sw/kernel_pulp/headers_bin/<test>_pulp_task_bin.h
+# embedding the position-independent flat binary in section .pulp_binary.
+.PHONY: pulp-header
+pulp-header:
+	@if [ -n "$(PULP_TASKS)" ]; then \
+		echo "[PULP] Auto-detected tasks: $(PULP_TASKS)"; \
+		$(MAKE) -C $(PULP_SW_DIR) TEST_NAME=$(test) task="$(PULP_TASKS)" PULP_TASK_DIR=$(ROOT_DIR)/$(PULP_TASK_DIR_PATH) core=$(core) all; \
+	else \
+		echo "[PULP] No pulp_task/ directory — skipping PULP cluster compilation"; \
+	fi
+
 $(BIN): $(CRT) $(OBJ)
 	@if [ -n "$(SPATZ_TASKS)" ]; then \
 		echo "[CV32-LINK] Linking with embedded Spatz binary (tasks: $(SPATZ_TASKS))"; \
 	else \
 		echo "[CV32-LINK] Linking without Spatz binary"; \
+	fi
+	@if [ -n "$(PULP_TASKS)" ]; then \
+		echo "[CV32-LINK] Linking with embedded PULP binary (tasks: $(PULP_TASKS))"; \
 	fi
 	$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT)
 
@@ -237,41 +239,21 @@ $(CRT):
 	mkdir -p $(TEST_BUILD_DIR)/build
 	$(CC) $(CC_OPTS) -c $(BOOTSCRIPT) -o $(CRT)
 
-# Compile CV32 test (depends on spatz-header only if tasks detected)
+# Compile CV32 test (depends on spatz/pulp headers only when tasks are used)
 ifneq ($(SPATZ_TASKS),)
 $(OBJ): spatz-header
+endif
+ifneq ($(PULP_TASKS),)
+$(OBJ): pulp-header
 endif
 
 $(OBJ):
 	mkdir -p $(TEST_BUILD_DIR)/build
-ifeq ($(TWO_BINARY),1)
+ifneq ($(PULP_TASKS),)
 	@echo "[CV32] Compiling main core source: $(TEST_DIR_PATH)/main.c"
 	$(CC) $(CC_OPTS) -c $(TEST_DIR_PATH)/main.c $(FLAGS) $(INC) -o $(OBJ)
 else
 	$(CC) $(CC_OPTS) -c $(TEST_SRCS) $(FLAGS) $(INC) -o $(OBJ)
-endif
-
-# ---------------------------------------------------------------------------
-# PULP cluster-core ELF (only when TWO_BINARY=1)
-# ---------------------------------------------------------------------------
-ifeq ($(TWO_BINARY),1)
-$(PULP_CRT):
-	mkdir -p $(TEST_BUILD_DIR)/build
-	$(CC) $(CC_OPTS) -c $(PULP_BOOTSCRIPT) -o $(PULP_CRT)
-
-$(PULP_OBJ):
-	mkdir -p $(TEST_BUILD_DIR)/build
-	@echo "[PULP] Compiling cluster source: $(TEST_DIR_PATH)/pulp_main.c"
-	$(CC) $(CC_OPTS) -c $(TEST_DIR_PATH)/pulp_main.c $(FLAGS) $(INC) -o $(PULP_OBJ)
-
-$(PULP_BIN): $(PULP_CRT) $(PULP_OBJ)
-	@echo "[PULP-LINK] Linking PULP cluster-core ELF (0xC0000000)"
-	$(LD) $(LD_OPTS) -o $(PULP_BIN) $(PULP_CRT) $(PULP_OBJ) -T$(PULP_LINKSCRIPT)
-
-$(PULP_STIM_INSTR) $(PULP_STIM_DATA): $(PULP_BIN)
-	objcopy --srec-len 1 --output-target=srec $(PULP_BIN) $(PULP_BIN).s19 && \
-	scripts/parse_s19.pl $(PULP_BIN).s19 > $(PULP_BIN).txt &&                \
-	$(BASE_PYTHON) scripts/s19tomem.py $(PULP_BIN).txt $(PULP_STIM_INSTR) $(PULP_STIM_DATA) c0000000 c0100000
 endif
 
 SHELL := /bin/bash
@@ -292,27 +274,16 @@ python_deps:
 	$(BASE_PYTHON) -m pip install --upgrade pip setuptools && \
     $(BASE_PYTHON) -m pip install -r requirements.txt
 
-# Generate instructions and data stimuli
-ifeq ($(TWO_BINARY),1)
-all: $(STIM_INSTR) $(STIM_DATA) $(PULP_STIM_INSTR) $(PULP_STIM_DATA) dis objdump itb pulp_dis pulp_objdump pulp_itb
+# Generate instructions and data stimuli (single-binary flow).
+ifneq ($(PULP_TASKS),)
+all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb pulp-dis
 else
 all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb
 endif
 
 # Run the simulation
-# In two-binary mode we also forward the PULP image via +PULP_INST_HEX/+PULP_DATA_HEX.
-# In legacy single-binary mode these plusargs are empty and the VIP simply skips the preload.
-ifeq ($(TWO_BINARY),1)
-  PULP_PLUSARGS := +PULP_INST_HEX=$(pulp_inst_hex_name) +PULP_DATA_HEX=$(pulp_data_hex_name)
-else
-  PULP_PLUSARGS :=
-endif
-
 run: $(CRT)
-# Before simulation: wipe any leftover traces from a previous run, then
-# recreate the per-tile directory tree so it's visible from the start.
-# Trace files are moved in at the end (see after vsim).
-ifeq ($(TWO_BINARY),1)
+ifneq ($(PULP_TASKS),)
 	@rm -rf $(TEST_BUILD_DIR)/traces $(TEST_BUILD_DIR)/trace_core_*.log
 	@bash $(ROOT_DIR)/scripts/setup_traces.sh $(TEST_BUILD_DIR) $(num_clusters)
 endif
@@ -321,7 +292,6 @@ ifeq ($(gui), 0)
 	$(QUESTA) vsim -c vopt_tb $(questa_run_fast_flag) -l transcript                              \
 	+INST_HEX=$(inst_hex_name)                                                                   \
 	+DATA_HEX=$(data_hex_name)                                                                   \
-	$(PULP_PLUSARGS)                                                                             \
 	+INST_ENTRY=$(inst_entry)                                                                    \
 	+DATA_ENTRY=$(data_entry)                                                                    \
 	+BOOT_ADDR=$(boot_addr)                                                                      \
@@ -337,7 +307,6 @@ else
 	-do "source $(WAVES)"                                                                        \
 	+INST_HEX=$(inst_hex_name)                                                                   \
 	+DATA_HEX=$(data_hex_name)                                                                   \
-	$(PULP_PLUSARGS)                                                                             \
 	+INST_ENTRY=$(inst_entry)                                                                    \
 	+DATA_ENTRY=$(data_entry)                                                                    \
 	+BOOT_ADDR=$(boot_addr)                                                                      \
@@ -346,10 +315,14 @@ else
 	)                                                                                            \
 	+itb_file=$(itb_file)
 endif
-# After simulation: move trace files into their per-tile subdirectories.
-# Called inline (not via sub-make) so test=/cluster= context is preserved.
-ifeq ($(TWO_BINARY),1)
+ifneq ($(PULP_TASKS),)
 	@bash $(ROOT_DIR)/scripts/sort_traces.sh $(TEST_BUILD_DIR) $(num_clusters)
+else
+	@for f in $(TEST_BUILD_DIR)/trace_core_*.log; do \
+		[ -f "$$f" ] || continue; \
+		hartid=$$(printf '%d' "0x$$(basename $$f .log | sed 's/trace_core_//')"); \
+		[ $$hartid -ge $$(( 2 * $(num_clusters) )) ] && rm -f "$$f" || true; \
+	done
 endif
 
 # Download bender
@@ -488,6 +461,10 @@ clean:
 		echo "[CLEAN] Cleaning Spatz..."; \
 		$(MAKE) -C $(SPATZ_SW_DIR) clean; \
 	fi
+	@if [ -d "$(PULP_SW_DIR)" ]; then \
+		echo "[CLEAN] Cleaning PULP cluster..."; \
+		$(MAKE) -C $(PULP_SW_DIR) clean; \
+	fi
 
 dis:
 	$(OBJDUMP) -d -S $(BIN) > $(DUMP)
@@ -498,15 +475,19 @@ objdump:
 itb:
 	$(BASE_PYTHON) scripts/objdump2itb.py $(ODUMP) > $(ITB)
 
-# PULP-side disassembly helpers (two-binary flow).
-pulp_dis:
-	$(OBJDUMP) -d -S $(PULP_BIN) > $(PULP_DUMP)
-
-pulp_objdump:
-	$(OBJDUMP) -d -l -s $(PULP_BIN) > $(PULP_ODUMP)
-
-pulp_itb:
-	$(BASE_PYTHON) scripts/objdump2itb.py $(PULP_ODUMP) > $(PULP_ITB)
+# PULP cluster disassembly with actual runtime (global) addresses.
+# Extracts _pulp_binary_start from the CV32 ELF via nm, then uses
+# --adjust-vma to shift the PIC PULP ELF addresses to match the traces.
+.PHONY: pulp-dis
+pulp-dis: $(BIN)
+	@LOAD_ADDR=$$($(NM) $(BIN) | grep ' _pulp_binary_start$$' | awk '{print "0x"$$1}'); \
+	if [ -z "$$LOAD_ADDR" ]; then \
+		echo "[PULP-DIS] WARNING: _pulp_binary_start not found in $(BIN) - skipping"; \
+	else \
+		echo "[PULP-DIS] _pulp_binary_start = $$LOAD_ADDR"; \
+		$(OBJDUMP) -d -S --adjust-vma=$$LOAD_ADDR $(PULP_ELF) > $(PULP_DUMP_GLOBAL); \
+		echo "[PULP-DIS] Written: $(PULP_DUMP_GLOBAL)"; \
+	fi
 
 # Trace directory helpers.
 #   setup-traces: pre-creates the traces/tile_N/{main,cluster}/ tree so it is

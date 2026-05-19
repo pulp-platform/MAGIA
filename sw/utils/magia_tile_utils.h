@@ -41,13 +41,21 @@
 #define EVENT_UNIT_END  (0x000016FF)
 #define SPATZ_CTRL_BASE (0x00001700)
 #define SPATZ_CTRL_END  (0x0000173F)
-/* PULP Cluster Control registers (tile_csr + 0x40) — from magia-sdk */
-#define PULP_CTRL_BASE  (0x00001740)
-#define PULP_FETCH_EN   (PULP_CTRL_BASE + 0x00)
-#define PULP_DONE       (PULP_CTRL_BASE + 0x04)
-#define PULP_CTRL_END   (0x000017FF)
-#define PULP_CORE_COUNT    (8)
-#define PULP_HARTID_BASE   (32)   /* 2 * NUM_CLUSTERS (16) */
+/* PULP Cluster Control registers (tile_csr + 0x40) — aligned with magia-sdk
+ *   +0x00 PULP_CLK_EN           : one-hot bitmask, bit N enables PULP core N
+ *   +0x04 PULP_BINARY           : entry point address (written by CV32)
+ *   +0x08 PULP_NB_CORES_TO_WAIT : number of PULP harts the cluster CSR waits for
+ *   +0x0C PULP_DONE             : R = sticky done flag (read-to-clear);
+ *                                 W = each PULP hart signals completion
+ */
+#define PULP_CTRL_BASE        (0x00001740)
+#define PULP_CLK_EN           (PULP_CTRL_BASE + 0x00)
+#define PULP_BINARY           (PULP_CTRL_BASE + 0x04)
+#define PULP_NB_CORES_TO_WAIT (PULP_CTRL_BASE + 0x08)
+#define PULP_DONE             (PULP_CTRL_BASE + 0x0C)
+#define PULP_CTRL_END         (0x000017FF)
+#define PULP_CORE_COUNT       (8)
+#define PULP_HARTID_BASE      (32)   /* 2 * NUM_CLUSTERS (16) */
 #define RESERVED_START  (0x00001800)   
 #define RESERVED_END    (0x0000FFFF)   
 #define STACK_START     (0x00010000)

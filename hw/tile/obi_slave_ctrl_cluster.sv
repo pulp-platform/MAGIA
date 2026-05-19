@@ -17,18 +17,12 @@
  * Authors: Niccolò Giuliani, Fondazione Chips-IT
  */
 
+
 module obi_slave_ctrl_cluster
   import magia_tile_pkg::*;
 #(
-   parameter logic [31:0] BaseAddr       = 32'h00001700,  // Base address for Cluster control registers
-   parameter int unsigned BOOT_ADDR      = 32'hCC000000,  // (unused) kept for interface compatibility
-   // Boot address for PULP cluster cores. The PULP binary is linked at
-   // 0xC0000000 and its reset vector (`jal _start`) sits at offset 0x80
-   // (see sw/kernel_pulp/crt0.S `.vectors .org 0x80`). The CV32E40P core
-   // starts fetching directly from boot_addr_i with no implicit offset,
-   // so the boot address must point to 0xC0000080 (same pattern as the
-   // main CV32 core which boots at 0xCC000080).
-   parameter int unsigned PULP_BOOT_ADDR = 32'hC0000080
+   parameter logic [31:0] BaseAddr       = 32'h00001700  // Base address for Cluster control registers
+
 )  (
   input  logic                                             clk_i,
   input  logic                                             rst_ni,
@@ -47,8 +41,11 @@ module obi_slave_ctrl_cluster
 
 //Registers offset
 
-localparam logic [31:0] CLUSTER_FETCH_EN  = 32'h00;
-localparam logic [31:0] CLUSTER_DONE      = 32'h04;
+localparam logic [31:0] CLUSTER_FETCH_EN          = 32'h00;
+localparam logic [31:0] CLUSTER_BINARY            = 32'h04;
+localparam logic [31:0] CLUSTER_NB_CORES_TO_WAIT  = 32'h08;
+localparam logic [31:0] CLUSTER_DONE              = 32'h0C;
+
 
 // Address decode (offset from base)
 logic [31:0]  addr_offset;
@@ -57,17 +54,18 @@ logic         addr_valid;
 assign addr_offset = obi_req_i.a.addr - BaseAddr;
 
 // Registers
-logic fetch_en_q, fetch_en_d;
+logic [magia_tile_pkg::N_CLUSTER_CORES-1:0] fetch_en_q;
 logic done_q;
-logic [magia_tile_pkg::N_BIT_CLUSTER_CORES-1:0]  nb_recv_end_reqs_q;
-
+logic [magia_tile_pkg::N_BIT_CLUSTER_CORES:0]  nb_recv_end_reqs_q;
+logic [magia_tile_pkg::N_BIT_CLUSTER_CORES:0]  nb_cores_to_wait_q;
+logic [31:0]                                   entry_point_q [magia_tile_pkg::N_CLUSTER_CORES-1:0];
 
 // Response pipeline
 logic        rvalid_q, rvalid_d;
 logic [31:0] rdata_q, rdata_d;
 
 assign addr_valid = (obi_req_i.a.addr >= BaseAddr) &&
-                    (obi_req_i.a.addr < (BaseAddr + 8));  // 2 registers * 4 bytes
+                    (obi_req_i.a.addr < (BaseAddr + 16));  // 4 registers * 4 bytes
 
 assign obi_rsp_o.gnt    = obi_req_i.req && addr_valid;
 assign obi_rsp_o.rvalid = rvalid_q;
@@ -82,7 +80,10 @@ assign obi_rsp_o.r.r_optional = '0;
 // ============================================
 logic  done_d;
 logic [magia_tile_pkg::N_BIT_CLUSTER_CORES:0]  nb_recv_end_reqs_d;
+logic [magia_tile_pkg::N_BIT_CLUSTER_CORES:0]  nb_cores_to_wait_d;
 logic  done_clear;
+logic [magia_tile_pkg::N_CLUSTER_CORES-1:0]    fetch_en_d;
+logic [31:0]                                   entry_point_d [magia_tile_pkg::N_CLUSTER_CORES-1:0];
 
 // Done is sticky: clears only when software reads the CLUSTER_DONE register
 assign done_clear = obi_req_i.req && addr_valid && !obi_req_i.a.we &&
@@ -93,7 +94,8 @@ always_comb begin
   fetch_en_d = fetch_en_q;
   done_d = done_q;  // sticky: keep previous value
   nb_recv_end_reqs_d = nb_recv_end_reqs_q;
-
+  nb_cores_to_wait_d = nb_cores_to_wait_q;
+  entry_point_d = entry_point_q;
   // Clear done on read (read-to-clear)
   if (done_clear) begin
     done_d = 1'b0;
@@ -101,7 +103,16 @@ always_comb begin
 
   if (obi_req_i.req && addr_valid && obi_req_i.a.we) begin
     case (addr_offset)
-      CLUSTER_FETCH_EN: fetch_en_d = obi_req_i.a.wdata[0];
+      CLUSTER_FETCH_EN: 
+        for (int i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin
+          fetch_en_d[i] = obi_req_i.a.wdata >> i & 1'b1;
+        end
+      CLUSTER_BINARY:   begin
+        for (int i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin
+          entry_point_d[i] = obi_req_i.a.wdata; 
+        end
+      end
+      CLUSTER_NB_CORES_TO_WAIT: nb_cores_to_wait_d = obi_req_i.a.wdata;
       CLUSTER_DONE: begin
         nb_recv_end_reqs_d = nb_recv_end_reqs_q + 1;
       end
@@ -109,7 +120,7 @@ always_comb begin
   end
 
   // Set done when all cores have reported
-  if (nb_recv_end_reqs_d == magia_tile_pkg::N_CLUSTER_CORES) begin
+  if (nb_recv_end_reqs_d == nb_cores_to_wait_q) begin
     done_d = 1'b1;
     nb_recv_end_reqs_d = '0;
   end
@@ -126,12 +137,17 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
     nb_recv_end_reqs_q <= '0;
     rvalid_q           <= 1'b0;
     rdata_q            <= 32'h0;
+    nb_cores_to_wait_q <= magia_tile_pkg::N_CLUSTER_CORES;  // Default to waiting for all cores
+    for (int i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++)
+      entry_point_q[i]  <= 32'hC0000080;  // Default entry point for all cores
   end else begin
     fetch_en_q         <= fetch_en_d;
     done_q             <= done_d;
     nb_recv_end_reqs_q <= nb_recv_end_reqs_d;
     rvalid_q           <= rvalid_d;
     rdata_q            <= rdata_d;
+    nb_cores_to_wait_q <= nb_cores_to_wait_d;
+    entry_point_q       <= entry_point_d;
   end
 end
 
@@ -145,24 +161,18 @@ always_comb begin
 
   if (obi_req_i.req && addr_valid && !obi_req_i.a.we) begin
     case (addr_offset)
-      CLUSTER_FETCH_EN: rdata_d = {31'h0, fetch_en_q};
-      CLUSTER_DONE:     rdata_d = {31'h0, done_q};
-      default:          rdata_d = 32'hDEADBEEF;
+      CLUSTER_FETCH_EN:         rdata_d = {{(32-magia_tile_pkg::N_CLUSTER_CORES){1'b0}}, fetch_en_q};
+      CLUSTER_BINARY:           rdata_d = entry_point_q[0];  // Assuming all cores have the same entry point
+      CLUSTER_NB_CORES_TO_WAIT: rdata_d = nb_cores_to_wait_q;
+      CLUSTER_DONE:             rdata_d = {31'h0, done_q};
+      default:                  rdata_d = 32'hDEADBEEF;
     endcase
   end
 end
 
 assign done_o     = done_q;
-assign fetch_en_o = {magia_tile_pkg::N_CLUSTER_CORES{fetch_en_q}};
+assign fetch_en_o = fetch_en_q;
 assign clk_en_o   = '1;
-
-// Static boot address for all cluster cores.
-// Points to the PULP instruction image (0xC0000000), distinct from the
-// CV32 main core boot address (0xCC000000).
-generate
-  for (genvar i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin : gen_boot_addr
-    assign boot_addr_o[i] = PULP_BOOT_ADDR;
-  end
-endgenerate
+assign boot_addr_o = entry_point_q;
 
 endmodule

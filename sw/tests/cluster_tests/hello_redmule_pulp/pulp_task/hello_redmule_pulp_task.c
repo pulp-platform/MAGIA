@@ -59,9 +59,16 @@
 #include "redmule_mm_utils.h"
 #include "event_unit_utils.h"
 
-#include "x_input.h"
-#include "w_input.h"
-#include "y_input.h"
+/* NOTE: we deliberately DO NOT include x_input.h / w_input.h /
+   y_input.h here. Those headers define large `const uint16_t` arrays
+   that would land in this PULP binary's .rodata/.data. Because the
+   binary is linked with ORIGIN=0 and embedded into the CV32 ELF at
+   runtime, GCC materializes the symbol addresses as their link-time
+   absolute values (e.g. y_inp -> 0x6f4), which at runtime falls
+   inside the tile's MMIO region (0x700+ = Event Unit) and hangs the
+   core on a fake sleep register. All operand buffers are pre-loaded
+   by the CV32 main into L1 SPM and we reach them through absolute
+   addresses (X_BASE, W_BASE, Y_BASE, Y_BIAS_BACKUP_BASE). */
 
 /* Same reduced size as main.c — must stay in sync. */
 #define M_SIZE   (4)
@@ -71,6 +78,12 @@
 #define X_BASE   (L1_BASE + 0x00012048)
 #define W_BASE   (L1_BASE + 0x00016048)
 #define Y_BASE   (L1_BASE + 0x0001A048)
+/* MUST match Y_BIAS_BACKUP_BASE in main.c.
+   Pre-loaded by the CV32 main with a fresh copy of y_inp. The PULP
+   task copies from here back into Y_BASE before each RedMulE run.
+   Using an absolute L1 address avoids any reference to PIC-linked
+   data symbols from the pulp_task (see comment in main.c). */
+#define Y_BIAS_BACKUP_BASE   (L1_BASE + 0x0001B048)
 
 /* Per-core marker area in L2: 4B per cluster core, 8 cluster cores per
    tile, 16 tiles -> 8*16 = 128 entries. Used only to prove every core
@@ -111,7 +124,11 @@ static inline void enable_fpu(void) {
    as uint32_t pairs (little-endian: pair = y_inp[2k+1]<<16 | y_inp[2k]).
 */
 static void reload_bias(void) {
-    const uint32_t *src = (const uint32_t*)y_inp;
+    /* Copy from a dedicated L1 backup region (loaded once by CV32
+       main from y_inp[] in L2) into Y_BASE. Both source and dest
+       are absolute L1 addresses; this function never dereferences
+       any PIC symbol from the embedded PULP binary. */
+    const volatile uint32_t *src = (const volatile uint32_t*)Y_BIAS_BACKUP_BASE;
     volatile uint32_t *dst = (volatile uint32_t*)Y_BASE;
     for (int i = 0; i < (M_SIZE * K_SIZE) / 2; i++) dst[i] = src[i];
     /* Drain the write queue: read the FIRST element back and add a

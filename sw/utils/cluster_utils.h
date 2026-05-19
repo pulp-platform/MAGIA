@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 ETH Zurich and University of Bologna
+ * Copyright (C) 2023-2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,30 +14,33 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
- * PULP Cluster Utilities for MAGIA
+ * PULP Cluster Utilities for MAGIA — aligned with magia-sdk
+ * (lz/magia_v3/pulp_on_magia).
  *
  * Two usage perspectives:
  *
  *   CV32 (main core) — orchestrator:
- *     cluster_start()              kick all N cluster cores
+ *     cluster_start(binary, mask)  one-shot kick: writes BINARY, NB_CORES_TO_WAIT
+ *                                  (popcount of mask) and CLK_EN (mask)
  *     cluster_wait_polling()       spin on PULP_DONE (blocking)
  *     cluster_is_done()            non-blocking status read
  *     cluster_init_eu()            arm Event Unit for cluster-done WFE
- *     cluster_wait_eu()            WFE on cluster_done (via EU bit 22),
- *                                  then clears the CSR
+ *     cluster_wait_eu()            WFE on cluster_done (EU bit 22), then
+ *                                  clears the CSR (read-to-clear)
+ *     cluster_stop()               de-assert PULP clock-enable mask
  *
- *   CV32E40P cluster core — worker:
+ *   PULP cluster core — worker:
  *     cluster_core_id()            local index within the cluster (0..N-1)
  *     cluster_tile_id()            tile index of this core
- *     cluster_chunk_offset()       data partition offset for this core
- *     cluster_chunk_size()         data partition size  for this core
+ *     cluster_chunk_offset/size()  data partition helpers
  *
- * Hardware background:
- *   - PULP_FETCH_EN  (PULP_CTRL_BASE + 0x00): W:1 releases all cluster cores
- *   - PULP_DONE      (PULP_CTRL_BASE + 0x04): R:1 = all cores done (read-to-clear)
- *                                             W:1 = each cluster core signals exit (from crt0)
- *   - EU bit 22 = cluster_done from obi_slave_ctrl_cluster, fed via other_events_i
- *     (see magia_tile.sv: assign other_events_shared = {..., cluster_done, 22'b0})
+ * Hardware (obi_slave_ctrl_cluster.sv) memory map @ PULP_CTRL_BASE = 0x1740:
+ *   +0x00 PULP_CLK_EN           one-hot bitmask (bit N => core N)
+ *   +0x04 PULP_BINARY           entry point address for all cores
+ *   +0x08 PULP_NB_CORES_TO_WAIT number of harts the CSR waits for
+ *   +0x0C PULP_DONE             sticky done flag (R: read-to-clear,
+ *                                                 W: each hart signals exit)
+ *   EU bit 22 = cluster_done from obi_slave_ctrl_cluster.
  */
 
 #ifndef CLUSTER_UTILS_H
@@ -45,6 +48,7 @@
 
 #include <stdint.h>
 #include "magia_tile_utils.h"
+#include "magia_pulp_utils.h"
 #include "event_unit_utils.h"
 
 // =============================================================================
@@ -52,37 +56,36 @@
 // =============================================================================
 
 /**
- * @brief Release all PULP cluster cores of this tile.
+ * @brief Bring up the PULP cluster cores selected by @p core_mask.
  *
- * Writes 1 to PULP_FETCH_EN. The cluster cores start fetching from
- * PULP_BOOT_ADDR (0xC0000080) after this call.
- * Must be called after any cluster-side setup (iDMA pre-loads, HWPE init…)
- * is complete.
+ *   1) Write the binary entry point to PULP_BINARY.
+ *   2) Write popcount(core_mask) to PULP_NB_CORES_TO_WAIT.
+ *   3) Write @p core_mask to PULP_CLK_EN, releasing the selected cores.
+ *
+ * @param binary_start  Entry point address (typically PULP_BINARY_START).
+ * @param core_mask     One-hot bitmask of PULP cores to enable.
  */
-static inline void cluster_start(void) {
-    mmio32(PULP_FETCH_EN) = 1;
+static inline void cluster_start(uint32_t binary_start, uint32_t core_mask) {
+    pulp_init(binary_start, core_mask);
+}
+
+/** De-assert the PULP clock-enable mask. */
+static inline void cluster_stop(void) {
+    pulp_clk_dis();
 }
 
 /**
- * @brief Busy-poll until all cluster cores have signalled done.
+ * @brief Busy-poll until the cluster CSR signals done.
  *
- * Reads PULP_DONE until bit 0 is set. The read itself clears the register
- * (read-to-clear), so this must be called exactly once per cluster run.
- * Prefer cluster_wait_eu() for energy efficiency.
+ * The read clears the register (read-to-clear) so this must be called
+ * exactly once per cluster run. Prefer cluster_wait_eu() for energy.
  */
 static inline void cluster_wait_polling(void) {
     while (!(mmio32(PULP_DONE) & 1))
         ;
 }
 
-/**
- * @brief Non-blocking check: returns non-zero if all cluster cores are done.
- *
- * NOTE: this read is NOT destructive only when the result is 0.
- * If it returns non-zero the PULP_DONE register has been cleared;
- * a subsequent cluster_wait_polling() / cluster_wait_eu() call would
- * hang indefinitely.  Use this only for status checks before the wait.
- */
+/** Non-blocking status check (clears the register if it was set). */
 static inline uint32_t cluster_is_done(void) {
     return mmio32(PULP_DONE) & 1;
 }
@@ -90,8 +93,8 @@ static inline uint32_t cluster_is_done(void) {
 /**
  * @brief Arm the Event Unit for cluster-done WFE.
  *
- * Clears the full EU event buffer and enables EU bit 22 (EU_CLUSTER_DONE_MASK).
- * Call this before cluster_start() to avoid missing the event.
+ * Clears the EU event buffer and enables EU bit 22.
+ * Call before cluster_start() to avoid missing the event.
  */
 static inline void cluster_init_eu(void) {
     eu_clear_events(0xFFFFFFFF);
@@ -99,41 +102,28 @@ static inline void cluster_init_eu(void) {
 }
 
 /**
- * @brief Sleep (cv.elw / p.elw) until all cluster cores are done, then clear.
+ * @brief Sleep until the cluster CSR signals done, then clear it.
  *
- * Uses the Event Unit WFE mechanism (EU bit 22 = cluster_done).
- * After waking, reads PULP_DONE to de-assert the RTL cluster_done signal
- * (read-to-clear); if the signal is still low (spurious wake) the function
- * re-arms and sleeps again.
- *
- * Typical usage:
  *   cluster_init_eu();
- *   cluster_start();
+ *   cluster_start(PULP_BINARY_START, 0xFF);
  *   cluster_wait_eu();
  */
 static inline void cluster_wait_eu(void) {
     do {
         eu_wait_events_wfe(EU_CLUSTER_DONE_MASK);
     } while (!(mmio32(PULP_DONE) & 1));
-    /* PULP_DONE read above already cleared the CSR (read-to-clear). */
 }
 
 // =============================================================================
 // Cluster core (worker) — identity helpers
 // =============================================================================
 
-/**
- * @brief Local core index within the cluster: 0 .. PULP_CORE_COUNT-1.
- */
 static inline uint32_t cluster_core_id(void) {
     uint32_t hartid;
     asm volatile("csrr %0, mhartid" : "=r"(hartid));
     return (hartid - PULP_HARTID_BASE) % PULP_CORE_COUNT;
 }
 
-/**
- * @brief Tile index of this cluster core: 0 .. NUM_CLUSTERS-1.
- */
 static inline uint32_t cluster_tile_id(void) {
     uint32_t hartid;
     asm volatile("csrr %0, mhartid" : "=r"(hartid));
@@ -144,21 +134,13 @@ static inline uint32_t cluster_tile_id(void) {
 // Cluster core (worker) — data partitioning helpers
 // =============================================================================
 
-/**
- * @brief Starting element index for this core given a 1-D array of `total`
- *        elements split evenly among `n_cores` cores.
- */
 static inline uint32_t cluster_chunk_offset(uint32_t total, uint32_t n_cores,
-                                             uint32_t core_id) {
+                                            uint32_t core_id) {
     return (total / n_cores) * core_id;
 }
 
-/**
- * @brief Number of elements assigned to this core.
- *        The last core absorbs any remainder (total % n_cores).
- */
 static inline uint32_t cluster_chunk_size(uint32_t total, uint32_t n_cores,
-                                           uint32_t core_id) {
+                                          uint32_t core_id) {
     uint32_t base = total / n_cores;
     return (core_id == n_cores - 1) ? (total - base * core_id) : base;
 }

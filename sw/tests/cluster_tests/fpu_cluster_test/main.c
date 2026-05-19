@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include "magia_tile_utils.h"
 #include "cluster_utils.h"
+#include "fpu_cluster_test_pulp_task_bin.h"
 
 /* Result slot: 4 bytes per cluster core.
  * Cluster cores write 0xFEEDxxxx where xx = error count. */
@@ -51,7 +52,7 @@ int main(void) {
     /* Release the PULP cluster cores. */
     if (print_summary)
         printf("[fpu_cluster_test] running %d PULP cores\n", PULP_CORE_COUNT);
-    cluster_start();
+    cluster_start(PULP_BINARY_START, 0xFFu);
 
     /* Sleep (cv.elw) until all cluster cores have exited. */
     cluster_wait_eu();
