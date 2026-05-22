@@ -95,12 +95,13 @@ int main(void) {
   printf("reps_3: 0x%8x\n", reps_3);
 #endif
 
-  uint32_t transfer_id_1 = idma_L2ToL1(src_addr, dst_addr, len);
-  printf("iDMA moving data from L2 to L1...\n");
-  
   // Clear Event Unit and ensure A2O mask is enabled
   eu_clear_events(0xFFFFFFFF);
   eu_enable_events(EU_IDMA_A2O_DONE_MASK);
+  
+  printf("iDMA moving data from L2 to L1...\n");
+  uint32_t transfer_id_1 = idma_L2ToL1(src_addr, dst_addr, len);
+  
 
   if (USE_WFE) {
     eu_idma_wait_a2o_completion(EU_WAIT_MODE_WFE);
@@ -135,14 +136,14 @@ int main(void) {
   printf("src_std_3: 0x%8x\n", src_std_3);
   printf("reps_3: 0x%8x\n", reps_3);
 #endif
-
-  uint32_t transfer_id_2 = idma_L1ToL2(src_addr, dst_addr, len);
-
-  printf("iDMA moving data from L1 to L2...\n");
-  
+ 
   // Clear Event Unit and ensure O2A mask is enabled
   eu_clear_events(0xFFFFFFFF);
   eu_enable_events(EU_IDMA_O2A_DONE_MASK);
+
+  printf("iDMA moving data from L1 to L2...\n");
+  uint32_t transfer_id_2 = idma_L1ToL2(src_addr, dst_addr, len);
+
 
   if (USE_WFE) {
     eu_idma_wait_o2a_completion(EU_WAIT_MODE_WFE);
