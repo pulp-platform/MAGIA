@@ -75,6 +75,8 @@
 #define IDMA_CONF_DST_MAX_LLEN_SHIFT (7)
 #define IDMA_CONF_ENABLE_ND_MASK     (0xC00) // bits 11:10
 #define IDMA_CONF_ENABLE_ND_SHIFT    (10)
+#define IDMA_CONF_SRC_PROTOCOL       (12)
+#define IDMA_CONF_DST_PROTOCOL       (15)
 
 // Status Register Bit Fields
 #define IDMA_STATUS_BUSY_MASK        (0x3FF) // bits 9:0
@@ -121,7 +123,13 @@ static inline void idma_mm_conf_dir(uint32_t is_l1_to_l2, uint32_t decouple_aw, 
     conf_val |= ((src_max_llen & 0x7) << IDMA_CONF_SRC_MAX_LLEN_SHIFT);
     conf_val |= ((dst_max_llen & 0x7) << IDMA_CONF_DST_MAX_LLEN_SHIFT);
     conf_val |= ((enable_nd & 0x3) << IDMA_CONF_ENABLE_ND_SHIFT);
-    
+    conf_val |= ((enable_nd & 0x3) << IDMA_CONF_ENABLE_ND_SHIFT);
+
+    if (is_l1_to_l2)
+      conf_val |= (1 << IDMA_CONF_SRC_PROTOCOL); 
+    else
+      conf_val |= (1 << IDMA_CONF_DST_PROTOCOL);
+
     mmio32(IDMA_CONF_ADDR(is_l1_to_l2)) = conf_val;
 }
 
