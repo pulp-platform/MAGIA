@@ -81,11 +81,11 @@ void idma_mv_in_pure_eu(unsigned int x_dim, unsigned int y_dim, uint16_t src_dat
   printf("len:        %0d\n", len);
 #endif
 
-  idma_L2ToL1(src_addr, dst_addr, len);
-
   // Clear Event Unit and ensure A2O mask is enabled
   eu_clear_events(0xFFFFFFFF);
   eu_enable_events(EU_IDMA_A2O_DONE_MASK);
+
+  idma_L2ToL1(src_addr, dst_addr, len);
 
   // Use PURE Event Unit
   eu_wait_mode_t wait_mode = USE_WFE ? EU_WAIT_MODE_WFE : EU_WAIT_MODE_POLLING;
@@ -126,11 +126,11 @@ void idma_mv_out_pure_eu(unsigned int x_dim, unsigned int y_dim, uint32_t src_ad
   printf("len:        %0d\n", len);
 #endif
 
-  idma_L1ToL2(src_addr, dst_addr, len);
-
   // Clear Event Unit and ensure O2A mask is enabled
   eu_clear_events(0xFFFFFFFF);
   eu_enable_events(EU_IDMA_O2A_DONE_MASK);
+
+  idma_L1ToL2(src_addr, dst_addr, len);
 
   // Use PURE Event Unit
   eu_wait_mode_t wait_mode = USE_WFE ? EU_WAIT_MODE_WFE : EU_WAIT_MODE_POLLING;
