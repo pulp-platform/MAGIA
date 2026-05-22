@@ -122,6 +122,9 @@ module idma_ctrl_mm
     .transfer_error_o ( a2o_transfer_error              )
   );
 
+ idma_obi_req_t obi_read_req_converter;
+ idma_obi_rsp_t obi_read_rsp_converter;
+
   // OBI2AXI Transfer Channel (L1 to L2)
   idma_axi_obi_transfer_ch #(
     .CHANNEL_T         ( magia_tile_pkg::OBI2AXI           ),
@@ -141,13 +144,39 @@ module idma_ctrl_mm
     .cfg_rsp_o        ( idma_fe_reg_obi2axi_rsp         ),
     .axi_req_o        ( axi_write_req_o                 ),
     .axi_rsp_i        ( axi_write_rsp_i                 ),
-    .obi_req_o        ( obi_read_req_o                  ),
-    .obi_rsp_i        ( obi_read_rsp_i                  ),
+    .obi_req_o        ( obi_read_req_converter          ),
+    .obi_rsp_i        ( obi_read_rsp_converter          ),
     .transfer_busy_o  ( o2a_transfer_busy               ),
     .transfer_start_o ( o2a_transfer_start              ),
     .transfer_done_o  ( o2a_transfer_done               ),
     .transfer_error_o ( o2a_transfer_error              )
   );
+
+
+  obi_rready_converter #(
+    .obi_a_chan_t(idma_obi_a_chan_t),
+    .obi_r_chan_t(idma_obi_r_chan_t),
+    .Depth(1)
+  ) obi_rready_converter_read_i (
+    .clk_i         ( clk_i                          ),
+    .rst_ni        ( rst_ni                         ),
+    .test_mode_i   ( test_en_i                      ),
+    .sbr_a_chan_i  ( obi_read_req_converter.a       ),
+    .req_i         ( obi_read_req_converter.req     ),
+    .gnt_o         ( obi_read_rsp_converter.gnt     ),
+    .rready_i      ( obi_read_req_converter.rready  ),
+    .sbr_r_chan_o  ( obi_read_rsp_converter.r       ),
+    .rvalid_o      ( obi_read_rsp_converter.rvalid  ),
+    .mgr_a_chan_o  ( obi_read_req_o.a               ),
+    .req_o         ( obi_read_req_o.req             ),
+    .mgr_r_chan_i  ( obi_read_rsp_i.r               ),
+    .gnt_i         ( obi_read_rsp_i.gnt             ),
+    .rvalid_i      ( obi_read_rsp_i.rvalid          )
+  );
+  // We are always ready for responses, because we don't
+  // send more requests than we can absorb in the fifo
+  assign obi_read_req_o.rready = 1'b1;
+
 
 /*******************************************************/
 /**     Memory-Mapped Bridge with IRQ Serialization   **/
