@@ -193,7 +193,7 @@ python_venv:
 	$(BASE_PYTHON) -m venv magia_venv
 
 python_deps:
-	$(BASE_PYTHON) -m pip install --upgrade pip setuptools && \
+	$(BASE_PYTHON) -m pip install --upgrade pip && \
     $(BASE_PYTHON) -m pip install -r requirements.txt
 
 # Generate instructions and data stimuli

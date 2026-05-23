@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: SHL-0.51
 
 flatdict
+setuptools<79
 pyyaml
 mako
 hjson
