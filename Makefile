@@ -170,11 +170,13 @@ endif
 # Spatz embedded binary support (via header)
 SPATZ_SW_DIR   := spatz/sw
 
-# Auto-detect which Spatz tasks are used by looking for *_TASK symbols in CV32 code
-# Example: HELLO_WORLD_TASK → hello_world_task
+# Auto-detect which Spatz tasks are used by looking for *_TASK symbols in CV32 code.
+# Example: HELLO_WORLD_TASK -> hello_world_task.  PULP task macros use the same
+# naming scheme, so remove tasks backed by pulp_task/*.c from the Spatz list.
 # When PULP tasks are embedded, the actual CV32 source is main.c.
 _SPATZ_SRC_TO_GREP := $(if $(PULP_TASKS),$(TEST_DIR_PATH)/main.c,$(TEST_SRCS))
-SPATZ_TASKS := $(shell grep -oP '\b(?!SPATZ_)[A-Z][A-Z0-9_]*_TASK\b' $(_SPATZ_SRC_TO_GREP) 2>/dev/null | tr '[:upper:]' '[:lower:]' | awk '!seen[$$0]++')
+_AUTO_TASKS := $(shell grep -oP '\b(?!SPATZ_)[A-Z][A-Z0-9_]*_TASK\b' $(_SPATZ_SRC_TO_GREP) 2>/dev/null | tr '[:upper:]' '[:lower:]' | awk '!seen[$$0]++')
+SPATZ_TASKS := $(filter-out $(PULP_TASKS),$(_AUTO_TASKS))
 
 # Setup build object dirs
 TEST_BUILD_DIR = $(TEST_DIR)/$(if $(TEST_SUBDIR),$(TEST_SUBDIR)/)$(test)

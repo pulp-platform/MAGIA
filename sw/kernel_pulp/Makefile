@@ -72,6 +72,8 @@ LDFLAGS   = $(ARCH_FLAGS) -nostartfiles -nostdlib \
             -mno-relax \
             -Wl,--gc-sections -Wl,--allow-multiple-definition \
             -Wl,-T,$(KERNEL_DIR)/pulp_program.ld
+comma := ,
+TASK_UNDEF_FLAGS = $(foreach t,$(task),-Wl$(comma)--undefined=$(t))
 
 PULP_CORE_COUNT ?= 8
 
@@ -121,7 +123,7 @@ $(ELF): $(CRT0_OBJ) $(TASK_SRCS) $(KERNEL_DIR)/pulp_program.ld
 		exit 1; \
 	fi
 	@echo "[PULP] Building ELF (tasks: $(task))"
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(CRT0_OBJ) $(TASK_SRCS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(TASK_UNDEF_FLAGS) -o $@ $(CRT0_OBJ) $(TASK_SRCS)
 
 $(BIN): $(ELF)
 	@echo "[PULP] Generating flat binary..."
@@ -143,6 +145,15 @@ $(HEADER): $(BIN) $(ELF)
 	@echo "/* Binary start address - defined by CV32 linker */" >> $(HEADER)
 	@echo "extern uint32_t _pulp_binary_start;" >> $(HEADER)
 	@echo "#define PULP_BINARY_START ((uint32_t)&_pulp_binary_start)" >> $(HEADER)
+	@echo "" >> $(HEADER)
+	@echo "/* PULP task entry points (offset from PULP_BINARY_START).            */" >> $(HEADER)
+	@echo "/* Extracted from $(BINARY_NAME).elf: any global function whose name */" >> $(HEADER)
+	@echo "/* contains \"task\" becomes a dispatchable entry point.              */" >> $(HEADER)
+	@$(OBJDUMP) -t $(ELF) | \
+		awk '$$2 == "g" && $$4 ~ /^\.text/ && $$NF ~ /task/ { \
+			name = $$NF; upper = toupper(name); \
+			printf "#define %s (PULP_BINARY_START + 0x%s)\n", upper, $$1 \
+		}' >> $(HEADER)
 	@echo "" >> $(HEADER)
 	@GUARD=$$(echo "$(HEADER_NAME)" | tr 'a-z' 'A-Z'); \
 	echo "#endif /* __$${GUARD}_H__ */" >> $(HEADER)

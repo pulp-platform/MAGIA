@@ -22,20 +22,20 @@
  *
  * Linked at 0xCC000000, run by the CV32 main core (mhartid 0..15).
  *
- * Demonstrates the SHARED-ACCELERATOR / MULTI-INITIATOR pattern the way
- * pulp_cluster + pulp-runtime does it:
+ * Demonstrates the SHARED-ACCELERATOR / MULTI-INITIATOR pattern with the
+ * local bare-metal PULP dispatch model:
  *
  *   1) The CV32 main core loads X, W, Y in tile-local L1.
  *   2) The CV32 main core runs RedMulE once (sanity check), then waits
  *      for completion via Event Unit WFE (p.elw on its own EU slice).
  *   3) The CV32 main core re-loads Y (so the bias is fresh again),
- *      then kicks the 8 PULP cluster cores via cluster_start().
+ *      then boots the PULP cluster dispatcher and dispatches the task.
  *   4) Each PULP cluster core (see pulp_main.c) tries to ACQUIRE the
  *      RedMulE HWPE; the HWPE returns -1 if busy so the cluster cores
  *      naturally serialize. Whoever wins runs RedMulE on the same
- *      buffers and waits via WFE on its OWN EU slice (per-core mask).
+ *      buffers and polls RedMulE STATUS via MMIO.
  *   5) When all 8 cluster cores have hit crt0 exit, PULP_DONE goes
- *      high; the CV32 main wakes from WFE (EU bit 22), verifies
+ *      high; the CV32 main wakes from WFE (EU bit 12), verifies
  *      Y == Z (golden), prints and exits.
  *
  * This exercises the RTL fix that broadcasts redmule_evt[*]/redmule_busy
@@ -215,14 +215,16 @@ int main(void) {
   idma_load_l2_to_l1((uint32_t)y_inp, Y_BIAS_BACKUP_BASE,
                      M_SIZE * K_SIZE * 2);
 
-  /* Arm EU for cluster-done WFE before kicking the cluster. */
-  cluster_init_eu();
+  printf("Booting PULP cluster cores...\n");
+  cluster_boot(PULP_BINARY_START);
 
-  printf("Releasing PULP cluster cores...\n");
-  cluster_start(PULP_BINARY_START, 0xFFu);
+  /* Arm EU before dispatching the task to avoid missing DONE. */
+  cluster_arm_done_event();
+
+  cluster_dispatch_task(HELLO_REDMULE_PULP_TASK, 0xFFu);
 
   /* Step 3: sleep (cv.elw) until all cluster cores have exited. */
-  cluster_wait_eu();
+  cluster_wait_done_eu();
 
   /* Step 4: verify the cluster's RedMulE pass also produced the right Y. */
   unsigned int err_pulp = 0;

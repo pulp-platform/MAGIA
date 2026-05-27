@@ -20,7 +20,8 @@
 /*
  * fpu_cluster_test - main core (CV32) binary.
  *
- * Releases the 8 PULP cluster cores and waits for them to complete.
+ * Boots the PULP cluster cores, dispatches the FPU task and waits for them
+ * to complete through the CV32 Event Unit PULP_DONE event.
  * Each cluster core runs a small set of single-precision FPU operations
  * (fadd.s, fmul.s, fsub.s) and writes a pass/fail word to L2.
  * The CV32 main then reads back those words and reports the result.
@@ -46,16 +47,18 @@ static inline uint32_t get_mhartid(void) {
 int main(void) {
     int print_summary = (get_mhartid() == 0);
 
-    /* Arm EU before kicking the cluster to avoid missing the event. */
-    cluster_init_eu();
-
-    /* Release the PULP cluster cores. */
+    /* Boot the PULP cluster cores into their dispatcher loop. */
     if (print_summary)
         printf("[fpu_cluster_test] running %d PULP cores\n", PULP_CORE_COUNT);
-    cluster_start(PULP_BINARY_START, 0xFFu);
+    cluster_boot(PULP_BINARY_START);
 
-    /* Sleep (cv.elw) until all cluster cores have exited. */
-    cluster_wait_eu();
+    /* Arm EU before dispatching the task to avoid missing DONE. */
+    cluster_arm_done_event();
+
+    cluster_dispatch_task(FPU_CLUSTER_TEST_TASK, 0xFFu);
+
+    /* Sleep (cv.elw) until all cluster cores have signalled task done. */
+    cluster_wait_done_eu();
 
     /* Read back per-core results from L2 and report. */
     unsigned int total_errors = 0;

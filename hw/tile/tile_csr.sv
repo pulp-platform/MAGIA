@@ -46,7 +46,9 @@ module tile_csr
   output logic [magia_tile_pkg::N_CLUSTER_CORES-1:0]  cluster_clk_en_o,
   output logic [31:0]                                 cluster_boot_addr_o  [magia_tile_pkg::N_CLUSTER_CORES-1:0],
   output logic [magia_tile_pkg::N_CLUSTER_CORES-1:0]  cluster_fetch_en_o,
-  output logic                                        cluster_done_o
+  output logic                                        cluster_done_o,
+  // Per-core 1-cycle dispatch IRQ pulse (drives MEI bit 11 of each PULP core)
+  output logic [magia_tile_pkg::N_CLUSTER_CORES-1:0]  cluster_start_irq_o
 );
 
   // ============================================
@@ -80,14 +82,15 @@ module tile_csr
   obi_slave_ctrl_cluster #(
     .BaseAddr       ( BaseAddr + 32'h40 )
   ) i_cluster_ctrl (
-    .clk_i       ( clk_i              ),
-    .rst_ni      ( rst_ni             ),
-    .obi_req_i   ( obi_req_i          ),
-    .obi_rsp_o   ( cluster_obi_rsp    ),
-    .clk_en_o    ( cluster_clk_en_o   ),
-    .boot_addr_o ( cluster_boot_addr_o),
-    .fetch_en_o  ( cluster_fetch_en_o ),
-    .done_o      ( cluster_done_o     )
+    .clk_i        ( clk_i              ),
+    .rst_ni       ( rst_ni             ),
+    .obi_req_i    ( obi_req_i          ),
+    .obi_rsp_o    ( cluster_obi_rsp    ),
+    .clk_en_o     ( cluster_clk_en_o   ),
+    .boot_addr_o  ( cluster_boot_addr_o),
+    .fetch_en_o   ( cluster_fetch_en_o ),
+    .done_o       ( cluster_done_o     ),
+    .start_irq_o  ( cluster_start_irq_o)
   );
 
   // ============================================

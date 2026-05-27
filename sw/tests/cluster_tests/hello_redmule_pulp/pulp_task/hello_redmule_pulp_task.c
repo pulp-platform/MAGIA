@@ -18,35 +18,31 @@
  */
 
 /*
- * hello_redmule_pulp - PULP cluster-core binary.
+ * hello_redmule_pulp - PULP cluster-core task.
  *
- * Linked at 0xC0000000, run by the 8 PULP cluster cores of each tile
- * (mhartid 32..159). All 8 cores ENTER main() concurrently after the
- * CV32 main has set PULP_FETCH_EN.
+ * Linked as a position-independent embedded PULP binary. The CV32 boots the
+ * cluster into crt0's dispatcher loop, then dispatches this task by writing
+ * PULP_NB_CORES_TO_WAIT, PULP_TASKBIN and PULP_START.
  *
- * Concurrency model (mirrors pulp_cluster + pulp-runtime):
+ * Concurrency model:
  *
  *   - All 8 cluster cores try to ACQUIRE the RedMulE HWPE in parallel.
  *     RedMulE's REDMULE_ACQUIRE register returns >=0 to exactly ONE
  *     core at a time (HWPE-internal arbitration). The losers see -1
  *     and spin.
  *
- *   - The winner programs RedMulE (mcfg + base addresses), arms its
- *     OWN EU_CORE_MASK with EU_REDMULE_DONE_MASK, triggers the job,
- *     then sleeps via p.elw (eu_redmule_wait_completion(WFE)). Thanks
- *     to the RTL fix in magia_tile.sv (acc_events broadcast to all
- *     cores), the redmule_evt[*] line raises the DONE bit in EVERY
- *     core's EU buffer, but only the core that ARMED the mask wakes.
+ *   - The winner programs RedMulE (mcfg + base addresses), triggers the job,
+ *     then polls RedMulE STATUS via MMIO. Cluster cores intentionally do not
+ *     use the Event Unit direct link.
  *
- *   - When the winner returns from WFE, it releases (HWPE auto-clears
- *     on completion) and the next acquire winner runs. Repeat 8 times.
+ *   - When the winner sees STATUS clear, the HWPE auto-clears and the next
+ *     acquire winner runs. Repeat 8 times.
  *
  *   - Each cluster core writes a small marker in L2 with its hartid so
  *     we can confirm in the trace that all 8 actually ran the kernel.
  *
- * crt0 takes care of writing 1 to PULP_DONE (offset 0x04 in tile
- * cluster CSR) when all 8 cores have exited main(); only then the
- * CV32 main wakes from its busy-wait.
+ * crt0 writes 1 to PULP_DONE when the task returns; after all selected cores
+ * report done, the tile CSR emits EU bit 12 and wakes the CV32 main core.
  *
  * NOTE: each cluster core re-runs the SAME matmul on the SAME L1
  * buffers prepared by the CV32 main. The result Y is overwritten 8
@@ -57,7 +53,6 @@
 
 #include "magia_tile_utils.h"
 #include "redmule_mm_utils.h"
-#include "event_unit_utils.h"
 
 /* NOTE: we deliberately DO NOT include x_input.h / w_input.h /
    y_input.h here. Those headers define large `const uint16_t` arrays
@@ -138,7 +133,8 @@ static void reload_bias(void) {
     (void)sink;
     asm volatile("fence" ::: "memory");
 }
-int main(void) {
+void hello_redmule_pulp_task(void *data) {
+    (void)data;
     enable_fpu();
 
     uint32_t hartid   = get_mhartid();
@@ -183,21 +179,10 @@ int main(void) {
                 M_SIZE, N_SIZE, K_SIZE,
                 (uint8_t)gemm_ops, (uint8_t)Float16, (uint8_t)Float16);
 
-    /* Arm THIS core's own EU mask. Per-core slice => no interference
-       with other cluster cores or the CV32. */
-    eu_redmule_init();
-
     hwpe_trigger_job();
 
-    /* Reference pattern from pulp_cluster hal_redmule.h::redmule_evt_wait():
-         do { eu_evt_maskWaitAndClr(HWPE_EVT); } while (STATUS != 0);
-       One WFE is not enough: RedMulE asserts DONE when the last MAC fires,
-       but STATUS stays nonzero while the HCI writeback of Y is still in
-       flight. The loop re-sleeps until STATUS == 0, which only happens
-       after the TCDM master has completed all write-back beats. */
-    do {
-        eu_redmule_wait_completion(EU_WAIT_MODE_WFE);
-    } while (hwpe_get_status() != 0);
+      while (hwpe_get_status() != 0)
+         ;
     asm volatile("fence" ::: "memory");
 
     hwpe_cg_disable();
@@ -206,6 +191,5 @@ int main(void) {
     printf("[Tile %u PULP-%u mhartid %u] RedMulE done, exiting\n",
             tile_id, local_id, hartid);
 
-    /* crt0 will set PULP_DONE bit when all 8 cluster cores return. */
-    return 0;
+    /* trap_handler writes 1 to PULP_DONE on return. */
 }

@@ -18,13 +18,16 @@
  */
 
 /*
- * hello_pulp — PULP cluster-core binary.
+ * hello_pulp — PULP cluster-core task.
  *
- * This ELF is linked at 0xC0000000 and executed by the PULP cluster
- * cores of each tile (mhartid 32..159).
+ * Linked at 0x0 (PIC, ORIGIN=0) and embedded as .pulp_binary inside the
+ * CV32 ELF (single-binary flow). The PULP cores boot here via crt0 and
+ * stay in their dispatcher loop until the CV32 dispatches this function
+ * with cluster_dispatch_task(HELLO_PULP_TASK, mask).
  *
- * On return, crt0 writes 1 to CLUSTER_DONE (tile CSR 0x1744) and
- * parks the core.
+ * The task is entered as `void hello_pulp_task(void *data)`; `data` is
+ * whatever pointer the CV32 wrote to PULP_DATA (NULL here). When it
+ * returns, the trap handler writes 1 to PULP_DONE and re-enters WFI.
  */
 
 #include "magia_tile_utils.h"
@@ -35,7 +38,9 @@ static inline uint32_t get_mhartid(void) {
     return id;
 }
 
-int main(void) {
+void hello_pulp_task(void *data) {
+    (void)data;
+
     uint32_t hartid   = get_mhartid();
     uint32_t pulp_gid = hartid - PULP_HARTID_BASE;
     uint32_t local_id = pulp_gid % PULP_CORE_COUNT;
@@ -46,6 +51,4 @@ int main(void) {
     if (local_id == 0)
         printf("[Tile %u PULP-%u mhartid %u] Hello World!\n",
                tile_id, local_id, hartid);
-
-    return 0;
 }

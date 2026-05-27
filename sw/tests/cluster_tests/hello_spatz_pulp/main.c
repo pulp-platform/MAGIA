@@ -26,7 +26,7 @@
  *   2) Initialize Spatz + Event Unit; offload Z = X + Y (vecsum16) to Spatz.
  *   3) Sleep via WFE (EU bit 8 = spatz_done) until Spatz signals completion.
  *   4) Check Spatz exit code; disable Spatz clock.
- *   5) Reset EU, arm for cluster-done WFE (EU bit 22); release PULP cluster.
+ *   5) Reset EU, boot PULP, arm PULP_DONE WFE and dispatch the cluster task.
  *   6) Each cluster core sums its 1/8th of Z (raw uint16 bit-patterns) → L2.
  *   7) CV32 wakes from WFE, collects per-core partial sums, verifies total.
  *
@@ -132,17 +132,18 @@ int main(void) {
     spatz_clk_dis();
 
     /* ------------------------------------------------------------------
-     * Step 4: release PULP cluster; wait for cluster-done via WFE.
+    * Step 4: boot PULP, dispatch the cluster task and wait for DONE via WFE.
      *
-     * eu_init() fully resets the EU (clears buffer and mask), then
-     * cluster_init_eu() arms EU bit 22 (EU_CLUSTER_DONE_MASK).
+    * eu_init() fully resets the EU after the Spatz wait. The cluster done
+    * event is armed after boot and before START is written.
      * ------------------------------------------------------------------ */
     eu_init();
-    cluster_init_eu();
 
-    printf("[CV32] Releasing PULP cluster cores...\n");
-    cluster_start(PULP_BINARY_START, 0xFFu);
-    cluster_wait_eu();
+    printf("[CV32] Booting PULP cluster cores...\n");
+    cluster_boot(PULP_BINARY_START);
+    cluster_arm_done_event();
+    cluster_dispatch_task(HELLO_SPATZ_PULP_TASK, 0xFFu);
+    cluster_wait_done_eu();
 
     /* ------------------------------------------------------------------
      * Step 5: collect per-core partial sums from L2 and verify.

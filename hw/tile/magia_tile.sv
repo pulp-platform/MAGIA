@@ -365,17 +365,13 @@ module magia_tile
   magia_tile_pkg::eu_direct_req_t eu_direct_req;
   magia_tile_pkg::eu_direct_rsp_t eu_direct_rsp;
 
-  // Cluster core data interface (intermediate for EU demux)
+  // Cluster core data interface (converted directly to OBI xbar)
   magia_tile_pkg::core_data_req_t cluster_data_req  [magia_tile_pkg::N_CLUSTER_CORES];
   magia_tile_pkg::core_data_rsp_t cluster_data_rsp  [magia_tile_pkg::N_CLUSTER_CORES];
 
   // Cluster core OBI data interface (output from demux data2obi)
   magia_tile_pkg::core_obi_data_req_t cluster_obi_data_req [magia_tile_pkg::N_CLUSTER_CORES];
   magia_tile_pkg::core_obi_data_rsp_t cluster_obi_data_rsp [magia_tile_pkg::N_CLUSTER_CORES];
-
-  // Cluster EU direct link signals (output from demux eu_direct)
-  magia_tile_pkg::eu_direct_req_t cluster_eu_direct_req [magia_tile_pkg::N_CLUSTER_CORES];
-  magia_tile_pkg::eu_direct_rsp_t cluster_eu_direct_rsp [magia_tile_pkg::N_CLUSTER_CORES];
 
   // EU direct req/rsp arrays for the cut (CV32 core[0] + cluster cores[1..N])
   magia_tile_pkg::eu_direct_req_t eu_direct_req_arr [magia_tile_pkg::N_CLUSTER_CORES+1];
@@ -434,6 +430,14 @@ module magia_tile
   logic                                  [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_fetch_enable;
   logic                                  [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_core_sleep;
   logic                                                                        cluster_done;
+  // Per-core dispatch IRQ pulse from tile_csr. CV32E40P IRQ inputs are level
+  // sensitive, so the pulse is stretched until the worker acknowledges MEI.
+  // PULP cluster cores remain disconnected from the event-unit IRQ port.
+  logic                                  [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_start_irq;
+  logic                                  [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_start_irq_pending;
+  logic                                  [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_irq_ack;
+  logic                                  [magia_tile_pkg::N_CLUSTER_CORES-1:0][magia_tile_pkg::CLIC_ID_W-1:0] cluster_irq_id;
+  logic                                  [magia_tile_pkg::N_CLUSTER_CORES-1:0][31:0] cluster_irq_vec;
 
 
   // Cluster icache interface (raw signals - struct type uses NR_FETCH_PORTS=1, not N_CLUSTER_CORES)
@@ -944,14 +948,14 @@ module magia_tile
     .eu_direct_rsp_i    ( eu_direct_rsp           )
   );
 
-  // Assemble EU direct req/rsp arrays (CV32 core = [0], cluster cores = [1..N])
+  // Assemble EU direct req/rsp arrays. Only the CV32 control core uses the EU
+  // direct link; cluster cores go through the OBI xbar
   assign eu_direct_req_arr[0] = eu_direct_req;
   assign eu_direct_rsp        = eu_direct_rsp_arr[0];
 
   generate
     for (genvar i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin : gen_eu_direct_arr
-      assign eu_direct_req_arr[i+1]   = cluster_eu_direct_req[i];
-      assign cluster_eu_direct_rsp[i] = eu_direct_rsp_arr[i+1];
+      assign eu_direct_req_arr[i+1] = '0;
     end
   endgenerate
 
@@ -2028,7 +2032,8 @@ module magia_tile
     .cluster_clk_en_o       ( cluster_clk_en                                               ),
     .cluster_boot_addr_o    ( cluster_boot_addr                                            ),
     .cluster_fetch_en_o     ( cluster_fetch_enable                                         ),
-    .cluster_done_o         ( cluster_done                                                 )
+    .cluster_done_o         ( cluster_done                                                 ),
+    .cluster_start_irq_o    ( cluster_start_irq                                            )
   );
 
 
@@ -2039,13 +2044,9 @@ module magia_tile
 /*******************************************************/
 
   // Event array assignments for proper 2D array structure
-  // Per-tile shared HW event lines (RedMulE, Spatz, iDMA, FSync, cluster_done).
-  // These are broadcast identically to ALL cores in the tile (CV32 @ idx 0 +
-  // cluster cores @ idx 1..N). Each core then selects which lines to observe
-  // via its OWN EU_CORE_MASK / EU_CORE_IRQ_MASK (per-core slice of the event
-  // unit, accessed through the per-core eu_direct_link demux). This mirrors
-  // the GVSoC/SDK model where eu_redmule_wait/eu_idma_wait/eu_pulp_wait are
-  // valid both from the control core and from any cluster core.
+  // Per-tile shared HW event lines. PULP DONE is exposed to the CV32 Event Unit
+  // on event bit 12. Cluster cores are dispatched by
+  // tile_csr MEI pulses and do not consume EU direct-link events.
   logic [3:0]  acc_events_shared;
   logic [1:0]  dma_events_shared;
   logic [1:0]  timer_events_shared;
@@ -2054,7 +2055,7 @@ module magia_tile
   assign acc_events_shared   = {redmule_evt[0][1], redmule_evt[0][0], redmule_busy, spatz_done};
   assign dma_events_shared   = {idma_obi2axi_done, idma_axi2obi_done};
   assign timer_events_shared = 2'b00;
-  assign other_events_shared = {idma_obi2axi_busy, idma_axi2obi_busy, idma_obi2axi_start, idma_axi2obi_start, idma_obi2axi_error, idma_axi2obi_error, fsync_error, fsync_done, spatz_start, cluster_done, 22'b0};  // iDMA status [31:28] | iDMA errors [27:26] | Fsync [25:24] | Spatz start [23] | cluster_done [22] | Reserved [21:0]
+  assign other_events_shared = {idma_obi2axi_busy, idma_axi2obi_busy, idma_obi2axi_start, idma_axi2obi_start, idma_obi2axi_error, idma_axi2obi_error, fsync_error, fsync_done, spatz_start, 7'b0, 3'b0, cluster_done, 12'b0};  // iDMA status [31:28] | iDMA errors [27:26] | Fsync [25:24] | Spatz start [23] | PULP done [12]
 
   // Broadcast event lines to CV32 (idx 0) and to every cluster core (idx 1..N).
   generate
@@ -2095,6 +2096,15 @@ module magia_tile
   assign eu_core_irq_ack_id = eu_core_irq_id;
   
   assign core_busy_o = !core_sleep_o;
+`else
+  // PULP cluster cores are no longer wired to the event unit's IRQ port:
+  // tie their ack/ack_id slots so the EU sees them as idle/never-acking.
+  generate
+    for (genvar i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin : gen_cluster_irq_ack_tie
+      assign eu_core_irq_ack[i+1]    = 1'b0;
+      assign eu_core_irq_ack_id[i+1] = '0;
+    end
+  endgenerate
 `endif
   
  magia_event_unit #(
@@ -2312,13 +2322,36 @@ module magia_tile
 /**            Cluster Beginninng                     **/
 /*******************************************************/
 
+// PULP cluster cores: clock is always enabled. They are disconnected from the
+// event-unit clock-enable path and rely on WFI + MEI (from tile_csr PULP_START)
+// for sleep/wake semantics, matching the new dynamic dispatch model.
 for (genvar j = 0; j < magia_tile_pkg::N_CLUSTER_CORES; j++) begin : gen_cluster_clk_gate
   tc_clk_gating i_cluster_clk_gate (
     .clk_i     ( sys_clk              ),
-    .en_i      ( eu_core_clk_en[j+1]  ),
+    .en_i      ( 1'b1                 ),
     .test_en_i ( test_mode_i          ),
     .clk_o     ( cluster_clk[j]       )
   );
+end
+
+always_ff @(posedge sys_clk or negedge rst_ni) begin
+  if (!rst_ni) begin
+    cluster_start_irq_pending <= '0;
+  end else begin
+    for (int unsigned i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin
+      if (cluster_irq_ack[i] && cluster_irq_id[i] == 5'd11) begin
+        cluster_start_irq_pending[i] <= 1'b0;
+      end else if (cluster_start_irq[i]) begin
+        cluster_start_irq_pending[i] <= 1'b1;
+      end
+    end
+  end
+end
+
+// Build per-core IRQ vector for PULP cluster cores: MEI bit (11) is driven by
+// the stretched dispatch request; all other interrupt bits forced to 0.
+for (genvar k = 0; k < magia_tile_pkg::N_CLUSTER_CORES; k++) begin : gen_cluster_irq_vec
+  assign cluster_irq_vec[k] = {20'b0, cluster_start_irq_pending[k], 11'b0};
 end
 
 generate
@@ -2340,8 +2373,9 @@ generate
         .clk_i                  ( cluster_clk[i]        ),  // Use gated clock for core
         .rst_ni                 ( rst_ni                ),
 
-        // Clock Interface
-        .pulp_clock_en_i        ( eu_core_clk_en[i+1]        ),
+        // Clock Interface — cluster cores always have clock enabled; rely on
+        // WFI / MEI (dispatch IRQ) for sleep/wake.
+        .pulp_clock_en_i        ( 1'b1                        ),
         .scan_cg_en_i           ( test_mode_i                 ),
         .boot_addr_i            ( cluster_boot_addr[i]        ),  // From tile CSR, dynamic per tile
         .mtvec_addr_i           ( cluster_boot_addr[i]        ),  // mtvec defaults to boot vector; SW can override via csrw
@@ -2354,7 +2388,7 @@ generate
         .instr_gnt_i            ( cluster_instr_rsp[i].gnt           ),
         .instr_rvalid_i         ( cluster_instr_rsp[i].rvalid        ),
         .instr_rdata_i          ( cluster_instr_rsp[i].rdata         ),
-        // Data interface (through core_data_req_t for EU demux)
+        // Data interface (converted directly to OBI xbar)
         .data_req_o             ( cluster_data_req[i].req              ),
         .data_addr_o            ( cluster_data_req[i].addr             ),
         .data_be_o              ( cluster_data_req[i].be               ),
@@ -2363,10 +2397,11 @@ generate
         .data_gnt_i             ( cluster_data_rsp[i].gnt              ),
         .data_rvalid_i          ( cluster_data_rsp[i].rvalid           ),
         .data_rdata_i           ( cluster_data_rsp[i].rdata            ),
-        // Interrupts (irq_i is [31:0]; EU IRQ goes to MEI bit 11, others 0)
-        .irq_i                  ( core_irq_vec[i+1]                  ),
-        .irq_ack_o              ( eu_core_irq_ack[i+1]               ),
-        .irq_id_o               ( eu_core_irq_ack_id[i+1]            ),
+        // Interrupts: PULP cluster cores receive only the per-core dispatch IRQ
+        // (MEI bit 11) from tile_csr. They are disconnected from the event unit.
+        .irq_i                  ( cluster_irq_vec[i]                  ),
+        .irq_ack_o              ( cluster_irq_ack[i]                  ),
+        .irq_id_o               ( cluster_irq_id[i]                   ),
         // Debug interface
         .debug_req_i            ( debug_req_i[i+1]                    ),
         // CPU control
@@ -2379,29 +2414,15 @@ endgenerate
 
   // Cluster core data demux (EU direct link) and OBI conversion
   generate
-    for (genvar i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin : gen_cluster_demux
-      magia_tile_pkg::core_data_req_t cluster_xbar_req;
-      magia_tile_pkg::core_data_rsp_t cluster_xbar_rsp;
-
-      core_data_demux_eu_direct i_cluster_demux (
-        .clk_i           ( sys_clk                    ),
-        .rst_ni          ( rst_ni                     ),
-        .core_data_req_i ( cluster_data_req[i]        ),
-        .core_data_rsp_o ( cluster_data_rsp[i]        ),
-        .xbar_data_req_o ( cluster_xbar_req           ),
-        .xbar_data_rsp_i ( cluster_xbar_rsp           ),
-        .eu_direct_req_o ( cluster_eu_direct_req[i]   ),
-        .eu_direct_rsp_i ( cluster_eu_direct_rsp[i]   )
-      );
-
+    for (genvar i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin : gen_cluster_data_obi
       data2obi_req i_cluster_data2obi (
-        .data_req_i ( cluster_xbar_req            ),
+        .data_req_i ( cluster_data_req[i]         ),
         .obi_req_o  ( cluster_obi_data_req[i]     )
       );
 
       obi2data_rsp i_cluster_obi2data (
         .obi_rsp_i  ( cluster_obi_data_rsp[i]     ),
-        .data_rsp_o ( cluster_xbar_rsp            )
+        .data_rsp_o ( cluster_data_rsp[i]         )
       );
     end
   endgenerate

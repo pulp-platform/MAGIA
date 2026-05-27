@@ -65,7 +65,8 @@ static inline void enable_fpu(void) {
     );
 }
 
-int main(void) {
+void fpu_cluster_test_task(void *data) {
+    (void)data;
     enable_fpu();
 
     uint32_t hartid   = get_mhartid();
@@ -100,6 +101,4 @@ int main(void) {
 
     /* Write result to L2 slot for this core. */
     mmio32(FPU_RESULT_BASE + 4 * local_id) = FPU_RESULT_MAGIC | (errors & 0xFFFFu);
-
-    return 0;
 }

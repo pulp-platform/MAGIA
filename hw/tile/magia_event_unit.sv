@@ -104,8 +104,8 @@ import magia_tile_pkg::*;
   logic addr_in_range;
   logic [magia_pkg::ADDR_W-1:0] addr_offset;
   
-  assign addr_in_range = (obi_req_i.a.addr >= magia_tile_pkg::EVENT_UNIT_ADDR_START) && 
-                         (obi_req_i.a.addr <= magia_tile_pkg::EVENT_UNIT_ADDR_END);
+  assign addr_in_range = (obi_req_i.a.addr >= magia_tile_pkg::EVENT_UNIT_ADDR_START) &&
+                         (obi_req_i.a.addr <  magia_tile_pkg::EVENT_UNIT_ADDR_END);
   assign addr_offset   = obi_req_i.a.addr - EU_BASE_ADDR;
   
   // OBI to XBAR_PERIPH_BUS conversion - pass RELATIVE address (offset from base)

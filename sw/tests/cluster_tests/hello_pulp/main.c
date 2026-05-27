@@ -25,10 +25,14 @@
  *
  * Flow:
  *   1) Print a "hello" banner.
- *   2) Arm the Event Unit for cluster-done WFE (EU bit 22).
- *   3) Kick the PULP cluster cores via cluster_start().
- *   4) Sleep in WFE until all cluster cores have reported (cluster_wait_eu()).
- *   5) Print the "done" message.
+ *   2) Boot the PULP cluster cores into their dispatcher loop
+ *      (cluster_boot -> pulp_init: programs PULP_BINARY, broadcasts
+ *      CLK_EN, polls PULP_READY).
+ *   3) Arm the CV32 Event Unit for PULP_DONE (EU bit 12).
+ *   4) Dispatch the hello task to all 8 PULP cores by programming
+ *      NB_CORES_TO_WAIT, TASKBIN and START.
+ *   5) Sleep in WFE until the DONE quorum reaches the Event Unit.
+ *   6) Print the "done" message.
  */
 
 #include "magia_tile_utils.h"
@@ -46,15 +50,18 @@ int main(void) {
 
     printf("[Main core %u] Hello World!\n", hartid);
 
-    /* Arm EU before kicking the cluster to avoid missing the event. */
-    cluster_init_eu();
+    /* Boot the PULP cluster cores into their dispatcher loop. */
+    cluster_boot(PULP_BINARY_START);
 
-    /* Release the PULP cluster cores of this tile. */
-    cluster_start(PULP_BINARY_START, 0xFFu);
+    /* Arm EU before dispatching the task to avoid missing DONE. */
+    cluster_arm_done_event();
+
+    /* Dispatch the hello task to all 8 cluster cores of this tile. */
+    cluster_dispatch_task(HELLO_PULP_TASK, 0xFFu);
 
     /* Sleep (cv.elw) until every cluster core of this tile has signalled
-     * exit; cluster_wait_eu() also clears PULP_DONE (read-to-clear). */
-    cluster_wait_eu();
+     * task completion. */
+    cluster_wait_done_eu();
 
     printf("[Main core %u] All %d cluster cores done!\n",
            hartid, PULP_CORE_COUNT);

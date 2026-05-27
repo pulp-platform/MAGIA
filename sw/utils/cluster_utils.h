@@ -14,20 +14,20 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
- * PULP Cluster Utilities for MAGIA — aligned with magia-sdk
- * (lz/magia_v3/pulp_on_magia).
+ * Bare-metal PULP Cluster Utilities for MAGIA.
  *
  * Two usage perspectives:
  *
  *   CV32 (main core) — orchestrator:
- *     cluster_start(binary, mask)  one-shot kick: writes BINARY, NB_CORES_TO_WAIT
- *                                  (popcount of mask) and CLK_EN (mask)
- *     cluster_wait_polling()       spin on PULP_DONE (blocking)
- *     cluster_is_done()            non-blocking status read
- *     cluster_init_eu()            arm Event Unit for cluster-done WFE
- *     cluster_wait_eu()            WFE on cluster_done (EU bit 22), then
- *                                  clears the CSR (read-to-clear)
- *     cluster_stop()               de-assert PULP clock-enable mask
+ *     cluster_boot(binary)         boot all PULP cores into the dispatcher
+ *                                  loop (= pulp_init); polls PULP_READY.
+ *     cluster_arm_done_event()     clear/enable the CV32 EU done event
+ *     cluster_dispatch_task()      write NB_CORES_TO_WAIT, TASKBIN, START;
+ *                                  returns once selected cores have ACK'd
+ *     cluster_wait_done_polling()  spin on the CV32 EU done event
+ *     cluster_done_pending()       non-blocking EU done-event check
+ *     cluster_wait_done_eu()       WFE on PULP_DONE (EU bit 12)
+ *     cluster_stop()               de-assert PULP CLK_EN
  *
  *   PULP cluster core — worker:
  *     cluster_core_id()            local index within the cluster (0..N-1)
@@ -35,12 +35,7 @@
  *     cluster_chunk_offset/size()  data partition helpers
  *
  * Hardware (obi_slave_ctrl_cluster.sv) memory map @ PULP_CTRL_BASE = 0x1740:
- *   +0x00 PULP_CLK_EN           one-hot bitmask (bit N => core N)
- *   +0x04 PULP_BINARY           entry point address for all cores
- *   +0x08 PULP_NB_CORES_TO_WAIT number of harts the CSR waits for
- *   +0x0C PULP_DONE             sticky done flag (R: read-to-clear,
- *                                                 W: each hart signals exit)
- *   EU bit 22 = cluster_done from obi_slave_ctrl_cluster.
+ *   see magia_tile_utils.h. EU bit 12 = PULP_DONE quorum.
  */
 
 #ifndef CLUSTER_UTILS_H
@@ -56,20 +51,45 @@
 // =============================================================================
 
 /**
- * @brief Bring up the PULP cluster cores selected by @p core_mask.
- *
- *   1) Write the binary entry point to PULP_BINARY.
- *   2) Write popcount(core_mask) to PULP_NB_CORES_TO_WAIT.
- *   3) Write @p core_mask to PULP_CLK_EN, releasing the selected cores.
+ * @brief Boot all PULP cluster cores: program the binary entry point, broadcast
+ *        CLK_EN, then wait until every core's dispatcher loop is armed.
  *
  * @param binary_start  Entry point address (typically PULP_BINARY_START).
- * @param core_mask     One-hot bitmask of PULP cores to enable.
  */
-static inline void cluster_start(uint32_t binary_start, uint32_t core_mask) {
-    pulp_init(binary_start, core_mask);
+static inline void cluster_boot(uint32_t binary_start) {
+    pulp_init(binary_start);
 }
 
-/** De-assert the PULP clock-enable mask. */
+/**
+ * @brief Dispatch @p task_addr to the cluster cores selected by @p core_mask.
+ *        Returns once every selected core has ACK'd the start (i.e. the cores
+ *        have entered the task function). Use cluster_wait_eu() / _polling()
+ *        to wait for task completion.
+ */
+static inline void cluster_dispatch_task(uint32_t task_addr, uint32_t core_mask) {
+    pulp_run_task(task_addr, core_mask);
+}
+
+static inline void cluster_run_task(uint32_t task_addr, uint32_t core_mask) {
+    cluster_dispatch_task(task_addr, core_mask);
+}
+
+/**
+ * @brief Dispatch a task with a context pointer passed as first argument.
+ */
+static inline void cluster_dispatch_task_with_params(uint32_t task_addr,
+                                                     uint32_t params_ptr,
+                                                     uint32_t core_mask) {
+    pulp_run_task_with_params(task_addr, params_ptr, core_mask);
+}
+
+static inline void cluster_run_task_with_params(uint32_t task_addr,
+                                                uint32_t params_ptr,
+                                                uint32_t core_mask) {
+    cluster_dispatch_task_with_params(task_addr, params_ptr, core_mask);
+}
+
+/** De-assert the PULP CLK_EN (disables all cluster cores). */
 static inline void cluster_stop(void) {
     pulp_clk_dis();
 }
@@ -77,41 +97,53 @@ static inline void cluster_stop(void) {
 /**
  * @brief Busy-poll until the cluster CSR signals done.
  *
- * The read clears the register (read-to-clear) so this must be called
- * exactly once per cluster run. Prefer cluster_wait_eu() for energy.
+ * Prefer cluster_wait_eu() for energy.
  */
-static inline void cluster_wait_polling(void) {
-    while (!(mmio32(PULP_DONE) & 1))
-        ;
+static inline void cluster_wait_done_polling(void) {
+    (void)eu_cluster_done_wait(EU_WAIT_MODE_POLLING);
 }
 
-/** Non-blocking status check (clears the register if it was set). */
+static inline void cluster_wait_polling(void) {
+    cluster_wait_done_polling();
+}
+
+/** Non-blocking status check. */
+static inline uint32_t cluster_done_pending(void) {
+    return eu_check_events(EU_CLUSTER_DONE_MASK) != 0;
+}
+
 static inline uint32_t cluster_is_done(void) {
-    return mmio32(PULP_DONE) & 1;
+    return cluster_done_pending();
 }
 
 /**
  * @brief Arm the Event Unit for cluster-done WFE.
  *
- * Clears the EU event buffer and enables EU bit 22.
- * Call before cluster_start() to avoid missing the event.
+ * Clears the EU event buffer and enables the PULP cluster events.
+ * Call before cluster_dispatch_task() to avoid missing the event.
  */
+static inline void cluster_arm_done_event(void) {
+    eu_cluster_done_init();
+}
+
 static inline void cluster_init_eu(void) {
-    eu_clear_events(0xFFFFFFFF);
-    eu_enable_events(EU_CLUSTER_DONE_MASK);
+    cluster_arm_done_event();
 }
 
 /**
- * @brief Sleep until the cluster CSR signals done, then clear it.
+ * @brief Sleep until the cluster CSR signals done through the Event Unit.
  *
  *   cluster_init_eu();
- *   cluster_start(PULP_BINARY_START, 0xFF);
- *   cluster_wait_eu();
+ *   cluster_arm_done_event();
+ *   cluster_dispatch_task(task, 0xFF);
+ *   cluster_wait_done_eu();
  */
+static inline void cluster_wait_done_eu(void) {
+    (void)eu_cluster_done_wait(EU_WAIT_MODE_WFE);
+}
+
 static inline void cluster_wait_eu(void) {
-    do {
-        eu_wait_events_wfe(EU_CLUSTER_DONE_MASK);
-    } while (!(mmio32(PULP_DONE) & 1));
+    cluster_wait_done_eu();
 }
 
 // =============================================================================
