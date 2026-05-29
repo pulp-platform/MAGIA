@@ -416,7 +416,7 @@ module magia_tile
   assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_STACK_IDX]        = '{idx: 32'd1, start_addr: magia_tile_pkg::STACK_ADDR_START, end_addr: magia_tile_pkg::STACK_ADDR_END  };
   assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_EVENT_UNIT_IDX]            = '{idx: 32'd5, start_addr: tile_event_unit_start_addr,     end_addr: tile_event_unit_end_addr };
   assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_SPATZ_CTRL_IDX]            = '{idx: 32'd6, start_addr: tile_spatz_ctrl_start_addr,  end_addr: tile_spatz_ctrl_end_addr    };
-`ifndef CV32E40X
+`ifndef CV32E40X_XIF
   assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_REDMULE_CTRL_IDX] = '{idx: 32'd2, start_addr: tile_redmule_ctrl_start_addr,     end_addr: tile_redmule_ctrl_end_addr     };
   assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_IDMA_IDX]         = '{idx: 32'd3, start_addr: tile_idma_ctrl_start_addr,        end_addr: tile_idma_ctrl_end_addr        };
   assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_FSYNC_CTRL_IDX]   = '{idx: 32'd4, start_addr: tile_fsync_ctrl_start_addr,       end_addr: tile_fsync_ctrl_end_addr       };
@@ -467,7 +467,7 @@ module magia_tile
   assign hci_clear = 1'b0;
   assign hci_ctrl  = '0;
 
-`ifdef CV32E40X
+`ifdef CV32E40X_XIF
   assign redmule_ctrl_req = '0;
 `endif
 
@@ -488,7 +488,7 @@ module magia_tile
   assign xif_coproc_rules[magia_tile_pkg::XIF_FSYNC_IDX]   = '{sign_list: '{ default: {magia_tile_pkg::FSYNC_OPCODE, magia_tile_pkg::FSYNC_FUNC3} }};
   assign redmule_evt[0][1] = 1'b0;
 
-`ifdef CV32E40X
+`ifdef CV32E40X_XIF
   assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_EVT_0] = 1'b0; /* redmule_evt[0][0];  */ // Event Unit manages these interrupts // Only 1 core supported
   assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_EVT_1] = 1'b0; /* redmule_evt[0][1];  */ // Event Unit manages these interrupts // Only 1 core supported
   assign irq[magia_tile_pkg::IRQ_IDX_A2O_ERROR]     = 1'b0; /* idma_axi2obi_error; */ // Event Unit manages these interrupts 
@@ -815,7 +815,7 @@ module magia_tile
     .rsp_r_user_i           ( '0                    )
   );
 
-`ifndef CV32E40X
+`ifndef CV32E40X_XIF
   // RedMule controller OBI-to-HWPE control interface
   obi2hwpe_ctrl obi2hwpe_ctrl_inst (
     .obi_req_i  ( core_mem_data_req[magia_tile_pkg::OBI_XBAR_REDMULE_CTRL_IDX] ),     
@@ -1024,7 +1024,7 @@ module magia_tile
 /*******************************************************/
 
   magia_redmule_wrap #(
-`ifdef CV32E40X
+`ifdef CV32E40X_XIF
     .CtrlIntfConfig  ( redmule_pkg::XIF            ),
     .XifIdWidth      ( magia_tile_pkg::X_ID_W      ),
 `else
@@ -1041,7 +1041,7 @@ module magia_tile
     .busy_o              ( redmule_busy                                                ),
     .evt_o               ( redmule_evt[0][0]                                           ),
 
-`ifdef CV32E40X
+`ifdef CV32E40X_XIF
     .x_issue_req_i       ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX].issue_req   ),
     .x_issue_resp_o      ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX].issue_resp  ),
     .x_issue_valid_i     ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX].issue_valid ),
@@ -1476,7 +1476,7 @@ module magia_tile
 /**                   iDMA Beginning                  **/
 /*******************************************************/
 
-`ifdef CV32E40X
+`ifdef CV32E40X_XIF
   idma_ctrl #(
     .ERROR_CAP ( ERROR_CAP                      ),
     .axi_req_t ( magia_tile_pkg::idma_axi_req_t ),
@@ -1788,7 +1788,7 @@ module magia_tile
 /**             Fractal Sync Out Beginning            **/
 /*******************************************************/
 
-`ifdef CV32E40X
+`ifdef CV32E40X_XIF
   fractal_sync_xif_inst_decoder #(
     .INSTR_W    ( magia_tile_pkg::FSYNC_INSTR_W    ),
     .DATA_W     ( magia_tile_pkg::FSYNC_DATA_W     ),

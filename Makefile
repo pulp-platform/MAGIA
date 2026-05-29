@@ -21,7 +21,7 @@
 
 # Paths to folders
 ROOT_DIR       := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
-core           ?= CV32E40P
+core           ?= CV32E40X
 
 MAGIA_DIR  ?= $(shell pwd)
 
@@ -41,7 +41,7 @@ ISA            ?= riscv
 ARCH           ?= rv
 XLEN           ?= 32
 ifeq ($(core), CV32E40X)
-  XTEN         = imafc
+  XTEN         = imac
 else
   XTEN         = imcxgap9
 endif

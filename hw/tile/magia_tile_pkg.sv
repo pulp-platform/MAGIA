@@ -287,7 +287,7 @@ package magia_tile_pkg;
   parameter int unsigned APU_NUSFLAGS_CPU    = 5;                                       // APU user side flags
   parameter logic[31:0]  DM_HALT_ADDR        = 32'h1A110800;                            // Debug module halt address
 
-`ifdef CV32E40X
+`ifdef CV32E40X_XIF
   parameter int unsigned X_NUM_RS        = 3;                                           // Number of register file read ports that can be used by the eXtension interface
   parameter int unsigned CLIC_ID_W       = 1;                                           // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
 `else
@@ -317,14 +317,14 @@ package magia_tile_pkg;
   parameter int unsigned RID_WIDTH    = 1;                                              // Width of the rid   signal (response channel identifier, see OBI documentation)
   parameter int unsigned MID_WIDTH    = 1;                                              // Width of the mid   signal (manager identifier, see OBI documentation)
   parameter int unsigned OBI_ID_WIDTH = 1;                                              // Width of the id - configuration
-`ifdef CV32E40X
+`ifdef CV32E40X_XIF
   parameter int unsigned N_SBR        = 4;                                              // Number of slaves (HCI, AXI XBAR, Event_Unit, Spatz_Ctrl)
 `else
   parameter int unsigned N_SBR        = 7;                                              // Number of OBI slaves (HCI, AXI XBAR, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl, Event_Unit, Spatz_Ctrl)
 `endif  
   parameter int unsigned N_MGR        = 3;                                              // Number of masters (Core, AXI XBAR, Spatz CC)
   parameter int unsigned N_MAX_TRAN   = 1;                                              // Number of maximum outstanding transactions
-`ifdef CV32E40X
+`ifdef CV32E40X_XIF
   parameter int unsigned N_ADDR_RULE  = 6;                                              // Number of address rules (L2, L1, Stack, Reserved, Event_Unit, Spatz_Ctrl)
 `else
   parameter int unsigned N_ADDR_RULE  = 9;                                              // Number of OBI address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl, Event_Unit, Spatz_Ctrl)
@@ -606,7 +606,7 @@ package magia_tile_pkg;
     logic[NR_FETCH_PORTS-1:0]               rerror;
   } core_cache_instr_rsp_t;
 
-`ifdef CV32E40X
+`ifdef CV32E40X_XIF
   typedef enum logic[2:0]{
     OBI_XBAR_STACK_IDX        = 5,
     OBI_XBAR_SPATZ_CTRL_IDX   = 4,
