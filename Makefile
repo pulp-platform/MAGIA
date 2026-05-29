@@ -46,7 +46,7 @@ else
   XTEN         = imcxgap9
 endif
 ABI            ?= ilp
-XABI           ?= f
+XABI           ?=
 
 #ifeq ($(REDMULE_COMPLEX),1)
 #	TEST_SRCS := sw/redmule_complex.c
