@@ -50,10 +50,6 @@ static inline uint32_t get_hartid(){
     return hartid;
 }
 
-static inline void amo_increment(volatile uint32_t addr, volatile uint32_t amnt){
-    asm volatile("amoadd.w x0, %1, (%0)" ::"r"(addr), "r"(amnt):"memory");
-}
-
 char* utoa(unsigned int value, unsigned int base, char* result) {
     if (base < 2 || base > 16){
         *result = '\0'; 
