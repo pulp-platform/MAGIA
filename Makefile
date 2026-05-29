@@ -21,7 +21,7 @@
 
 # Paths to folders
 ROOT_DIR       := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
-core           ?= CV32E40X
+core           ?= CV32E40P
 
 MAGIA_DIR  ?= $(shell pwd)
 
@@ -36,17 +36,18 @@ else
     BENDER ?= ./bender
     BASE_PYTHON ?= python3
 endif
-BENDER_DIR     ?= .
-ISA            ?= riscv
-ARCH           ?= rv
-XLEN           ?= 32
+BENDER_DIR    ?= .
+ISA           ?= riscv
+ARCH          ?= rv
+XLEN          ?= 32
 ifeq ($(core), CV32E40X)
   XTEN         = imac
+  XABI        ?=
 else
   XTEN         = imcxgap9
+  XABI        ?= f
 endif
-ABI            ?= ilp
-XABI           ?=
+ABI           ?= ilp
 
 #ifeq ($(REDMULE_COMPLEX),1)
 #	TEST_SRCS := sw/redmule_complex.c
