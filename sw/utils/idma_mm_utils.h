@@ -35,19 +35,21 @@
 #define IDMA_MM_BASE_AXI2OBI (IDMA_BASE)                      // direction=0, L2 to L1
 #define IDMA_MM_BASE_OBI2AXI (IDMA_BASE + IDMA_MM_DIRECTION_OFFSET) // direction=1, L1 to L2
 
-#define IDMA_CONF_OFFSET          (0x00)
-#define IDMA_STATUS_OFFSET        (0x04)  
-#define IDMA_NEXT_ID_OFFSET       (0x44)  
-#define IDMA_DONE_ID_OFFSET       (0x84)  
-#define IDMA_DST_ADDR_LOW_OFFSET  (0xD0)
-#define IDMA_SRC_ADDR_LOW_OFFSET  (0xD8)
-#define IDMA_LENGTH_LOW_OFFSET    (0xE0)
-#define IDMA_DST_STRIDE_2_LOW_OFFSET (0xE8)
-#define IDMA_SRC_STRIDE_2_LOW_OFFSET (0xF0)
-#define IDMA_REPS_2_LOW_OFFSET    (0xF8)
-#define IDMA_DST_STRIDE_3_LOW_OFFSET (0x100)
-#define IDMA_SRC_STRIDE_3_LOW_OFFSET (0x108)
-#define IDMA_REPS_3_LOW_OFFSET    (0x110)
+#define IDMA_CONF_OFFSET              (0x00)
+#define IDMA_STATUS_OFFSET            (0x04)
+#define IDMA_NEXT_ID_OFFSET           (0x44)
+#define IDMA_DONE_ID_OFFSET           (0x84)
+#define IDMA_MULTICAST_MASK_OFFSET    (0xc4)
+#define IDMA_COLLECTIVE_SEL_OFFSET    (0xc8)
+#define IDMA_DST_ADDR_LOW_OFFSET      (0xD0)
+#define IDMA_SRC_ADDR_LOW_OFFSET      (0xD8)
+#define IDMA_LENGTH_LOW_OFFSET        (0xE0)
+#define IDMA_DST_STRIDE_2_LOW_OFFSET  (0xE8)
+#define IDMA_SRC_STRIDE_2_LOW_OFFSET  (0xF0)
+#define IDMA_REPS_2_LOW_OFFSET        (0xF8)
+#define IDMA_DST_STRIDE_3_LOW_OFFSET  (0x100)
+#define IDMA_SRC_STRIDE_3_LOW_OFFSET  (0x108)
+#define IDMA_REPS_3_LOW_OFFSET        (0x110)
 
 // Register Addresses - now direction-aware
 #define IDMA_CONF_ADDR(is_l1_to_l2)          ((is_l1_to_l2) ? (IDMA_MM_BASE_OBI2AXI + IDMA_CONF_OFFSET) : (IDMA_MM_BASE_AXI2OBI + IDMA_CONF_OFFSET))
@@ -63,6 +65,8 @@
 #define IDMA_DST_STRIDE_3_LOW_ADDR(is_l1_to_l2) ((is_l1_to_l2) ? (IDMA_MM_BASE_OBI2AXI + IDMA_DST_STRIDE_3_LOW_OFFSET) : (IDMA_MM_BASE_AXI2OBI + IDMA_DST_STRIDE_3_LOW_OFFSET))
 #define IDMA_SRC_STRIDE_3_LOW_ADDR(is_l1_to_l2) ((is_l1_to_l2) ? (IDMA_MM_BASE_OBI2AXI + IDMA_SRC_STRIDE_3_LOW_OFFSET) : (IDMA_MM_BASE_AXI2OBI + IDMA_SRC_STRIDE_3_LOW_OFFSET))
 #define IDMA_REPS_3_LOW_ADDR(is_l1_to_l2)    ((is_l1_to_l2) ? (IDMA_MM_BASE_OBI2AXI + IDMA_REPS_3_LOW_OFFSET) : (IDMA_MM_BASE_AXI2OBI + IDMA_REPS_3_LOW_OFFSET))
+#define IDMA_MULTICAST_MASK_ADDR(is_l1_to_l2)    ((is_l1_to_l2) ? (IDMA_MM_BASE_OBI2AXI + IDMA_MULTICAST_MASK_OFFSET) : (IDMA_MM_BASE_AXI2OBI + IDMA_MULTICAST_MASK_OFFSET))
+#define IDMA_COLLECTIVE_SEL_ADDR(is_l1_to_l2)    ((is_l1_to_l2) ? (IDMA_MM_BASE_OBI2AXI + IDMA_COLLECTIVE_SEL_OFFSET) : (IDMA_MM_BASE_AXI2OBI + IDMA_COLLECTIVE_SEL_OFFSET))
 
 // Configuration Register Bit Fields
 #define IDMA_CONF_DECOUPLE_AW_BIT    (0)
@@ -147,6 +151,14 @@ static inline uint32_t idma_mm_start_transfer_dir(uint32_t is_l1_to_l2, uint32_t
     if (stream_id >= 16) return 0;
     uint32_t transfer_id = mmio32(IDMA_NEXT_ID_ADDR(is_l1_to_l2, stream_id));
     return transfer_id;
+}
+
+static inline void idma_mm_set_multicast_mask(uint32_t is_l1_to_l2, uint32_t mask) {
+    mmio32(IDMA_MULTICAST_MASK_ADDR(is_l1_to_l2)) = mask;
+}
+
+static inline void idma_mm_set_collective_sel(uint32_t is_l1_to_l2, uint32_t collective_op) {
+    mmio32(IDMA_COLLECTIVE_SEL_ADDR(is_l1_to_l2)) = collective_op;
 }
 
 static inline uint32_t idma_mm_get_done_id_dir(uint32_t is_l1_to_l2, uint32_t stream_id) {
@@ -242,6 +254,16 @@ static inline int idma_L1ToL2(unsigned int src, unsigned int dst, unsigned short
   idma_mm_set_addr_len_dir(1, dst, src, size);
   idma_mm_set_2d_params_dir(1, 0, 0, 1);
   idma_mm_set_3d_params_dir(1, 0, 0, 1);
+  return idma_mm_start_transfer_dir(1, 0);
+}
+
+static inline int broadcast(unsigned int src, unsigned int dst, unsigned short size, uint32_t mask, uint32_t collective_op) {
+  idma_mm_conf_default_dir(1);
+  idma_mm_set_addr_len_dir(1, dst, src, size);
+  idma_mm_set_2d_params_dir(1, 0, 0, 1);
+  idma_mm_set_3d_params_dir(1, 0, 0, 1);
+  idma_mm_set_multicast_mask(1, mask);
+  idma_mm_set_collective_sel(1, collective_op);
   return idma_mm_start_transfer_dir(1, 0);
 }
 

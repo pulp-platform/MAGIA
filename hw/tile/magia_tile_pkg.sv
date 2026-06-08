@@ -338,7 +338,7 @@ package magia_tile_pkg;
   localparam int unsigned NumDim                  = iDMA_NumDims;                       // Needed by the iDMA typedef (wtf?)
   parameter int unsigned iDMA_DataWidth           = magia_pkg::WIDE_DATA_W;             // iDMA Data Width
   parameter int unsigned iDMA_AddrWidth           = magia_pkg::ADDR_W;                  // iDMA Address Width
-  parameter int unsigned iDMA_UserWidth           = AXI_DATA_U_W;                       // iDMA AXI User Width
+  parameter int unsigned iDMA_UserWidth           = magia_pkg::USR_W;                   // iDMA AXI User Width
   parameter int unsigned iDMA_StrbWidth           = magia_pkg::WIDE_STRB_W;             // iDMA AXI Strobe Width
   parameter int unsigned iDMA_AxiIdWidth          = AXI_DATA_ID_W;                      // iDMA AXI ID Width
   parameter int unsigned iDMA_NumAxInFlight       = 16;                                 // iDMA Number of transaction that can be in-flight concurrently
@@ -621,11 +621,16 @@ package magia_tile_pkg;
   `REG_BUS_TYPEDEF_ALL(reg_dma, logic[magia_pkg::ADDR_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0])
   `REG_BUS_TYPEDEF_ALL(idma_fe_reg, logic[magia_pkg::ADDR_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0])
 
-  `IDMA_TYPEDEF_FULL_REQ_T(idma_be_req_t, logic[iDMA_AxiIdWidth-1:0], idma_addr_t, logic[iDMA_TFLenWidth-1:0])
+  `IDMA_TYPEDEF_FULL_REQ_T(idma_be_req_t, logic[iDMA_AxiIdWidth-1:0], idma_addr_t, logic[iDMA_TFLenWidth-1:0], logic[35:0])
   `IDMA_TYPEDEF_FULL_RSP_T(idma_be_rsp_t, idma_addr_t)
   `IDMA_TYPEDEF_FULL_ND_REQ_T(idma_nd_req_t, idma_be_req_t, logic[iDMA_RepWidth-1:0], logic[iDMA_StrideWidth-1:0])
 
-  `AXI_TYPEDEF_ALL_CT(idma_axi, idma_axi_req_t, idma_axi_rsp_t, logic[iDMA_AddrWidth-1:0], logic[iDMA_AxiIdWidth-1:0], logic[iDMA_DataWidth-1:0], logic[iDMA_StrbWidth-1:0], logic[iDMA_UserWidth-1:0])
+    typedef struct packed {
+        logic [magia_pkg::ADDR_W-1:0] collective_mask;
+        logic [3:0] collective_op;
+  } axi_wide_data_slv_user_t;
+  
+  `AXI_TYPEDEF_ALL_CT(idma_axi, idma_axi_req_t, idma_axi_rsp_t, logic[iDMA_AddrWidth-1:0], logic[iDMA_AxiIdWidth-1:0], logic[iDMA_DataWidth-1:0], logic[iDMA_StrbWidth-1:0], axi_wide_data_slv_user_t)
 
   localparam obi_pkg::obi_optional_cfg_t obi_idma_optional_cfg = obi_pkg::obi_all_optional_config(AUSER_WIDTH, WUSER_WIDTH, RUSER_WIDTH, MID_WIDTH, ACHK_WIDTH, RCHK_WIDTH);
   localparam obi_pkg::obi_cfg_t          obi_idma_cfg          = obi_pkg::obi_default_cfg(iDMA_AddrWidth, iDMA_DataWidth, iDMA_AxiIdWidth, obi_idma_optional_cfg);

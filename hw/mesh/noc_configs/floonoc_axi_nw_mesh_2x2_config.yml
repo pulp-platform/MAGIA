@@ -5,6 +5,9 @@ network_type: "narrow-wide"
 routing:
   route_algo: "XY"
   use_id_table: true
+  collective:
+    en_narrow_multicast: true
+    en_wide_multicast: true
 
 protocols:
   - name: "narrow_data_mst"
@@ -13,28 +16,38 @@ protocols:
     data_width: 32
     addr_width: 32
     id_width: 3
-    user_width: 1
+    user_width:
+      collective_mask: 32
+      collective_op: 4
+      user: 5
   - name: "narrow_data_slv"
     type: "narrow"
     protocol: "AXI4"
     data_width: 32
     addr_width: 32
     id_width: 6
-    user_width: 1
+    user_width:
+      collective_mask: 32
+      collective_op: 4
+      user: 5
   - name: "wide_data_mst"
     type: "wide"
     protocol: "AXI4"
     data_width: 256
     addr_width: 32
     id_width: 2
-    user_width: 1
+    user_width:
+      collective_mask: 32
+      collective_op: 4
   - name: "wide_data_slv"
     type: "wide"
     protocol: "AXI4"
     data_width: 256
     addr_width: 32
     id_width: 2
-    user_width: 1
+    user_width:
+      collective_mask: 32
+      collective_op: 4
 
 endpoints:
   - name: "magia_tile"
@@ -42,6 +55,7 @@ endpoints:
     addr_range:
       base: 0x0000_0000
       size: 0x0010_0000
+      en_collective: true
     mgr_port_protocol:
       - "narrow_data_slv"
       - "wide_data_slv"

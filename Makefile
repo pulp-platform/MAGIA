@@ -408,6 +408,7 @@ bender_defs    += -D SPATZ_RVV=$(SPATZ_RVV)
 
 update-ips:
 	$(BENDER) update
+	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_ADD_IDS=$(IDMA_ADD_IDS)
 	$(BENDER) script vsim          \
 	--vlog-arg="$(compile_flag)"   \
 	--vcom-arg="-pedanticerrors"   \

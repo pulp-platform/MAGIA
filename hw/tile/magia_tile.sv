@@ -219,6 +219,7 @@ module magia_tile
   magia_tile_pkg::core_hci_data_rsp_t core_l1_data_rsp;
 
   magia_tile_pkg::core_axi_data_req_t core_l2_data_req;
+  magia_tile_pkg::core_axi_data_req_t core_l2_data_req_unfiltered;
   magia_tile_pkg::core_axi_data_rsp_t core_l2_data_rsp;
 
   magia_tile_pkg::core_instr_req_t core_instr_req;
@@ -576,7 +577,7 @@ module magia_tile
 
   assign en_default_mst_port = '1;
 
-  assign floo_id = '{x: (x_id_i+1), y: y_id_i, port_id: 0};
+  assign floo_id = '{x: x_id_i, y: y_id_i, port_id: 0};
 
   assign hci_clear = 1'b0;
   assign hci_ctrl  = '0;
@@ -684,13 +685,20 @@ module magia_tile
     .obi_req_i           ( core_mem_data_req[magia_tile_pkg::OBI_XBAR_L2_IDX] ),
     .obi_rsp_o           ( core_mem_data_rsp[magia_tile_pkg::OBI_XBAR_L2_IDX] ),
     .user_i              ( axi_data_user                                      ),
-    .axi_req_o           ( core_l2_data_req                                   ),
+    .axi_req_o           ( core_l2_data_req_unfiltered                        ),
     .axi_rsp_i           ( core_l2_data_rsp                                   ),
     .axi_rsp_channel_sel (                                                    ),
     .axi_rsp_b_user_o    (                                                    ),
     .axi_rsp_r_user_o    (                                                    ),
     .obi_rsp_user_i      ( obi_rsp_data_user                                  )
   );
+
+
+  mcast_gen i_mcast_gen (
+    .data_req_i ( core_l2_data_req_unfiltered ),
+    .data_req_o ( core_l2_data_req )
+  );
+
 
   instr2cache_req i_core_instr2cache_req (
     .instr_req_i ( core_instr_req       ),
@@ -1657,19 +1665,21 @@ module magia_tile
 /*******************************************************/
   
   floo_nw_router #(
-    .AxiCfgN      ( AxiCfgN     ),
-    .AxiCfgW      ( AxiCfgW     ),
-    .RouteAlgo    ( XYRouting   ),
-    .NumRoutes    ( 5           ),
-    .NumInputs    ( 5           ),
-    .NumOutputs   ( 5           ),
-    .InFifoDepth  ( 2           ),
-    .OutFifoDepth ( 2           ),
-    .id_t         ( id_t        ),
-    .hdr_t        ( hdr_t       ),
-    .floo_req_t   ( floo_req_t  ),
-    .floo_rsp_t   ( floo_rsp_t  ),
-    .floo_wide_t  ( floo_wide_t )
+    .AxiCfgN      ( AxiCfgN                ),
+    .AxiCfgW      ( AxiCfgW                ),
+    .RouteAlgo    ( XYRouting              ),
+    .NumRoutes    ( 5                      ),
+    .NumInputs    ( 5                      ),
+    .NumOutputs   ( 5                      ),
+    .InFifoDepth  ( 2                      ),
+    .OutFifoDepth ( 2                      ),
+    .NoLoopback   ( 1'b0                   ),
+    .CollectiveCfg( RouteCfg.CollectiveCfg ),
+    .id_t         ( id_t                   ),
+    .hdr_t        ( hdr_t                  ),
+    .floo_req_t   ( floo_req_t             ),
+    .floo_rsp_t   ( floo_rsp_t             ),
+    .floo_wide_t  ( floo_wide_t            )
   ) i_magia_tile_router (
     .clk_i          ( sys_clk              ),
     .rst_ni         ( rst_ni               ),
@@ -1727,16 +1737,20 @@ module magia_tile
     .id_t                 ( id_t                                     ),
     .rob_idx_t            ( rob_idx_t                                ),
     .hdr_t                ( hdr_t                                    ),
-    .sam_rule_t           ( sam_rule_t                               ),
-    .Sam                  ( Sam                                      ),
-    .axi_narrow_in_req_t  ( axi_narrow_data_slv_req_t                ),
-    .axi_narrow_in_rsp_t  ( axi_narrow_data_slv_rsp_t                ),
-    .axi_narrow_out_req_t ( axi_narrow_data_mst_req_t                ),
-    .axi_narrow_out_rsp_t ( axi_narrow_data_mst_rsp_t                ),
-    .axi_wide_in_req_t    ( axi_wide_data_slv_req_t                  ),
-    .axi_wide_in_rsp_t    ( axi_wide_data_slv_rsp_t                  ),
-    .axi_wide_out_req_t   ( axi_wide_data_mst_req_t                  ),
-    .axi_wide_out_rsp_t   ( axi_wide_data_mst_rsp_t                  ),
+    .sam_rule_t           ( collective_sam_rule_t                    ),
+    .sam_idx_t            ( collective_idx_t                         ),
+    .mask_sel_t           ( collective_mask_sel_t                    ),
+    .Sam                  ( CollectiveSam                            ),
+    .user_wide_struct_t   ( collective_axi_wide_data_slv_user_t      ),
+    .user_narrow_struct_t ( collective_axi_narrow_data_slv_user_t    ),
+    .axi_narrow_in_req_t  ( collective_axi_narrow_data_slv_req_t     ),
+    .axi_narrow_in_rsp_t  ( collective_axi_narrow_data_slv_rsp_t     ),
+    .axi_narrow_out_req_t ( collective_axi_narrow_data_mst_req_t     ),
+    .axi_narrow_out_rsp_t ( collective_axi_narrow_data_mst_rsp_t     ),
+    .axi_wide_in_req_t    ( collective_axi_wide_data_slv_req_t       ),
+    .axi_wide_in_rsp_t    ( collective_axi_wide_data_slv_rsp_t       ),
+    .axi_wide_out_req_t   ( collective_axi_wide_data_mst_req_t       ),
+    .axi_wide_out_rsp_t   ( collective_axi_wide_data_mst_rsp_t       ),
     .floo_req_t           ( floo_req_t                               ),
     .floo_rsp_t           ( floo_rsp_t                               ),
     .floo_wide_t          ( floo_wide_t                              )

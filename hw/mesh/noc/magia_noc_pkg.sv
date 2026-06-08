@@ -48,6 +48,25 @@ package magia_noc_pkg;
         logic [ADDR_W-1:0] end_addr;
     } sam_rule_t;
 
+    typedef struct packed {
+        int unsigned offset;
+        int unsigned len;
+        int unsigned base_id;
+    } collective_mask_sel_t;
+
+    typedef struct packed {
+        id_t id;
+        collective_mask_sel_t mask_x;
+        collective_mask_sel_t mask_y;
+    } collective_idx_t;
+
+    typedef struct packed {
+        collective_idx_t idx;
+        logic [31:0] start_addr;
+        logic [31:0] end_addr;
+    } collective_sam_rule_t;
+
+
     /**********************************
     **          ROUTING TABLE        **
     **********************************/
@@ -76,8 +95,34 @@ package magia_noc_pkg;
         return Sam;
     endfunction
 
+    // Helper function to get the correct routing table
+    function automatic collective_sam_rule_t[SamNumRules-1:0] gen_collective_sam_table(int unsigned num_tiles);
+        collective_sam_rule_t[SamNumRules-1:0] CollectiveSam;
+
+        case (num_tiles)
+            32'd4:  begin
+                CollectiveSam = floo_axi_nw_mesh_2x2_noc_pkg::CollectiveSam;
+            end
+            32'd16: begin
+                CollectiveSam = floo_axi_nw_mesh_4x4_noc_pkg::CollectiveSam;
+            end
+            32'd64: begin
+                CollectiveSam = floo_axi_nw_mesh_8x8_noc_pkg::Sam;
+            end
+            32'd256: begin
+                CollectiveSam = floo_axi_nw_mesh_16x16_noc_pkg::Sam;
+            end
+            32'd1024: begin
+                CollectiveSam = floo_axi_nw_mesh_32x32_noc_pkg::Sam;
+            end
+        endcase
+
+        return CollectiveSam;
+    endfunction
+
     // Actual declaration of the Sam rules
     localparam sam_rule_t[SamNumRules-1:0] Sam = gen_sam_table(N_TILES);
+    localparam collective_sam_rule_t[SamNumRules-1:0] CollectiveSam = gen_collective_sam_table(N_TILES);
 
     // Helper function to get the correct route configuration
     function automatic route_cfg_t gen_route_config(int unsigned num_tiles);
@@ -107,18 +152,54 @@ package magia_noc_pkg;
     // Actual declaration of RouteCfg
     localparam route_cfg_t RouteCfg = gen_route_config(N_TILES);
 
+
+    /**********************************
+    **          BROADCAST MASK       **
+    **********************************/
+    // Helper function to get the broadcast mask
+    function automatic logic[31:0] gen_broadcast_mask(int unsigned num_tiles);
+        logic[31:0] mask;
+
+        case (num_tiles)
+            32'd4:  begin
+                mask = 32'h00300000;
+            end
+            32'd16: begin
+                mask = 32'h00F00000;
+            end
+            32'd64: begin
+                mask = 32'h00300000;
+            end
+            32'd256: begin
+                mask = 32'h00300000;
+            end
+            32'd1024: begin
+                mask = 32'h00300000;
+            end
+        endcase
+
+        return mask;
+    endfunction
+
+    // Actual declaration of the Broadcast Mask
+    localparam logic[31:0] BroadcastMask = gen_broadcast_mask(N_TILES);
+    localparam logic[3:0] CollectiveOp = 4'b0001; // 0x0 Unicast; 0x1 Multicast; 0x2 Barrier
+
+    //********** STANDARD AXI STRUCTS **********//
     typedef logic[ADDR_W-1:0]  axi_narrow_data_mst_addr_t;
     typedef logic[DATA_W-1:0]  axi_narrow_data_mst_data_t;
     typedef logic[STRB_W-1:0]  axi_narrow_data_mst_strb_t;
     typedef logic[L2_ID_W-1:0] axi_narrow_data_mst_id_t;
-    typedef logic[L2_U_W-1:0]  axi_narrow_data_mst_user_t;
+    typedef logic[iDMA_UserWidth-1:0]  axi_narrow_data_mst_user_t;
+
     `AXI_TYPEDEF_ALL_CT(axi_narrow_data_mst, axi_narrow_data_mst_req_t, axi_narrow_data_mst_rsp_t, axi_narrow_data_mst_addr_t, axi_narrow_data_mst_id_t, axi_narrow_data_mst_data_t, axi_narrow_data_mst_strb_t, axi_narrow_data_mst_user_t)
 
     typedef logic[ADDR_W-1:0]       axi_narrow_data_slv_addr_t;
     typedef logic[DATA_W-1:0]       axi_narrow_data_slv_data_t;
     typedef logic[STRB_W-1:0]       axi_narrow_data_slv_strb_t;
     typedef logic[AXI_NOC_ID_W-1:0] axi_narrow_data_slv_id_t;
-    typedef logic[AXI_NOC_U_W-1:0]  axi_narrow_data_slv_user_t;
+    typedef logic[iDMA_UserWidth-1:0]  axi_narrow_data_slv_user_t;
+
     `AXI_TYPEDEF_ALL_CT(axi_narrow_data_slv, axi_narrow_data_slv_req_t, axi_narrow_data_slv_rsp_t, axi_narrow_data_slv_addr_t, axi_narrow_data_slv_id_t, axi_narrow_data_slv_data_t, axi_narrow_data_slv_strb_t, axi_narrow_data_slv_user_t)
 
     typedef logic[ADDR_W-1:0]          axi_wide_data_mst_addr_t;
@@ -135,11 +216,55 @@ package magia_noc_pkg;
     typedef logic[iDMA_UserWidth-1:0]  axi_wide_data_slv_user_t;
     `AXI_TYPEDEF_ALL_CT(axi_wide_data_slv, axi_wide_data_slv_req_t, axi_wide_data_slv_rsp_t, axi_wide_data_slv_addr_t, axi_wide_data_slv_id_t, axi_wide_data_slv_data_t, axi_wide_data_slv_strb_t, axi_wide_data_slv_user_t)
 
-    `FLOO_TYPEDEF_HDR_T(hdr_t, id_t, id_t, nw_ch_e, rob_idx_t)
+
+    //********** COLLECTIVE AXI STRUCTS **********//
+    typedef logic[ADDR_W-1:0] collective_axi_narrow_data_mst_addr_t;
+    typedef logic[DATA_W-1:0] collective_axi_narrow_data_mst_data_t;
+    typedef logic[STRB_W-1:0] collective_axi_narrow_data_mst_strb_t;
+    typedef logic[L2_ID_W-1:0] collective_axi_narrow_data_mst_id_t;
+    typedef struct packed {
+        logic [ADDR_W-1:0] collective_mask;
+        logic [COLLECTIVE_OP_W-1:0] collective_op;
+    } collective_axi_narrow_data_mst_user_t;
+    `AXI_TYPEDEF_ALL_CT(collective_axi_narrow_data_mst, collective_axi_narrow_data_mst_req_t, collective_axi_narrow_data_mst_rsp_t, collective_axi_narrow_data_mst_addr_t, collective_axi_narrow_data_mst_id_t, collective_axi_narrow_data_mst_data_t, collective_axi_narrow_data_mst_strb_t, collective_axi_narrow_data_mst_user_t)
+
+    typedef logic[ADDR_W-1:0] collective_axi_narrow_data_slv_addr_t;
+    typedef logic[DATA_W-1:0] collective_axi_narrow_data_slv_data_t;
+    typedef logic[STRB_W-1:0] collective_axi_narrow_data_slv_strb_t;
+    typedef logic[AXI_NOC_ID_W-1:0] collective_axi_narrow_data_slv_id_t;
+    typedef struct packed {
+        logic [ADDR_W-1:0] collective_mask;
+        logic [COLLECTIVE_OP_W-1:0] collective_op;
+    } collective_axi_narrow_data_slv_user_t;
+    `AXI_TYPEDEF_ALL_CT(collective_axi_narrow_data_slv, collective_axi_narrow_data_slv_req_t, collective_axi_narrow_data_slv_rsp_t, collective_axi_narrow_data_slv_addr_t, collective_axi_narrow_data_slv_id_t, collective_axi_narrow_data_slv_data_t, collective_axi_narrow_data_slv_strb_t, collective_axi_narrow_data_slv_user_t)
+
+    typedef logic[ADDR_W-1:0] collective_axi_wide_data_mst_addr_t;
+    typedef logic[WIDE_DATA_W-1:0] collective_axi_wide_data_mst_data_t;
+    typedef logic[WIDE_STRB_W-1:0] collective_axi_wide_data_mst_strb_t;
+    typedef logic[iDMA_AxiIdWidth-1:0] collective_axi_wide_data_mst_id_t;
+    typedef struct packed {
+        logic [ADDR_W-1:0] collective_mask;
+        logic [COLLECTIVE_OP_W-1:0] collective_op;
+    } collective_axi_wide_data_mst_user_t;
+    `AXI_TYPEDEF_ALL_CT(collective_axi_wide_data_mst, collective_axi_wide_data_mst_req_t, collective_axi_wide_data_mst_rsp_t, collective_axi_wide_data_mst_addr_t, collective_axi_wide_data_mst_id_t, collective_axi_wide_data_mst_data_t, collective_axi_wide_data_mst_strb_t, collective_axi_wide_data_mst_user_t)
+
+    typedef logic[ADDR_W-1:0] collective_axi_wide_data_slv_addr_t;
+    typedef logic[WIDE_DATA_W-1:0] collective_axi_wide_data_slv_data_t;
+    typedef logic[WIDE_STRB_W-1:0] collective_axi_wide_data_slv_strb_t;
+    typedef logic[iDMA_AxiIdWidth-1:0] collective_axi_wide_data_slv_id_t;
+    typedef struct packed {
+        logic [ADDR_W-1:0] collective_mask;
+        logic [COLLECTIVE_OP_W-1:0] collective_op;
+    } collective_axi_wide_data_slv_user_t;
+    `AXI_TYPEDEF_ALL_CT(collective_axi_wide_data_slv, collective_axi_wide_data_slv_req_t, collective_axi_wide_data_slv_rsp_t, collective_axi_wide_data_slv_addr_t, collective_axi_wide_data_slv_id_t, collective_axi_wide_data_slv_data_t, collective_axi_wide_data_slv_strb_t, collective_axi_wide_data_slv_user_t)
+
+
+
+    `FLOO_TYPEDEF_HDR_T(hdr_t, id_t, id_t, nw_ch_e, rob_idx_t, id_t, collect_op_t)
     localparam axi_cfg_t AxiCfgN = '{
         AddrWidth:  ADDR_W,
         DataWidth:  DATA_W,
-        UserWidth:  AXI_U_W,
+        UserWidth:  iDMA_UserWidth,
         InIdWidth:  AXI_NOC_ID_W,
         OutIdWidth: L2_ID_W
     };
@@ -152,7 +277,6 @@ package magia_noc_pkg;
     };
 
     `FLOO_TYPEDEF_NW_CHAN_ALL(axi, req, rsp, wide, axi_narrow_data_slv, axi_wide_data_slv, AxiCfgN, AxiCfgW, hdr_t)
-
     `FLOO_TYPEDEF_NW_LINK_ALL(req, rsp, wide, req, rsp, wide)
 
 endpackage
