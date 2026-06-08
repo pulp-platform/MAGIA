@@ -24,28 +24,39 @@ package floo_axi_nw_mesh_2x2_noc_pkg;
     L21 = 5,
     NumEndpoints = 6} ep_id_e;
 
-
+  typedef enum logic[2:0] {
+    MagiaTileX0Y0SamIdx = 0,
+    MagiaTileX0Y1SamIdx = 1,
+    MagiaTileX1Y0SamIdx = 2,
+    MagiaTileX1Y1SamIdx = 3,
+    L20SamIdx = 4,
+    L21SamIdx = 5} sam_idx_e;
 
   typedef logic[0:0] rob_idx_t;
-typedef logic[0:0] port_id_t;
-typedef logic[1:0] x_bits_t;
-typedef logic[0:0] y_bits_t;
-typedef struct packed {
+  typedef logic[0:0] port_id_t;
+  typedef logic[1:0] x_bits_t;
+  typedef logic[0:0] y_bits_t;
+  typedef struct packed {
     x_bits_t x;
     y_bits_t y;
     port_id_t port_id;
-} id_t;
+  } id_t;
 
-typedef logic route_t;
+  typedef logic route_t;
 
+  typedef struct packed {
+    id_t idx;
+    id_t start_addr;
+    id_t end_addr;
+  } route_map_rule_t;
 
   localparam int unsigned SamNumRules = 6;
 
-typedef struct packed {
-    id_t idx;
-    logic [31:0] start_addr;
-    logic [31:0] end_addr;
-} sam_rule_t;
+  typedef struct packed {
+      id_t idx;
+      logic [31:0] start_addr;
+      logic [31:0] end_addr;
+  } sam_rule_t;
 
 localparam sam_rule_t[SamNumRules-1:0] Sam = '{
 '{idx: '{x: 0, y: 1, port_id: 0}, start_addr: 32'he0000000, end_addr: 32'hffffffff},// L2_1_sam_idx
@@ -58,14 +69,107 @@ localparam sam_rule_t[SamNumRules-1:0] Sam = '{
 };
 
 
+  localparam int unsigned CollectiveSamNumRules = 6;
 
-  localparam route_cfg_t RouteCfg = '{    RouteAlgo: XYRouting,
+  typedef struct packed {
+      int unsigned offset;
+      int unsigned len;
+      int unsigned base_id;
+  } collective_mask_sel_t;
+
+  typedef struct packed {
+      id_t id;
+      collective_mask_sel_t mask_x;
+      collective_mask_sel_t mask_y;
+  } collective_idx_t;
+
+  typedef struct packed {
+      collective_idx_t idx;
+      logic [31:0] start_addr;
+      logic [31:0] end_addr;
+  } collective_sam_rule_t;
+
+
+localparam collective_sam_rule_t[CollectiveSamNumRules-1:0] CollectiveSam = '{
+'{    idx: '{    id: '{x: 0, y: 1, port_id: 0},
+    mask_x: '{    default: '0},
+    mask_y: '{    default: '0}},
+    start_addr: 32'he0000000,
+    end_addr: 32'h100000000},// L21
+'{    idx: '{    id: '{x: 0, y: 0, port_id: 0},
+    mask_x: '{    default: '0},
+    mask_y: '{    default: '0}},
+    start_addr: 32'hc0000000,
+    end_addr: 32'he0000000},// L20
+'{    idx: '{    id: '{x: 3, y: 1, port_id: 0},
+    mask_x: '{    offset: 21,
+    len: 2,
+    base_id: 2},
+    mask_y: '{    offset: 20,
+    len: 1,
+    base_id: 0}},
+    start_addr: 32'h00300000,
+    end_addr: 32'h00400000},// MagiaTileX1Y1
+'{    idx: '{    id: '{x: 3, y: 0, port_id: 0},
+    mask_x: '{    offset: 21,
+    len: 2,
+    base_id: 2},
+    mask_y: '{    offset: 20,
+    len: 1,
+    base_id: 0}},
+    start_addr: 32'h00200000,
+    end_addr: 32'h00300000},// MagiaTileX1Y0
+'{    idx: '{    id: '{x: 2, y: 1, port_id: 0},
+    mask_x: '{    offset: 21,
+    len: 2,
+    base_id: 2},
+    mask_y: '{    offset: 20,
+    len: 1,
+    base_id: 0}},
+    start_addr: 32'h00100000,
+    end_addr: 32'h00200000},// MagiaTileX0Y1
+'{    idx: '{    id: '{x: 2, y: 0, port_id: 0},
+    mask_x: '{    offset: 21,
+    len: 2,
+    base_id: 2},
+    mask_y: '{    offset: 20,
+    len: 1,
+    base_id: 0}},
+    start_addr: 32'h00000000,
+    end_addr: 32'h00100000} // MagiaTileX0Y0
+
+};
+
+  localparam route_cfg_t RouteCfg = '{    
+    RouteAlgo: XYRouting,
     UseIdTable: 1'b1,
     XYAddrOffsetX: 32,
     XYAddrOffsetY: 34,
     IdAddrOffset: 0,
     NumSamRules: 6,
-    NumRoutes: 0};
+    NumRoutes: 0,
+    CollectiveCfg: '{    
+      OpCfg: '{    
+        EnNarrowMulticast: 1'b1,
+        EnWideMulticast: 1'b1,
+        EnLsbAnd: 1'b1,
+        EnFpAdd: 1'b0,
+        EnFpMul: 1'b0,
+        EnFpMin: 1'b0,
+        EnFpMax: 1'b0,
+        EnIntAdd: 1'b0,
+        EnIntMul: 1'b0,
+        EnIntMinS: 1'b0,
+        EnIntMinU: 1'b0,
+        EnIntMaxS: 1'b0,
+        EnIntMaxU: 1'b0
+        },
+      NarrRedCfg: RedDefaultCfg,
+      WideRedCfg: RedDefaultCfg
+      }
+    };
+
+
 
 
   typedef logic[31:0] axi_narrow_data_mst_addr_t;

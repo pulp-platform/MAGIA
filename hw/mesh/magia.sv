@@ -194,18 +194,18 @@ module magia
         .test_mode_i                                               ,
         .tile_enable_i                                             ,
 
-        .noc_south_req_o     ( tile_south_req_out[i*N_TILES_X+j]  ),
-        .noc_south_rsp_i     ( tile_south_rsp_in[i*N_TILES_X+j]   ),
-        .noc_south_wide_o    ( tile_south_wide_out[i*N_TILES_X+j] ),
-        .noc_east_req_o      ( tile_east_req_out[i*N_TILES_X+j]   ),
-        .noc_east_rsp_i      ( tile_east_rsp_in[i*N_TILES_X+j]    ),
-        .noc_east_wide_o     ( tile_east_wide_out[i*N_TILES_X+j]  ),
-        .noc_north_req_o     ( tile_north_req_out[i*N_TILES_X+j]  ),
-        .noc_north_rsp_i     ( tile_north_rsp_in[i*N_TILES_X+j]   ),
-        .noc_north_wide_o    ( tile_north_wide_out[i*N_TILES_X+j] ),
-        .noc_west_req_o      ( tile_west_req_out[i*N_TILES_X+j]   ),
-        .noc_west_rsp_i      ( tile_west_rsp_in[i*N_TILES_X+j]    ),
-        .noc_west_wide_o     ( tile_west_wide_out[i*N_TILES_X+j]  ),
+        .noc_south_req_o     ( tile_south_req_out[i*N_TILES_X+j]     ),
+        .noc_south_rsp_i     ( tile_south_rsp_in[i*N_TILES_X+j]      ),
+        .noc_south_wide_o    ( tile_south_wide_out[i*N_TILES_X+j]    ),
+        .noc_east_req_o      ( tile_east_req_out[i*N_TILES_X+j]      ),
+        .noc_east_rsp_i      ( tile_east_rsp_in[i*N_TILES_X+j]       ),
+        .noc_east_wide_o     ( tile_east_wide_out[i*N_TILES_X+j]     ),
+        .noc_north_req_o     ( tile_north_req_out[i*N_TILES_X+j]     ),
+        .noc_north_rsp_i     ( tile_north_rsp_in[i*N_TILES_X+j]      ),
+        .noc_north_wide_o    ( tile_north_wide_out[i*N_TILES_X+j]    ),
+        .noc_west_req_o      ( tile_west_req_out[i*N_TILES_X+j]      ),
+        .noc_west_rsp_i      ( tile_west_rsp_in[i*N_TILES_X+j]       ),
+        .noc_west_wide_o     ( tile_west_wide_out[i*N_TILES_X+j]     ),
 
         .noc_south_req_i     ( tile_south_req_in[i*N_TILES_X+j]   ),
         .noc_south_rsp_o     ( tile_south_rsp_out[i*N_TILES_X+j]  ),
@@ -220,8 +220,8 @@ module magia
         .noc_west_rsp_o      ( tile_west_rsp_out[i*N_TILES_X+j]   ),
         .noc_west_wide_i     ( tile_west_wide_in[i*N_TILES_X+j]   ),
 
-        .x_id_i              ( j                                  ),
-        .y_id_i              ( i                                  ),
+        .x_id_i              ( CollectiveSam[j*N_TILES_Y+i].idx.id.x ),
+        .y_id_i              ( CollectiveSam[j*N_TILES_Y+i].idx.id.y ),
   
 `ifdef VERILATOR
         .ht_fsync_req_o      ( ht_tile_fsync_req[i*N_TILES_X+j][0] ),
@@ -239,19 +239,19 @@ module magia
         .vn_fsync_if_o       ( vn_fsync_if[i*N_TILES_X+j]         ),
 `endif
         
-        .scan_cg_en_i                                              ,
+        .scan_cg_en_i                                                 ,
   
-        .boot_addr_i                                               ,
-        .mtvec_addr_i                                              ,
-        .dm_halt_addr_i                                            ,
-        .dm_exception_addr_i                                       ,
-        .mhartid_i           ( mhartid[i*N_TILES_X+j]             ),
-        .mimpid_patch_i                                            ,
+        .boot_addr_i                                                  ,
+        .mtvec_addr_i                                                 ,
+        .dm_halt_addr_i                                               ,
+        .dm_exception_addr_i                                          ,
+        .mhartid_i           ( mhartid[j*N_TILES_Y+i]                ),
+        .mimpid_patch_i                                               ,
   
-        .mcycle_o            ( mcycle_o[i*N_TILES_X+j]            ),
-        .time_i                                                    ,
+        .mcycle_o            ( mcycle_o[i*N_TILES_X+j]               ),
+        .time_i                                                       ,
   
-        .irq_i               ( irq_i[i*N_TILES_X+j]               ),
+        .irq_i               ( irq_i[i*N_TILES_X+j]                  ),
   
         // Tile expects [N_CLUSTER_CORES:0] (1 main + 8 cluster cores).
         // Replicate the single top-level debug_req_i bit across all cores;
@@ -265,8 +265,8 @@ module magia
         .debug_pc_valid_o    ( debug_pc_valid_o[i*N_TILES_X+j]  ),
         .debug_pc_o          ( debug_pc_o[i*N_TILES_X+j]        ),
   
-        .fetch_enable_i                                            ,
-        .core_sleep_o        ( core_sleep_o[i*N_TILES_X+j]        ),
+        .fetch_enable_i                                               ,
+        .core_sleep_o        ( core_sleep_o[i*N_TILES_X+j]           ),
         .wu_wfe_i
 `ifdef VERILATOR
         , .observe_o         ( tile_observe_o[i*N_TILES_X+j]      )
