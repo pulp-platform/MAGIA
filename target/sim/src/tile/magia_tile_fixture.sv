@@ -142,7 +142,7 @@ module magia_tile_fixture;
     .noc_west_rsp_i      ( noc_west_rsp_i    ),
     .noc_west_wide_o     ( noc_west_wide_o   ),
 
-    .x_id_i              ( 0                 ),
+    .x_id_i              ( 1                 ),
     .y_id_i              ( 0                 ),
 
     .ht_fsync_if_o       ( ht_fsync_if_o[0]  ),
