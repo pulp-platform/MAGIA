@@ -34,7 +34,7 @@
 #define MESH_X_TILES (4)
 #define NUM_HARTS    (MESH_Y_TILES*MESH_X_TILES)
 
-#define GET_Y_ID(mhartid)  ((mhartid)/MESH_X_TILES)
+#define GET_Y_ID(mhartid)  ((mhartid)/MESH_Y_TILES)
 #define GET_X_ID(mhartid)  ((mhartid)%MESH_X_TILES)
 #define GET_ID(y_id, x_id) (((y_id)*MESH_X_TILES)+(x_id))
 

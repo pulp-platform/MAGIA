@@ -67,6 +67,9 @@ module idma_obi_ctrl_decoder
   
   localparam logic [11:0] IDMA_DONE_ID_0_OFFSET = 12'h84;
  
+  localparam logic [11:0] IDMA_MULTICAST_MASK_OFFSET = 12'hc4;
+  localparam logic [11:0] IDMA_COLLECTIVE_SEL_OFFSET = 12'hc8;
+
   localparam logic [11:0] IDMA_DST_ADDR_LOW_OFFSET = 12'hd0;
   localparam logic [11:0] IDMA_SRC_ADDR_LOW_OFFSET = 12'hd8;
   localparam logic [11:0] IDMA_LENGTH_LOW_OFFSET = 12'he0;
@@ -119,7 +122,9 @@ module idma_obi_ctrl_decoder
                           (reg_offset == IDMA_REPS_2_LOW_OFFSET) ||
                           (reg_offset == IDMA_DST_STRIDE_3_LOW_OFFSET) ||
                           (reg_offset == IDMA_SRC_STRIDE_3_LOW_OFFSET) ||
-                          (reg_offset == IDMA_REPS_3_LOW_OFFSET)
+                          (reg_offset == IDMA_REPS_3_LOW_OFFSET) || 
+                          (reg_offset == IDMA_MULTICAST_MASK_OFFSET)  ||
+                          (reg_offset == IDMA_COLLECTIVE_SEL_OFFSET)
                           );
 
 /*******************************************************/
