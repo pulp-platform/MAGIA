@@ -278,7 +278,6 @@ module magia_tile
   logic idma_obi2axi_done;
   logic idma_obi2axi_error;
 
-  magia_tile_pkg::xif_inst_rule_t[magia_tile_pkg::N_RULES-1:0] xif_coproc_rules;
   
   logic sys_clk;
   logic sys_clk_en;
@@ -414,13 +413,11 @@ module magia_tile
   assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_L1SPM_IDX]        = '{idx: 32'd1, start_addr: tile_l1_start_addr,               end_addr: tile_l1_end_addr                };
   assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_RESERVED_IDX]     = '{idx: 32'd1, start_addr: tile_reserved_start_addr,         end_addr: tile_reserved_end_addr          };
   assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_STACK_IDX]        = '{idx: 32'd1, start_addr: magia_tile_pkg::STACK_ADDR_START, end_addr: magia_tile_pkg::STACK_ADDR_END  };
-  assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_EVENT_UNIT_IDX]            = '{idx: 32'd5, start_addr: tile_event_unit_start_addr,     end_addr: tile_event_unit_end_addr };
-  assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_SPATZ_CTRL_IDX]            = '{idx: 32'd6, start_addr: tile_spatz_ctrl_start_addr,  end_addr: tile_spatz_ctrl_end_addr    };
-`ifndef CV32E40X
-  assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_REDMULE_CTRL_IDX] = '{idx: 32'd2, start_addr: tile_redmule_ctrl_start_addr,     end_addr: tile_redmule_ctrl_end_addr     };
-  assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_IDMA_IDX]         = '{idx: 32'd3, start_addr: tile_idma_ctrl_start_addr,        end_addr: tile_idma_ctrl_end_addr        };
-  assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_FSYNC_CTRL_IDX]   = '{idx: 32'd4, start_addr: tile_fsync_ctrl_start_addr,       end_addr: tile_fsync_ctrl_end_addr       };
-`endif
+  assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_REDMULE_CTRL_IDX] = '{idx: 32'd2, start_addr: tile_redmule_ctrl_start_addr,     end_addr: tile_redmule_ctrl_end_addr      };
+  assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_IDMA_IDX]         = '{idx: 32'd3, start_addr: tile_idma_ctrl_start_addr,        end_addr: tile_idma_ctrl_end_addr         };
+  assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_FSYNC_CTRL_IDX]   = '{idx: 32'd4, start_addr: tile_fsync_ctrl_start_addr,       end_addr: tile_fsync_ctrl_end_addr        };
+  assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_EVENT_UNIT_IDX]   = '{idx: 32'd5, start_addr: tile_event_unit_start_addr,     end_addr: tile_event_unit_end_addr          };
+  assign obi_xbar_rule[magia_tile_pkg::OBI_XBAR_SPATZ_CTRL_IDX]   = '{idx: 32'd6, start_addr: tile_spatz_ctrl_start_addr,  end_addr: tile_spatz_ctrl_end_addr             };
 
   assign axi_xbar_rule[magia_tile_pkg::AXI_XBAR_L2_IDX]       = '{idx: 32'd0, start_addr: magia_tile_pkg::L2_ADDR_START, end_addr: magia_tile_pkg::L2_ADDR_END };
   assign axi_xbar_rule[magia_tile_pkg::AXI_XBAR_L1SPM_IDX]    = '{idx: 32'd1, start_addr: tile_l1_start_addr,            end_addr: tile_l1_end_addr            };
@@ -467,25 +464,10 @@ module magia_tile
   assign hci_clear = 1'b0;
   assign hci_ctrl  = '0;
 
-`ifdef CV32E40X
-  assign redmule_ctrl_req = '0;
-`endif
-
   assign idma_clear = 1'b0;
 
   assign fsync_clear = 1'b0;
 
-  assign xif_coproc_rules[magia_tile_pkg::XIF_REDMULE_IDX] = '0; // current version of XIF-RedMulE not (yet) supported
-  assign xif_coproc_rules[magia_tile_pkg::XIF_IDMA_IDX]    = '{sign_list: '{ {{magia_tile_pkg::CONF_OPCODE, magia_tile_pkg::CONF_FUNC3}}, 
-                                                                             {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_AL_FUNC3}},
-                                                                             {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_SR2_FUNC3}},
-                                                                             {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_SR3_FUNC3}},
-                                                                             {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_S_FUNC3}},
-                                                                             {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_S_FUNC3}},
-                                                                             {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_S_FUNC3}},
-                                                                             {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_S_FUNC3}},
-                                                                             {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_S_FUNC3}} }};
-  assign xif_coproc_rules[magia_tile_pkg::XIF_FSYNC_IDX]   = '{sign_list: '{ default: {magia_tile_pkg::FSYNC_OPCODE, magia_tile_pkg::FSYNC_FUNC3} }};
   assign redmule_evt[0][1] = 1'b0;
 
 `ifdef CV32E40X
@@ -522,12 +504,6 @@ module magia_tile
   assign enable_prefetching = 1'b0;
   assign flush_valid[0]     = fencei_flush_req; // Single port i$
   assign fencei_flush_ack   = flush_ready[0];   // Signle port i$
-
-  assign xif_redmule_if.result_ready     = 1'b0;
-  assign xif_redmule_if.compressed_valid = 1'b0;
-  assign xif_redmule_if.compressed_req   = '0;
-  assign xif_redmule_if.mem_ready        = 1'b0;
-  assign xif_redmule_if.mem_resp         = '0;
 `else
   // Icache control signals
   assign enable_prefetching = 1'b0;
@@ -815,7 +791,6 @@ module magia_tile
     .rsp_r_user_i           ( '0                    )
   );
 
-`ifndef CV32E40X
   // RedMule controller OBI-to-HWPE control interface
   obi2hwpe_ctrl obi2hwpe_ctrl_inst (
     .obi_req_i  ( core_mem_data_req[magia_tile_pkg::OBI_XBAR_REDMULE_CTRL_IDX] ),     
@@ -823,7 +798,6 @@ module magia_tile
     .ctrl_req_o ( redmule_ctrl_req                                             ),
     .ctrl_rsp_i ( redmule_ctrl_rsp                                             )
   );
-`endif
 
 /*******************************************************/
 /**                Type Conversions End               **/
@@ -967,37 +941,18 @@ module magia_tile
     end
   endgenerate
 
-  cv32e40x_if_xif xif_redmule_if ();
+  // Single Xif interface shared between core (cpu_*) and FPU (coproc_*)
+  cv32e40x_if_xif #(
+    .X_NUM_RS    ( magia_tile_pkg::X_NUM_RS ),
+    .X_ID_WIDTH  ( magia_tile_pkg::X_ID_W   ),
+    .X_MEM_WIDTH ( magia_tile_pkg::X_MEM_W  ),
+    .X_RFR_WIDTH ( magia_tile_pkg::X_RFR_W  ),
+    .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
+    .X_MISA      ( magia_tile_pkg::X_MISA   ),
+    .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
+  ) xif_if    ();
 
-  cv32e40x_if_xif #(
-    .X_NUM_RS    ( magia_tile_pkg::X_NUM_RS ),
-    .X_ID_WIDTH  ( magia_tile_pkg::X_ID_W   ),
-    .X_MEM_WIDTH ( magia_tile_pkg::X_MEM_W  ),
-    .X_RFR_WIDTH ( magia_tile_pkg::X_RFR_W  ),
-    .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
-    .X_MISA      ( magia_tile_pkg::X_MISA   ),
-    .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
-  ) xif_fpu_if ();
-  
-  cv32e40x_if_xif #(
-    .X_NUM_RS    ( magia_tile_pkg::X_NUM_RS ),
-    .X_ID_WIDTH  ( magia_tile_pkg::X_ID_W   ),
-    .X_MEM_WIDTH ( magia_tile_pkg::X_MEM_W  ),
-    .X_RFR_WIDTH ( magia_tile_pkg::X_RFR_W  ),
-    .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
-    .X_MISA      ( magia_tile_pkg::X_MISA   ),
-    .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
-  ) xif_if ();
 
-  cv32e40x_if_xif #(
-    .X_NUM_RS    ( magia_tile_pkg::X_NUM_RS ),
-    .X_ID_WIDTH  ( magia_tile_pkg::X_ID_W   ),
-    .X_MEM_WIDTH ( magia_tile_pkg::X_MEM_W  ),
-    .X_RFR_WIDTH ( magia_tile_pkg::X_RFR_W  ),
-    .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
-    .X_MISA      ( magia_tile_pkg::X_MISA   ),
-    .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
-  ) xif_coproc_if[magia_tile_pkg::N_COPROC] (); // Index 0 -> RedMulE, Index 1 -> iDMA, Index 2 -> Fractal Sync, Index 3 -> FPU
 
 /*******************************************************/
 /**             Interface Definitions End             **/
@@ -1024,14 +979,9 @@ module magia_tile
 /*******************************************************/
 
   magia_redmule_wrap #(
-`ifdef CV32E40X
-    .CtrlIntfConfig  ( redmule_pkg::XIF            ),
-    .XifIdWidth      ( magia_tile_pkg::X_ID_W      ),
-`else
-    .CtrlIntfConfig  ( redmule_pkg::HWPE_TARGET    ),
-`endif
-    .Height          ( magia_tile_pkg::REDMULE_HEIGHT    ),
-    .Width           ( magia_tile_pkg::REDMULE_WIDTH     ),
+    .CtrlIntfConfig  ( redmule_pkg::HWPE_TARGET              ),
+    .Height          ( magia_tile_pkg::REDMULE_HEIGHT        ),
+    .Width           ( magia_tile_pkg::REDMULE_WIDTH         ),
     .NumPipeRegs     ( magia_tile_pkg::REDMULE_NUM_PIPE_REGS )
   ) i_redmule_wrap (
     .clk_i               ( sys_clk                                                     ),
@@ -1040,21 +990,6 @@ module magia_tile
 
     .busy_o              ( redmule_busy                                                ),
     .evt_o               ( redmule_evt[0][0]                                           ),
-
-`ifdef CV32E40X
-    .x_issue_req_i       ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX].issue_req   ),
-    .x_issue_resp_o      ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX].issue_resp  ),
-    .x_issue_valid_i     ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX].issue_valid ),
-    .x_issue_ready_o     ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX].issue_ready ),
-    .x_register_i        ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX].register    ),
-    .x_register_valid_i  ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX].register_valid ),
-    .x_register_ready_o  ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_REDMULE_IDX].register_ready ),
-    .x_commit_i          ( xif_coproc_if.coproc_commit[magia_tile_pkg::XIF_REDMULE_IDX].commit       ),
-    .x_commit_valid_i    ( xif_coproc_if.coproc_commit[magia_tile_pkg::XIF_REDMULE_IDX].commit_valid ),
-    .x_result_o          ( xif_redmule_if.coproc_result.result                                       ),
-    .x_result_valid_o    ( xif_redmule_if.coproc_result.result_valid                                 ),
-    .x_result_ready_i    ( xif_redmule_if.coproc_result.result_ready                                 ),
-`else
     .x_issue_req_i       (                                                             ), // Not used in HWPE mode
     .x_issue_resp_o      (                                                             ), // Not used in HWPE mode
     .x_issue_valid_i     ( 1'b0                                                        ), // Not used in HWPE mode
@@ -1067,7 +1002,6 @@ module magia_tile
     .x_result_o          (                                                             ), // Not used in HWPE mode
     .x_result_valid_o    (                                                             ), // Not used in HWPE mode
     .x_result_ready_i    ( 1'b0                                                        ), // Not used in HWPE mode
-`endif
     .data_req_o          ( redmule_data_req                                            ),
     .data_rsp_i          ( redmule_data_rsp                                            ),
 
@@ -1114,7 +1048,7 @@ module magia_tile
     .CLIC_ID_WIDTH    ( magia_tile_pkg::CLIC_ID_W       )     // Width of clic_irq_id_i and clic_irq_id_o
   ) i_cv32e40x_core (
     // Clock and reset
-    .clk_i               ( sys_clk                ),
+    .clk_i               ( core_clk               ),
     .rst_ni              ( rst_ni                 ),
     .scan_cg_en_i                                  ,
 
@@ -1450,70 +1384,9 @@ module magia_tile
 /*******************************************************/
 /**                 L1 SPM (TCDM) End                 **/
 /*******************************************************/
-/**              Xif Dispatcher Beginning             **/
-/*******************************************************/
-
-  xif_inst_dispatcher #(
-    .N_COPROC        ( magia_tile_pkg::N_COPROC        ),
-    .N_RULES         ( magia_tile_pkg::N_RULES         ),
-    .DEFAULT_IDX     ( magia_tile_pkg::DEFAULT_IDX     ),
-    .OPCODE_OFF      ( magia_tile_pkg::OPCODE_OFF      ),
-    .OPCODE_W        ( magia_tile_pkg::OPCODE_W        ),
-    .xif_inst_rule_t ( magia_tile_pkg::xif_inst_rule_t )
-  ) i_xif_inst_dispatcher (
-    .clk_i           ( sys_clk                 ),
-    .rst_ni          ( rst_ni                  ),
-    .xif_issue_if_i  ( xif_if.coproc_issue     ),
-    .xif_issue_if_o  ( xif_coproc_if.cpu_issue ),
-    .xif_result_if_o ( xif_if.coproc_result    ),
-    .xif_result_if_i ( xif_fpu_if.cpu_result   ),
-    .rules_i         ( xif_coproc_rules        )
-  );
-
-/*******************************************************/
-/**                 Xif Dispatcher End                **/
-/*******************************************************/
 /**                   iDMA Beginning                  **/
 /*******************************************************/
 
-`ifdef CV32E40X
-  idma_ctrl #(
-    .ERROR_CAP ( ERROR_CAP                      ),
-    .axi_req_t ( magia_tile_pkg::idma_axi_req_t ),
-    .axi_rsp_t ( magia_tile_pkg::idma_axi_rsp_t ),
-    .obi_req_t ( magia_tile_pkg::idma_obi_req_t ),
-    .obi_rsp_t ( magia_tile_pkg::idma_obi_rsp_t )
-  ) i_idma_ctrl (
-    .clk_i           ( sys_clk                                                  ),
-    .rst_ni          ( rst_ni                                                   ),
-    .testmode_i      ( test_mode_i                                              ),
-    .clear_i         ( idma_clear                                               ),
-
-    .xif_issue_if_i  ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_IDMA_IDX] ),
-
-    .axi_read_req_o  ( idma_axi_read_req_out                                    ),
-    .axi_read_rsp_i  ( idma_axi_read_rsp_out                                    ),
-
-    .axi_write_req_o ( idma_axi_write_req_out                                   ),
-    .axi_write_rsp_i ( idma_axi_write_rsp_out                                   ),
-
-    .obi_read_req_o  ( idma_obi_read_req_out                                    ),
-    .obi_read_rsp_i  ( idma_obi_read_rsp_out                                    ),
-
-    .obi_write_req_o ( idma_obi_write_req_out                                   ),
-    .obi_write_rsp_i ( idma_obi_write_rsp_out                                   ),
-
-    .axi2obi_start_o ( idma_axi2obi_start                                       ),
-    .axi2obi_busy_o  ( idma_axi2obi_busy                                        ),
-    .axi2obi_done_o  ( idma_axi2obi_done                                        ),
-    .axi2obi_error_o ( idma_axi2obi_error                                       ),
-
-    .obi2axi_start_o ( idma_obi2axi_start                                       ),
-    .obi2axi_busy_o  ( idma_obi2axi_busy                                        ),
-    .obi2axi_done_o  ( idma_obi2axi_done                                        ),
-    .obi2axi_error_o ( idma_obi2axi_error                                       )
-  );
-`else
   idma_ctrl_mm #(
     .ERROR_CAP         ( ERROR_CAP                           ),
     .obi_req_t         ( magia_tile_pkg::core_obi_data_req_t ),
@@ -1556,7 +1429,6 @@ module magia_tile
     .irq_o2a_done_o    ( idma_obi2axi_done                                    ),
     .irq_o2a_error_o   ( idma_obi2axi_error                                   )
   );
-`endif
 
   axi_rw_join #(
     .axi_req_t  ( magia_tile_pkg::idma_axi_req_t ),
@@ -1785,37 +1657,8 @@ module magia_tile
 /*******************************************************/
 /**             Fractal Sync Out Beginning            **/
 /*******************************************************/
-
-`ifdef CV32E40X
-  fractal_sync_xif_inst_decoder #(
-    .INSTR_W    ( magia_tile_pkg::FSYNC_INSTR_W    ),
-    .DATA_W     ( magia_tile_pkg::FSYNC_DATA_W     ),
-    .ADDR_W     ( magia_tile_pkg::FSYNC_ADDR_W     ),
-    .N_RF_PORTS ( magia_tile_pkg::FSYNC_N_RF_PORTS ),
-    .OPCODE_W   ( magia_tile_pkg::FSYNC_OPCODE_W   ),
-    .FUNC3_W    ( magia_tile_pkg::FSYNC_FUNC3_W    ),
-    .OPCODE_OFF ( magia_tile_pkg::FSYNC_OPCODE_OFF ),
-    .FUNC3_OFF  ( magia_tile_pkg::FSYNC_FUNC3_OFF  ),
-    .N_CFG_REG  ( magia_tile_pkg::FSYNC_N_CFG_REG  ),
-    .AGGR_W     ( magia_tile_pkg::FSYNC_AGGR_W     ),
-    .ID_W       ( magia_tile_pkg::FSYNC_ID_W       ),
-    .NBR_AGGR_W ( magia_tile_pkg::FSYNC_NBR_AGGR_W ),
-    .NBR_ID_W   ( magia_tile_pkg::FSYNC_NBR_ID_W   ),
-    .STALL      ( magia_tile_pkg::FSYNC_STALL      )
-  ) i_fsync_dec (
-    .clk_i          ( sys_clk                                                   ),
-    .rst_ni         ( rst_ni                                                    ),
-    .clear_i        ( fsync_clear                                               ),
-    .xif_issue_if_i ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_FSYNC_IDX] ),
-    .ht_fsync_if_o  ( ht_fsync_if_o                                             ),
-    .hn_fsync_if_o  ( hn_fsync_if_o                                             ),
-    .vt_fsync_if_o  ( vt_fsync_if_o                                             ),
-    .vn_fsync_if_o  ( vn_fsync_if_o                                             ),
-    .done_o         ( fsync_done                                                ),
-    .error_o        ( fsync_error                                               )
-  );
-`else  
-  // Fractal Sync OBI Memory-Mapped Slave (replaces XIF interface)
+  
+  // Fractal Sync OBI Memory-Mapped Slave
   obi_slave_fsync #(
     .BASE_ADDR    ( magia_tile_pkg::FSYNC_CTRL_ADDR_START ),
     .AGGR_W       ( magia_tile_pkg::FSYNC_AGGR_W          ),
@@ -1835,7 +1678,6 @@ module magia_tile
     .done_o         ( fsync_done                                                 ),
     .error_o        ( fsync_error                                                )
   );
-`endif
 
 /*******************************************************/
 /**                Fractal Sync Out End               **/
@@ -1878,12 +1720,12 @@ module magia_tile
   );
 
   xif_if2struct i_xif_if2struct (
-    .xif_compressed_if_i  ( xif_if.coproc_compressed                                ),
-    .xif_issue_if_i       ( xif_coproc_if.coproc_issue[magia_tile_pkg::XIF_FPU_IDX] ),
-    .xif_commit_if_i      ( xif_if.coproc_commit                                    ),
-    .xif_mem_if_o         ( xif_if.coproc_mem                                       ),
-    .xif_mem_result_if_i  ( xif_if.coproc_mem_result                                ),
-    .xif_result_if_o      ( xif_fpu_if.coproc_result                                ),
+    .xif_compressed_if_i  ( xif_if.coproc_compressed ),
+    .xif_issue_if_i       ( xif_if.coproc_issue      ),
+    .xif_commit_if_i      ( xif_if.coproc_commit     ),
+    .xif_mem_if_o         ( xif_if.coproc_mem        ),
+    .xif_mem_result_if_i  ( xif_if.coproc_mem_result ),
+    .xif_result_if_o      ( xif_if.coproc_result     ),
     .x_compressed_valid_o ( x_compressed_valid                                      ),
     .x_compressed_ready_i ( x_compressed_ready                                      ),
     .x_compressed_req_o   ( x_compressed_req                                        ),
