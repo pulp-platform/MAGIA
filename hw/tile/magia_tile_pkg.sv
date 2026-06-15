@@ -294,6 +294,7 @@ package magia_tile_pkg;
   parameter int unsigned X_NUM_RS            = 2;                                       // Number of register file read ports (R-type instructions have 2 source operands)
   parameter int unsigned CLIC_ID_W           = 5;                                       // CLIC interrupt ID width (5 bits for 32 interrupts)
 `endif
+  parameter int unsigned CLIC_ID_W_CLUSTER    = 5;                                       // cv32e40p irq_id_o/irq_id_i width (fixed, independent of the ctrl core's CLIC_ID_W)
   
   // Parameters used by Event Unit
   parameter int unsigned EVENT_UNIT_IRQ_WIDTH = 5;                                      // Width of Event Unit IRQ ID signals (supports up to 32 different event types)
@@ -308,31 +309,24 @@ package magia_tile_pkg;
   parameter int unsigned REDMULE_UW         = UWH;                                      // RedMulE User Width
 
   // Parameters used by OBI
-  parameter int unsigned AUSER_WIDTH     = 1;                                              // Width of the auser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned WUSER_WIDTH     = 1;                                              // Width of the wuser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned ACHK_WIDTH      = 1;                                              // Width of the achk  signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned RUSER_WIDTH     = 1;                                              // Width of the ruser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned RCHK_WIDTH      = 1;                                              // Width of the rchk  signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned AID_WIDTH       = 1;                                              // Width of the aid   signal (address channel identifier, see OBI documentation)
-  parameter int unsigned RID_WIDTH       = 1;                                              // Width of the rid   signal (response channel identifier, see OBI documentation)
-  parameter int unsigned MID_WIDTH       = 1;                                              // Width of the mid   signal (manager identifier, see OBI documentation)
-  parameter int unsigned OBI_ID_WIDTH    = 1;                                              // Width of the id - configuration
-  parameter int unsigned N_CLUSTER_CORES = 8;                                              // Number of cores in the cluster (cntrl core not considered)
-`ifdef CV32E40X
-  parameter int unsigned N_SBR        = 5;                                              // Number of slaves (HCI, AXI XBAR, Event_Unit, Tile_CSR, + unused RESERVED alias)
-`else
-  parameter int unsigned N_SBR        = 7;                                              // Number of OBI slaves (HCI, AXI XBAR, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl, Event_Unit, Tile_CSR)
-`endif  
+  parameter int unsigned AUSER_WIDTH  = 1;                                              // Width of the auser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned WUSER_WIDTH  = 1;                                              // Width of the wuser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned ACHK_WIDTH   = 1;                                              // Width of the achk  signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned RUSER_WIDTH  = 1;                                              // Width of the ruser signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned RCHK_WIDTH   = 1;                                              // Width of the rchk  signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned AID_WIDTH    = 1;                                              // Width of the aid   signal (address channel identifier, see OBI documentation)
+  parameter int unsigned RID_WIDTH    = 1;                                              // Width of the rid   signal (response channel identifier, see OBI documentation)
+  parameter int unsigned MID_WIDTH    = 1;                                              // Width of the mid   signal (manager identifier, see OBI documentation)
+  parameter int unsigned OBI_ID_WIDTH = 1; 
+  parameter int unsigned N_CLUSTER_CORES = 8;                                           // Width of the id - configuration
+  parameter int unsigned N_SBR        = 7;                                              // Number of OBI slaves (HCI, AXI XBAR, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl, Event_Unit, Spatz_Ctrl)
   parameter int unsigned N_MGR        = 3 + N_CLUSTER_CORES;                            // Number of masters (Core, AXI XBAR, Spatz CC)
   parameter int unsigned N_MAX_TRAN   = 1;                                              // Number of maximum outstanding transactions
-`ifdef CV32E40X
-  parameter int unsigned N_ADDR_RULE  = 6;                                              // Number of address rules (L2, L1, Stack, Reserved, Event_Unit, Tile_CSR)
-`else
-  parameter int unsigned N_ADDR_RULE  = 9;                                             // Number of OBI address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl, Event_Unit, Tile_CSR)
-`endif  
+  parameter int unsigned N_ADDR_RULE  = 9;                                              // Number of OBI address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl, Event_Unit, Spatz_Ctrl) 
   localparam int unsigned N_BIT_SBR           = $clog2(N_SBR);                          // Number of bits required to identify each slave
   localparam int unsigned N_BIT_MGR           = $clog2(N_MGR);                          // Number of bits required to identify each master
-  localparam int unsigned N_BIT_CLUSTER_CORES = $clog2(N_CLUSTER_CORES);                // Number of bits required to identify each core in the cluster
+  localparam int unsigned N_BIT_CLUSTER_CORES = $clog2(N_CLUSTER_CORES);                // Number of bits required to identify each slave
+
   // Parameters used by AXI
   parameter int unsigned AXI_DATA_ID_W  = 3;                                            // Width of the AXI Data ID (3 bits for 5 slave ports on crossbar: 2^3=8)
   parameter int unsigned AXI_INSTR_ID_W = 3;                                            // Width of the AXI Instruction ID (3 bits for 5 slave ports on crossbar)
@@ -373,85 +367,7 @@ package magia_tile_pkg;
     OBI2AXI = 1'b1
   } idma_transfer_ch_e;                                                                 // iDMA type of transfer channel
 
-  // Parameters used by the Xif Instruction Dispatcher
-  parameter int unsigned N_COPROC         = 4;                                          // RedMulE, iDMA, Fractal Sync and FPU
-  parameter int unsigned N_RULES          = N_COPROC-1;                                 // RedMulE, iDMA and Fractal Sync all have custom Xif instructions but not FPU
-  parameter int unsigned N_REDMULE_SIGN   = 9;                                          // Number of signitures (= {opcode, func3}) in the programming model of RedMulE
-  parameter int unsigned N_IDMA_SIGN      = 5;                                          // Number of signitures (= {opcode, func3}) in the programming model of the iDMA decoder
-  parameter int unsigned N_FSYNC_SIGN     = 1;                                          // Number of signitures (= {opcode, func3}) in the programming model of Fractal Sync
-  parameter int unsigned N_SIGN           = 9;                                          // Number of opcodes = max{RedMulE_signitures, iDMA_signitures, FractalSync_signitures}
-  typedef enum logic[1:0]{
-    XIF_REDMULE_IDX = 2'b00,
-    XIF_IDMA_IDX    = 2'b01,
-    XIF_FSYNC_IDX   = 2'b10,
-    XIF_FPU_IDX     = 2'b11
-  } xif_inst_dispatch_idx_e;
-  parameter int unsigned DEFAULT_IDX      = XIF_FPU_IDX;                                // FPU will handle the instructions by default
-  parameter int unsigned OPCODE_W         = 7;                                          // ISA OPCODE Width
-  parameter int unsigned OPCODE_OFF       = 0;                                          // ISA OPCODE Offset
-  parameter int unsigned FUNC3_W          = 3;                                          // ISA FUNC3 Width
-  parameter int unsigned FUNC3_OFF        = 12;                                         // ISA FUNC3 Offset
-  parameter int unsigned SIGN_W           = OPCODE_W + FUNC3_W;                         // Width of the instruction signiture
-  parameter bit          PRIORITY         = 0;                                          // Indicates that the dispatcher should rout the instruction to only 1 coprocessor (with highest priority)
-
-  // Parameters used by the iDMA instruction decoder
-  parameter int unsigned DMA_INSTR_W              = magia_pkg::INSTR_W;                 // iDMA Decoder instruction width
-  parameter int unsigned DMA_DATA_W               = magia_pkg::DATA_W;                  // iDMA Decoder data width
-  parameter int unsigned DMA_ADDR_W               = magia_pkg::ADDR_W;                  // iDMA Decoder address width
-  parameter int unsigned DMA_N_RF_PORTS           = X_NUM_RS;                           // iDMA Decoder number of register file read ports
-  parameter int unsigned DMA_OPCODE_W             = OPCODE_W;                           // iDMA Decoder OPCODE field width
-  parameter int unsigned DMA_FUNC3_W              = FUNC3_W;                            // iDMA Decoder FUNC3 field width
-  parameter int unsigned DMA_ND_EN_W              = 2;                                  // iDMA Decoder ND_EN field width
-  parameter int unsigned DMA_DST_MAX_LOG_LEN_W    = 3;                                  // iDMA Decoder DST_MAX_LOG_LEN field width
-  parameter int unsigned DMA_SRC_MAX_LOG_LEN_W    = 3;                                  // iDMA Decoder SRC_MAX_LOG_LEN field width
-  parameter int unsigned DMA_DST_REDUCE_LEN_W     = 1;                                  // iDMA Decoder DST_REDUCE_LEN field width
-  parameter int unsigned DMA_SRC_REDUCE_LEN_W     = 1;                                  // iDMA Decoder SRC_REDUCE_LEN field width
-  parameter int unsigned DMA_DECOUPLE_R_W_W       = 1;                                  // iDMA Decoder DECOUPLE_R_W field width
-  parameter int unsigned DMA_DECOUPLE_R_AW_W      = 1;                                  // iDMA Decoder DECOUPLE_R_AW field width
-  parameter int unsigned DMA_DIRECTION_W          = 1;                                  // iDMA Decoder DIRECTION field width
-  parameter int unsigned DMA_OPCODE_OFF           = OPCODE_OFF;                         // iDMA Decoder OPCODE field offset
-  parameter int unsigned DMA_FUNC3_OFF            = FUNC3_OFF;                          // iDMA Decoder FUNC3 field offset
-  parameter int unsigned DMA_ND_EN_OFF            = 26;                                 // iDMA Decoder ND_EN field offset
-  parameter int unsigned DMA_DST_MAX_LOG_LEN_OFF  = 22;                                 // iDMA Decoder DST_MAX_LOG_LEN field offset
-  parameter int unsigned DMA_SRC_MAX_LOG_LEN_OFF  = 19;                                 // iDMA Decoder SRC_MAX_LOG_LEN field offset
-  parameter int unsigned DMA_DST_REDUCE_LEN_OFF   = 18;                                 // iDMA Decoder DST_REDUCE_LEN field offset
-  parameter int unsigned DMA_SRC_REDUCE_LEN_OFF   = 17;                                 // iDMA Decoder SRC_REDUCE_LEN field offset
-  parameter int unsigned DMA_DECOUPLE_R_W_OFF     = 16;                                 // iDMA Decoder DECOUPLE_R_W field offset
-  parameter int unsigned DMA_DECOUPLE_R_AW_OFF    = 15;                                 // iDMA Decoder DECOUPLE_R_AW field offset
-  parameter int unsigned DMA_DIRECTION_OFF        = 25;                                 // iDMA Decoder DIRECTION field offset
-  parameter int unsigned DMA_N_CFG_REG            = 10;                                 // iDMA Decoder number of configuration registers of the iDMA forntend: CONF, DST_ADDR, SRC_ADDR, LENGTH, DST_STRIDE_2, SRC_STRIDE_2, REPS_2, DST_STRIDE_3, SRC_STRIDE_3, REPS_3
-  parameter int unsigned DMA_CONF_IDX             = 0;                                  // iDMA Decoder CONF cofiguration register index 
-  parameter int unsigned DMA_DST_ADDR_IDX         = 1;                                  // iDMA Decoder DST_ADDR cofiguration register index 
-  parameter int unsigned DMA_SRC_ADDR_IDX         = 2;                                  // iDMA Decoder SRC_ADDR cofiguration register index 
-  parameter int unsigned DMA_LENGTH_IDX           = 3;                                  // iDMA Decoder LENGTH cofiguration register index 
-  parameter int unsigned DMA_DST_STRIDE_2_IDX     = 4;                                  // iDMA Decoder DST_STRIDE_2 cofiguration register index 
-  parameter int unsigned DMA_SRC_STRIDE_2_IDX     = 5;                                  // iDMA Decoder SRC_STRIDE_2 cofiguration register index 
-  parameter int unsigned DMA_REPS_2_IDX           = 6;                                  // iDMA Decoder REPS_2 configuration register index
-  parameter int unsigned DMA_DST_STRIDE_3_IDX     = 7;                                  // iDMA Decoder DST_STRIDE_3 cofiguration register index 
-  parameter int unsigned DMA_SRC_STRIDE_3_IDX     = 8;                                  // iDMA Decoder SRC_STRIDE_3 cofiguration register index 
-  parameter int unsigned DMA_REPS_3_IDX           = 9;                                  // iDMA Decoder REPS_3 configuration register index
-  parameter logic[DMA_OPCODE_W-1:0] CONF_OPCODE   = 7'b101_1011;                        // iDMA Decoder CONF instruction OPCODE
-  parameter logic[ DMA_FUNC3_W-1:0] CONF_FUNC3    = 3'b000;                             // iDMA Decoder CONF instruction FUNC3
-  parameter logic[DMA_OPCODE_W-1:0] SET_OPCODE    = 7'b111_1011;                        // iDMA Decoder SET (ADDR/LEN, STD_2/REP_2, STD_3/REP_3, START) instruction OPCODE
-  parameter logic[ DMA_FUNC3_W-1:0] SET_AL_FUNC3  = 3'b000;                             // iDMA Decoder ADDR/LEN instruction FUNC3
-  parameter logic[ DMA_FUNC3_W-1:0] SET_SR2_FUNC3 = 3'b001;                             // iDMA Decoder STD_2/REP_2 instruction FUNC3
-  parameter logic[ DMA_FUNC3_W-1:0] SET_SR3_FUNC3 = 3'b010;                             // iDMA Decoder STD_3/REP_3 instruction FUNC3
-  parameter logic[ DMA_FUNC3_W-1:0] SET_S_FUNC3   = 3'b111;                             // iDMA Decoder START instruction FUNC3
-
-  // Parameters used by the Fractal Sync instruction decoder
-  parameter int unsigned FSYNC_INSTR_W             = magia_pkg::INSTR_W;                // Fractal Sync Decoder instruction width
-  parameter int unsigned FSYNC_DATA_W              = magia_pkg::DATA_W;                 // Fractal Sync Decoder data width
-  parameter int unsigned FSYNC_ADDR_W              = magia_pkg::ADDR_W;                 // Fractal Sync Decoder address width
-  parameter int unsigned FSYNC_N_RF_PORTS          = X_NUM_RS;                          // Fractal Sync Decoder number of register file read ports
-  parameter int unsigned FSYNC_OPCODE_W            = OPCODE_W;                          // Fractal Sync Decoder OPCODE field width
-  parameter int unsigned FSYNC_FUNC3_W             = FUNC3_W;                           // Fractal Sync Decoder FUNC3 field width
-  parameter int unsigned FSYNC_OPCODE_OFF          = OPCODE_OFF;                        // Fractal Sync Decoder OPCODE field offset
-  parameter int unsigned FSYNC_FUNC3_OFF           = FUNC3_OFF;                         // Fractal Sync Decoder FUNC3 field offset
-  parameter int unsigned FSYNC_N_CFG_REG           = 2;                                 // Fractal Sync Decoder number of configuration registers: AGGR, ID
-  parameter int unsigned FSYNC_AGGR_IDX            = 0;                                 // Fractal Sync Decoder AGGR cofiguration register index 
-  parameter int unsigned FSYNC_ID_IDX              = 1;                                 // Fractal Sync Decoder ID cofiguration register index 
-  parameter logic[FSYNC_OPCODE_W-1:0] FSYNC_OPCODE = 7'b101_1011;                       // Fractal Sync Decoder instruction OPCODE
-  parameter logic[ FSYNC_FUNC3_W-1:0] FSYNC_FUNC3  = 3'b010;                            // Fractal Sync Decoder instruction FUNC3
+  // Parameters used by Fractal Sync (memory-mapped interface)
   parameter int unsigned FSYNC_AGGR_W              = magia_pkg::TILE_FSYNC_AGGR_W;      // Fractal Sync Aggr. width for non-neighbor nodes
   parameter int unsigned FSYNC_LVL_W               = magia_pkg::TILE_FSYNC_LVL_W;       // Fractal Sync Level width for non-neighbor nodes
   parameter int unsigned FSYNC_ID_W                = magia_pkg::TILE_FSYNC_ID_W;        // Fractal Sync Id width for non-neighbor nodes
@@ -624,16 +540,6 @@ package magia_tile_pkg;
     logic[NR_FETCH_PORTS-1:0]               rerror;
   } core_cache_instr_rsp_t;
 
-`ifdef CV32E40X
-  typedef enum logic[2:0]{
-    OBI_XBAR_STACK_IDX         = 5,
-    OBI_XBAR_TILE_CSR_IDX      = 4,
-    OBI_XBAR_EVENT_UNIT_IDX    = 3,
-    OBI_XBAR_RESERVED_IDX      = 2,
-    OBI_XBAR_L1SPM_IDX         = 1,
-    OBI_XBAR_L2_IDX            = 0
-  } obi_mem_array_idx_e;
-`else
   typedef enum logic[3:0]{
     OBI_XBAR_STACK_IDX         = 8,
     OBI_XBAR_RESERVED_IDX      = 7,
@@ -645,7 +551,6 @@ package magia_tile_pkg;
     OBI_XBAR_L1SPM_IDX         = 1,
     OBI_XBAR_L2_IDX            = 0
   } obi_mem_array_idx_e;
-`endif
 
   typedef enum logic[2:0]{
     AXI_XBAR_STACK_IDX    = 4,
@@ -670,9 +575,6 @@ package magia_tile_pkg;
     AXI_MST_BOOTROM_IDX = 2
   } axi_xbar_mst_idx_e;
 
-  typedef struct packed {
-    logic[N_SIGN-1:0][SIGN_W-1:0] sign_list;
-  } xif_inst_rule_t;
 
   typedef logic[iDMA_AddrWidth-1:0] idma_addr_t;
 

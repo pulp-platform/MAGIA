@@ -46,16 +46,7 @@ ifeq ($(core), CV32E40X)
   ISA = riscv
   ABI            ?= ilp
   XABI           ?= f
-else ifeq ($(core), RI5CY)
-  XTEN = imcxgap9
-  ISA  = riscv
-  ABI            ?= ilp
-  XABI           ?=
 else
-  # CV32E40P configured with ZFINX=1 in RTL: FP ops use the GPRs (no F register
-  # file). Toolchain must therefore use Zfinx (and Zhinxmin for FP16) and the
-  # plain ilp32 ABI; using `f` in march or ilp32f ABI would emit instructions
-  # that target the (non-existent) F regs.
   XTEN = imc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfinx_zhinxmin
   ISA = cv32e40p
   ABI            ?= ilp
@@ -130,9 +121,6 @@ ifeq ($(core), CV32E40P)
   FLAGS += -DCV32E40P
 endif
 
-ifeq ($(core), RI5CY)
-  FLAGS += -DRI5CY
-endif
 
 # Include directories
 INC += -Isw
@@ -232,11 +220,14 @@ spatz-header:
 # Build PULP cluster binary (magia-sdk style): produces
 #   sw/kernel_pulp/headers_bin/<test>_pulp_task_bin.h
 # embedding the position-independent flat binary in section .pulp_binary.
+# PULP cluster cores are always CV32E40P (see magia_tile.sv), independent of
+# which core is selected for the control core via $(core) — so core=CV32E40P
+# is hardcoded here rather than forwarding $(core).
 .PHONY: pulp-header
 pulp-header:
 	@if [ -n "$(PULP_TASKS)" ]; then \
 		echo "[PULP] Auto-detected tasks: $(PULP_TASKS)"; \
-		$(MAKE) -C $(PULP_SW_DIR) TEST_NAME=$(test) task="$(PULP_TASKS)" PULP_TASK_DIR=$(ROOT_DIR)/$(PULP_TASK_DIR_PATH) core=$(core) all; \
+		$(MAKE) -C $(PULP_SW_DIR) TEST_NAME=$(test) task="$(PULP_TASKS)" PULP_TASK_DIR=$(ROOT_DIR)/$(PULP_TASK_DIR_PATH) core=CV32E40P all; \
 	else \
 		echo "[PULP] No pulp_task/ directory — skipping PULP cluster compilation"; \
 	fi
@@ -361,18 +352,13 @@ ifeq ($(core), CV32E40X)
   bender_defs += -D CV32E40X
 else ifeq ($(core), CV32E40P)
   bender_defs += -D CV32E40P
-else ifeq ($(core), RI5CY)
-  bender_defs += -D RI5CY
 else
-  $(error Detected unsupported core, must choose among CV32E40X, CV32E40P and RI5CY)
+  $(error Detected unsupported core, must choose among CV32E40X or CV32E40P )
 endif
 
 bender_targs += -t rtl
 bender_targs += -t test
-ifeq ($(core), CV32E40P)
 bender_targs += -t cv32e40p_include_tracer
-endif
-# RI5CY: riscv_*.sv compiled unconditionally by the PULP cv32e40p package, no extra bender target needed
 
 
 # Targets needed to avoid error even though the module is not used
@@ -428,18 +414,8 @@ bender_defs    += -D SPATZ_XDMA=$(SPATZ_XDMA)
 bender_defs    += -D SPATZ_RVF=$(SPATZ_RVF)
 bender_defs    += -D SPATZ_RVV=$(SPATZ_RVV)
 
-# RI5CY_CV32E40P_GIT / RI5CY_CV32E40P_REV: PULP repo override for core=RI5CY
-RI5CY_CV32E40P_GIT := https://github.com/pulp-platform/cv32e40p.git
-RI5CY_CV32E40P_REV := f5241403d5d65dbe1fffacd7035dd7ae1359c8ef
-CV32E40P_GIT      := https://github.com/FondazioneChipsIT/cv32e40p.git
-CV32E40P_REV      := 7e48663
 
 update-ips:
-ifeq ($(core), RI5CY)
-	@sed -i 's|^  cv32e40p .*|  cv32e40p           : { git: "$(RI5CY_CV32E40P_GIT)"          , rev: $(RI5CY_CV32E40P_REV) } # RI5CY branch: lb/magia_core|' Bender.local
-else
-	@sed -i 's|^  cv32e40p .*|  cv32e40p           : { git: "$(CV32E40P_GIT)"      , rev: $(CV32E40P_REV) } # branch: ng/pulp_cluster|' Bender.local
-endif
 	$(BENDER) update
 	$(BENDER) script vsim          \
 	--vlog-arg="$(compile_flag)"   \
