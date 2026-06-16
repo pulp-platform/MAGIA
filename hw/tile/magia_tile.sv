@@ -429,6 +429,9 @@ module magia_tile
   magia_tile_pkg::core_instr_rsp_t       [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_instr_rsp;
   logic                                  [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_fetch_enable;
   logic                                  [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_core_sleep;
+`ifdef RI5CY
+  logic                                  [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_core_busy; // RI5CY cluster: core_busy_o intermediate
+`endif
   logic                                                                        cluster_done;
   // Per-core dispatch IRQ pulse from tile_csr. CV32E40P IRQ inputs are level
   // sensitive, so the pulse is stretched until the worker acknowledges MEI.
@@ -1238,7 +1241,7 @@ module magia_tile
     .PMA_CFG          (                                 ),    // No array of PMA configurations
     .CLIC             ( magia_tile_pkg::CLIC_EN         ),    // Support for Smclic, Smclicshv and Smclicconfig
     .CLIC_ID_WIDTH    ( magia_tile_pkg::CLIC_ID_W       )     // Width of clic_irq_id_i and clic_irq_id_o
-  ) i_cv32e40x_core (
+  ) i_cv32e40x_main_core (
     // Clock and reset
     .clk_i               ( sys_clk                ),
     .rst_ni              ( rst_ni                 ),
@@ -1317,6 +1320,100 @@ module magia_tile
     .core_sleep_o                                  ,
     .wu_wfe_i            
   );
+`elsif RI5CY
+  riscv_core #(
+    .N_EXT_PERF_COUNTERS ( magia_tile_pkg::N_EXT_PERF_COUNTERS ),
+    .INSTR_RDATA_WIDTH   ( magia_tile_pkg::INSTR_RDATA_WIDTH   ),
+    .PULP_SECURE         ( magia_tile_pkg::PULP_SECURE         ),
+    .N_PMP_ENTRIES       ( magia_tile_pkg::N_PMP_ENTRIES       ),
+    .USE_PMP             ( magia_tile_pkg::USE_PMP             ),
+    .PULP_CLUSTER        ( magia_tile_pkg::PULP_CLUSTER        ),
+    .FPU                 ( magia_tile_pkg::FPU                 ),
+    .Zfinx               ( magia_tile_pkg::ZFINX               ),
+    .FP_DIVSQRT          ( magia_tile_pkg::FP_DIVSQRT          ),
+    .SHARED_FP           ( magia_tile_pkg::SHARED_FP           ),
+    .SHARED_DSP_MULT     ( magia_tile_pkg::SHARED_DSP_MULT     ),
+    .SHARED_INT_MULT     ( magia_tile_pkg::SHARED_INT_MULT     ),
+    .SHARED_INT_DIV      ( magia_tile_pkg::SHARED_INT_DIV      ),
+    .SHARED_FP_DIVSQRT   ( magia_tile_pkg::SHARED_FP_DIVSQRT   ),
+    .WAPUTYPE            ( magia_tile_pkg::WAPUTYPE            ),
+    .APU_NARGS_CPU       ( magia_tile_pkg::APU_NARGS_CPU       ),
+    .APU_WOP_CPU         ( magia_tile_pkg::APU_WOP_CPU         ),
+    .APU_NDSFLAGS_CPU    ( magia_tile_pkg::APU_NDSFLAGS_CPU    ),
+    .APU_NUSFLAGS_CPU    ( magia_tile_pkg::APU_NUSFLAGS_CPU    ),
+    .DM_HaltAddress      ( magia_tile_pkg::DM_HALT_ADDR        )
+  ) i_ri5cy_main_core (
+    // Clock and Reset
+    .clk_i                  ( core_clk              ),  // Use gated clock for core
+    .rst_ni                 ( rst_ni                ),
+    
+    // Clock enable and test mode
+    .clock_en_i             ( sys_clk_en            ),
+    .test_en_i              ( test_mode_i           ),
+    
+    // Floating-point register file disable (for Zfinx)
+    .fregfile_disable_i     ( 1'b0                  ), // FPU enabled, use dedicated FP regfile
+    
+    // Boot configuration
+    .boot_addr_i            ( boot_addr_i           ),
+
+    // Cluster/Core IDs
+    .cluster_id_i           ( '0                    ), 
+    .core_id_i              ( mhartid_i[3:0]        ), 
+
+    // Instruction memory interface
+    .instr_req_o            ( core_instr_req.req    ),
+    .instr_gnt_i            ( core_instr_rsp.gnt    ),
+    .instr_rvalid_i         ( core_instr_rsp.rvalid ),
+    .instr_addr_o           ( core_instr_req.addr   ),
+    .instr_rdata_i          ( core_instr_rsp.rdata  ),
+    
+    // Data memory interface  
+    .data_req_o             ( core_data_req.req     ),
+    .data_gnt_i             ( core_data_rsp.gnt     ),
+    .data_rvalid_i          ( core_data_rsp.rvalid  ),
+    .data_addr_o            ( core_data_req.addr    ),
+    .data_be_o              ( core_data_req.be      ),
+    .data_wdata_o           ( core_data_req.wdata   ),
+    .data_we_o              ( core_data_req.we      ),
+    .data_rdata_i           ( core_data_rsp.rdata   ),
+
+    // APU interface (disabled - not connected)
+    .apu_master_req_o       (                       ),
+    .apu_master_ready_o     (                       ),
+    .apu_master_gnt_i       ( '0                    ),
+    
+    .apu_master_operands_o  (                       ),
+    .apu_master_op_o        (                       ),
+    .apu_master_type_o      (                       ),
+    .apu_master_flags_o     (                       ),
+
+    .apu_master_valid_i     ( '0                    ),
+    .apu_master_result_i    ( '0                    ),
+    .apu_master_flags_i     ( '0                    ),
+    
+    // Interrupts
+    .irq_i                  ( eu_core_irq_req[0]    ),
+    .irq_id_i               ( '0                    ), 
+    .irq_ack_o              ( eu_core_irq_ack[0]    ),
+    .irq_id_o               ( eu_core_irq_ack_id[0] ),
+    .irq_sec_i              ( '0                    ),
+
+    // Security level (unused)
+    .sec_lvl_o              (                       ),
+    
+    // Debug interface
+    .debug_req_i            ( debug_req_i[0]         ),
+    
+    // CPU control
+    .fetch_enable_i         ( fetch_enable_i        ),
+    .core_busy_o            ( core_busy_o           ),
+    
+
+    // Performance counters
+    .ext_perf_counters_i    ( '0                    )
+  );
+
 `else
 `ifndef CORE_TRACES
   cv32e40p_top #(
@@ -1330,7 +1427,7 @@ module magia_tile
     .FPU_ADDMUL_LAT      ( 1                                   ), // Match C_LAT_FP32=1 in fpnew wrapper
     .FPU_OTHERS_LAT      ( 1                                   ), // Match C_LAT_NONCOMP=1 in fpnew wrapper
     .NUM_MHPMCOUNTERS    ( 29                                  )
-  ) i_cv32e40p_core (
+  ) i_cv32e40p_main_core (
     // Clock and Reset
     .clk_i                  ( core_clk              ),  // Use gated clock for core
     .rst_ni                 ( rst_ni                ),
@@ -1362,6 +1459,7 @@ module magia_tile
     .irq_i                  ( core_irq_vec[0]       ),
     .irq_ack_o              ( eu_core_irq_ack[0]    ),
     .irq_id_o               ( eu_core_irq_ack_id[0] ),
+    .irq_id_i               ( '0                    ), 
     // Debug interface
     .debug_req_i            ( debug_req_i[0]           ),
     // CPU control
@@ -2105,6 +2203,10 @@ module magia_tile
       assign eu_core_irq_ack_id[i+1] = '0;
     end
   endgenerate
+`ifdef RI5CY
+  // RI5CY outputs core_busy_o (active-high: 1 = busy); derive core_sleep_o (active-high: 1 = sleeping)
+  assign core_sleep_o = ~core_busy_o;
+`endif
 `endif
   
  magia_event_unit #(
@@ -2339,7 +2441,13 @@ always_ff @(posedge sys_clk or negedge rst_ni) begin
     cluster_start_irq_pending <= '0;
   end else begin
     for (int unsigned i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin
-      if (cluster_irq_ack[i] && cluster_irq_id[i] == 5'd11) begin
+      // Clear on any ack: cluster cores have exactly one IRQ source (the
+      // dispatch pulse), so irq_ack always refers to that source.
+      // CV32E40P acks with irq_id_o=11 (MEI, from priority encoder on irq_i[31:0]).
+      // RI5CY   acks with irq_id_o=0  (reflects irq_id_i which is tied to '0).
+      // Checking irq_id==11 would never fire for RI5CY, leaving pending stuck
+      // HIGH and causing repeated trap-handler re-entry after every mret.
+      if (cluster_irq_ack[i]) begin
         cluster_start_irq_pending[i] <= 1'b0;
       end else if (cluster_start_irq[i]) begin
         cluster_start_irq_pending[i] <= 1'b1;
@@ -2356,6 +2464,105 @@ end
 
 generate
   for (genvar i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin : CORE
+    `ifdef RI5CY
+      // RI5CY core with integrated FPU and tracer
+      // cluster_id_i identifies WHICH cluster (= tile), same for all cores in a tile.
+      // core_id_i    identifies WHICH core within the cluster (0-indexed).
+      // Use mhartid_i+1 for cluster_id so tile-0 cluster cores never get 0 (0 = standalone main core).
+      riscv_core #(
+        .N_EXT_PERF_COUNTERS ( magia_tile_pkg::N_EXT_PERF_COUNTERS ),
+        .INSTR_RDATA_WIDTH   ( magia_tile_pkg::INSTR_RDATA_WIDTH   ),
+        .PULP_SECURE         ( magia_tile_pkg::PULP_SECURE         ),
+        .N_PMP_ENTRIES       ( magia_tile_pkg::N_PMP_ENTRIES       ),
+        .USE_PMP             ( magia_tile_pkg::USE_PMP             ),
+        .PULP_CLUSTER        ( magia_tile_pkg::PULP_CLUSTER        ),
+        .FPU                 ( magia_tile_pkg::FPU                 ),
+        .Zfinx               ( magia_tile_pkg::ZFINX               ),
+        .FP_DIVSQRT          ( magia_tile_pkg::FP_DIVSQRT          ),
+        .SHARED_FP           ( magia_tile_pkg::SHARED_FP           ),
+        .SHARED_DSP_MULT     ( magia_tile_pkg::SHARED_DSP_MULT     ),
+        .SHARED_INT_MULT     ( magia_tile_pkg::SHARED_INT_MULT     ),
+        .SHARED_INT_DIV      ( magia_tile_pkg::SHARED_INT_DIV      ),
+        .SHARED_FP_DIVSQRT   ( magia_tile_pkg::SHARED_FP_DIVSQRT   ),
+        .WAPUTYPE            ( magia_tile_pkg::WAPUTYPE            ),
+        .APU_NARGS_CPU       ( magia_tile_pkg::APU_NARGS_CPU       ),
+        .APU_WOP_CPU         ( magia_tile_pkg::APU_WOP_CPU         ),
+        .APU_NDSFLAGS_CPU    ( magia_tile_pkg::APU_NDSFLAGS_CPU    ),
+        .APU_NUSFLAGS_CPU    ( magia_tile_pkg::APU_NUSFLAGS_CPU    ),
+        .DM_HaltAddress      ( magia_tile_pkg::DM_HALT_ADDR        )
+      ) i_RI5CY_core (
+        // Clock and Reset
+        .clk_i                  ( cluster_clk[i]              ),  // Always-on per-core cluster clock (NOT the EU-gated main-core clock)
+        .rst_ni                 ( rst_ni                       ),
+        
+        // Clock enable and test mode
+        .clock_en_i             ( sys_clk_en                  ),
+        .test_en_i              ( test_mode_i                 ),
+        
+        // Floating-point register file disable (for Zfinx)
+        .fregfile_disable_i     ( 1'b0                        ), // FPU enabled, use dedicated FP regfile
+        
+        // Boot configuration
+        .boot_addr_i            ( cluster_boot_addr[i]        ),
+
+        // Cluster/Core IDs
+        .cluster_id_i           ( 6'(mhartid_i) + 6'd1        ),  // which cluster (tile+1, 1-indexed)
+        .core_id_i              ( 4'(i)                        ),  // which core within the cluster
+
+        // Instruction memory interface
+        .instr_req_o            ( cluster_instr_req[i].req    ),
+        .instr_addr_o           ( cluster_instr_req[i].addr   ),
+        .instr_gnt_i            ( cluster_instr_rsp[i].gnt    ),
+        .instr_rvalid_i         ( cluster_instr_rsp[i].rvalid ),
+        .instr_rdata_i          ( cluster_instr_rsp[i].rdata  ),
+        
+        // Data memory interface  
+        .data_req_o             ( cluster_data_req[i].req     ),
+        .data_addr_o            ( cluster_data_req[i].addr    ),
+        .data_be_o              ( cluster_data_req[i].be      ),
+        .data_wdata_o           ( cluster_data_req[i].wdata   ),
+        .data_we_o              ( cluster_data_req[i].we      ),
+        .data_gnt_i             ( cluster_data_rsp[i].gnt     ),
+        .data_rvalid_i          ( cluster_data_rsp[i].rvalid  ),
+        .data_rdata_i           ( cluster_data_rsp[i].rdata   ),
+
+        // APU interface (disabled - not connected)
+        .apu_master_req_o       (                             ),
+        .apu_master_ready_o     (                             ),
+        .apu_master_gnt_i       ( '0                          ),
+        
+        .apu_master_operands_o  (                             ),
+        .apu_master_op_o        (                             ),
+        .apu_master_type_o      (                             ),
+        .apu_master_flags_o     (                             ),
+
+        .apu_master_valid_i     ( '0                          ),
+        .apu_master_result_i    ( '0                          ),
+        .apu_master_flags_i     ( '0                          ),
+        
+        // Interrupts
+        .irq_i                  ( cluster_start_irq_pending[i] ),
+        .irq_ack_o              ( cluster_irq_ack[i]          ),
+        .irq_id_o               ( cluster_irq_id[i]           ),
+        .irq_sec_i              ( '0                          ),
+        .irq_id_i               ( '0                          ),
+
+        // Security level (unused)
+        .sec_lvl_o              (                             ),
+        
+        // Debug interface
+        .debug_req_i            ( debug_req_i[i+1]            ),
+        
+        // CPU control
+        .fetch_enable_i         ( cluster_fetch_enable[i]     ),
+        .core_busy_o            ( cluster_core_busy[i]    ),
+        
+
+        // Performance counters
+        .ext_perf_counters_i    ( '0                          )
+      );
+      assign cluster_core_sleep[i] = ~cluster_core_busy[i]; // RI5CY: core_busy_o is active-high; derive core_sleep (active-high)
+    `else
     `ifndef CORE_TRACES
       cv32e40p_top #(
     `else
@@ -2408,7 +2615,7 @@ generate
         .fetch_enable_i         ( cluster_fetch_enable[i]             ),
         .core_sleep_o           ( cluster_core_sleep[i]               )
       );
-
+    `endif
   end
 endgenerate
 

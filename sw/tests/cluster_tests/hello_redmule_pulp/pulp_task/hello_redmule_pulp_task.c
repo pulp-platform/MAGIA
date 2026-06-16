@@ -53,6 +53,7 @@
 
 #include "magia_tile_utils.h"
 #include "redmule_mm_utils.h"
+#include "magia_utils.h"
 
 /* NOTE: we deliberately DO NOT include x_input.h / w_input.h /
    y_input.h here. Those headers define large `const uint16_t` arrays
@@ -85,11 +86,6 @@
    reached the kernel. */
 #define MARKER_BASE  (L2_BASE + 0x00050000)
 
-static inline uint32_t get_mhartid(void) {
-    uint32_t id;
-    asm volatile("csrr %0, mhartid" : "=r"(id));
-    return id;
-}
 
 /* Enable the FPU on this hart: set mstatus.FS to INITIAL (01). Without
    this any FPU instruction faults. RedMulE's hwpe-mac-engine itself
@@ -137,7 +133,7 @@ void hello_redmule_pulp_task(void *data) {
     (void)data;
     enable_fpu();
 
-    uint32_t hartid   = get_mhartid();
+    uint32_t hartid   = get_hartid();
     uint32_t pulp_gid = hartid - PULP_HARTID_BASE;     /* 0..127 */
     uint32_t local_id = pulp_gid % PULP_CORE_COUNT;    /* 0..7 within tile */
     uint32_t tile_id  = pulp_gid / PULP_CORE_COUNT;    /* 0..15 across mesh */

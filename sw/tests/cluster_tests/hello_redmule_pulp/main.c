@@ -66,12 +66,6 @@
    L1 addressing (see pulp_task/hello_redmule_pulp_task.c). */
 #define Y_BIAS_BACKUP_BASE (L1_BASE + 0x0001B048)
 
-static inline uint32_t get_mhartid(void) {
-  uint32_t id;
-  asm volatile("csrr %0, mhartid" : "=r"(id));
-  return id;
-}
-
 /* Enable the FPU: set mstatus.FS to INITIAL (01).
  * Without this any FPU instruction faults. CV32E40P (and the cluster
  * cores) need this even though FP is enabled at compile time. */

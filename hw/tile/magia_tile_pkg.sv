@@ -268,7 +268,7 @@ package magia_tile_pkg;
   // Parameters used by cv32e40p core
   parameter int unsigned N_EXT_PERF_COUNTERS = 0;                                       // Number of external performance counters
   parameter int unsigned INSTR_RDATA_WIDTH   = 32;                                      // Instruction data width  
-  parameter bit          PULP_SECURE         = 1'b0;                                    // PULP security features
+  parameter bit          PULP_SECURE         = 1'b1;                                        // PULP security features (must be 1 for writable mtvec; PULP_SECURE=0 hardwires mtvec_q to boot_addr_i)
   parameter int unsigned N_PMP_ENTRIES       = 16;                                      // Number of PMP entries
   parameter bit          USE_PMP             = 1'b1;                                    // Enable PMP
   parameter bit          PULP_CLUSTER        = 1'b1;                                    // PULP cluster mode

@@ -14,8 +14,8 @@ export PATH=/usr/pack/gcc-5.2.0-af/x86_64-rhe6-linux/bin:$PATH
 export PATH=/usr/local/anaconda3-2023.07/condabin:$PATH
 export PATH=/home/visachi/.local/bin:$PATH
 export XLEN=32
-if [[ "$core" == "CV32E40P" ]]; then
-  echo "Exporting ISA extentions: I, M, C, GAP9"
+if [[ "$core" == "CV32E40P" ]] || [[ "$core" == "RI5CY" ]]; then
+  echo "Exporting ISA extentions: I, M, C, PULP"
   export XTEN=imfc
 else
   echo "Exporting ISA extentions: I, M, A, F, C"

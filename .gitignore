@@ -36,3 +36,9 @@ spatz/sw/bin/*.dump
 spatz/sw/bin/*.o
 
 spatz/sw/headers_bin/*.h
+
+sw/kernel_pulp/bin/
+sw/kernel_pulp/headers_bin/
+
+*.wlf
+*.dbg

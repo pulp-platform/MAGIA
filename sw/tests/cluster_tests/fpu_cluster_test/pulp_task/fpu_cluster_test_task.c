@@ -50,7 +50,7 @@
 
 #define abs_diff(x, y) (((x) > (y)) ? ((x) - (y)) : ((y) - (x)))
 
-static inline uint32_t get_mhartid(void) {
+static inline uint32_t get_hartid(void) {
     uint32_t id;
     asm volatile("csrr %0, mhartid" : "=r"(id));
     return id;
@@ -69,7 +69,7 @@ void fpu_cluster_test_task(void *data) {
     (void)data;
     enable_fpu();
 
-    uint32_t hartid   = get_mhartid();
+    uint32_t hartid   = get_hartid();
     uint32_t pulp_gid = hartid - PULP_HARTID_BASE;  /* 0..127 */
     uint32_t local_id = pulp_gid % PULP_CORE_COUNT;  /* 0..7 */
 

@@ -33,17 +33,24 @@ ifneq (,$(wildcard /etc/iis.version))
     BASE_PYTHON ?= python
 else
     QUESTA ?=
-    BENDER ?= ./bender
+    BENDER ?= bender
     BASE_PYTHON ?= python3
 endif
+
 BENDER_DIR     ?= .
 ARCH           ?= rv
 XLEN           ?= 32
+
 ifeq ($(core), CV32E40X)
   XTEN = imafc
   ISA = riscv
   ABI            ?= ilp
   XABI           ?= f
+else ifeq ($(core), RI5CY)
+  XTEN = imcxgap9
+  ISA  = riscv
+  ABI            ?= ilp
+  XABI           ?=
 else
   # CV32E40P configured with ZFINX=1 in RTL: FP ops use the GPRs (no F register
   # file). Toolchain must therefore use Zfinx (and Zhinxmin for FP16) and the
@@ -119,6 +126,10 @@ ifeq ($(core), CV32E40X)
   FLAGS += -DCV32E40X
 endif
 
+ifeq ($(core), RI5CY)
+  FLAGS += -DRI5CY
+endif
+
 # Include directories
 INC += -Isw
 INC += -Isw/inc
@@ -149,21 +160,21 @@ LINKSCRIPT := sw/kernel/link.ld
 
 PULP_SW_DIR := sw/kernel_pulp
 
-ifeq ($(core), CV32E40X)
-	CC=$(ISA)$(XLEN)-unknown-elf-gcc
+ifneq ($(core), CV32E40P)
+  CC=$(ISA)$(XLEN)-unknown-elf-gcc
   OBJDUMP=$(ISA)$(XLEN)-unknown-elf-objdump
   NM=$(ISA)$(XLEN)-unknown-elf-nm
 else
-	CC=riscv64-unknown-elf-gcc
+  CC=riscv64-unknown-elf-gcc
   OBJDUMP=riscv64-unknown-elf-objdump
   NM=riscv64-unknown-elf-nm
 endif
 LD=$(CC)
-ifeq ($(core), CV32E40X)
+ifneq ($(core), CV32E40P)
   CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
 	LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
 else
-	CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -U__riscv__ -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
+  CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -U__riscv__ -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
   LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -U__riscv__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
 endif
 
@@ -346,13 +357,18 @@ ifeq ($(core), CV32E40X)
   bender_defs += -D CV32E40X
 else ifeq ($(core), CV32E40P)
   bender_defs += -D CV32E40P
+else ifeq ($(core), RI5CY)
+  bender_defs += -D RI5CY
 else
-  $(error Detected unsupported core, must choose among CV32E40X and CV32E40P)
+  $(error Detected unsupported core, must choose among CV32E40X, CV32E40P and RI5CY)
 endif
 
 bender_targs += -t rtl
 bender_targs += -t test
+ifeq ($(core), CV32E40P)
 bender_targs += -t cv32e40p_include_tracer
+endif
+# RI5CY: riscv_*.sv compiled unconditionally by the PULP cv32e40p package, no extra bender target needed
 
 
 # Targets needed to avoid error even though the module is not used
@@ -408,7 +424,18 @@ bender_defs    += -D SPATZ_XDMA=$(SPATZ_XDMA)
 bender_defs    += -D SPATZ_RVF=$(SPATZ_RVF)
 bender_defs    += -D SPATZ_RVV=$(SPATZ_RVV)
 
+# RI5CY_CV32E40P_GIT / RI5CY_CV32E40P_REV: PULP repo override for core=RI5CY
+RI5CY_CV32E40P_GIT := https://github.com/pulp-platform/cv32e40p.git
+RI5CY_CV32E40P_REV := f5241403d5d65dbe1fffacd7035dd7ae1359c8ef
+CV32E40P_GIT      := https://github.com/FondazioneChipsIT/cv32e40p.git
+CV32E40P_REV      := 7e48663
+
 update-ips:
+ifeq ($(core), RI5CY)
+	@sed -i 's|^  cv32e40p .*|  cv32e40p           : { git: "$(RI5CY_CV32E40P_GIT)"          , rev: $(RI5CY_CV32E40P_REV) } # RI5CY branch: lb/magia_core|' Bender.local
+else
+	@sed -i 's|^  cv32e40p .*|  cv32e40p           : { git: "$(CV32E40P_GIT)"      , rev: $(CV32E40P_REV) } # branch: ng/pulp_cluster|' Bender.local
+endif
 	$(BENDER) update
 	$(BENDER) script vsim          \
 	--vlog-arg="$(compile_flag)"   \

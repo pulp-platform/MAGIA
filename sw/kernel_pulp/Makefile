@@ -36,6 +36,13 @@ ifeq ($(core), CV32E40X)
   OBJDUMP = $(ISA)$(XLEN)-unknown-elf-objdump
   XABI :=f
   ABI  := ilp
+else ifeq ($(core), RI5CY)
+  XTEN := imcxgap9
+  CC      = riscv$(XLEN)-unknown-elf-gcc
+  OBJCOPY = riscv$(XLEN)-unknown-elf-objcopy
+  OBJDUMP = riscv$(XLEN)-unknown-elf-objdump
+  XABI :=
+  ABI  := ilp
 else
   # CV32E40P with ZFINX=1 (FP ops on GPRs) — see top Makefile.
   XTEN := imc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfinx_zhinxmin
@@ -62,14 +69,20 @@ CFLAGS     = $(ARCH_FLAGS) -O2 -g -Wall -Wextra -Wno-unused-parameter \
              -Wno-unused-variable -Wno-unused-function -Wundef \
              -ffunction-sections -fdata-sections \
              -fPIC -mcmodel=medany \
-             -msmall-data-limit=0 -mno-relax \
+             -msmall-data-limit=0 \
              -nostartfiles -nostdlib \
              -DPULP_CORE_COUNT=$(PULP_CORE_COUNT) \
              -D$(core) -U__riscv__
 CFLAGS    += -I../utils -I../../hw/include -I.
+# RI5CY toolchain (riscv32-unknown-elf-gcc / gap9 binutils) uses an older
+# assembler that does not recognise the 3-operand FLW pseudo-instruction
+# `flw rd, symbol, rt` emitted by newer gcc when rv32*f* is in the march.
+# -mexplicit-relocs forces gcc to emit lui+flw(%hi/%lo) instead.
+ifeq ($(core), RI5CY)
+CFLAGS    += -mexplicit-relocs
+endif
 
 LDFLAGS   = $(ARCH_FLAGS) -nostartfiles -nostdlib \
-            -mno-relax \
             -Wl,--gc-sections -Wl,--allow-multiple-definition \
             -Wl,-T,$(KERNEL_DIR)/pulp_program.ld
 comma := ,

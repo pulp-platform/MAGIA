@@ -38,14 +38,14 @@
 #define FPU_RESULT_MAGIC (0xFEED0000u)
 #define FPU_RESULT_MASK  (0xFFFF0000u)
 
-static inline uint32_t get_mhartid(void) {
+static inline uint32_t get_hartid(void) {
     uint32_t hartid;
     asm volatile("csrr %0, mhartid" : "=r"(hartid));
     return hartid;
 }
 
 int main(void) {
-    int print_summary = (get_mhartid() == 0);
+    int print_summary = (get_hartid() == 0);
 
     /* Boot the PULP cluster cores into their dispatcher loop. */
     if (print_summary)
@@ -91,4 +91,5 @@ int main(void) {
     }
 
     return (int)total_errors;
+    
 }
