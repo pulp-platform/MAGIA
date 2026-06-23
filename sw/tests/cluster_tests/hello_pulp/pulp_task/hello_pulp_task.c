@@ -44,7 +44,6 @@ static inline uint32_t get_hartid(void) {
         //   core_id_i    = i                 (which core within the cluster, 0-indexed)
         uint32_t cluster_id = (hartid >> 5) & 0x3F;  // = tile_hartid + 1 (same for all cores in a tile)
         uint32_t core_id    = hartid & 0xF;           // = i (unique per core within tile)
-        //printf ("%d\n",PULP_HARTID_BASE + (cluster_id - 1) * PULP_CORE_COUNT + core_id);
         if (cluster_id == 0)
             return core_id;  // standalone main tile core
         return PULP_HARTID_BASE + (cluster_id - 1) * PULP_CORE_COUNT + core_id;

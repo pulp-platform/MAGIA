@@ -18,54 +18,18 @@
  */
 
 /*
- * hello_redmule_pulp - PULP cluster-core task.
- *
- * Linked as a position-independent embedded PULP binary. The CV32 boots the
- * cluster into crt0's dispatcher loop, then dispatches this task by writing
- * PULP_NB_CORES_TO_WAIT, PULP_TASKBIN and PULP_START.
- *
- * Concurrency model:
- *
- *   - All 8 cluster cores try to ACQUIRE the RedMulE HWPE in parallel.
- *     RedMulE's REDMULE_ACQUIRE register returns >=0 to exactly ONE
- *     core at a time (HWPE-internal arbitration). The losers see -1
- *     and spin.
- *
- *   - The winner programs RedMulE (mcfg + base addresses), triggers the job,
- *     then polls RedMulE STATUS via MMIO. Cluster cores intentionally do not
- *     use the Event Unit direct link.
- *
- *   - When the winner sees STATUS clear, the HWPE auto-clears and the next
- *     acquire winner runs. Repeat 8 times.
- *
- *   - Each cluster core writes a small marker in L2 with its hartid so
- *     we can confirm in the trace that all 8 actually ran the kernel.
- *
- * crt0 writes 1 to PULP_DONE when the task returns; after all selected cores
- * report done, the tile CSR emits EU bit 12 and wakes the CV32 main core.
- *
- * NOTE: every cluster core runs the SAME matmul on the SAME shared X/W
- * inputs, but each writes its result into its OWN PRIVATE Y slot
- * (Y_BASE + local_id*Y_STRIDE). No two cores ever touch the same word,
- * so the result is deterministic regardless of timing. The CV32 main
- * pre-loads every Y slot with the y_inp bias before dispatch and, after
- * PULP_DONE, verifies every slot == Z.
+ * hello_redmule_pulp — PULP cluster task (PIC, ORIGIN=0).
+ * All 8 cores serialize on hwpe_acquire_job(); the winner programs RedMulE
+ * and polls STATUS. Each core writes into its own Y slot (Y_BASE + id*Y_STRIDE)
+ * so there is no shared-buffer race. crt0 writes PULP_DONE on return.
  */
 
 #include "magia_tile_utils.h"
 #include "redmule_mm_utils.h"
 #include "magia_utils.h"
 
-/* NOTE: we deliberately DO NOT include x_input.h / w_input.h /
-   y_input.h here. Those headers define large `const uint16_t` arrays
-   that would land in this PULP binary's .rodata/.data. Because the
-   binary is linked with ORIGIN=0 and embedded into the CV32 ELF at
-   runtime, GCC materializes the symbol addresses as their link-time
-   absolute values (e.g. y_inp -> 0x6f4), which at runtime falls
-   inside the tile's MMIO region (0x700+ = Event Unit) and hangs the
-   core on a fake sleep register. All operand buffers are pre-loaded
-   by the CV32 main into L1 SPM and we reach them through absolute
-   addresses (X_BASE, W_BASE, Y_BASE). */
+/* Do NOT include x_input.h/w_input.h/y_input.h: with ORIGIN=0 their symbol
+   addresses alias tile MMIO at runtime. Use X_BASE/W_BASE/Y_BASE instead. */
 
 /* Same reduced size as main.c — must stay in sync. */
 #define M_SIZE   (1)
@@ -74,11 +38,6 @@
 
 #define X_BASE   (L1_BASE + 0x00012048)   /* shared, read-only */
 #define W_BASE   (L1_BASE + 0x00016048)   /* shared, read-only */
-/* PER-CORE output Y: each cluster core writes its OWN private slot at
-   Y_BASE + local_id*Y_STRIDE, so two cores never touch the same word ->
-   no cross-core race on the result buffer (deterministic). The CV32 main
-   pre-loads every slot with the y_inp bias before dispatch, so the cores
-   do NOT reload the bias themselves. MUST match Y_BASE/Y_STRIDE in main.c. */
 #define Y_BASE   (L1_BASE + 0x0001A048)
 #define Y_STRIDE (0x00001000)
 
@@ -86,20 +45,6 @@
    tile, 16 tiles -> 8*16 = 128 entries. Used only to prove every core
    reached the kernel. */
 #define MARKER_BASE  (L2_BASE + 0x00050000)
-
-
-/* Enable the FPU on this hart: set mstatus.FS to INITIAL (01). Without
-   this any FPU instruction faults. RedMulE's hwpe-mac-engine itself
-   does not need this (it's a separate HWPE), but the cluster core
-   may execute float register copies in libgcc helpers / printf, and
-   future tests may issue FP instructions directly. */
-static inline void enable_fpu(void) {
-    asm volatile (
-        "li t0, 0x2000\n"
-        "csrs mstatus, t0\n"
-        ::: "t0"
-    );
-}
 
 void hello_redmule_pulp_task(void *data) {
     (void)data;
@@ -119,26 +64,16 @@ void hello_redmule_pulp_task(void *data) {
         printf("[Tile %u PULP-%u mhartid %u] entering RedMulE contention\n",
             tile_id, local_id, hartid);
     }
-    /* HWPE acquire: ONE core at a time wins. Losers spin here.
-       NOTE: do NOT call hwpe_soft_clear inside this critical section,
-       it would release the HWPE and let another core grab it mid-job.
-       The CV32 main has already done cg_enable + soft_clear before
-       releasing the cluster, so the HWPE is in a clean state. */
+
     int job_id;
     while ((job_id = hwpe_acquire_job()) < 0)
         ;
 
-    /* Wait for the HWPE to be fully idle before (re)configuring it: the
-       previous winner may still have write-back beats in flight (STATUS
-       nonzero) even after it released the ACQUIRE lock. With per-core Y
-       slots those beats land in the PREVIOUS core's slot, not ours, so
-       they can't corrupt our result -- but we still wait so we never
-       reprogram the HWPE mid-write-back. */
+    // Wait for the HWPE to be fully idle before (re)configuring it
+
     while (hwpe_get_status() != 0);
     asm volatile("fence" ::: "memory");
 
-    /* This core's PRIVATE output slot. The CV32 main has already pre-loaded
-       it with the y_inp bias, so we just point RedMulE at it -- no reload. */
     uint32_t my_y = Y_BASE + local_id * Y_STRIDE;
 
     redmule_cfg((unsigned)X_BASE, (unsigned)W_BASE, (unsigned)my_y,

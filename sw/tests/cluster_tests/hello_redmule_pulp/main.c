@@ -18,28 +18,10 @@
  */
 
 /*
- * hello_redmule_pulp - main core (CV32) binary.
- *
- * Linked at 0xCC000000, run by the CV32 main core (mhartid 0..15).
- *
- * Demonstrates the SHARED-ACCELERATOR / MULTI-INITIATOR pattern with the
- * local bare-metal PULP dispatch model:
- *
- *   1) The CV32 main core loads X, W, Y in tile-local L1.
- *   2) The CV32 main core runs RedMulE once (sanity check), then waits
- *      for completion via Event Unit WFE (p.elw on its own EU slice).
- *   3) The CV32 main core re-loads Y (so the bias is fresh again),
- *      then boots the PULP cluster dispatcher and dispatches the task.
- *   4) Each PULP cluster core (see pulp_main.c) tries to ACQUIRE the
- *      RedMulE HWPE; the HWPE returns -1 if busy so the cluster cores
- *      naturally serialize. Whoever wins runs RedMulE on the same
- *      buffers and polls RedMulE STATUS via MMIO.
- *   5) When all 8 cluster cores have hit crt0 exit, PULP_DONE goes
- *      high; the CV32 main wakes from WFE (EU bit 12), verifies
- *      Y == Z (golden), prints and exits.
- *
- * This exercises the RTL fix that broadcasts redmule_evt[*]/redmule_busy
- * to every cluster core's EU slice (acc_events_array[i] for i=0..N).
+ * hello_redmule_pulp — CV32 main core entry point.
+ * CV32 runs RedMulE once (sanity check), then boots the PULP cluster
+ * and dispatches the task. Each cluster core GEMMs into its own private
+ * Y slot; CV32 verifies all 8 slots after PULP_DONE (EU bit 12).
  */
 
 #include <stdint.h>
@@ -81,12 +63,7 @@ static inline void enable_fpu(void) {
   );
 }
 
-/* Bulk-load an array from L2 (.rodata of the main ELF) into L1 via iDMA.
- * Same wait pattern as cluster cores use after RedMulE jobs:
- *   issue -> WFE -> on wake re-check the HW status, retry until clear.
- * The first WFE returns when A2O_DONE is asserted, the status check
- * confirms the back-end FIFO has truly drained before we let the
- * caller touch L1. */
+/* iDMA L2→L1 transfer: issue, WFE on A2O_DONE, re-poll until truly idle. */
 static inline void idma_load_l2_to_l1(uint32_t l2_src, uint32_t l1_dst, uint32_t size_bytes) {
   eu_clear_events(0xFFFFFFFF);
   eu_enable_events(EU_IDMA_A2O_DONE_MASK);
@@ -96,25 +73,17 @@ static inline void idma_load_l2_to_l1(uint32_t l2_src, uint32_t l1_dst, uint32_t
   } while (idma_mm_is_busy_dir(/*is_l1_to_l2=*/0, /*stream_id=*/0));
 }
 
-/* Reduced from 96 to 1 row. Two reasons: (1) it cuts simulation time,
- * and (2) it shrinks the SHARED Y buffer that all 8 cluster cores reload
- * and GEMM into (M*K words) to the minimum, so the per-word reload-vs-
- * write-back race window across cores is as small as possible.
- * The first M rows of the golden are independent of the others, so
- * z_oup[0..M*K-1] remains a valid reference for this subset.
- * N and K cannot be reduced: they are baked into the W matrix layout. */
+/* M=1 to keep simulation fast; N/K fixed by the W matrix layout. */
 #define M_SIZE  (1)
 #define N_SIZE  (64)
 #define K_SIZE  (64)
 
-#define VERBOSE (0)
 #define USE_WFE (1)
 #define DIFF_TH (0x0011)
 
 /* Helper: same body as redmule_test_event_unit.c::main, factored so we
    can call it once from the CV32 main and verify results. Returns
    number of mismatches. */
-static unsigned int redmule_run_and_verify(void) __attribute__((unused));
 static unsigned int redmule_run_and_verify(void) {
   /* Bulk-load X, W, Y for this tile via iDMA. All 16 tiles run this
      in parallel; cross-tile contention is handled the same way the
@@ -184,27 +153,12 @@ static unsigned int redmule_run_and_verify(void) {
 int main(void) {
   enable_fpu();
 
-  /* Step 1: CV32 main runs RedMulE once as a sanity check AND to leave
-     the HWPE in a fully-initialized state for the cluster cores.
-     Without an actual trigger+done cycle on the CV32 side, the cluster
-     cores read garbage (0xFFFFFFFE) from REDMULE_ACQUIRE and spin
-     forever in `while ((id = hwpe_acquire_job()) < 0)`.
-
-     This step also implicitly populates X, W, Y in this tile's L1 SPM
-     (via redmule_run_and_verify -> idma_load_l2_to_l1), so the cluster
-     cores have valid operands when they re-run the matmul.
-
-     NOTE: under mesh_dv=1 this used to race with iDMA on tiles 14/15;
-     if that regresses, gate the call with a mesh_dv check or revert
-     to soft_clear-only + extend the CV32-side hwpe_cg_enable to write
-     a real CG-enable register once one is exposed by the wrapper. */
+  /* Sanity-check run: also primes the HWPE so cluster cores don't read
+     garbage (0xFFFFFFFE) from REDMULE_ACQUIRE on first acquire. */
   unsigned int err_main = redmule_run_and_verify();
   printf("CV32 main RedMulE sanity-check: %0d errors\n", err_main);
 
-  /* Pre-load EVERY per-core Y slot with the y_inp bias. Each cluster core
-     then computes X*W + bias into its OWN slot, so there is no shared Y
-     buffer and no cross-core race at all. (slot 0 = Y_BASE was overwritten
-     with the result by the sanity-check above; this refreshes all slots.) */
+  /* Pre-load every per-core Y slot with y_inp (slot 0 overwritten by the sanity check above). */
   for (int c = 0; c < PULP_CORE_COUNT; c++)
     idma_load_l2_to_l1((uint32_t)y_inp, Y_BASE + c * Y_STRIDE,
                        M_SIZE * K_SIZE * 2);

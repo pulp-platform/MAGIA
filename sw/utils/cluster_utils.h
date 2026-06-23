@@ -50,100 +50,38 @@
 // CV32 (main core) — orchestrator API
 // =============================================================================
 
-/**
- * @brief Boot all PULP cluster cores: program the binary entry point, broadcast
- *        CLK_EN, then wait until every core's dispatcher loop is armed.
- *
- * @param binary_start  Entry point address (typically PULP_BINARY_START).
- */
 static inline void cluster_boot(uint32_t binary_start) {
     pulp_init(binary_start);
 }
 
-/**
- * @brief Dispatch @p task_addr to the cluster cores selected by @p core_mask.
- *        Returns once every selected core has ACK'd the start (i.e. the cores
- *        have entered the task function). Use cluster_wait_eu() / _polling()
- *        to wait for task completion.
- */
 static inline void cluster_dispatch_task(uint32_t task_addr, uint32_t core_mask) {
     pulp_run_task(task_addr, core_mask);
 }
 
-static inline void cluster_run_task(uint32_t task_addr, uint32_t core_mask) {
-    cluster_dispatch_task(task_addr, core_mask);
-}
-
-/**
- * @brief Dispatch a task with a context pointer passed as first argument.
- */
 static inline void cluster_dispatch_task_with_params(uint32_t task_addr,
                                                      uint32_t params_ptr,
                                                      uint32_t core_mask) {
     pulp_run_task_with_params(task_addr, params_ptr, core_mask);
 }
 
-static inline void cluster_run_task_with_params(uint32_t task_addr,
-                                                uint32_t params_ptr,
-                                                uint32_t core_mask) {
-    cluster_dispatch_task_with_params(task_addr, params_ptr, core_mask);
-}
-
-/** De-assert the PULP CLK_EN (disables all cluster cores). */
 static inline void cluster_stop(void) {
     pulp_clk_dis();
 }
 
-/**
- * @brief Busy-poll until the cluster CSR signals done.
- *
- * Prefer cluster_wait_eu() for energy.
- */
 static inline void cluster_wait_done_polling(void) {
     (void)eu_cluster_done_wait(EU_WAIT_MODE_POLLING);
 }
 
-static inline void cluster_wait_polling(void) {
-    cluster_wait_done_polling();
-}
-
-/** Non-blocking status check. */
 static inline uint32_t cluster_done_pending(void) {
     return eu_check_events(EU_CLUSTER_DONE_MASK) != 0;
 }
 
-static inline uint32_t cluster_is_done(void) {
-    return cluster_done_pending();
-}
-
-/**
- * @brief Arm the Event Unit for cluster-done WFE.
- *
- * Clears the EU event buffer and enables the PULP cluster events.
- * Call before cluster_dispatch_task() to avoid missing the event.
- */
 static inline void cluster_arm_done_event(void) {
     eu_cluster_done_init();
 }
 
-static inline void cluster_init_eu(void) {
-    cluster_arm_done_event();
-}
-
-/**
- * @brief Sleep until the cluster CSR signals done through the Event Unit.
- *
- *   cluster_init_eu();
- *   cluster_arm_done_event();
- *   cluster_dispatch_task(task, 0xFF);
- *   cluster_wait_done_eu();
- */
 static inline void cluster_wait_done_eu(void) {
     (void)eu_cluster_done_wait(EU_WAIT_MODE_WFE);
-}
-
-static inline void cluster_wait_eu(void) {
-    cluster_wait_done_eu();
 }
 
 // =============================================================================

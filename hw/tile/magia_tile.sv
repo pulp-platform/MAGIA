@@ -423,7 +423,6 @@ module magia_tile
   logic                                  [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_clk;
   logic                                  [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_clk_en;
   logic [31:0]                                                                 cluster_boot_addr         [magia_tile_pkg::N_CLUSTER_CORES-1:0];
-  //logic [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_dbg_irq_valid;
   logic                                  [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_setback;
   magia_tile_pkg::core_instr_req_t       [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_instr_req;
   magia_tile_pkg::core_instr_rsp_t       [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_instr_rsp;
