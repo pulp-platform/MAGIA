@@ -27,11 +27,10 @@ The following *optional* parameters can be specified:
 
 `mesh_dv`: **0**|**1** (**Default**: 1). 0 simulation of a single tile; 1 simulation of the entire mesh.
 
-`fast_sim`: **0**|**1** (**Default**: 0). 0 faster simulation that does not track signals; 1 simulation that tracks signals (for debugging).
+`fast_sim`: **0**|**1** (**Default**: 0). 0 simulation that tracks signals (for debugging); 1 faster simulation that does not track signals.
 
 `gui`: **0**|**1** (**Default**: 0). 0 simulation without GUI; 1 simulation with GUI.
 
-`test`: **tile_test**|**mesh_test** (**Default**: mesh_test). Specifies which tests should be run. More fine-grain tests are available, see `sw/tests`.
 
 **Instructions to build HW/SW and run simulations**:
 

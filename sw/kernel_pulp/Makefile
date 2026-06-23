@@ -65,10 +65,19 @@ ARCH_FLAGS = -march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI)
 #     embedded binary's relocated data section.
 # -mno-relax: prevent the linker from collapsing auipc+addi back into li
 #     for small absolute values (would also break PIC at runtime).
+# -fno-jump-tables: switch statements otherwise compile to a jump table
+#     whose base address is referenced ABSOLUTELY (e.g. `li a4, 0x618`).
+#     Since this binary is linked at ORIGIN=0 but copied/relocated to
+#     0xCC00_xxxx at runtime without a dynamic loader, that absolute base
+#     is never fixed up: the indirect jump lands in unmapped space and the
+#     cluster icache stalls forever on a fill that loops in the NoC.
+#     Forcing compare-chains keeps every branch PC-relative (PIC-safe).
+#     Affects all cores (CV32E40P/RI5CY) and both mesh_dv settings.
 CFLAGS     = $(ARCH_FLAGS) -O2 -g -Wall -Wextra -Wno-unused-parameter \
              -Wno-unused-variable -Wno-unused-function -Wundef \
              -ffunction-sections -fdata-sections \
              -fPIC -mcmodel=medany \
+             -fno-jump-tables \
              -msmall-data-limit=0 \
              -nostartfiles -nostdlib \
              -DPULP_CORE_COUNT=$(PULP_CORE_COUNT) \

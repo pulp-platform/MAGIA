@@ -101,10 +101,6 @@ int main(void) {
   
   printf("iDMA moving data from L2 to L1...\n");
   uint32_t transfer_id_1 = idma_L2ToL1(src_addr, dst_addr, len);
-  
-
-  uint32_t transfer_id_1 = idma_L2ToL1(src_addr, dst_addr, len);
-  printf("iDMA moving data from L2 to L1...\n");
 
   if (USE_WFE) {
     eu_idma_wait_a2o_completion(EU_WAIT_MODE_WFE);

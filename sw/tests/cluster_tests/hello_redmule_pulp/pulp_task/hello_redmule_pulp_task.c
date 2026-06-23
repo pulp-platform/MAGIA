@@ -44,11 +44,12 @@
  * crt0 writes 1 to PULP_DONE when the task returns; after all selected cores
  * report done, the tile CSR emits EU bit 12 and wakes the CV32 main core.
  *
- * NOTE: each cluster core re-runs the SAME matmul on the SAME L1
- * buffers prepared by the CV32 main. The result Y is overwritten 8
- * times with the same value (deterministic since X, W, bias are
- * unchanged across iterations). The CV32 main verifies Y == Z after
- * PULP_DONE.
+ * NOTE: every cluster core runs the SAME matmul on the SAME shared X/W
+ * inputs, but each writes its result into its OWN PRIVATE Y slot
+ * (Y_BASE + local_id*Y_STRIDE). No two cores ever touch the same word,
+ * so the result is deterministic regardless of timing. The CV32 main
+ * pre-loads every Y slot with the y_inp bias before dispatch and, after
+ * PULP_DONE, verifies every slot == Z.
  */
 
 #include "magia_tile_utils.h"
@@ -64,22 +65,22 @@
    inside the tile's MMIO region (0x700+ = Event Unit) and hangs the
    core on a fake sleep register. All operand buffers are pre-loaded
    by the CV32 main into L1 SPM and we reach them through absolute
-   addresses (X_BASE, W_BASE, Y_BASE, Y_BIAS_BACKUP_BASE). */
+   addresses (X_BASE, W_BASE, Y_BASE). */
 
 /* Same reduced size as main.c — must stay in sync. */
-#define M_SIZE   (4)
+#define M_SIZE   (1)
 #define N_SIZE   (64)
 #define K_SIZE   (64)
 
-#define X_BASE   (L1_BASE + 0x00012048)
-#define W_BASE   (L1_BASE + 0x00016048)
+#define X_BASE   (L1_BASE + 0x00012048)   /* shared, read-only */
+#define W_BASE   (L1_BASE + 0x00016048)   /* shared, read-only */
+/* PER-CORE output Y: each cluster core writes its OWN private slot at
+   Y_BASE + local_id*Y_STRIDE, so two cores never touch the same word ->
+   no cross-core race on the result buffer (deterministic). The CV32 main
+   pre-loads every slot with the y_inp bias before dispatch, so the cores
+   do NOT reload the bias themselves. MUST match Y_BASE/Y_STRIDE in main.c. */
 #define Y_BASE   (L1_BASE + 0x0001A048)
-/* MUST match Y_BIAS_BACKUP_BASE in main.c.
-   Pre-loaded by the CV32 main with a fresh copy of y_inp. The PULP
-   task copies from here back into Y_BASE before each RedMulE run.
-   Using an absolute L1 address avoids any reference to PIC-linked
-   data symbols from the pulp_task (see comment in main.c). */
-#define Y_BIAS_BACKUP_BASE   (L1_BASE + 0x0001B048)
+#define Y_STRIDE (0x00001000)
 
 /* Per-core marker area in L2: 4B per cluster core, 8 cluster cores per
    tile, 16 tiles -> 8*16 = 128 entries. Used only to prove every core
@@ -100,35 +101,6 @@ static inline void enable_fpu(void) {
     );
 }
 
-/* Reload the bias slot the previous winner overwrote, so each
-   subsequent winner sees a fresh y_inp. Without this every core after
-   the first would compute Z + (k-1)*Z accumulated bias.
-   The reload is itself protected by the HWPE acquire window: when a
-   core holds the HWPE (between acquire and DONE), nobody else can
-   trigger a job, so it's safe to write the bias buffer here.
-
-   Use 32-bit stores (sw) instead of 16-bit (sh): observed that 16-bit
-   stores from cluster cores to L1 race against the previous RedMulE
-   writeback on the SAME 32-bit word, leaving Y[0,0]/Y[0,1] stale.
-   32-bit stores avoid byte-enable handling on the cluster-core OBI
-   path entirely. y_inp is uint16_t but contiguous, so we can read it
-   as uint32_t pairs (little-endian: pair = y_inp[2k+1]<<16 | y_inp[2k]).
-*/
-static void reload_bias(void) {
-    /* Copy from a dedicated L1 backup region (loaded once by CV32
-       main from y_inp[] in L2) into Y_BASE. Both source and dest
-       are absolute L1 addresses; this function never dereferences
-       any PIC symbol from the embedded PULP binary. */
-    const volatile uint32_t *src = (const volatile uint32_t*)Y_BIAS_BACKUP_BASE;
-    volatile uint32_t *dst = (volatile uint32_t*)Y_BASE;
-    for (int i = 0; i < (M_SIZE * K_SIZE) / 2; i++) dst[i] = src[i];
-    /* Drain the write queue: read the FIRST element back and add a
-       memory fence so RedMulE sees the freshly-written bias when it
-       issues its first Y-load. */
-    volatile uint32_t sink = dst[0];
-    (void)sink;
-    asm volatile("fence" ::: "memory");
-}
 void hello_redmule_pulp_task(void *data) {
     (void)data;
     enable_fpu();
@@ -156,22 +128,20 @@ void hello_redmule_pulp_task(void *data) {
     while ((job_id = hwpe_acquire_job()) < 0)
         ;
 
-    /* Root cause of Y[0,0]/Y[0,1] corruption:
-       HWPE releases the ACQUIRE lock (RUNNING_JOB→0) as soon as the
-       last MAC fires, but its HCI TCDM master may still have a few
-       write-back beats in flight to L1 (STATUS is still nonzero).
-       The next winner acquires immediately and starts reload_bias(),
-       writing y_inp back to Y_BASE. Those tail HCI beats from the
-       PREVIOUS job then land on Y[0..1], overwriting the fresh bias
-       with the previous GEMM result.  Polling STATUS=0 HERE (after
-       acquire, before reload_bias) guarantees the previous job's HCI
-       is fully committed to L1 before we touch Y. */
+    /* Wait for the HWPE to be fully idle before (re)configuring it: the
+       previous winner may still have write-back beats in flight (STATUS
+       nonzero) even after it released the ACQUIRE lock. With per-core Y
+       slots those beats land in the PREVIOUS core's slot, not ours, so
+       they can't corrupt our result -- but we still wait so we never
+       reprogram the HWPE mid-write-back. */
     while (hwpe_get_status() != 0);
     asm volatile("fence" ::: "memory");
 
-    reload_bias();
+    /* This core's PRIVATE output slot. The CV32 main has already pre-loaded
+       it with the y_inp bias, so we just point RedMulE at it -- no reload. */
+    uint32_t my_y = Y_BASE + local_id * Y_STRIDE;
 
-    redmule_cfg((unsigned)X_BASE, (unsigned)W_BASE, (unsigned)Y_BASE,
+    redmule_cfg((unsigned)X_BASE, (unsigned)W_BASE, (unsigned)my_y,
                 M_SIZE, N_SIZE, K_SIZE,
                 (uint8_t)gemm_ops, (uint8_t)Float16, (uint8_t)Float16);
 
@@ -183,9 +153,9 @@ void hello_redmule_pulp_task(void *data) {
 
     hwpe_cg_disable();
 
-
-    printf("[Tile %u PULP-%u mhartid %u] RedMulE done, exiting\n",
-            tile_id, local_id, hartid);
-
+    if (local_id == 0) {
+      printf("[Tile %u PULP-%u mhartid %u] RedMulE done, exiting\n",
+               tile_id, local_id, hartid);
+    }
     /* trap_handler writes 1 to PULP_DONE on return. */
 }

@@ -1459,7 +1459,6 @@ module magia_tile
     .irq_i                  ( core_irq_vec[0]       ),
     .irq_ack_o              ( eu_core_irq_ack[0]    ),
     .irq_id_o               ( eu_core_irq_ack_id[0] ),
-    .irq_id_i               ( '0                    ), 
     // Debug interface
     .debug_req_i            ( debug_req_i[0]           ),
     // CPU control
@@ -1773,9 +1772,7 @@ module magia_tile
   .L0_LINE_COUNT       ( magia_tile_pkg::L0_LINE_COUNT        ),
   .LINE_WIDTH          ( magia_tile_pkg::LINE_WIDTH           ),
   .LINE_COUNT          ( magia_tile_pkg::LINE_COUNT           ),
-  .SET_COUNT           ( magia_tile_pkg::SET_COUNT            ),
-  .L1DataParityWidth   ( magia_tile_pkg::L1_PARITY_W          ),
-  .L0DataParityWidth   ( magia_tile_pkg::L0_PARITY_W          ),
+  .WAY_COUNT           ( magia_tile_pkg::WAY_COUNT            ),
   .FetchAddrWidth      ( magia_tile_pkg::FETCH_AW             ),
   .FetchDataWidth      ( magia_tile_pkg::FETCH_DW             ),
   .AxiAddrWidth        ( magia_tile_pkg::FILL_AW              ),
@@ -2636,14 +2633,12 @@ endgenerate
 
 
 
-  pulp_icache_wrap #(
+  magia_tile_icache_wrap #(
   .NumFetchPorts       ( magia_tile_pkg::N_CLUSTER_CORES              ),
   .L0_LINE_COUNT       ( magia_tile_pkg::CLUSTER_L0_LINE_COUNT        ),
   .LINE_WIDTH          ( magia_tile_pkg::CLUSTER_LINE_WIDTH           ),
   .LINE_COUNT          ( magia_tile_pkg::CLUSTER_LINE_COUNT           ),
-  .SET_COUNT           ( magia_tile_pkg::CLUSTER_SET_COUNT            ),
-  .L1DataParityWidth   ( magia_tile_pkg::CLUSTER_L1_PARITY_W          ),
-  .L0DataParityWidth   ( magia_tile_pkg::CLUSTER_L0_PARITY_W          ),
+  .WAY_COUNT           ( magia_tile_pkg::CLUSTER_WAY_COUNT            ),
   .FetchAddrWidth      ( magia_tile_pkg::CLUSTER_FETCH_AW             ),
   .FetchDataWidth      ( magia_tile_pkg::CLUSTER_FETCH_DW             ),
   .AxiAddrWidth        ( magia_tile_pkg::CLUSTER_FILL_AW              ),
@@ -2655,7 +2650,6 @@ endgenerate
   ) cluster_icache_top_i (
     .clk_i                ( clk_i                          ),
     .rst_ni               ( rst_ni                         ),
-
     .fetch_req_i          ( cluster_cache_req             ),
     .fetch_addr_i         ( cluster_cache_addr            ),
     .fetch_gnt_o          ( cluster_cache_gnt             ),

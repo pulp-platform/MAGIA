@@ -264,11 +264,23 @@ static inline unsigned int eu_evt_maskWaitAndClr(unsigned int evtMask) {
 //=============================================================================
 
 static inline void eu_cluster_done_init(void) {
-    eu_clear_events(0xFFFFFFFF);
-    eu_enable_events(EU_CLUSTER_DONE_MASK);
+    /* IMPORTANT: arm the mask ABSOLUTELY (not OR), enabling ONLY the
+       cluster-done bit. The CV32 main typically ran RedMulE before
+       dispatching the cluster (e.g. a sanity check), which left the
+       RedMulE-done bit (EU_REDMULE_DONE_BIT) enabled via MASK_OR. The
+       RedMulE events are broadcast to every core's EU slice, so once the
+       cluster cores start triggering RedMulE the main would wake on the
+       RedMulE-done event instead of the real PULP_DONE (bit 12) and race
+       ahead to verify results before the cluster has finished. Disabling
+       all other events here makes the WFE wake ONLY on cluster_done. */
+    mmio32(EU_CORE_MASK) = 0x00000000;        /* disable ALL events (absolute) */
+    eu_clear_events(0xFFFFFFFF);              /* drop any stale latched events  */
+    eu_enable_events(EU_CLUSTER_DONE_MASK);   /* enable ONLY cluster-done (b12)  */
 }
 
 static inline uint32_t eu_cluster_done_wait(eu_wait_mode_t mode) {
+    /* Do NOT re-enable other events: keep the mask at cluster-done only so
+       a stray RedMulE/iDMA event cannot wake us before PULP_DONE. */
     eu_enable_events(EU_CLUSTER_DONE_MASK);
     return eu_wait_events(EU_CLUSTER_DONE_MASK, mode, 1000000);
 }

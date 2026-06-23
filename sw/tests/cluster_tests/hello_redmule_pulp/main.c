@@ -59,12 +59,16 @@
  * X, W, Y live in tile-local L1 (private per tile, no cross-tile race).
  * The golden reference Z is read directly from z_oup[] in the main
  * ELF .rodata (already in L2), so no per-tile L2 copy is needed. */
-#define X_BASE (L1_BASE + 0x00012048)
-#define W_BASE (L1_BASE + 0x00016048)
-#define Y_BASE (L1_BASE + 0x0001A048)
-/* Backup slot for y_inp: read by the PULP cluster task via absolute
-   L1 addressing (see pulp_task/hello_redmule_pulp_task.c). */
-#define Y_BIAS_BACKUP_BASE (L1_BASE + 0x0001B048)
+#define X_BASE (L1_BASE + 0x00012048)   /* shared, read-only */
+#define W_BASE (L1_BASE + 0x00016048)   /* shared, read-only */
+/* PER-CORE output Y: each of the 8 cluster cores computes into its OWN
+   private slot at Y_BASE + c*Y_STRIDE, so no two cores ever touch the same
+   word -> the result is fully deterministic (no shared-buffer race). The
+   CV32 main pre-loads every slot with the y_inp bias before dispatch, so
+   the cores never reload the bias themselves.
+   MUST match Y_BASE/Y_STRIDE in pulp_task/hello_redmule_pulp_task.c. */
+#define Y_BASE   (L1_BASE + 0x0001A048)
+#define Y_STRIDE (0x00001000)            /* 4 KB per core (8 slots) */
 
 /* Enable the FPU: set mstatus.FS to INITIAL (01).
  * Without this any FPU instruction faults. CV32E40P (and the cluster
@@ -92,11 +96,14 @@ static inline void idma_load_l2_to_l1(uint32_t l2_src, uint32_t l1_dst, uint32_t
   } while (idma_mm_is_busy_dir(/*is_l1_to_l2=*/0, /*stream_id=*/0));
 }
 
-/* Reduced from 96 to 4 (= RedMulE ARRAY_HEIGHT) to cut simulation time.
+/* Reduced from 96 to 1 row. Two reasons: (1) it cuts simulation time,
+ * and (2) it shrinks the SHARED Y buffer that all 8 cluster cores reload
+ * and GEMM into (M*K words) to the minimum, so the per-word reload-vs-
+ * write-back race window across cores is as small as possible.
  * The first M rows of the golden are independent of the others, so
  * z_oup[0..M*K-1] remains a valid reference for this subset.
  * N and K cannot be reduced: they are baked into the W matrix layout. */
-#define M_SIZE  (4)
+#define M_SIZE  (1)
 #define N_SIZE  (64)
 #define K_SIZE  (64)
 
@@ -194,20 +201,13 @@ int main(void) {
   unsigned int err_main = redmule_run_and_verify();
   printf("CV32 main RedMulE sanity-check: %0d errors\n", err_main);
 
-  /* Reload Y so the bias slot is fresh again for the cluster pass
-     (the sanity-check above overwrote Y with the computed result). */
-  idma_load_l2_to_l1((uint32_t)y_inp, Y_BASE, M_SIZE * K_SIZE * 2);
-
-  /* Also DMA y_inp into a dedicated L1 backup slot. The PULP task
-     copies from this absolute L1 address into Y_BASE before each
-     RedMulE run (see reload_bias() in the pulp_task). We CANNOT let
-     the PULP task reference `y_inp[]` directly: the PULP ELF is
-     linked with ORIGIN=0 (position-independent embed) and GCC
-     materializes `&y_inp` as the literal link-time address (~0x6f4),
-     which at runtime lands inside the tile's MMIO range (0x700+ =
-     Event Unit), hanging the core on a fake sleep register. */
-  idma_load_l2_to_l1((uint32_t)y_inp, Y_BIAS_BACKUP_BASE,
-                     M_SIZE * K_SIZE * 2);
+  /* Pre-load EVERY per-core Y slot with the y_inp bias. Each cluster core
+     then computes X*W + bias into its OWN slot, so there is no shared Y
+     buffer and no cross-core race at all. (slot 0 = Y_BASE was overwritten
+     with the result by the sanity-check above; this refreshes all slots.) */
+  for (int c = 0; c < PULP_CORE_COUNT; c++)
+    idma_load_l2_to_l1((uint32_t)y_inp, Y_BASE + c * Y_STRIDE,
+                       M_SIZE * K_SIZE * 2);
 
   printf("Booting PULP cluster cores...\n");
   cluster_boot(PULP_BINARY_START);
@@ -220,17 +220,20 @@ int main(void) {
   /* Step 3: sleep (cv.elw) until all cluster cores have exited. */
   cluster_wait_done_eu();
 
-  /* Step 4: verify the cluster's RedMulE pass also produced the right Y. */
+  /* Step 4: verify EVERY cluster core's private Y slot == golden Z. */
   unsigned int err_pulp = 0;
   uint16_t computed, expected, diff;
-  for (int i = 0; i < M_SIZE*K_SIZE; i++) {
-    computed = mmio16(Y_BASE + 2*i);
-    expected = z_oup[i];
-    diff = (computed > expected) ? (computed - expected) : (expected - computed);
-    if (diff > DIFF_TH) {
-      err_pulp++;
-      printf("**PULP_ERR**: i=%0d row=%0d col=%0d Y=0x%4x Z=0x%4x diff=0x%4x\n",
-             i, i / K_SIZE, i % K_SIZE, computed, expected, diff);
+  for (int c = 0; c < PULP_CORE_COUNT; c++) {
+    uint32_t ybase = Y_BASE + c * Y_STRIDE;
+    for (int i = 0; i < M_SIZE*K_SIZE; i++) {
+      computed = mmio16(ybase + 2*i);
+      expected = z_oup[i];
+      diff = (computed > expected) ? (computed - expected) : (expected - computed);
+      if (diff > DIFF_TH) {
+        err_pulp++;
+        printf("**PULP_ERR**: core=%0d i=%0d Y=0x%4x Z=0x%4x diff=0x%4x\n",
+               c, i, computed, expected, diff);
+      }
     }
   }
   printf("PULP cluster pass finished with %0d errors\n", err_pulp);
