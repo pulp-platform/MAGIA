@@ -46,8 +46,22 @@
    reached the kernel. */
 #define MARKER_BASE  (L2_BASE + 0x00050000)
 
+/* Enable the FPU on this hart: set mstatus.FS to INITIAL (01). Without
+   this any FPU instruction faults. RedMulE's hwpe-mac-engine itself
+   does not need this (it's a separate HWPE), but the cluster core
+   may execute float register copies in libgcc helpers / printf, and
+   future tests may issue FP instructions directly. */
+static inline void enable_fpu(void) {
+    asm volatile (
+        "li t0, 0x2000\n"
+        "csrs mstatus, t0\n"
+        ::: "t0"
+    );
+}
+
 void hello_redmule_pulp_task(void *data) {
     (void)data;
+    enable_fpu();
 
     uint32_t hartid   = get_hartid();
     uint32_t pulp_gid = hartid - PULP_HARTID_BASE;     /* 0..127 */
