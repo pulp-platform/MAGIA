@@ -114,7 +114,7 @@ typedef struct packed {
 } sam_rule_t;
 
 localparam sam_rule_t[SamNumRules-1:0] Sam = '{
-'{idx: '{x: 0, y: 7, port_id: 0}, start_addr: 32'hf8000000, end_addr: 32'hffffffff},// L2_7_sam_idx
+'{idx: '{x: 0, y: 7, port_id: 0}, start_addr: 32'hf8000000, end_addr: 32'h100000000},// L2_7_sam_idx
 '{idx: '{x: 0, y: 6, port_id: 0}, start_addr: 32'hf0000000, end_addr: 32'hf8000000},// L2_6_sam_idx
 '{idx: '{x: 0, y: 5, port_id: 0}, start_addr: 32'he8000000, end_addr: 32'hf0000000},// L2_5_sam_idx
 '{idx: '{x: 0, y: 4, port_id: 0}, start_addr: 32'he0000000, end_addr: 32'he8000000},// L2_4_sam_idx

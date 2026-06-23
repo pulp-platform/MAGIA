@@ -48,7 +48,6 @@
 
 void hello_redmule_pulp_task(void *data) {
     (void)data;
-    enable_fpu();
 
     uint32_t hartid   = get_hartid();
     uint32_t pulp_gid = hartid - PULP_HARTID_BASE;     /* 0..127 */
