@@ -27,16 +27,16 @@ MAGIA_DIR  ?= $(shell pwd)
 
 SW             ?= sw
 BUILD_DIR      ?= sim/work
+
 ifneq (,$(wildcard /etc/iis.version))
     QUESTA ?= questa-2025.1
-    BENDER ?= bender
     BASE_PYTHON ?= python
 else
     QUESTA ?=
-    BENDER ?= bender
     BASE_PYTHON ?= python3
 endif
 
+BENDER ?= bender
 BENDER_DIR     ?= .
 ARCH           ?= rv
 XLEN           ?= 32
@@ -124,6 +124,10 @@ endif
 
 ifeq ($(core), CV32E40X)
   FLAGS += -DCV32E40X
+endif
+
+ifeq ($(core), CV32E40P)
+  FLAGS += -DCV32E40P
 endif
 
 ifeq ($(core), RI5CY)

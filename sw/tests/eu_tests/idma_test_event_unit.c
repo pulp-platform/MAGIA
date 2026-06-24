@@ -95,7 +95,7 @@ int main(void) {
   printf("reps_3: 0x%8x\n", reps_3);
 #endif
 
-  // Clear Event Unit and arm A2O mask before starting the transfer.
+  // Clear Event Unit and ensure A2O mask is enabled
   eu_clear_events(0xFFFFFFFF);
   eu_enable_events(EU_IDMA_A2O_DONE_MASK);
   
@@ -136,7 +136,7 @@ int main(void) {
   printf("reps_3: 0x%8x\n", reps_3);
 #endif
 
-  // Clear Event Unit and arm O2A mask before starting the transfer.
+  // Clear Event Unit and ensure O2A mask is enabled
   eu_clear_events(0xFFFFFFFF);
   eu_enable_events(EU_IDMA_O2A_DONE_MASK);
 
@@ -167,7 +167,7 @@ int main(void) {
   printf("len: %0d\n", len);
 #endif
 
-  // Arm both masks before launching both directions.
+  // Clear Event Unit and ensure both masks are enabled
   eu_clear_events(0xFFFFFFFF);
   eu_enable_events(EU_IDMA_ALL_DONE_MASK);
 

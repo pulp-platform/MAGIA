@@ -233,7 +233,7 @@ module magia
         // implicit name-based connection would leave bits [N:1] unconnected (X)
         // and X-propagate into cv32e40p_controller.debug_req_pending, corrupting
         // ctrl_fsm_cs (observed: ctrl_fsm_cs=0x1xx, debug_req_pending=x).
-        .debug_req_i         ( {(magia_tile_pkg::N_CLUSTER_CORES+1){debug_req_i}} ),
+        .debug_req_i         ( '0                               ),
         .debug_havereset_o   ( debug_havereset_o[i*N_TILES_X+j] ),
         .debug_running_o     ( debug_running_o[i*N_TILES_X+j]   ),
         .debug_halted_o      ( debug_halted_o[i*N_TILES_X+j]    ),

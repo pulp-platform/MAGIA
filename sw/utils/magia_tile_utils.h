@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
+ * Copyright (C) 2023-2024 ETH Zurich and University of Bologna and Fondazione Chips-IT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -158,7 +158,7 @@ static inline void sentinel_end(){
 }
 
 static inline void ccount_en(){
-#ifdef CV32E40X
+#if defined(CV32E40X) || defined(CV32E40P)
     asm volatile("csrrci zero, 0x320, 0x1" ::);
 #else
     asm volatile("csrw 0x7E0, %0" :: "r"(0x1));
@@ -167,16 +167,16 @@ static inline void ccount_en(){
 }
 
 static inline void ccount_dis(){
-#ifdef CV32E40X
+#if defined(CV32E40X) || defined(CV32E40P)
     asm volatile("csrrsi zero, 0x320, 0x1" ::);
 #else
-    asm volatile("csrw 0x7E1, %0" :: "r"(0x0)); 
+    asm volatile("csrw 0x7E1, %0" :: "r"(0x0));
 #endif
 }
 
 static inline uint32_t get_cyclel(){
     uint32_t cyclel;
-#ifdef CV32E40X
+#if defined(CV32E40X) || defined(CV32E40P)
     asm volatile("csrr %0, cycle"
                  :"=r"(cyclel):);
 #else

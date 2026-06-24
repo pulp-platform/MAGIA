@@ -32,11 +32,11 @@ module eu_direct_cut
   input  logic           clk_i,
   input  logic           rst_ni,
 
-  input  eu_direct_req_t sbr_req_i [NB_CORES],
-  output eu_direct_rsp_t sbr_rsp_o [NB_CORES],
+  input  eu_direct_req_t [NB_CORES -1 :0] sbr_req_i ,
+  output eu_direct_rsp_t [NB_CORES -1 :0] sbr_rsp_o,
 
-  output eu_direct_req_t mgr_req_o [NB_CORES],
-  input  eu_direct_rsp_t mgr_rsp_i [NB_CORES]
+  output eu_direct_req_t [NB_CORES -1 :0] mgr_req_o,
+  input  eu_direct_rsp_t [NB_CORES -1 :0] mgr_rsp_i 
 );
 
   // ============================

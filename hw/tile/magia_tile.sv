@@ -366,20 +366,20 @@ module magia_tile
   magia_tile_pkg::eu_direct_rsp_t eu_direct_rsp;
 
   // Cluster core data interface (converted directly to OBI xbar)
-  magia_tile_pkg::core_data_req_t cluster_data_req  [magia_tile_pkg::N_CLUSTER_CORES];
-  magia_tile_pkg::core_data_rsp_t cluster_data_rsp  [magia_tile_pkg::N_CLUSTER_CORES];
+  magia_tile_pkg::core_data_req_t [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_data_req;
+  magia_tile_pkg::core_data_rsp_t [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_data_rsp;
 
   // Cluster core OBI data interface (output from demux data2obi)
-  magia_tile_pkg::core_obi_data_req_t cluster_obi_data_req [magia_tile_pkg::N_CLUSTER_CORES];
-  magia_tile_pkg::core_obi_data_rsp_t cluster_obi_data_rsp [magia_tile_pkg::N_CLUSTER_CORES];
+  magia_tile_pkg::core_obi_data_req_t [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_obi_data_req;
+  magia_tile_pkg::core_obi_data_rsp_t [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_obi_data_rsp;
 
   // EU direct req/rsp arrays for the cut (CV32 core[0] + cluster cores[1..N])
-  magia_tile_pkg::eu_direct_req_t eu_direct_req_arr [magia_tile_pkg::N_CLUSTER_CORES+1];
-  magia_tile_pkg::eu_direct_rsp_t eu_direct_rsp_arr [magia_tile_pkg::N_CLUSTER_CORES+1];
+  magia_tile_pkg::eu_direct_req_t [magia_tile_pkg::N_CLUSTER_CORES:0] eu_direct_req_arr;
+  magia_tile_pkg::eu_direct_rsp_t [magia_tile_pkg::N_CLUSTER_CORES:0] eu_direct_rsp_arr;
 
   // EU direct with pipeline cut
-  magia_tile_pkg::eu_direct_req_t eu_direct_req_cut [magia_tile_pkg::N_CLUSTER_CORES +1];
-  magia_tile_pkg::eu_direct_rsp_t eu_direct_rsp_cut [magia_tile_pkg::N_CLUSTER_CORES +1];
+  magia_tile_pkg::eu_direct_req_t [magia_tile_pkg::N_CLUSTER_CORES:0] eu_direct_req_cut;
+  magia_tile_pkg::eu_direct_rsp_t [magia_tile_pkg::N_CLUSTER_CORES:0] eu_direct_rsp_cut;
 
   // Flat EU direct signals for event unit connection
   logic [magia_tile_pkg::N_CLUSTER_CORES:0]       eu_direct_req_flat;
