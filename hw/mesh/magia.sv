@@ -228,12 +228,17 @@ module magia
   
         .irq_i               ( irq_i[i*N_TILES_X+j]               ),
   
-        .debug_req_i                                               ,
-        .debug_havereset_o   ( debug_havereset_o[i*N_TILES_X+j]   ),
-        .debug_running_o     ( debug_running_o[i*N_TILES_X+j]     ),
-        .debug_halted_o      ( debug_halted_o[i*N_TILES_X+j]      ),
-        .debug_pc_valid_o    ( debug_pc_valid_o[i*N_TILES_X+j]    ),
-        .debug_pc_o          ( debug_pc_o[i*N_TILES_X+j]          ),
+        // Tile expects [N_CLUSTER_CORES:0] (1 main + 8 cluster cores).
+        // Replicate the single top-level debug_req_i bit across all cores;
+        // implicit name-based connection would leave bits [N:1] unconnected (X)
+        // and X-propagate into cv32e40p_controller.debug_req_pending, corrupting
+        // ctrl_fsm_cs (observed: ctrl_fsm_cs=0x1xx, debug_req_pending=x).
+        .debug_req_i         ( '0                               ),
+        .debug_havereset_o   ( debug_havereset_o[i*N_TILES_X+j] ),
+        .debug_running_o     ( debug_running_o[i*N_TILES_X+j]   ),
+        .debug_halted_o      ( debug_halted_o[i*N_TILES_X+j]    ),
+        .debug_pc_valid_o    ( debug_pc_valid_o[i*N_TILES_X+j]  ),
+        .debug_pc_o          ( debug_pc_o[i*N_TILES_X+j]        ),
   
         .fetch_enable_i                                            ,
         .core_sleep_o        ( core_sleep_o[i*N_TILES_X+j]        ),

@@ -12,14 +12,14 @@ protocols:
     protocol: "AXI4"
     data_width: 32
     addr_width: 32
-    id_width: 2
+    id_width: 3
     user_width: 1
   - name: "narrow_data_slv"
     type: "narrow"
     protocol: "AXI4"
     data_width: 32
     addr_width: 32
-    id_width: 4
+    id_width: 6
     user_width: 1
   - name: "wide_data_mst"
     type: "wide"

@@ -26,6 +26,7 @@ ifeq ($(core), CV32E40X)
 	sim_targs += -t cv32e40x
 else ifeq ($(core), CV32E40P)
 	sim_targs += -t cv32e40p
+# RI5CY: no bender target needed — riscv_*.sv compiled unconditionally by the PULP cv32e40p package
 endif
 
 common_targs += -t magia_tile

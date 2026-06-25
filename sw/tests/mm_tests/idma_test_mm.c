@@ -27,8 +27,8 @@
 
 #define X_BASE (L1_BASE + 0x00012048)
 #define Y_BASE (L1_BASE + 0x00016048)
-#define Z_BASE (L2_BASE + 0x00001000)
-#define W_BASE (L2_BASE + 0x00005000)
+#define Z_BASE (L2_BASE + 0x00042000)  /* offset safe: clear of instrram (0xCC000000..0xCC007FFF) and dataram header */
+#define W_BASE (L2_BASE + 0x00046000)
 
 #define M_SIZE (96)
 #define N_SIZE (64)

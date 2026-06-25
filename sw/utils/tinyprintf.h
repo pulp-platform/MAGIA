@@ -106,8 +106,9 @@ For further details see source code.
 
 regs Kusti, 23.10.2004
 */
+#define NULL 0
 
-void putf(char *null, char c) {
+void putf(void *null, char c) {
   *(volatile int *) (0xFFFF0004) = (int)c;
 }
 
@@ -377,7 +378,7 @@ static char a2u(char ch, const char **src, int base, unsigned int *nump)
     return ch;
 }
 
-static void putchw(void *putp, putcf putf__, struct param *p)
+static void putchw(void *putp, putcf putf, struct param *p)
 {
     char ch;
     int n = p->width;
@@ -429,7 +430,7 @@ static void putchw(void *putp, putcf putf__, struct param *p)
     }
 }
 
-void tfp_format(void *putp, putcf putf__, const char *fmt, va_list va)
+void tfp_format(void *putp, putcf putf, const char *fmt, va_list va)
 {
     struct param p;
 #ifdef PRINTF_LONG_SUPPORT
@@ -602,10 +603,21 @@ void tfp_format(void *putp, putcf putf__, const char *fmt, va_list va)
 }
 
 #if TINYPRINTF_DEFINE_TFP_PRINTF
-static putcf stdout_putf;
-static void *stdout_putp;
+static putcf stdout_putf = NULL;
+static void *stdout_putp = NULL;
 
-void init_printf(void *putp, putcf putf__)
+static inline putcf tfp_default_putf(void)
+{
+#if defined(__riscv)
+    putcf fn;
+    __asm__ volatile ("lla %0, putf" : "=r"(fn));
+    return fn;
+#else
+    return putf;
+#endif
+}
+
+void init_printf(void *putp, putcf putf)
 {
     stdout_putf = putf;
     stdout_putp = putp;
@@ -615,7 +627,8 @@ void tfp_printf(char *fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
-    tfp_format(stdout_putp, stdout_putf, fmt, va);
+    putcf out = stdout_putf ? stdout_putf : tfp_default_putf();
+    tfp_format(stdout_putp, out, fmt, va);
     va_end(va);
 }
 #endif
