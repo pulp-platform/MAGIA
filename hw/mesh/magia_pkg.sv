@@ -36,8 +36,8 @@ package magia_pkg;
   localparam int unsigned WIDE_STRB_W      = WIDE_DATA_W/BYTE_W;              // System-wide wide communication strobe Width
   localparam int unsigned N_MEM_BANKS      = 32;                              // Number of TCDM banks (1 extra bank for missaligned accesses)
   localparam int unsigned N_WORDS_BANK     = 8192;                            // Number of words per TCDM bank
-  localparam int unsigned N_TILES_Y        = 2;                               // Number of Tile rowns
-  localparam int unsigned N_TILES_X        = 2;                               // Number of Tile columns
+  localparam int unsigned N_TILES_Y        = 4;                               // Number of Tile rowns
+  localparam int unsigned N_TILES_X        = 4;                               // Number of Tile columns
   localparam int unsigned N_TILES          = N_TILES_Y*N_TILES_X;             // Number of Tiles in the Mesh
   localparam int unsigned N_IRQ            = 32;                              // Number of IRQs
   localparam int unsigned IRQ_ID_W         = $clog2(N_IRQ);                   // IRQ ID Width

@@ -183,7 +183,7 @@ package magia_noc_pkg;
 
     // Actual declaration of the Broadcast Mask
     localparam logic[31:0] BroadcastMask = gen_broadcast_mask(N_TILES);
-    localparam logic[3:0] CollectiveOp = 4'b0001; // 0x0 Unicast; 0x1 Multicast; 0x2 Barrier
+    localparam logic[3:0] CollectiveOp = 4'b0010; // 0x0 Unicast; 0x1 Multicast; 0x2 Barrier
 
     //********** STANDARD AXI STRUCTS **********//
     typedef logic[ADDR_W-1:0]  axi_narrow_data_mst_addr_t;
