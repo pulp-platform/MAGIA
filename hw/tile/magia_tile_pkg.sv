@@ -68,7 +68,7 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_END            = TILE_CSR_START + TILE_CSR_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = TILE_CSR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE           = 32'h0000_E800;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END       = RESERVED_ADDR_START + RESERVED_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END       = 32'h0000_FFFF;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START        = RESERVED_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE              = 32'h0001_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_END          = STACK_ADDR_START + STACK_SIZE;
@@ -76,8 +76,8 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_SIZE                 = 32'h000E_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_END             = L1_ADDR_START + L1_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_TILE_OFFSET          = 32'h0010_0000;
-  localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_START           = 32'hC000_0000;
-  localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                 = 32'h4000_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_START           = 32'hB000_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                 = 32'h5000_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_END             = L2_ADDR_START + L2_SIZE;
 
   // Instruction region for Spatz code (cacheable region)

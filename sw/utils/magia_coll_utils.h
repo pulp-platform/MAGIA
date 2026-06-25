@@ -1,0 +1,55 @@
+/*
+ * Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Authors: Carlotta Chiarini
+ * 
+ *  Collective Utility Functions
+ */
+#ifndef MAGIA_COLL_UTILS_H
+#define MAGIA_COLL_UTILS_H
+
+#include <stdint.h>
+#include "magia_utils.h"
+
+#define COLLECTIVE_MASK_OFFSET   (COLL_CTRL_BASE + 0x00)
+#define COLLECTIVE_OP_OFFSET    (COLL_CTRL_BASE + 0x04)
+
+#define COLLECTIVE_ADDR_OFFSET (0xB0000000)
+
+#define MASK_OFFSET 20
+
+#define BROADCAST 1
+#define REDUCE 2
+
+#define mmio32(x) (*(volatile uint32_t *)(x))
+
+static inline void set_collective_mask(uint32_t collective_mask) {
+    mmio32(COLLECTIVE_MASK_OFFSET) = collective_mask;
+}
+
+static inline void set_collective_op(uint32_t collective_op) {
+    mmio32(COLLECTIVE_OP_OFFSET) = collective_op;
+}
+
+// The collective mask is composed of an Y_FIELD starting from MASK_OFFSET, followed by an X_FIELD
+static inline uint32_t gen_collective_mask() {
+    if(NUM_HARTS == 4)
+        return (1 << (MASK_OFFSET)) | (1 << (MASK_OFFSET + 1));
+    else if (NUM_HARTS == 16)
+        return (3 << (MASK_OFFSET)) | (3 << (MASK_OFFSET + 2));
+}
+
+#endif

@@ -312,7 +312,7 @@ localparam collective_sam_rule_t[CollectiveSamNumRules-1:0] CollectiveSam = '{
     NumRoutes: 0,
     CollectiveCfg: '{    OpCfg: '{    EnNarrowMulticast: 1'b1,
     EnWideMulticast: 1'b1,
-    EnLsbAnd: 1'b0,
+    EnLsbAnd: 1'b1,
     EnFpAdd: 1'b0,
     EnFpMul: 1'b0,
     EnFpMin: 1'b0,

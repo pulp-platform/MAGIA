@@ -23,6 +23,7 @@
  * Register map (offsets from BaseAddr):
  *   0x00–0x18  Spatz registers   (handled by obi_slave_ctrl_spatz)
  *   0x40–0x44  PULP/Cluster regs (handled by obi_slave_ctrl_cluster)
+ *   0x100–0x104  Collective registers   (handled by obi_slave_ctrl_coll)
  */
 module tile_csr
   import magia_tile_pkg::*;
@@ -42,6 +43,10 @@ module tile_csr
   output logic                                        spatz_start_o,
   output logic                                        spatz_done_o,
 
+  // Collective Control outputs
+  output logic[31:0]                                  collective_mask_o,
+  output logic[3:0]                                   collective_op_o,
+
   // Cluster Control outputs
   output logic [magia_tile_pkg::N_CLUSTER_CORES-1:0]  cluster_clk_en_o,
   output logic [31:0]                                 cluster_boot_addr_o  [magia_tile_pkg::N_CLUSTER_CORES-1:0],
@@ -55,9 +60,10 @@ module tile_csr
   // Internal OBI signals for sub-modules
   // ============================================
   core_obi_data_rsp_t spatz_obi_rsp;
+  core_obi_data_rsp_t collective_obi_rsp;
   core_obi_data_rsp_t cluster_obi_rsp;
 
-  // Both sub-modules receive the same OBI request.
+  // All the sub-modules receive the same OBI request.
   // Each checks addr_valid against its own BaseAddr/range,
   // so only one will grant at a time.
 
@@ -75,6 +81,7 @@ module tile_csr
     .start_o   ( spatz_start_o  ),
     .done_o    ( spatz_done_o   )
   );
+
 
   // ============================================
   // Cluster control registers (offset 0x40–0x44)
@@ -94,15 +101,30 @@ module tile_csr
   );
 
   // ============================================
+  // Collective control registers (offset 0x100–0x104)
+  // ============================================
+  obi_slave_ctrl_coll #(
+    .BaseAddr  ( BaseAddr + 32'h100)
+  ) i_collective_ctrl (
+    .clk_i             ( clk_i              ),
+    .rst_ni            ( rst_ni             ),
+    .obi_req_i         ( obi_req_i          ),
+    .obi_rsp_o         ( collective_obi_rsp ),
+    .collective_mask_o ( collective_mask_o  ),
+    .collective_op_o   ( collective_op_o    )
+  );
+
+
+  // ============================================
   // OBI response mux
   // ============================================
   // Non-overlapping address ranges guarantee at most one
   // sub-module grants/responds at a time.
-  assign obi_rsp_o.gnt    = spatz_obi_rsp.gnt    | cluster_obi_rsp.gnt;
-  assign obi_rsp_o.rvalid = spatz_obi_rsp.rvalid  | cluster_obi_rsp.rvalid;
-  assign obi_rsp_o.r.rdata      = spatz_obi_rsp.rvalid ? spatz_obi_rsp.r.rdata : cluster_obi_rsp.r.rdata;
+  assign obi_rsp_o.gnt          = spatz_obi_rsp.gnt | collective_obi_rsp.gnt | cluster_obi_rsp.gnt;
+  assign obi_rsp_o.rvalid       = spatz_obi_rsp.rvalid | collective_obi_rsp.rvalid | cluster_obi_rsp.rvalid;
+  assign obi_rsp_o.r.rdata      = spatz_obi_rsp.rvalid ? spatz_obi_rsp.r.rdata : collective_obi_rsp.rvalid ? collective_obi_rsp.r.rdata : cluster_obi_rsp.r.rdata;
   assign obi_rsp_o.r.rid        = '0;
-  assign obi_rsp_o.r.err        = spatz_obi_rsp.r.err | cluster_obi_rsp.r.err;
+  assign obi_rsp_o.r.err        = spatz_obi_rsp.r.err | collective_obi_rsp.r.err | cluster_obi_rsp.r.err;
   assign obi_rsp_o.r.r_optional = '0;
 
 endmodule

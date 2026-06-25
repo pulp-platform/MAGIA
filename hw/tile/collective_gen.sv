@@ -17,15 +17,21 @@
  
  * Mcast Generator
  
- * This module sets up the user field for a broadcast operation.
- * If the MSB is B, the transaction is recognized as a broadcast operation.
+ * This module sets up the user field for a collective operation.
+ * If the MSB is B, the transaction is recognized as a collective operation.
+ * Currently the only the Broadcast (coll_op = 0x0) and LsbAnd (coll_op = 0x1) reduce are supported. 
+ * The collective_mask is used to identify the tiles that take part to the collective operation.
  */
 
-module mcast_gen
+module collective_gen
   import magia_noc_pkg::*;
 (
-  input  magia_tile_pkg::core_axi_data_req_t data_req_i,
-  output magia_tile_pkg::core_axi_data_req_t data_req_o
+  input clk_i,
+  input rst_ni,
+  input logic[31:0] collective_mask_i;
+  output logic[3:0] collective_op_i;
+  input  magia_pkg::axi_xbar_mst_req_t data_req_i,
+  output magia_pkg::axi_xbar_mst_req_t data_req_o
 );
 
 
@@ -52,6 +58,6 @@ assign data_req_o.aw.prot = data_req_i.aw.prot;
 assign data_req_o.aw.qos = data_req_i.aw.qos;
 assign data_req_o.aw.region = data_req_i.aw.region;
 assign data_req_o.aw.atop = data_req_i.aw.atop;
-assign data_req_o.aw.user = (data_req_i.aw.addr[31:28] == 4'hb) ? {magia_noc_pkg::BroadcastMask, magia_noc_pkg::CollectiveOp} : '0;
+assign data_req_o.aw.user = (data_req_i.aw.addr[31:28] == 4'hb) ? {collective_mask_i, collective_op_i} : '0;
 
-endmodule: mcast_gen
+endmodule: collective_gen
