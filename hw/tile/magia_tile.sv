@@ -1240,7 +1240,7 @@ module magia_tile
     .PMA_CFG          (                                 ),    // No array of PMA configurations
     .CLIC             ( magia_tile_pkg::CLIC_EN         ),    // Support for Smclic, Smclicshv and Smclicconfig
     .CLIC_ID_WIDTH    ( magia_tile_pkg::CLIC_ID_W       )     // Width of clic_irq_id_i and clic_irq_id_o
-  ) i_cv32e40x_main_core (
+  ) i_cv32e40x_ctrl_core (
     // Clock and reset
     .clk_i               ( sys_clk                ),
     .rst_ni              ( rst_ni                 ),
@@ -1341,7 +1341,7 @@ module magia_tile
     .APU_NDSFLAGS_CPU    ( magia_tile_pkg::APU_NDSFLAGS_CPU    ),
     .APU_NUSFLAGS_CPU    ( magia_tile_pkg::APU_NUSFLAGS_CPU    ),
     .DM_HaltAddress      ( magia_tile_pkg::DM_HALT_ADDR        )
-  ) i_ri5cy_main_core (
+  ) i_ri5cy_ctrl_core (
     // Clock and Reset
     .clk_i                  ( core_clk              ),  // Use gated clock for core
     .rst_ni                 ( rst_ni                ),
@@ -1426,7 +1426,7 @@ module magia_tile
     .FPU_ADDMUL_LAT      ( 1                                   ), // Match C_LAT_FP32=1 in fpnew wrapper
     .FPU_OTHERS_LAT      ( 1                                   ), // Match C_LAT_NONCOMP=1 in fpnew wrapper
     .NUM_MHPMCOUNTERS    ( 29                                  )
-  ) i_cv32e40p_main_core (
+  ) i_cv32e40p_ctrl_core (
     // Clock and Reset
     .clk_i                  ( core_clk              ),  // Use gated clock for core
     .rst_ni                 ( rst_ni                ),

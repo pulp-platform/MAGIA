@@ -581,7 +581,7 @@ hw-all: hw-clean hw-lib hw-compile hw-opt
 # Nonfree components
 MAGIA_NONFREE_REMOTE ?= git@iis-git.ee.ethz.ch:pulp-restricted/magia-nonfree
 MAGIA_NONFREE_DIR ?= nonfree
-MAGIA_NONFREE_COMMIT ?= d8322f07c92a39b0fed0134bb066b973d0d11c61
+MAGIA_NONFREE_COMMIT ?= c4d50afffec926698d73a8d352710a363e98e68b
 
 .PHONY: magia-nonfree-init
 MAGIA_NONFREE_DEPS ?= 1

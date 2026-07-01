@@ -268,9 +268,9 @@ module magia_vip
   for (genvar i = 0; i < magia_tb_pkg::N_TILES_Y; i++) begin: gen_tile_instr_monitor_y
     for (genvar j = 0; j < magia_tb_pkg::N_TILES_X; j++) begin: gen_tile_instr_monitor_x
 `ifdef CV32E40X
-      assign curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.core_i.id_stage_i.id_ex_pipe_o.instr.bus_resp.rdata;
+      assign curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_ctrl_core.core_i.id_stage_i.id_ex_pipe_o.instr.bus_resp.rdata;
 `else
-      assign curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_core.ex_valid ? i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_core.id_stage_i.instr_rdata_i : '0;
+      assign curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_ctrl_core.ex_valid ? i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_ctrl_core.id_stage_i.instr_rdata_i : '0;
 `endif
       always @(curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j]) begin: instr_ex_reporter
         if (curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] == 32'h50500013) 
@@ -288,9 +288,9 @@ module magia_vip
         end
       end
 `ifdef CV32E40X
-      assign curr_instr_id[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.core_i.id_stage_i.if_id_pipe_i.instr.bus_resp.rdata;
+      assign curr_instr_id[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_ctrl_core.core_i.id_stage_i.if_id_pipe_i.instr.bus_resp.rdata;
 `else
-      assign curr_instr_id[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_core.id_stage_i.instr_rdata_i;
+      assign curr_instr_id[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_ctrl_core.id_stage_i.instr_rdata_i;
 `endif
       always @(curr_instr_id[i*magia_tb_pkg::N_TILES_X+j]) begin: instr_id_reporter
         if (curr_instr_id[i*magia_tb_pkg::N_TILES_X+j] == 32'h40400013) 
@@ -338,11 +338,11 @@ module magia_vip
   for (genvar i = 0; i < magia_tb_pkg::N_TILES_Y; i++) begin: gen_tile_instr_monitor_y
     for (genvar j = 0; j < magia_tb_pkg::N_TILES_X; j++) begin: gen_tile_instr_monitor_x 
 `ifdef CV32E40X
-      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.core_i.wb_stage_i.ex_wb_pipe_i.instr_valid ?
-      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
+      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr_valid ?
+      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
 `else
-      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_core.wb_valid ?
-      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_core.regfile_wdata : '0;
+      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_ctrl_core.wb_valid ?
+      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_ctrl_core.regfile_wdata : '0;
 `endif
       always @(curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j]) begin: instr_wb_reporter
         if (curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] == 32'h5AA00013) begin
@@ -498,11 +498,11 @@ module magia_vip
   for (genvar i = 0; i < magia_tb_pkg::N_TILES_Y; i++) begin: gen_tile_instr_monitor_y
     for (genvar j = 0; j < magia_tb_pkg::N_TILES_X; j++) begin: gen_tile_instr_monitor_x 
 `ifdef CV32E40X
-      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.core_i.wb_stage_i.ex_wb_pipe_i.instr_valid ?
-      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
+      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr_valid ?
+      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
 `else
-      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_core.wb_valid ?
-      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_core.instr_rdata_id : '0;
+      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_ctrl_core.wb_valid ?
+      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_ctrl_core.instr_rdata_id : '0;
 `endif
       always @(curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j]) begin: instr_wb_reporter
         if (curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] == 32'h5AA00013) begin

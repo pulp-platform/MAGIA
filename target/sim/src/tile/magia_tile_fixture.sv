@@ -178,7 +178,7 @@ module magia_tile_fixture;
 `ifdef CORE_TRACES
 `ifdef CV32E40X
   localparam string core_trace_file_name = "log_file_0";
-  defparam i_magia_tile.i_cv32e40x_core.rvfi_i.tracer_i.LOGFILE_PATH_PLUSARG = core_trace_file_name;
+  defparam i_magia_tile.i_cv32e40x_ctrl_core.rvfi_i.tracer_i.LOGFILE_PATH_PLUSARG = core_trace_file_name;
 `endif
   // Note: cv32e40p tracer generates its own filename: trace_core_{cluster_id}_{core_id}.log
 `endif
