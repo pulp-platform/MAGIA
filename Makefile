@@ -27,26 +27,40 @@ MAGIA_DIR  ?= $(shell pwd)
 
 SW             ?= sw
 BUILD_DIR      ?= sim/work
+
 ifneq (,$(wildcard /etc/iis.version))
     QUESTA ?= questa-2025.1
-    BENDER ?= bender
     BASE_PYTHON ?= python
 else
     QUESTA ?=
-    BENDER ?= ./bender
     BASE_PYTHON ?= python3
 endif
+
+BENDER ?= bender
 BENDER_DIR     ?= .
-ISA            ?= riscv
 ARCH           ?= rv
 XLEN           ?= 32
+
 ifeq ($(core), CV32E40X)
-  XTEN         = imafc
+  XTEN = imafc
+  ISA = riscv
+  ABI            ?= ilp
+  XABI           ?= f
+else ifeq ($(core), RI5CY)
+  XTEN = imcxgap9
+  ISA  = riscv
+  ABI            ?= ilp
+  XABI           ?=
 else
-  XTEN         = imcxgap9
+  # CV32E40P configured with ZFINX=1 in RTL: FP ops use the GPRs (no F register
+  # file). Toolchain must therefore use Zfinx (and Zhinxmin for FP16) and the
+  # plain ilp32 ABI; using `f` in march or ilp32f ABI would emit instructions
+  # that target the (non-existent) F regs.
+  XTEN = imc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfinx_zhinxmin
+  ISA = cv32e40p
+  ABI            ?= ilp
+  XABI           ?=
 endif
-ABI            ?= ilp
-XABI           ?= f
 
 #ifeq ($(REDMULE_COMPLEX),1)
 #	TEST_SRCS := sw/redmule_complex.c
@@ -54,9 +68,19 @@ XABI           ?= f
 #	TEST_SRCS := sw/redmule.c
 #endif
 
-TEST_DIR  := sw/tests
-# Auto-detect test location in any subdirectory
-TEST_SUBDIR = $(filter-out .,$(shell find $(TEST_DIR) -name "$(test).c" -printf "%P\n" 2>/dev/null | head -1 | xargs dirname 2>/dev/null))
+# Auto-detect test location under sw/tests/ recursively — no cluster= flag needed.
+# A directory named $(test) is searched first (handles both sw/tests/<test>/ and
+# sw/tests/cluster_tests/<test>/); single-file tests fall back to sw/tests/$(test).c.
+# cluster= is still accepted for backward compatibility but its value is ignored.
+cluster       ?= 0   # accepted for backward compat — value is ignored
+num_clusters  ?= 16  # number of PULP cluster tiles (N_TILES for 4x4 mesh)
+
+_FOUND_TEST_DIR  := $(shell find sw/tests -maxdepth 5 -type d -name "$(test)" 2>/dev/null | head -1)
+TEST_DIR          = $(if $(_FOUND_TEST_DIR),$(patsubst %/,%,$(dir $(_FOUND_TEST_DIR))),sw/tests)
+TEST_SUBDIR       = $(filter-out .,$(shell find $(TEST_DIR) -name "$(test).c" -printf "%P\n" 2>/dev/null | head -1 | xargs dirname 2>/dev/null))
+# CV32-side test source. For cluster tests with a pulp_task/ subdirectory the
+# entrypoint is main.c (handled in the $(OBJ) rule); for plain single-binary
+# tests this matches the legacy $(test).c naming convention.
 TEST_SRCS  = $(TEST_DIR)/$(if $(TEST_SUBDIR),$(TEST_SUBDIR)/)$(test).c
 
 compile_script       ?= scripts/compile.tcl
@@ -102,27 +126,72 @@ ifeq ($(core), CV32E40X)
   FLAGS += -DCV32E40X
 endif
 
+ifeq ($(core), CV32E40P)
+  FLAGS += -DCV32E40P
+endif
+
+ifeq ($(core), RI5CY)
+  FLAGS += -DRI5CY
+endif
+
 # Include directories
 INC += -Isw
 INC += -Isw/inc
 INC += -Isw/utils
 INC += -Ispatz/sw/headers_bin
+INC += -Isw/kernel_pulp/headers_bin
+
+# ----------------------------------------------------------------------------
+# Kernel runtime selection — magia-sdk single-binary flow.
+#
+# A single CV32 ELF is always produced via sw/kernel/{crt0.S,link.ld}.
+# If the test directory contains a `pulp_task/` subdirectory with at least
+# one .c source, the PULP cluster sources are compiled into a separate
+# position-independent ELF (sw/kernel_pulp/{pulp_crt0.S,pulp_program.ld}),
+# converted to a flat binary, and packed into
+#   sw/kernel_pulp/headers_bin/<test>_pulp_task_bin.h
+# which the CV32 main.c `#include`s. The linker (sw/kernel/link.ld) KEEPs
+# that array inside the `.pulp_binary` section, right after the optional
+# Spatz binary in instrram (0xCC000000...).  This mirrors what is done for
+# Spatz tasks via spatz/sw/Makefile and the `.spatz_binary` section.
+# ----------------------------------------------------------------------------
+TEST_DIR_PATH       := $(if $(_FOUND_TEST_DIR),$(_FOUND_TEST_DIR),sw/tests/$(test))
+PULP_TASK_DIR_PATH  := $(TEST_DIR_PATH)/pulp_task
+PULP_TASKS          := $(if $(wildcard $(PULP_TASK_DIR_PATH)/*.c),$(notdir $(basename $(wildcard $(PULP_TASK_DIR_PATH)/*.c))),)
 
 BOOTSCRIPT := sw/kernel/crt0.S
 LINKSCRIPT := sw/kernel/link.ld
 
-CC=$(ISA)$(XLEN)-unknown-elf-gcc
+PULP_SW_DIR := sw/kernel_pulp
+
+ifneq ($(core), CV32E40P)
+  CC=$(ISA)$(XLEN)-unknown-elf-gcc
+  OBJDUMP=$(ISA)$(XLEN)-unknown-elf-objdump
+  NM=$(ISA)$(XLEN)-unknown-elf-nm
+else
+  CC=riscv64-unknown-elf-gcc
+  OBJDUMP=riscv64-unknown-elf-objdump
+  NM=riscv64-unknown-elf-nm
+endif
 LD=$(CC)
-OBJDUMP=$(ISA)$(XLEN)-unknown-elf-objdump
-CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
-LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
+ifneq ($(core), CV32E40P)
+  CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
+	LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
+else
+  CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -U__riscv__ -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
+  LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -U__riscv__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
+endif
 
 # Spatz embedded binary support (via header)
 SPATZ_SW_DIR   := spatz/sw
 
-# Auto-detect which Spatz tasks are used by looking for *_TASK symbols in CV32 code
-# Example: HELLO_WORLD_TASK → hello_world_task
-SPATZ_TASKS := $(shell grep -oP '\b(?!SPATZ_)[A-Z][A-Z0-9_]*_TASK\b' $(TEST_SRCS) 2>/dev/null | tr '[:upper:]' '[:lower:]' | awk '!seen[$$0]++')
+# Auto-detect which Spatz tasks are used by looking for *_TASK symbols in CV32 code.
+# Example: HELLO_WORLD_TASK -> hello_world_task.  PULP task macros use the same
+# naming scheme, so remove tasks backed by pulp_task/*.c from the Spatz list.
+# When PULP tasks are embedded, the actual CV32 source is main.c.
+_SPATZ_SRC_TO_GREP := $(if $(PULP_TASKS),$(TEST_DIR_PATH)/main.c,$(TEST_SRCS))
+_AUTO_TASKS := $(shell grep -oP '\b(?!SPATZ_)[A-Z][A-Z0-9_]*_TASK\b' $(_SPATZ_SRC_TO_GREP) 2>/dev/null | tr '[:upper:]' '[:lower:]' | awk '!seen[$$0]++')
+SPATZ_TASKS := $(filter-out $(PULP_TASKS),$(_AUTO_TASKS))
 
 # Setup build object dirs
 TEST_BUILD_DIR = $(TEST_DIR)/$(if $(TEST_SUBDIR),$(TEST_SUBDIR)/)$(test)
@@ -131,6 +200,9 @@ OBJ=$(TEST_BUILD_DIR)/build/verif.o
 BIN=$(TEST_BUILD_DIR)/build/verif
 DUMP=$(TEST_BUILD_DIR)/build/verif.dump
 ODUMP=$(TEST_BUILD_DIR)/build/verif.objdump
+# PULP cluster disassembly with global (runtime) addresses (only when PULP_TASKS set)
+PULP_ELF=$(PULP_SW_DIR)/bin/$(test)_pulp_task_bin.elf
+PULP_DUMP_GLOBAL=$(TEST_BUILD_DIR)/build/$(test)_pulp_task_global.dump
 ITB=$(TEST_BUILD_DIR)/build/verif.itb
 STIM_INSTR=$(TEST_BUILD_DIR)/build/stim_instr.txt
 STIM_DATA=$(TEST_BUILD_DIR)/build/stim_data.txt
@@ -157,11 +229,26 @@ spatz-header:
 		echo "[SPATZ] No Spatz tasks detected - skipping Spatz compilation"; \
 	fi
 
+# Build PULP cluster binary (magia-sdk style): produces
+#   sw/kernel_pulp/headers_bin/<test>_pulp_task_bin.h
+# embedding the position-independent flat binary in section .pulp_binary.
+.PHONY: pulp-header
+pulp-header:
+	@if [ -n "$(PULP_TASKS)" ]; then \
+		echo "[PULP] Auto-detected tasks: $(PULP_TASKS)"; \
+		$(MAKE) -C $(PULP_SW_DIR) TEST_NAME=$(test) task="$(PULP_TASKS)" PULP_TASK_DIR=$(ROOT_DIR)/$(PULP_TASK_DIR_PATH) core=$(core) all; \
+	else \
+		echo "[PULP] No pulp_task/ directory — skipping PULP cluster compilation"; \
+	fi
+
 $(BIN): $(CRT) $(OBJ)
 	@if [ -n "$(SPATZ_TASKS)" ]; then \
 		echo "[CV32-LINK] Linking with embedded Spatz binary (tasks: $(SPATZ_TASKS))"; \
 	else \
 		echo "[CV32-LINK] Linking without Spatz binary"; \
+	fi
+	@if [ -n "$(PULP_TASKS)" ]; then \
+		echo "[CV32-LINK] Linking with embedded PULP binary (tasks: $(PULP_TASKS))"; \
 	fi
 	$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT)
 
@@ -169,14 +256,22 @@ $(CRT):
 	mkdir -p $(TEST_BUILD_DIR)/build
 	$(CC) $(CC_OPTS) -c $(BOOTSCRIPT) -o $(CRT)
 
-# Compile CV32 test (depends on spatz-header only if tasks detected)
+# Compile CV32 test (depends on spatz/pulp headers only when tasks are used)
 ifneq ($(SPATZ_TASKS),)
 $(OBJ): spatz-header
+endif
+ifneq ($(PULP_TASKS),)
+$(OBJ): pulp-header
 endif
 
 $(OBJ):
 	mkdir -p $(TEST_BUILD_DIR)/build
+ifneq ($(PULP_TASKS),)
+	@echo "[CV32] Compiling main core source: $(TEST_DIR_PATH)/main.c"
+	$(CC) $(CC_OPTS) -c $(TEST_DIR_PATH)/main.c $(FLAGS) $(INC) -o $(OBJ)
+else
 	$(CC) $(CC_OPTS) -c $(TEST_SRCS) $(FLAGS) $(INC) -o $(OBJ)
+endif
 
 SHELL := /bin/bash
 
@@ -196,14 +291,22 @@ python_deps:
 	$(BASE_PYTHON) -m pip install --upgrade pip setuptools && \
     $(BASE_PYTHON) -m pip install -r requirements.txt
 
-# Generate instructions and data stimuli
+# Generate instructions and data stimuli (single-binary flow).
+ifneq ($(PULP_TASKS),)
+all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb pulp-dis
+else
 all: $(STIM_INSTR) $(STIM_DATA) dis objdump itb
+endif
 
 # Run the simulation
 run: $(CRT)
+ifneq ($(PULP_TASKS),)
+	@rm -rf $(TEST_BUILD_DIR)/traces $(TEST_BUILD_DIR)/trace_core_*.log
+	@bash $(ROOT_DIR)/scripts/setup_traces.sh $(TEST_BUILD_DIR) $(num_clusters)
+endif
 ifeq ($(gui), 0)
 	cd $(TEST_BUILD_DIR);                                                                		 \
-	$(QUESTA) vsim -c vopt_tb $(questa_run_fast_flag) -l transcript -do "run -a"                 \
+	$(QUESTA) vsim -c vopt_tb $(questa_run_fast_flag) -l transcript                              \
 	+INST_HEX=$(inst_hex_name)                                                                   \
 	+DATA_HEX=$(data_hex_name)                                                                   \
 	+INST_ENTRY=$(inst_entry)                                                                    \
@@ -212,7 +315,8 @@ ifeq ($(gui), 0)
 	$(foreach i, $(shell seq 0 $(shell echo $$(($(num_cores)-1)))),                              \
 		+log_file_$(i)=$(log_path_$(i))                                                            \
 	)                                                                                            \
-	+itb_file=$(itb_file)
+	+itb_file=$(itb_file)                                                                        \
+	-do "run -a"
 else
 	cd $(TEST_BUILD_DIR);                                                                		 \
 	$(QUESTA) vsim vopt_tb $(questa_run_flag) -l transcript                                      \
@@ -227,6 +331,15 @@ else
 		+log_file_$(i)=$(log_path_$(i))                                                            \
 	)                                                                                            \
 	+itb_file=$(itb_file)
+endif
+ifneq ($(PULP_TASKS),)
+	@bash $(ROOT_DIR)/scripts/sort_traces.sh $(TEST_BUILD_DIR) $(num_clusters)
+else
+	@for f in $(TEST_BUILD_DIR)/trace_core_*.log; do \
+		[ -f "$$f" ] || continue; \
+		hartid=$$(printf '%d' "0x$$(basename $$f .log | sed 's/trace_core_//')"); \
+		[ $$hartid -ge $$(( 2 * $(num_clusters) )) ] && rm -f "$$f" || true; \
+	done
 endif
 
 # Download bender
@@ -248,13 +361,18 @@ ifeq ($(core), CV32E40X)
   bender_defs += -D CV32E40X
 else ifeq ($(core), CV32E40P)
   bender_defs += -D CV32E40P
+else ifeq ($(core), RI5CY)
+  bender_defs += -D RI5CY
 else
-  $(error Detected unsupported core, must choose among CV32E40X and CV32E40P)
+  $(error Detected unsupported core, must choose among CV32E40X, CV32E40P and RI5CY)
 endif
 
 bender_targs += -t rtl
 bender_targs += -t test
+ifeq ($(core), CV32E40P)
 bender_targs += -t cv32e40p_include_tracer
+endif
+# RI5CY: riscv_*.sv compiled unconditionally by the PULP cv32e40p package, no extra bender target needed
 
 
 # Targets needed to avoid error even though the module is not used
@@ -310,7 +428,18 @@ bender_defs    += -D SPATZ_XDMA=$(SPATZ_XDMA)
 bender_defs    += -D SPATZ_RVF=$(SPATZ_RVF)
 bender_defs    += -D SPATZ_RVV=$(SPATZ_RVV)
 
+# RI5CY_CV32E40P_GIT / RI5CY_CV32E40P_REV: PULP repo override for core=RI5CY
+RI5CY_CV32E40P_GIT := https://github.com/pulp-platform/cv32e40p.git
+RI5CY_CV32E40P_REV := f5241403d5d65dbe1fffacd7035dd7ae1359c8ef
+CV32E40P_GIT      := https://github.com/FondazioneChipsIT/cv32e40p.git
+CV32E40P_REV      := 7e48663
+
 update-ips:
+ifeq ($(core), RI5CY)
+	@sed -i 's|^  cv32e40p .*|  cv32e40p           : { git: "$(RI5CY_CV32E40P_GIT)"          , rev: $(RI5CY_CV32E40P_REV) } # RI5CY branch: lb/magia_core|' Bender.local
+else
+	@sed -i 's|^  cv32e40p .*|  cv32e40p           : { git: "$(CV32E40P_GIT)"      , rev: $(CV32E40P_REV) } # branch: ng/pulp_cluster|' Bender.local
+endif
 	$(BENDER) update
 	$(BENDER) script vsim          \
 	--vlog-arg="$(compile_flag)"   \
@@ -360,10 +489,14 @@ clean-sdk:
 	rm -rf $(SW)/pulp-sdk
 
 clean:
-	rm -rf $(TEST_BUILD_DIR)
+	rm -rf $(TEST_BUILD_DIR)/build
 	@if [ -d "$(SPATZ_SW_DIR)" ]; then \
 		echo "[CLEAN] Cleaning Spatz..."; \
 		$(MAKE) -C $(SPATZ_SW_DIR) clean; \
+	fi
+	@if [ -d "$(PULP_SW_DIR)" ]; then \
+		echo "[CLEAN] Cleaning PULP cluster..."; \
+		$(MAKE) -C $(PULP_SW_DIR) clean; \
 	fi
 
 dis:
@@ -374,6 +507,32 @@ objdump:
 
 itb:
 	$(BASE_PYTHON) scripts/objdump2itb.py $(ODUMP) > $(ITB)
+
+# PULP cluster disassembly with actual runtime (global) addresses.
+# Extracts _pulp_binary_start from the CV32 ELF via nm, then uses
+# --adjust-vma to shift the PIC PULP ELF addresses to match the traces.
+.PHONY: pulp-dis
+pulp-dis: $(BIN)
+	@LOAD_ADDR=$$($(NM) $(BIN) | grep ' _pulp_binary_start$$' | awk '{print "0x"$$1}'); \
+	if [ -z "$$LOAD_ADDR" ]; then \
+		echo "[PULP-DIS] WARNING: _pulp_binary_start not found in $(BIN) - skipping"; \
+	else \
+		echo "[PULP-DIS] _pulp_binary_start = $$LOAD_ADDR"; \
+		$(OBJDUMP) -d -S --adjust-vma=$$LOAD_ADDR $(PULP_ELF) > $(PULP_DUMP_GLOBAL); \
+		echo "[PULP-DIS] Written: $(PULP_DUMP_GLOBAL)"; \
+	fi
+
+# Trace directory helpers.
+#   setup-traces: pre-creates the traces/tile_N/{main,cluster}/ tree so it is
+#                 visible as soon as the simulation starts (called by 'run').
+#   sort-traces : after sim, moves trace_core_<hartid>.log into the matching
+#                 tile subdir (called by 'run'; also usable manually).
+.PHONY: setup-traces sort-traces
+setup-traces:
+	@bash $(ROOT_DIR)/scripts/setup_traces.sh $(TEST_BUILD_DIR) $(num_clusters)
+
+sort-traces:
+	@bash $(ROOT_DIR)/scripts/sort_traces.sh $(TEST_BUILD_DIR) $(num_clusters)
 
 OP     ?= gemm
 fp_fmt ?= FP16
@@ -422,7 +581,7 @@ hw-all: hw-clean hw-lib hw-compile hw-opt
 # Nonfree components
 MAGIA_NONFREE_REMOTE ?= git@iis-git.ee.ethz.ch:pulp-restricted/magia-nonfree
 MAGIA_NONFREE_DIR ?= nonfree
-MAGIA_NONFREE_COMMIT ?= v0.2
+MAGIA_NONFREE_COMMIT ?= c4d50afffec926698d73a8d352710a363e98e68b
 
 .PHONY: magia-nonfree-init
 MAGIA_NONFREE_DEPS ?= 1

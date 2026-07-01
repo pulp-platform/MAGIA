@@ -9,6 +9,7 @@ build-hw.log
 profile-ips.log
 magia_venv/
 modelsim.ini
+regression_logs/
 
 sw/tests/*/build/
 sw/tests/*/logs/
@@ -35,3 +36,9 @@ spatz/sw/bin/*.dump
 spatz/sw/bin/*.o
 
 spatz/sw/headers_bin/*.h
+
+sw/kernel_pulp/bin/
+sw/kernel_pulp/headers_bin/
+
+*.wlf
+*.dbg

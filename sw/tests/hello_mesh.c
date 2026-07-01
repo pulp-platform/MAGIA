@@ -23,7 +23,7 @@
 #include "magia_utils.h"
 
 int main(void) {
-  // h_pprintf("Hello World! it is hartid "); pprintf(ds(get_hartid())); pprintln;
+  //h_pprintf("Hello World! it is hartid "); pprintf(ds(get_hartid())); pprintln;
   printf("Hello World! it is tile/hart %0d\n", get_hartid());
 
   return 0;

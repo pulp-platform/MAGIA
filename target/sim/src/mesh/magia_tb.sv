@@ -30,11 +30,13 @@ module magia_tb;
 
   initial begin
     // Fetch plusargs or use safe (fail-fast) defaults
-    if (!$value$plusargs("INST_HEX=%s" ,   inst_hex))  inst_hex  = "";
-    if (!$value$plusargs("DATA_HEX=%s" ,   data_hex))  data_hex  = "";
-    if (!$value$plusargs("BOOT_ADDR=%h",   boot_addr)) boot_addr = 0;
+    if (!$value$plusargs("INST_HEX=%s" ,      inst_hex))      inst_hex      = "";
+    if (!$value$plusargs("DATA_HEX=%s" ,      data_hex))      data_hex      = "";
+    if (!$value$plusargs("BOOT_ADDR=%h",      boot_addr))     boot_addr     = 0;
 
-    // Preload data (dummy L2 MEM) and instructions (I$)
+    // Single-binary flow: the CV32 ELF (@ 0xCC000000) embeds the optional
+    // Spatz/PULP task binaries in dedicated linker sections
+    // (.spatz_binary / .pulp_binary), so only one stimulus pair is preloaded.
     fixture.vip.inst_preload(inst_hex);
     fixture.vip.data_preload(data_hex);
 
