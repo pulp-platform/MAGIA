@@ -107,10 +107,10 @@ package magia_noc_pkg;
                 CollectiveSam = floo_axi_nw_mesh_4x4_noc_pkg::CollectiveSam;
             end
             32'd64: begin
-                CollectiveSam = floo_axi_nw_mesh_8x8_noc_pkg::Sam;
+                CollectiveSam = floo_axi_nw_mesh_8x8_noc_pkg::CollectiveSam;
             end
             32'd256: begin
-                CollectiveSam = floo_axi_nw_mesh_16x16_noc_pkg::Sam;
+                CollectiveSam = floo_axi_nw_mesh_16x16_noc_pkg::CollectiveSam;
             end
             32'd1024: begin
                 CollectiveSam = floo_axi_nw_mesh_32x32_noc_pkg::Sam;
@@ -152,38 +152,6 @@ package magia_noc_pkg;
     // Actual declaration of RouteCfg
     localparam route_cfg_t RouteCfg = gen_route_config(N_TILES);
 
-
-    /**********************************
-    **          BROADCAST MASK       **
-    **********************************/
-    // Helper function to get the broadcast mask
-    function automatic logic[31:0] gen_broadcast_mask(int unsigned num_tiles);
-        logic[31:0] mask;
-
-        case (num_tiles)
-            32'd4:  begin
-                mask = 32'h00300000;
-            end
-            32'd16: begin
-                mask = 32'h00F00000;
-            end
-            32'd64: begin
-                mask = 32'h00300000;
-            end
-            32'd256: begin
-                mask = 32'h00300000;
-            end
-            32'd1024: begin
-                mask = 32'h00300000;
-            end
-        endcase
-
-        return mask;
-    endfunction
-
-    // Actual declaration of the Broadcast Mask
-    localparam logic[31:0] BroadcastMask = gen_broadcast_mask(N_TILES);
-    localparam logic[3:0] CollectiveOp = 4'b0010; // 0x0 Unicast; 0x1 Multicast; 0x2 Barrier
 
     //********** STANDARD AXI STRUCTS **********//
     typedef logic[ADDR_W-1:0]  axi_narrow_data_mst_addr_t;
