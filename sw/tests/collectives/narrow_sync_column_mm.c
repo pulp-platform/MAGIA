@@ -16,22 +16,31 @@
  *
  * Authors: Carlotta Chiarini
  * 
- * MAGIA Reduction test over the narrow channel
+ * MAGIA Column synchronization test over the narrow channel
+ * using the built-in FlooNoC collectives
  */
 
 #include "magia_utils.h"
 #include "magia_coll_utils.h"
 
 #define MEM_OFFSET (0x1000)
-#define DESTINATION_HART_ID 4
+#define DESTINATION_HART_ID 6
+#define CACHE_HEAT_CYCLES (5)
 
 int main() {
 
-  set_collective_mask(gen_collective_mask());
+  set_collective_mask(gen_collective_mask(COLUMN));
   set_collective_op(REDUCE);
 
-  // Data to be reduced (LsbAND)
-  *(volatile int*) (COLLECTIVE_ADDR_OFFSET + L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + MEM_OFFSET) = 3;
+  if(GET_X_ID(get_hartid()) == GET_X_ID(DESTINATION_HART_ID)){
+    printf("Synchronizing...\n");
+    // Execute synchronization multiple times to pre-heat the cache
+    for (int i = 0; i < CACHE_HEAT_CYCLES; i++) {
+        // Data to be reduced (LsbAND)
+        *(volatile int*) (COLLECTIVE_ADDR_OFFSET + L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + MEM_OFFSET) = 3;
+        magia_fence();
+    }
+  }
 
   if(get_hartid() == DESTINATION_HART_ID){
     while(*(volatile int*) (L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) != 3) {};

@@ -31,8 +31,12 @@
 
 #define MASK_OFFSET 20
 
-#define BROADCAST 1
+#define MULTICAST 1
 #define REDUCE 2
+
+#define ALL 1
+#define COLUMN 2
+#define ROW 3
 
 #define mmio32(x) (*(volatile uint32_t *)(x))
 
@@ -45,11 +49,41 @@ static inline void set_collective_op(uint32_t collective_op) {
 }
 
 // The collective mask is composed of an Y_FIELD starting from MASK_OFFSET, followed by an X_FIELD
-static inline uint32_t gen_collective_mask() {
-    if(NUM_HARTS == 4)
-        return (1 << (MASK_OFFSET)) | (1 << (MASK_OFFSET + 1));
-    else if (NUM_HARTS == 16)
-        return (3 << (MASK_OFFSET)) | (3 << (MASK_OFFSET + 2));
+static inline uint32_t gen_collective_mask(uint32_t geometry) {
+    if(NUM_HARTS == 4){
+        if (geometry == ALL)
+            return (1 << (MASK_OFFSET)) | (1 << (MASK_OFFSET + 1));
+        else if (geometry == COLUMN)
+            return (1 << (MASK_OFFSET));
+        else if (geometry == ROW)
+            return (1 << (MASK_OFFSET + 1));  
+    } else if (NUM_HARTS == 16){
+        if (geometry == ALL)
+            return (3 << (MASK_OFFSET)) | (3 << (MASK_OFFSET + 2));
+        else if (geometry == COLUMN)
+            return (3 << (MASK_OFFSET));
+        else if (geometry == ROW)
+            return (3 << (MASK_OFFSET + 2));  
+    } else if (NUM_HARTS == 64){
+        if (geometry == ALL)
+            return (7 << (MASK_OFFSET)) | (7 << (MASK_OFFSET + 3));
+        else if (geometry == COLUMN)
+            return (7 << (MASK_OFFSET));
+        else if (geometry == ROW)
+            return (7 << (MASK_OFFSET + 3));  
+    } else if (NUM_HARTS == 256){
+        if (geometry == ALL)
+            return (15 << (MASK_OFFSET)) | (15 << (MASK_OFFSET + 4));
+        else if (geometry == COLUMN)
+            return (15 << (MASK_OFFSET));
+        else if (geometry == ROW)
+            return (15 << (MASK_OFFSET + 4));  
+    }
+        
+}
+
+static inline void magia_fence() {
+    asm volatile("fence" ::: "memory");
 }
 
 #endif

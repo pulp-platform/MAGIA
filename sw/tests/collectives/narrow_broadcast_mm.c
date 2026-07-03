@@ -26,12 +26,13 @@
 #define END_OF_TEST_OFFSET (0x0)
 #define END_PATTERN (0xCCAA)
 #define BROADCAST_WORD (0x12345678)
+
 #define SOURCE_HART_ID 3
 
 int main() {
   
-  set_collective_mask(gen_collective_mask());
-  set_collective_op(BROADCAST);
+  set_collective_mask(gen_collective_mask(ALL));
+  set_collective_op(MULTICAST);
     
   if(get_hartid() == SOURCE_HART_ID) {
     
