@@ -220,8 +220,8 @@ module magia
         .noc_west_rsp_o      ( tile_west_rsp_out[i*N_TILES_X+j]   ),
         .noc_west_wide_i     ( tile_west_wide_in[i*N_TILES_X+j]   ),
 
-        .x_id_i              ( CollectiveSam[j*N_TILES_Y+i].idx.id.x ),
-        .y_id_i              ( CollectiveSam[j*N_TILES_Y+i].idx.id.y ),
+        .x_id_i              ( {{(32-$clog2(N_TILES_X+1)){1'b0}}, CollectiveSam[j*N_TILES_Y+i].idx.id.x}  ),
+        .y_id_i              ( {{(32-$clog2(N_TILES_Y)){1'b0}}, CollectiveSam[j*N_TILES_Y+i].idx.id.y}    ),
   
 `ifdef VERILATOR
         .ht_fsync_req_o      ( ht_tile_fsync_req[i*N_TILES_X+j][0] ),

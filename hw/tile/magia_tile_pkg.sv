@@ -625,12 +625,7 @@ package magia_tile_pkg;
   `IDMA_TYPEDEF_FULL_RSP_T(idma_be_rsp_t, idma_addr_t)
   `IDMA_TYPEDEF_FULL_ND_REQ_T(idma_nd_req_t, idma_be_req_t, logic[iDMA_RepWidth-1:0], logic[iDMA_StrideWidth-1:0])
 
-    typedef struct packed {
-        logic [magia_pkg::ADDR_W-1:0] collective_mask;
-        logic [3:0] collective_op;
-  } axi_wide_data_slv_user_t;
-  
-  `AXI_TYPEDEF_ALL_CT(idma_axi, idma_axi_req_t, idma_axi_rsp_t, logic[iDMA_AddrWidth-1:0], logic[iDMA_AxiIdWidth-1:0], logic[iDMA_DataWidth-1:0], logic[iDMA_StrbWidth-1:0], axi_wide_data_slv_user_t)
+  `AXI_TYPEDEF_ALL_CT(idma_axi, idma_axi_req_t, idma_axi_rsp_t, logic[iDMA_AddrWidth-1:0], logic[iDMA_AxiIdWidth-1:0], logic[iDMA_DataWidth-1:0], logic[iDMA_StrbWidth-1:0], logic[iDMA_UserWidth-1:0])
 
   localparam obi_pkg::obi_optional_cfg_t obi_idma_optional_cfg = obi_pkg::obi_all_optional_config(AUSER_WIDTH, WUSER_WIDTH, RUSER_WIDTH, MID_WIDTH, ACHK_WIDTH, RCHK_WIDTH);
   localparam obi_pkg::obi_cfg_t          obi_idma_cfg          = obi_pkg::obi_default_cfg(iDMA_AddrWidth, iDMA_DataWidth, iDMA_AxiIdWidth, obi_idma_optional_cfg);
