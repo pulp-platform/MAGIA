@@ -42,16 +42,16 @@ int main() {
     *(volatile int*) (COLLECTIVE_ADDR_OFFSET + get_hartid()*L1_TILE_OFFSET + L1_BASE + END_OF_TEST_OFFSET) = (int) END_PATTERN;
     
   } else {
-        if(GET_Y_ID(get_hartid()) == GET_Y_ID(SOURCE_HART_ID)){
-            printf("Destination of the multicast\n");
+      if(GET_Y_ID(get_hartid()) == GET_Y_ID(SOURCE_HART_ID)){
+        printf("Destination of the multicast\n");
 
-            while(*(volatile int*) (L1_BASE + get_hartid()*L1_TILE_OFFSET + END_OF_TEST_OFFSET) != (int) END_PATTERN) {};
+        while(*(volatile int*) (L1_BASE + get_hartid()*L1_TILE_OFFSET + END_OF_TEST_OFFSET) != (int) END_PATTERN) {};
 
-            if(*(volatile int*) (L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) == BROADCAST_WORD)
-                printf("TEST PASSED\n");
-            else
-                printf("ERROR: Expected 0x%x; Actual: 0x%x\n", BROADCAST_WORD, *(volatile int *)(L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET));
-        }
+        if(*(volatile int*) (L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) == BROADCAST_WORD)
+            printf("TEST PASSED\n");
+        else
+            printf("ERROR: Expected 0x%x; Actual: 0x%x\n", BROADCAST_WORD, *(volatile int *)(L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET));
+      }
     }   
 
   return 0;
