@@ -305,8 +305,8 @@ module magia_tile
   logic[magia_tile_pkg::AID_WIDTH-1:0]   axi2obi_req_read_aid;
   logic[magia_tile_pkg::AUSER_WIDTH-1:0] axi2obi_req_read_auser;
 
-  logic                                  axi2obi_rsp_b_user;
-  logic                                  axi2obi_rsp_r_user;
+  logic[magia_pkg::AXI_NOC_U_W-1:0]  axi2obi_rsp_b_user;
+  logic[magia_pkg::AXI_NOC_U_W]    axi2obi_rsp_r_user;
 
   logic idma_clear;         // Can be used to manage iDMA clear at top-level
   logic idma_axi2obi_start;
@@ -1747,16 +1747,16 @@ module magia_tile
     .sam_idx_t            ( collective_idx_t                         ),
     .mask_sel_t           ( collective_mask_sel_t                    ),
     .Sam                  ( CollectiveSam                            ),
-    .user_wide_struct_t   ( collective_axi_wide_data_slv_user_t      ),
-    .user_narrow_struct_t ( collective_axi_narrow_data_slv_user_t    ),
-    .axi_narrow_in_req_t  ( collective_axi_narrow_data_slv_req_t     ),
-    .axi_narrow_in_rsp_t  ( collective_axi_narrow_data_slv_rsp_t     ),
-    .axi_narrow_out_req_t ( collective_axi_narrow_data_mst_req_t     ),
-    .axi_narrow_out_rsp_t ( collective_axi_narrow_data_mst_rsp_t     ),
-    .axi_wide_in_req_t    ( collective_axi_wide_data_slv_req_t       ),
-    .axi_wide_in_rsp_t    ( collective_axi_wide_data_slv_rsp_t       ),
-    .axi_wide_out_req_t   ( collective_axi_wide_data_mst_req_t       ),
-    .axi_wide_out_rsp_t   ( collective_axi_wide_data_mst_rsp_t       ),
+    .user_wide_struct_t   ( axi_wide_data_slv_user_t                 ),
+    .user_narrow_struct_t ( axi_narrow_data_slv_user_t               ),
+    .axi_narrow_in_req_t  ( axi_narrow_data_slv_req_t                ),
+    .axi_narrow_in_rsp_t  ( axi_narrow_data_slv_rsp_t                ),
+    .axi_narrow_out_req_t ( axi_narrow_data_mst_req_t                ),
+    .axi_narrow_out_rsp_t ( axi_narrow_data_mst_rsp_t                ),
+    .axi_wide_in_req_t    ( axi_wide_data_slv_req_t                  ),
+    .axi_wide_in_rsp_t    ( axi_wide_data_slv_rsp_t                  ),
+    .axi_wide_out_req_t   ( axi_wide_data_mst_req_t                  ),
+    .axi_wide_out_rsp_t   ( axi_wide_data_mst_rsp_t                  ),
     .floo_req_t           ( floo_req_t                               ),
     .floo_rsp_t           ( floo_rsp_t                               ),
     .floo_wide_t          ( floo_wide_t                              )

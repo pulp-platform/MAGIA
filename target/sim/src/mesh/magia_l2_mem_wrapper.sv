@@ -51,8 +51,8 @@ module magia_l2_mem_wrapper
   magia_pkg::axi_narrow_l2_req_t [NumPorts-1:0] l2_narrow_data_req;
   magia_pkg::axi_narrow_l2_rsp_t [NumPorts-1:0] l2_narrow_data_rsp;
 
-  collective_axi_wide_data_mst_req_t   [NumPorts-1:0] l2_wide_data_req;
-  collective_axi_wide_data_mst_rsp_t   [NumPorts-1:0] l2_wide_data_rsp;
+  axi_wide_data_mst_req_t   [NumPorts-1:0] l2_wide_data_req;
+  axi_wide_data_mst_rsp_t   [NumPorts-1:0] l2_wide_data_rsp;
   // AXI bus narrow channel upsized
   magia_pkg::axi_wide_l2_req_t   [NumPorts-1:0] l2_upsize_data_req;
   magia_pkg::axi_wide_l2_rsp_t   [NumPorts-1:0] l2_upsize_data_rsp;
@@ -112,12 +112,12 @@ module magia_l2_mem_wrapper
       .axi_narrow_in_rsp_t  ( axi_narrow_data_slv_rsp_t                ),
       .axi_narrow_out_req_t ( axi_narrow_data_mst_req_t                ),
       .axi_narrow_out_rsp_t ( axi_narrow_data_mst_rsp_t                ),
-      .user_narrow_struct_t ( collective_axi_narrow_data_slv_user_t      ),
-      .axi_wide_in_req_t    ( collective_axi_wide_data_slv_req_t       ),
-      .axi_wide_in_rsp_t    ( collective_axi_wide_data_slv_rsp_t       ),
-      .axi_wide_out_req_t   ( collective_axi_wide_data_mst_req_t       ),
-      .axi_wide_out_rsp_t   ( collective_axi_wide_data_mst_rsp_t       ),
-      .user_wide_struct_t   ( collective_axi_wide_data_slv_user_t      ),
+      .user_narrow_struct_t ( axi_narrow_data_slv_user_t      ),
+      .axi_wide_in_req_t    ( axi_wide_data_slv_req_t       ),
+      .axi_wide_in_rsp_t    ( axi_wide_data_slv_rsp_t       ),
+      .axi_wide_out_req_t   ( axi_wide_data_mst_req_t       ),
+      .axi_wide_out_rsp_t   ( axi_wide_data_mst_rsp_t       ),
+      .user_wide_struct_t   ( axi_wide_data_slv_user_t      ),
       .floo_req_t           ( floo_req_t                               ),
       .floo_rsp_t           ( floo_rsp_t                               ),
       .floo_wide_t          ( floo_wide_t                              )
