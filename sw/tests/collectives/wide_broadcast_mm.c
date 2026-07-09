@@ -17,31 +17,28 @@
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
  *         Based on idma_test.c by Victor Isachi
  * 
- * MAGIA Broscast test over iDMA using Memory-Mapped Control
+ * MAGIA Broadcast test over iDMA using Memory-Mapped Control
  */
 #include "magia_utils.h"
 #include "magia_tile_utils.h"
 #include "idma_mm_utils.h"
+#include "magia_coll_utils.h"
 
 #include "x_input.h"
 
-//#define X_BASE (L1_BASE + 0x00012048)
-#define X_BASE (L1_BASE + 0x00112048)
+#define X_BASE (L1_BASE + 0x00012048)
 #define Y_BASE (L1_BASE + 0x00016048)
 #define Z_BASE (L2_BASE + 0x00001000)
-#define W_BASE (L2_BASE + 0x00005000)
 
 #define M_SIZE (16)
 #define N_SIZE (16)
 
 #define VERBOSE (0)
 
-#define WAIT_CYCLES (10)
+#define END_OF_TEST_OFFSET (0x0)
+#define END_PATTERN (0xCCAA)
 
-#define CONCURRENT
-
-#define MEM_OFFSET (0x1000)
-#define MHARTID_OFFSET (0x00100000)
+#define SOURCE_HART_ID 3
 
 int main(void) {
 
@@ -52,17 +49,17 @@ int main(void) {
   uint32_t mask;
   uint32_t collective_op;
 
-  if(get_hartid() == 0) {
+  if(get_hartid() == SOURCE_HART_ID) {
 
   // ******** WRITING DATA TO L2 MEMORY ******** //
     printf("Before writing data to memory...\n");
     for (int i = 0; i < M_SIZE*N_SIZE; i++)
       mmio16(Z_BASE + 2*i) = x_inp[i];
 
-    dst_addr   = (uint32_t)(X_BASE);
-    src_addr   = (uint32_t)Z_BASE;
+    dst_addr   = (uint32_t)(X_BASE + get_hartid()*L1_TILE_OFFSET);
+    src_addr   = (uint32_t)(Z_BASE);
     len        = (uint32_t)(M_SIZE*N_SIZE*2); // 2 Bytes per element
-    broad_addr = (uint32_t)(X_BASE);
+    broad_addr = (uint32_t)(X_BASE + get_hartid()*L1_TILE_OFFSET);
 
   // ******** MOVING DATA FROM L2 TO L1 TILE 0 MEMORY ******** //
   #if VERBOSE > 10
@@ -79,25 +76,36 @@ int main(void) {
 
 
     // **************** BROADCASTING ************** //
-    if(NUM_HARTS==4)
-      mask = 0x00300000;
-    else if(NUM_HARTS==16)
-      mask = 0x00F00000;
-    else if(NUM_HARTS==64)
-      mask = 0x00F00000;
-    else if(NUM_HARTS==256)
-      mask = 0x00F00000;
-    else
-      mask = 0x00F00000;
-
-    collective_op = 0x1; // 0x0 Unicast; 0x1 Multicast
-    uint32_t transfer_id_1 = broadcast(dst_addr, broad_addr, len, mask, collective_op);
+    uint32_t transfer_id_1 = broadcast(dst_addr, broad_addr, len, gen_collective_mask(ALL), MULTICAST);
     printf("Broadcasting...\n");
 
     // Use polling to wait for completion
     dma_wait(transfer_id_1);
 
-    printf("End of test...\n");
+    // Inform all the cores about the newly arrived data
+    printf("Sending end of test signal...\n");
+    set_collective_mask(gen_collective_mask(ALL));
+    set_collective_op(MULTICAST);
+    *(volatile int*) (COLLECTIVE_ADDR_OFFSET + get_hartid()*L1_TILE_OFFSET + L1_BASE + END_OF_TEST_OFFSET) = (int) END_PATTERN;
+
+  } else {
+
+      printf("Destination of the broadcast...\n");
+      // Polling on the end_of_test address offset
+      while(*(volatile int*) (L1_BASE + get_hartid()*L1_TILE_OFFSET + END_OF_TEST_OFFSET) != (int) END_PATTERN) {};
+
+      uint16_t detected_l1, detected_l2, expected;
+      unsigned int num_errors = 0;
+      for(int i = 0; i < M_SIZE*N_SIZE; i++){
+        detected_l1 = mmio16(X_BASE + get_hartid()*L1_TILE_OFFSET + 2*i);
+        expected = mmio16(Z_BASE + 2*i);
+        if(detected_l1 != expected){
+          num_errors++;
+          printf("**ERROR**: DETECTED L1[%0d](=0x%4x) != EXPECTED[%0d](=0x%4x)\n", i, detected_l1, i, expected);
+        }
+      }
+      printf("Finished test with %0d errors\n", num_errors);
+
 
   }
   return 0;

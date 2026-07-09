@@ -23,7 +23,7 @@
 #include "magia_coll_utils.h"
 
 #define MEM_OFFSET (0x1000)
-#define DESTINATION_HART_ID 6
+#define DESTINATION_HART_ID 0
 #define CACHE_HEAT_CYCLES (5)
 
 int main() {
@@ -36,8 +36,10 @@ int main() {
     // Execute synchronization multiple times to pre-heat the cache
     for (int i = 0; i < CACHE_HEAT_CYCLES; i++) {
         // Data to be reduced (LsbAND)
+        sentinel_start();
         *(volatile int*) (COLLECTIVE_ADDR_OFFSET + L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + MEM_OFFSET) = 3;
         magia_fence();
+        sentinel_end();
     }
   }
 
