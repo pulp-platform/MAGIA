@@ -83,7 +83,7 @@ module magia_tile_vip
 
   output logic[magia_pkg::N_IRQ-1:0]        irq,
 
-  output logic                              debug_req,
+  output logic[magia_tile_pkg::N_CLUSTER_CORES:0] debug_req,
   input  logic                              debug_havereset,
   input  logic                              debug_running,
   input  logic                              debug_halted,
@@ -110,7 +110,7 @@ module magia_tile_vip
   assign dm_exception_addr       = '0;
   assign mhartid                 = '0;
   assign mimpid_patch            = '0;
-  assign debug_req               = 1'b0;
+  assign debug_req               = '0;
   assign wu_wfe                  = 1'b0;
   assign ht_fsync_if_o[0].wake   = 1'b0;
   assign ht_fsync_if_o[0].lvl    = '0;
@@ -259,9 +259,9 @@ end
 `ifdef PROFILE_DETAILED
   bit[31:0] curr_instr;
 `ifdef CV32E40X
-  assign curr_instr = i_magia_tile.i_cv32e40x_core.core_i.if_stage_i.if_id_pipe_o.instr.bus_resp.rdata;
+  assign curr_instr = i_magia_tile.i_cv32e40x_ctrl_core.core_i.if_stage_i.if_id_pipe_o.instr.bus_resp.rdata;
 `else
-  assign curr_instr = i_magia_tile.i_cv32e40p_core.id_stage_i.instr_rdata_i;
+  assign curr_instr = i_magia_tile.i_cv32e40p_ctrl_core.id_stage_i.instr_rdata_i;
 `endif
   always @(curr_instr) begin: instr_reporter
     if (curr_instr == 32'h50500013) $display("[TB] detected sentinel instruction at time %0dns", time_var);
@@ -275,11 +275,11 @@ end
   time end_sentinel[$];
   time sentinel_latency;
 `ifdef CV32E40X
-  assign curr_instr_wb = i_magia_tile.i_cv32e40x_core.core_i.wb_stage_i.ex_wb_pipe_i.instr_valid ?
-  i_magia_tile.i_cv32e40x_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
+  assign curr_instr_wb = i_magia_tile.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr_valid ?
+  i_magia_tile.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
 `else
-  assign curr_instr_wb = i_magia_tile.i_cv32e40p_core.wb_valid ?
-  i_magia_tile.i_cv32e40p_core.instr_rdata_id : '0;
+  assign curr_instr_wb = i_magia_tile.i_cv32e40p_ctrl_core.wb_valid ?
+  i_magia_tile.i_cv32e40p_ctrl_core.instr_rdata_id : '0;
 `endif
   always @(curr_instr_wb) begin: instr_wb_reporter
     if (curr_instr_wb == 32'h5AA00013) begin
