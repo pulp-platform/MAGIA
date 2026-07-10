@@ -44,7 +44,7 @@ module cluster_event_map #(
   for (genvar i = 0; i < NB_CORES; i++) begin : gen_event_mapping
     assign events_mapped_o[i] = {
       cluster_events_i[i][31:16],           // [31:16] Custom cluster events (upper 16 bits)
-      4'b0,                                 // [15:12] Reserved
+      cluster_events_i[i][15:12],           // [15:12] PULP cluster events
       acc_events_i[i],                      // [11:8]  Accelerator events
       2'b0,                                 // [7:6]   Reserved
       timer_events_i[i],                    // [5:4]   Timer events
