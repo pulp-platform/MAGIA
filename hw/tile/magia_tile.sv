@@ -1661,34 +1661,82 @@ module magia_tile
 /**             FlooNoC Modules Beginning             **/
 /*******************************************************/
   
+  red_wide_req_t offload_wide_req;
+  red_wide_rsp_t offload_wide_rsp;
+
+  red_narrow_req_t offload_narrow_req;
+  red_narrow_rsp_t offload_narrow_rsp;
+
+  logic[63:0] wide_alu_result, narrow_alu_result;
+
+  floo_reduction_alu i_wide_floo_alu (
+  .clk_i(sys_clk),
+  .rst_ni(rst_ni),
+  .flush_i(1'b0),
+  .alu_req_op1_i(offload_wide_req.req.operand1[63:0]),
+  .alu_req_op2_i(offload_wide_req.req.operand2[63:0]),
+  .alu_req_type_i(offload_wide_req.req.op),
+  .alu_req_valid_i(offload_wide_req.valid),
+  .alu_req_ready_o(offload_wide_rsp.ready),
+  .alu_resp_data_o(wide_alu_result),
+  .alu_resp_valid_o(offload_wide_rsp.valid),
+  .alu_resp_ready_i(offload_wide_req.ready)
+);
+
+
+floo_reduction_alu i_narrow_floo_alu (
+  .clk_i(sys_clk),
+  .rst_ni(rst_ni),
+  .flush_i(1'b0),
+  .alu_req_op1_i({{32{1'b0}},offload_narrow_req.req.operand1}),
+  .alu_req_op2_i({{32{1'b0}},offload_narrow_req.req.operand2}),
+  .alu_req_type_i(offload_narrow_req.req.op),
+  .alu_req_valid_i(offload_narrow_req.valid),
+  .alu_req_ready_o(offload_narrow_rsp.ready),
+  .alu_resp_data_o(narrow_alu_result),
+  .alu_resp_valid_o(offload_narrow_rsp.valid),
+  .alu_resp_ready_i(offload_narrow_req.ready)
+);
+
+assign offload_wide_rsp.rsp.result = {{192{1'b0}}, wide_alu_result};
+assign offload_narrow_rsp.rsp.result = narrow_alu_result[31:0];
+
   floo_nw_router #(
-    .AxiCfgN      ( AxiCfgN                ),
-    .AxiCfgW      ( AxiCfgW                ),
-    .RouteAlgo    ( XYRouting              ),
-    .NumRoutes    ( 5                      ),
-    .NumInputs    ( 5                      ),
-    .NumOutputs   ( 5                      ),
-    .InFifoDepth  ( 2                      ),
-    .OutFifoDepth ( 2                      ),
-    .NoLoopback   ( 1'b0                   ),
-    .CollectiveCfg( RouteCfg.CollectiveCfg ),
-    .id_t         ( id_t                   ),
-    .hdr_t        ( hdr_t                  ),
-    .floo_req_t   ( floo_req_t             ),
-    .floo_rsp_t   ( floo_rsp_t             ),
-    .floo_wide_t  ( floo_wide_t            )
+    .AxiCfgN        ( AxiCfgN                ),
+    .AxiCfgW        ( AxiCfgW                ),
+    .RouteAlgo      ( XYRouting              ),
+    .NumRoutes      ( 5                      ),
+    .NumInputs      ( 5                      ),
+    .NumOutputs     ( 5                      ),
+    .InFifoDepth    ( 2                      ),
+    .OutFifoDepth   ( 2                      ),
+    .NoLoopback     ( 1'b0                   ),
+    .CollectiveCfg  ( RouteCfg.CollectiveCfg ),
+    .id_t           ( id_t                   ),
+    .hdr_t          ( hdr_t                  ),
+    .floo_req_t     ( floo_req_t             ),
+    .floo_rsp_t     ( floo_rsp_t             ),
+    .floo_wide_t    ( floo_wide_t            ),
+    .red_wide_req_t ( red_wide_req_t         ),
+    .red_wide_rsp_t ( red_wide_rsp_t         ),
+    .red_narrow_req_t ( red_narrow_req_t       ),
+    .red_narrow_rsp_t ( red_narrow_rsp_t       )
   ) i_magia_tile_router (
-    .clk_i          ( sys_clk              ),
-    .rst_ni         ( rst_ni               ),
-    .test_enable_i  ( test_mode_i          ),
-    .id_i           ( floo_id              ),
-    .id_route_map_i ( '0                   ),
-    .floo_req_i     ( floo_router_req_in   ),
-    .floo_rsp_o     ( floo_router_rsp_out  ),
-    .floo_req_o     ( floo_router_req_out  ),
-    .floo_rsp_i     ( floo_router_rsp_in   ),
-    .floo_wide_i    ( floo_router_wide_in  ),
-    .floo_wide_o    ( floo_router_wide_out )
+    .clk_i                ( sys_clk              ),
+    .rst_ni               ( rst_ni               ),
+    .test_enable_i        ( test_mode_i          ),
+    .id_i                 ( floo_id              ),
+    .id_route_map_i       ( '0                   ),
+    .floo_req_i           ( floo_router_req_in   ),
+    .floo_rsp_o           ( floo_router_rsp_out  ),
+    .floo_req_o           ( floo_router_req_out  ),
+    .floo_rsp_i           ( floo_router_rsp_in   ),
+    .floo_wide_i          ( floo_router_wide_in  ),
+    .floo_wide_o          ( floo_router_wide_out ),
+    .offload_wide_req_o   ( offload_wide_req     ),
+    .offload_wide_rsp_i   ( offload_wide_rsp     ),
+    .offload_narrow_req_o ( offload_narrow_req   ),
+    .offload_narrow_rsp_i ( offload_narrow_rsp   ) 
   );
 
   // Output requests

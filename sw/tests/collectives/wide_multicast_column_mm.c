@@ -76,7 +76,7 @@ int main(void) {
 
 
     // **************** BROADCASTING ************** //
-    uint32_t transfer_id_1 = broadcast(dst_addr, broad_addr, len, gen_collective_mask(COLUMN), MULTICAST);
+    uint32_t transfer_id_1 = collective(dst_addr, broad_addr, len, gen_collective_mask(COLUMN), MULTICAST);
     printf("Multicast over the column...\n");
 
     // Use polling to wait for completion
