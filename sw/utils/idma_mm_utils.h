@@ -257,7 +257,7 @@ static inline int idma_L1ToL2(unsigned int src, unsigned int dst, unsigned short
   return idma_mm_start_transfer_dir(1, 0);
 }
 
-static inline int broadcast(unsigned int src, unsigned int dst, unsigned short size, uint32_t mask, uint32_t collective_op) {
+static inline int collective(unsigned int src, unsigned int dst, unsigned short size, uint32_t mask, uint32_t collective_op) {
   idma_mm_conf_default_dir(1);
   idma_mm_set_addr_len_dir(1, dst, src, size);
   idma_mm_set_2d_params_dir(1, 0, 0, 1);

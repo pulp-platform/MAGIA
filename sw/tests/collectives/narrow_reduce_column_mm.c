@@ -16,37 +16,34 @@
  *
  * Authors: Carlotta Chiarini
  * 
- * MAGIA Column synchronization test over the narrow channel
+ * MAGIA Column Reduce test over the narrow channel
  * using the built-in FlooNoC collectives
  */
 
 #include "magia_utils.h"
 #include "magia_coll_utils.h"
 
-#define MEM_OFFSET (0x1000)
+#define REDUCE_OFFSET (0x1000)
 #define DESTINATION_HART_ID 0
 #define CACHE_HEAT_CYCLES (5)
 
 int main() {
+    
+  uint32_t unreduced_data = 100;
+  uint32_t reduced_data;
 
   set_collective_mask(gen_collective_mask(COLUMN));
-  set_collective_op(LSBAND);
+  set_collective_op(INT_ADD);
 
   if(GET_X_ID(get_hartid()) == GET_X_ID(DESTINATION_HART_ID)){
-    printf("Synchronizing...\n");
-    // Execute synchronization multiple times to pre-heat the cache
-    for (int i = 0; i < CACHE_HEAT_CYCLES; i++) {
-        // Data to be reduced (LsbAND)
-        sentinel_start();
-        *(volatile int*) (COLLECTIVE_ADDR_OFFSET + L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + MEM_OFFSET) = 3;
-        magia_fence();
-        sentinel_end();
-    }
+    printf("Summing...\n");
+    *(volatile int*) (COLLECTIVE_ADDR_OFFSET +  L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + REDUCE_OFFSET) = unreduced_data;
   }
 
   if(get_hartid() == DESTINATION_HART_ID){
-    while(*(volatile int*) (L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) != 3) {};
-    printf("TEST PASSED\n");
+    reduced_data = unreduced_data * MESH_X_TILES;
+    while(*(volatile int*) (L1_BASE + get_hartid()*L1_TILE_OFFSET + REDUCE_OFFSET) != reduced_data) {};
+    printf("SUM TEST PASSED\n");
   }
 
   return 0;

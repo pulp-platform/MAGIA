@@ -29,7 +29,7 @@
 int main() {
 
   set_collective_mask(gen_collective_mask(ROW));
-  set_collective_op(REDUCE);
+  set_collective_op(LSBAND);
 
   if(GET_Y_ID(get_hartid()) == GET_Y_ID(DESTINATION_HART_ID)){
     printf("Synchronizing...\n");

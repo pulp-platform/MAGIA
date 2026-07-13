@@ -31,6 +31,7 @@ package magia_tile_pkg;
   `include "fractal_sync/typedef.svh"
   `include "reqrsp_interface/typedef.svh"
   `include "tcdm_interface/typedef.svh"
+  `include "floo_noc/typedef.svh"
 
   `include "../include/alias.svh"
 
@@ -741,6 +742,12 @@ package magia_tile_pkg;
   `OBI_TYPEDEF_DEFAULT_REQ_T(spatz_obi32_req_t, spatz_obi32_a_chan_t)
   `OBI_TYPEDEF_RSP_T(spatz_obi32_rsp_t, spatz_obi32_r_chan_t)
 
+
+  typedef logic [255:0] wide_data_t;
+  `FLOO_RED_TYPEDEF_REQ_RSP_LINK(wide, wide_data_t, wide_req, wide_rsp)
+
+  typedef logic [31:0] narrow_data_t;
+  `FLOO_RED_TYPEDEF_REQ_RSP_LINK(narrow, narrow_data_t, narrow_req, narrow_rsp)
 
 
 

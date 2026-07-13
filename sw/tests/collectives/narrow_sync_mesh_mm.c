@@ -29,7 +29,7 @@
 int main() {
 
   set_collective_mask(gen_collective_mask(ALL));
-  set_collective_op(REDUCE);
+  set_collective_op(LSBAND);
 
   // Execute synchronization multiple times to pre-heat the cache
   for (int i = 0; i < CACHE_HEAT_CYCLES; i++) {

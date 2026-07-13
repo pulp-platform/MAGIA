@@ -32,7 +32,18 @@
 #define MASK_OFFSET 20
 
 #define MULTICAST 1
-#define REDUCE 2
+#define LSBAND 2
+#define FP_ADD 3
+#define FP_MUL 4
+#define FP_MIN 5
+#define FP_MIN 6
+#define INT_ADD 7
+#define INT_MUL 8
+#define INT_MINS 9
+#define INT_MINU 10
+#define INT_MAXS 11
+#define INT_MAXU 12
+
 
 #define ALL 1
 #define COLUMN 2
