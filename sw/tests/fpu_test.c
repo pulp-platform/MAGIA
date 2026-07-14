@@ -25,7 +25,7 @@
 #define B_VAL (56.78f)
 #define C_EXP (69.12f)
 
-#define FP_TH (0.1f)
+#define FP_TH (1e-45f)
 
 #define abs_diff(x, y) (((x) > (y)) ? ((x) - (y)) : ((y) - (x)))
 
@@ -49,8 +49,10 @@ int main(void) {
 
   if (abs_diff(c, C_EXP) > FP_TH){
      printf("Test FAILED\n");
+     return 1;
    }else{
      printf("Test PASSED\n");
+      return 0;
    }
 #else
   uint32_t a, b, c;
