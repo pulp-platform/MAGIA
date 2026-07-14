@@ -26,4 +26,4 @@ jobs:
           repo: github-mirror/magia
           token: ${{ secrets.GITLAB_TOKEN }}
           poll-count: 1000
-          poll-interval: 60
+          poll-period: 60
