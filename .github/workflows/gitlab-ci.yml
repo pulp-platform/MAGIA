@@ -4,7 +4,7 @@
 
 # Author: Alessandro Nadalini <alessandro.nadalini3@unibo.it>
 
-name: gitlab-Copyright
+name: gitlab-CI
 on:
   push:
     branches:
@@ -15,6 +15,7 @@ on:
 jobs:
   gitlab-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 960
     steps:
       - name: Check GitLab CI
         uses: pulp-platform/pulp-actions/gitlab-ci@v2.5.0
@@ -24,4 +25,5 @@ jobs:
           domain: iis-git.ee.ethz.ch
           repo: github-mirror/magia
           token: ${{ secrets.GITLAB_TOKEN }}
-          poll-count: 2160
+          poll-count: 1000
+          poll-interval: 60
