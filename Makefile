@@ -62,12 +62,6 @@ else
   XABI           ?=
 endif
 
-#ifeq ($(REDMULE_COMPLEX),1)
-#	TEST_SRCS := sw/redmule_complex.c
-#else
-#	TEST_SRCS := sw/redmule.c
-#endif
-
 # Auto-detect test location under sw/tests/ recursively — no cluster= flag needed.
 # A directory named $(test) is searched first (handles both sw/tests/<test>/ and
 # sw/tests/cluster_tests/<test>/); single-file tests fall back to sw/tests/$(test).c.
@@ -321,7 +315,6 @@ else
 	cd $(TEST_BUILD_DIR);                                                                		 \
 	$(QUESTA) vsim vopt_tb $(questa_run_flag) -l transcript                                      \
 	-do "add log -r sim:/$(tb)/*"                                                                \
-	-do "source $(WAVES)"                                                                        \
 	+INST_HEX=$(inst_hex_name)                                                                   \
 	+DATA_HEX=$(data_hex_name)                                                                   \
 	+INST_ENTRY=$(inst_entry)                                                                    \
@@ -380,22 +373,12 @@ bender_targs += -t snitch_cluster
 bender_targs += -t idma_test
 bender_targs += -t spatz
 
-#ifeq ($(REDMULE_COMPLEX),1)
-#	tb := redmule_complex_tb
-#	WAVES := $(mkfile_path)/wave_complex_xif.do
-#	bender_targs += -t redmule_complex
-#else
-#	tb := redmule_tb
-#	WAVES := $(mkfile_path)/wave.do
-#	bender_targs += -t redmule_hwpe
-#endif
-
 ifeq ($(mesh_dv),1)
 	tb         := magia_tb
 else
 	tb         := magia_tile_tb
 endif
-WAVES        := $(mkfile_path)/wave.do
+
 ifeq ($(core), CV32E40X)
   bender_targs += -t redmule_complex
   bender_targs += -t cv32e40x_bhv
