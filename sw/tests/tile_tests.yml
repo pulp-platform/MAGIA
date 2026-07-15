@@ -1,0 +1,55 @@
+# Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Author: Alessandro Nadalini <alessandro.nadalini3@unibo.it>
+
+tile-generic-tests:
+  hello_world:
+    path: .
+    command: make clean all run mesh_dv=0 fast_sim=1 test=hello_world
+  fpu_test:
+    path: .
+    command: make clean all run mesh_dv=0 fast_sim=1 test=fpu_test
+redmule-tests:
+  mm_tests/tile_test_mm:
+    path: .
+    command: make clean all run mesh_dv=0 fast_sim=1 test=mm_tests/tile_test_mm
+  eu_tests/tile_test_event_unit:
+    path: .
+    command: make clean all run mesh_dv=0 fast_sim=1 test=eu_tests/tile_test_event_unit
+spatz-tests:
+  simple_spatz_test:
+    path: .
+    command: make clean all run mesh_dv=0 fast_sim=1 test=simple_spatz_test
+  dotp_spatz_test:
+    path: .
+    command: make clean all run mesh_dv=0 fast_sim=1 test=dotp_spatz_test
+  gemm_spatz_test:
+    path: .
+    command: make clean all run mesh_dv=0 fast_sim=1 test=gemm_spatz_test
+  matmul_compare_spatz_test:
+    path: .
+    command: make clean all run mesh_dv=0 fast_sim=1 test=matmul_compare_spatz_test
+  vecsum_spatz_test:
+    path: .
+    command: make clean all run mesh_dv=0 fast_sim=1 test=vecsum_spatz_test
+pulp_cluster_tests:
+  hello_pulp:
+    path: .
+    command: make clean all run mesh_dv=0 fast_sim=1 test=hello_pulp
+  fpu_cluster_test:
+    path: .
+    command: make clean all run mesh_dv=0 fast_sim=1 test=fpu_cluster_test
+
+  

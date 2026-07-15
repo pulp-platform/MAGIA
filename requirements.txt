@@ -8,3 +8,4 @@ mako
 hjson
 tabulate
 matplotlib
+PrettyTable
