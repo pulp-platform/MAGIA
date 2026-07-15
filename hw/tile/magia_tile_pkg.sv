@@ -222,8 +222,9 @@ package magia_tile_pkg;
 
 
   // Parameters used by the HCI
+  parameter int unsigned N_CLUSTER_CORES = 8;                                           // Number of cores in the cluster (cntrl core not considered) - moved up so N_CORE can size the cluster L1/TCDM HCI ports
   parameter int unsigned N_HWPE  = 1;                                                   // Number of HWPEs attached to the port
-  parameter int unsigned N_CORE  = 1 + SPATZ_HCI_PORTS;                                 // Number of core-side HCI ports (CV32 + Spatz TCDM ports)
+  parameter int unsigned N_CORE  = 1 + SPATZ_HCI_PORTS + N_CLUSTER_CORES;               // Number of core-side HCI ports (CV32 + Spatz TCDM ports + cluster cores L1/TCDM ports)
   parameter int unsigned N_DMA   = 4;                                                   // Number of DMA ports (1 out read channel, 1 out write channel, 1 in read channel and 1 in write channel)
   typedef enum logic[1:0]{
     HCI_DMA_OUT_CH_READ_IDX  = 2'b00,
@@ -317,7 +318,6 @@ package magia_tile_pkg;
   parameter int unsigned RID_WIDTH       = 1;                                              // Width of the rid   signal (response channel identifier, see OBI documentation)
   parameter int unsigned MID_WIDTH       = 1;                                              // Width of the mid   signal (manager identifier, see OBI documentation)
   parameter int unsigned OBI_ID_WIDTH    = 1;                                              // Width of the id - configuration
-  parameter int unsigned N_CLUSTER_CORES = 8;                                              // Number of cores in the cluster (cntrl core not considered)
 `ifdef CV32E40X
   parameter int unsigned N_SBR        = 5;                                              // Number of slaves (HCI, AXI XBAR, Event_Unit, Tile_CSR, + unused RESERVED alias)
 `else
@@ -494,17 +494,21 @@ package magia_tile_pkg;
   localparam int unsigned SPATZ_L0_EARLY_TAG_W   = snitch_pkg::PAGE_SHIFT - $clog2(SPATZ_ICACHE_LINE_WIDTH/8); // L0 early tag width
   
   //Cluster ICache parameters (dedicated icache for cluster cores)
-  parameter int unsigned CLUSTER_NR_FETCH_PORTS = N_CLUSTER_CORES;                              // i$ Number of request (fetch) ports
-  parameter int unsigned CLUSTER_L0_LINE_COUNT  = 32*N_CLUSTER_CORES;                           // i$ L0 Cache Line Count
-  parameter int unsigned CLUSTER_LINE_WIDTH     = 128;                                          // i$ Cache Line Width; >= 64
-  parameter int unsigned CLUSTER_LINE_COUNT     = 32*N_CLUSTER_CORES;                           // i$ The number of cache lines per set. Power of two; >= 2.
-  parameter int unsigned CLUSTER_WAY_COUNT      = 32;                                           // i$ The set associativity of the cache. Power of two; >= 1.
-  parameter int unsigned CLUSTER_L0_PARITY_W    = 0;                                            // i$ Parity of the L0 cache
-  parameter int unsigned CLUSTER_L1_PARITY_W    = CLUSTER_L0_PARITY_W;                          // i$ Parity of the L1 cache
-  parameter int unsigned CLUSTER_FETCH_AW       = magia_pkg::ADDR_W;                            // i$ Fetch interface address width. Same as FETCH_AW; >= 1.
-  parameter int unsigned CLUSTER_FETCH_DW       = magia_pkg::DATA_W;                            // i$ Fetch interface data width. Power of two; >= 8.
-  parameter int unsigned CLUSTER_FILL_AW        = magia_pkg::ADDR_W;                            // i$ Fill interface address width. Same as FILL_AW; >= 1.
-  parameter int unsigned CLUSTER_FILL_DW        = magia_pkg::DATA_W;                            // i$ Fill interface data width. Power of two; >= 8.
+  // Source configuration knobs (mirror pulp_cluster Cfg.* / pulp_soc_defines.sv)
+  parameter int unsigned CLUSTER_ICACHE_PRIVATE_SIZE = 512;                                     // Cfg.iCachePrivateSize      [Bytes]
+  parameter int unsigned CLUSTER_ICACHE_SHARED_SIZE  = 4096;                                    // Cfg.iCacheSharedSize       [Bytes]
+  parameter int unsigned CLUSTER_ICACHE_NUM_WAYS     = 4;                                       // Cfg.iCacheNumWays
+  parameter int unsigned CLUSTER_ICACHE_PRIVATE_DW   = magia_pkg::DATA_W;                       // Cfg.iCachePrivateDataWidth [bits]
+
+  parameter int unsigned CLUSTER_NR_FETCH_PORTS = N_CLUSTER_CORES;                              // i$ Number of request (fetch) ports (Cfg.NumCores = NB_CORES)
+  parameter int unsigned CLUSTER_LINE_WIDTH     = 256;                                          // i$ Cache Line Width; >= 64
+  parameter int unsigned CLUSTER_L0_LINE_COUNT  = CLUSTER_ICACHE_PRIVATE_SIZE*8/CLUSTER_LINE_WIDTH;                       // i$ L0 Cache Line Count (Cfg.iCachePrivateSize*8/LineWidth)
+  parameter int unsigned CLUSTER_LINE_COUNT     = CLUSTER_ICACHE_SHARED_SIZE*8/CLUSTER_LINE_WIDTH/CLUSTER_ICACHE_NUM_WAYS; // i$ Cache lines per set (Cfg.iCacheSharedSize*8/LineWidth/iCacheNumWays)
+  parameter int unsigned CLUSTER_WAY_COUNT      = CLUSTER_ICACHE_NUM_WAYS;                      // i$ The set associativity of the cache (SET_COUNT = Cfg.iCacheNumWays)
+  parameter int unsigned CLUSTER_FETCH_AW       = magia_pkg::ADDR_W;                            // i$ Fetch interface address width. Same as FETCH_AW; >= 1. (AddrWidth)
+  parameter int unsigned CLUSTER_FETCH_DW       = CLUSTER_ICACHE_PRIVATE_DW;                    // i$ Fetch interface data width. Power of two; >= 8. (Cfg.iCachePrivateDataWidth)
+  parameter int unsigned CLUSTER_FILL_AW        = magia_pkg::ADDR_W;                            // i$ Fill interface address width. Same as FILL_AW; >= 1. (AddrWidth)
+  parameter int unsigned CLUSTER_FILL_DW        = magia_pkg::DATA_W;                            // i$ Fill interface data width. Power of two; >= 8. (= AddrWidth, come il resto del sistema)
 
   // Parameters used by the FPU
   parameter bit                             FPU_ZFINX          = 1;                     // FPU use Zfinx extension instead of the F ISA extention

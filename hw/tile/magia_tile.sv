@@ -369,9 +369,22 @@ module magia_tile
   magia_tile_pkg::core_data_req_t [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_data_req;
   magia_tile_pkg::core_data_rsp_t [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_data_rsp;
 
-  // Cluster core OBI data interface (output from demux data2obi)
+  // Cluster core data demux: split L1 (TCDM) vs peripherals (OBI)
+  localparam int unsigned CLUSTER_DATA_N_SLV    = 2;                            // [0] = TCDM (L1), [1] = OBI (peripherals / default)
+  localparam int unsigned CLUSTER_DATA_TCDM_IDX = 0;
+  localparam int unsigned CLUSTER_DATA_OBI_IDX  = 1;
+
+  // Per-core demux downstream ports ([i][0] = TCDM, [i][1] = OBI)
+  magia_tile_pkg::core_data_req_t [magia_tile_pkg::N_CLUSTER_CORES-1:0][CLUSTER_DATA_N_SLV-1:0] cluster_ddemux_req;
+  magia_tile_pkg::core_data_rsp_t [magia_tile_pkg::N_CLUSTER_CORES-1:0][CLUSTER_DATA_N_SLV-1:0] cluster_ddemux_rsp;
+
+  // Cluster core OBI data interface (peripheral path: demux OBI port -> OBI xbar)
   magia_tile_pkg::core_obi_data_req_t [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_obi_data_req;
   magia_tile_pkg::core_obi_data_rsp_t [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_obi_data_rsp;
+
+  // Cluster core L1/TCDM data interface (dedicated HCI interconnect ports: demux TCDM port -> hci_core_if)
+  magia_tile_pkg::core_hci_data_req_t [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_hci_data_req;
+  magia_tile_pkg::core_hci_data_rsp_t [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_hci_data_rsp;
 
   // EU direct req/rsp arrays for the cut (CV32 core[0] + cluster cores[1..N])
   magia_tile_pkg::eu_direct_req_t [magia_tile_pkg::N_CLUSTER_CORES:0] eu_direct_req_arr;
@@ -1137,6 +1150,11 @@ module magia_tile
    generate
     for (genvar i = 0; i < magia_tile_pkg::SPATZ_HCI_PORTS; i++) begin : gen_spatz_hci_assign
       `HCI_ASSIGN_TO_INTF(hci_core_if[i+1], spatz_hci_req[i], spatz_hci_rsp[i])                                 // Spatz CC HCI ports
+    end
+  endgenerate
+   generate
+    for (genvar i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin : gen_cluster_hci_assign
+      `HCI_ASSIGN_TO_INTF(hci_core_if[1 + magia_tile_pkg::SPATZ_HCI_PORTS + i], cluster_hci_data_req[i], cluster_hci_data_rsp[i]) // Cluster cores L1/TCDM HCI ports
     end
   endgenerate
   `HCI_ASSIGN_TO_INTF(hci_redmule_if[0],                                redmule_data_req,   redmule_data_rsp)   // Only 1 RedMulE supported
@@ -2615,17 +2633,79 @@ generate
   end
 endgenerate
 
-  // Cluster core data demux (EU direct link) and OBI conversion
+  // Cluster core data demux: route each core's data requests to the L1 (TCDM)
+  // window on a dedicated HCI port, and everything else to the OBI xbar.
+  generate
+    for (genvar i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin : gen_cluster_data_demux
+
+      // Runtime slave address ranges: TCDM = this tile's L1 window, OBI = default.
+      logic [magia_pkg::ADDR_W-1:0] cluster_ddemux_start_addr [CLUSTER_DATA_N_SLV-1:0];
+      logic [magia_pkg::ADDR_W-1:0] cluster_ddemux_end_addr   [CLUSTER_DATA_N_SLV-1:0];
+      assign cluster_ddemux_start_addr[CLUSTER_DATA_TCDM_IDX] = tile_l1_start_addr;
+      assign cluster_ddemux_end_addr  [CLUSTER_DATA_TCDM_IDX] = tile_l1_end_addr;
+      assign cluster_ddemux_start_addr[CLUSTER_DATA_OBI_IDX]  = '0; // unused (default slave)
+      assign cluster_ddemux_end_addr  [CLUSTER_DATA_OBI_IDX]  = '0; // unused (default slave)
+
+      core_data_demux #(
+        .NumSlv     ( CLUSTER_DATA_N_SLV     ),
+        .DefaultSlv ( CLUSTER_DATA_OBI_IDX   )
+      ) i_cluster_data_demux (
+        .clk_i            ( cluster_clk[i]              ),
+        .rst_ni           ( rst_ni                      ),
+        .core_data_req_i  ( cluster_data_req[i]         ),
+        .core_data_rsp_o  ( cluster_data_rsp[i]         ),
+        .slv_start_addr_i ( cluster_ddemux_start_addr   ),
+        .slv_end_addr_i   ( cluster_ddemux_end_addr     ),
+        .slv_data_req_o   ( cluster_ddemux_req[i]       ),
+        .slv_data_rsp_i   ( cluster_ddemux_rsp[i]       )
+      );
+    end
+  endgenerate
+
+  // Cluster core OBI (peripheral) path: demux OBI port -> OBI xbar.
+  // Cluster core TCDM (L1) path: demux TCDM port -> OBI -> HCI interconnect port.
   generate
     for (genvar i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin : gen_cluster_data_obi
+
+      // --- OBI (peripheral) path ---
       data2obi_req i_cluster_data2obi (
-        .data_req_i ( cluster_data_req[i]         ),
-        .obi_req_o  ( cluster_obi_data_req[i]     )
+        .data_req_i ( cluster_ddemux_req[i][CLUSTER_DATA_OBI_IDX] ),
+        .obi_req_o  ( cluster_obi_data_req[i]                     )
       );
 
       obi2data_rsp i_cluster_obi2data (
-        .obi_rsp_i  ( cluster_obi_data_rsp[i]     ),
-        .data_rsp_o ( cluster_data_rsp[i]         )
+        .obi_rsp_i  ( cluster_obi_data_rsp[i]                     ),
+        .data_rsp_o ( cluster_ddemux_rsp[i][CLUSTER_DATA_OBI_IDX] )
+      );
+
+      // --- TCDM (L1) path: native mem -> OBI -> HCI dedicated interconnect port ---
+      magia_tile_pkg::core_obi_data_req_t cluster_tcdm_obi_req;
+      magia_tile_pkg::core_obi_data_rsp_t cluster_tcdm_obi_rsp;
+
+      data2obi_req i_cluster_tcdm_data2obi (
+        .data_req_i ( cluster_ddemux_req[i][CLUSTER_DATA_TCDM_IDX] ),
+        .obi_req_o  ( cluster_tcdm_obi_req                         )
+      );
+
+      obi2data_rsp i_cluster_tcdm_obi2data (
+        .obi_rsp_i  ( cluster_tcdm_obi_rsp                         ),
+        .data_rsp_o ( cluster_ddemux_rsp[i][CLUSTER_DATA_TCDM_IDX] )
+      );
+
+      obi2hci_req #(
+        .obi_req_t ( magia_tile_pkg::core_obi_data_req_t ),
+        .hci_req_t ( magia_tile_pkg::core_hci_data_req_t )
+      ) i_cluster_tcdm_obi2hci_req (
+        .obi_req_i ( cluster_tcdm_obi_req        ),
+        .hci_req_o ( cluster_hci_data_req[i]     )
+      );
+
+      hci2obi_rsp #(
+        .hci_rsp_t ( magia_tile_pkg::core_hci_data_rsp_t ),
+        .obi_rsp_t ( magia_tile_pkg::core_obi_data_rsp_t )
+      ) i_cluster_tcdm_hci2obi_rsp (
+        .hci_rsp_i ( cluster_hci_data_rsp[i]     ),
+        .obi_rsp_o ( cluster_tcdm_obi_rsp        )
       );
     end
   endgenerate

@@ -99,6 +99,7 @@ sources:
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
+      - hw/tile/core_data_demux.sv
       - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_tile_icache_wrap.sv
       - hw/tile/magia_redmule_wrap.sv
@@ -166,6 +167,7 @@ sources:
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
+      - hw/tile/core_data_demux.sv
       - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_tile_icache_wrap.sv
       - hw/tile/magia_redmule_wrap.sv
@@ -232,11 +234,12 @@ sources:
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
+      - hw/tile/core_data_demux.sv
       - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_redmule_wrap.sv
       - hw/tile/magia_tile.sv
       # MAGIA
       - hw/mesh/magia.sv
       # Tech
-      - pd/sourcecode/tc_sram.sv
-      - pd/sourcecode/tc_clk.sv
+      - gf12/sourcecode/tc_sram.sv
+      - gf12/sourcecode/tc_clk.sv
