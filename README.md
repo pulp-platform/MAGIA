@@ -31,6 +31,8 @@ The following *optional* parameters can be specified:
 
 `gui`: **0**|**1** (**Default**: 0). 0 simulation without GUI; 1 simulation with GUI.
 
+`core`: **CV32E40P**|**RI5CY**|**CV32E40X** (**Default**: CV32E40P). Control and cluster cores type.
+
 
 **Instructions to build HW/SW and run simulations**:
 
@@ -46,9 +48,10 @@ make python_deps
 ```bash
 make bender
 ```
+Remember to export the bender binary to your `PATH` variable.
 **4)** Clone the *dependencies* and generate the *compilation script* (`MAGIA` folder):
 ```bash
-make update-ips > update-ips.log <mesh_dv>
+make vsim-scripts > vsim-scripts.log <mesh_dv> <core>
 ```
 **4\*)** Apply FlooNoC *patch* - **currently FlooNoC requires this step but should not need it in the future** (`MAGIA` folder):
 ```bash
@@ -56,15 +59,15 @@ make floonoc-patch
 ```
 **5)** *Build* the hardware (`MAGIA` folder):
 ```bash
-make build-hw > build-hw.log <mesh_dv> <fast_sim>
+make build-hw > build-hw.log <mesh_dv> <fast_sim> <core>
 ```
 **6)** *Compile* the test code (`MAGIA` folder):
 ```bash
-make all <test>
+make all <test> <mesh_dv> <core>
 ```
 **7)** *Run* test (`MAGIA` folder):
 ```bash
-make run <test> <gui> <mesh_dv>
+make run <test> <gui> <mesh_dv> <fast_sim> <core>
 ```
 
 **Full example**:
@@ -73,7 +76,7 @@ make python_venv
 source setup_env.sh
 make python_deps
 make bender
-make update-ips > update-ips.log 
+make vsim-scripts > vsim-scripts.log 
 make build-hw > build-hw.log fast_sim=1
 make all test=fsync_test
 make run test=fsync_test

@@ -419,9 +419,9 @@ CV32E40P_REV      :=  a8206ab02759f110c40dd907369816ea656381bc
 
 update-ips:
 ifeq ($(core), RI5CY)
-	@sed -i 's|^  cv32e40p .*|  cv32e40p           : { git: "$(RI5CY_CV32E40P_GIT)"          , rev: $(RI5CY_CV32E40P_REV) } # RI5CY branch: lb/magia_core|' Bender.local
+	@sed -i '/^  cv32e40p:$$/,/^  cv32e40x:/ { s|^    revision: .*|    revision: $(RI5CY_CV32E40P_REV)|;	s|^      Git: .*|      Git: $(RI5CY_CV32E40P_GIT)|;	}' Bender.lock
 else
-	@sed -i 's|^  cv32e40p .*|  cv32e40p           : { git: "$(CV32E40P_GIT)"      , rev: $(CV32E40P_REV) } # branch: ng/pulp_cluster|' Bender.local
+	@sed -i '/^  cv32e40p:$$/,/^  cv32e40x:/ { s|^    revision: .*|    revision: $(CV32E40P_REV)|; 			s|^      Git: .*|      Git: $(CV32E40P_GIT)|; 		}' Bender.lock
 endif
 	$(BENDER) update
 	$(BENDER) script vsim          \
@@ -432,6 +432,11 @@ endif
 	> ${compile_script}
 
 vsim-scripts:
+ifeq ($(core), RI5CY)
+	@sed -i '/^  cv32e40p:$$/,/^  cv32e40x:/ { s|^    revision: .*|    revision: $(RI5CY_CV32E40P_REV)|;	s|^      Git: .*|      Git: $(RI5CY_CV32E40P_GIT)|;	}' Bender.lock
+else
+	@sed -i '/^  cv32e40p:$$/,/^  cv32e40x:/ { s|^    revision: .*|    revision: $(CV32E40P_REV)|; 			s|^      Git: .*|      Git: $(CV32E40P_GIT)|; 		}' Bender.lock
+endif
 	$(BENDER) script vsim          \
 	--vlog-arg="$(compile_flag)"   \
 	--vcom-arg="-pedanticerrors"   \
@@ -441,11 +446,10 @@ vsim-scripts:
 
 synth-ips:
 ifeq ($(core), RI5CY)
-	@sed -i 's|^  cv32e40p .*|  cv32e40p           : { git: "$(RI5CY_CV32E40P_GIT)"          , rev: $(RI5CY_CV32E40P_REV) } # RI5CY branch: lb/magia_core|' Bender.local
+	@sed -i '/^  cv32e40p:$$/,/^  cv32e40x:/ { s|^    revision: .*|    revision: $(RI5CY_CV32E40P_REV)|;	s|^      Git: .*|      Git: $(RI5CY_CV32E40P_GIT)|;	}' Bender.lock
 else
-	@sed -i 's|^  cv32e40p .*|  cv32e40p           : { git: "$(CV32E40P_GIT)"      , rev: $(CV32E40P_REV) } # branch: ng/pulp_cluster|' Bender.local
+	@sed -i '/^  cv32e40p:$$/,/^  cv32e40x:/ { s|^    revision: .*|    revision: $(CV32E40P_REV)|; 			s|^      Git: .*|      Git: $(CV32E40P_GIT)|; 		}' Bender.lock
 endif
-	$(BENDER) update
 	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_ADD_IDS=$(IDMA_ADD_IDS)
 	$(BENDER) script synopsys      \
 	$(common_targs) $(common_defs) \
