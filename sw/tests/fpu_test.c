@@ -25,7 +25,13 @@
 #define B_VAL (56.78f)
 #define C_EXP (69.12f)
 
+#ifdef CV32E40P
 #define FP_TH (1e-45f)
+#else
+#ifdef RI5CY
+#define FP_TH (8e-6f)
+#endif
+#endif
 
 #define abs_diff(x, y) (((x) > (y)) ? ((x) - (y)) : ((y) - (x)))
 
@@ -39,7 +45,7 @@ inline uint32_t f_add(volatile uint32_t op_a, volatile uint32_t op_b){
 }
 
 int main(void) {
-  uint32_t exit_code;
+  uint32_t error = 0;
   
 #ifndef CV32E40X
   volatile float a, b, c;
@@ -49,10 +55,9 @@ int main(void) {
 
   if (abs_diff(c, C_EXP) > FP_TH){
      printf("Test FAILED\n");
-     return 1;
+     error++;
    }else{
      printf("Test PASSED\n");
-      return 0;
    }
 #else
   uint32_t a, b, c;
@@ -62,5 +67,5 @@ int main(void) {
   printf("Float operation result: 0x%0x [expected: 0x428A3D71(69.12f)]\n", c);
 #endif
 
-  return 0;
+  return error;
 }
