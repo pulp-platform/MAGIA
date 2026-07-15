@@ -1,5 +1,4 @@
 .bender
-Bender.lock
 bender
 scripts/compile.tcl
 scripts/synth_compile.tcl
