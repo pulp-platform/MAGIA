@@ -45,6 +45,179 @@ package magia_pkg;
   localparam int unsigned ID_W             = 1;                               // Default ID Width
   localparam int unsigned USR_W            = 1;                               // Default User Width
 
+  // Tile accelerator configuration
+  typedef struct packed {
+    int unsigned Height;       // Systolic array height
+    int unsigned Width;        // Systolic array width
+    int unsigned NumPipeRegs;  // Pipeline registers in the systolic array
+  } redmule_cfg_t;
+
+  typedef struct packed {
+    bit          RVD;       // Double-precision vector support (drives 64-bit TCDM)
+    bit          RVF;       // Single-precision FP support
+    bit          RVV;       // Vector extension support
+    int unsigned NumIPU;    // Number of integer processing units
+    int unsigned NumFPU;    // Number of FP processing units
+    bit          XDivSqrt;  // FP division/sqrt enable
+    bit          XDMA;      // DMA inside the Spatz CC
+  } spatz_cfg_t;
+
+  typedef struct packed {
+    int unsigned NumCores;  // Number of cv32e40p cluster cores
+  } cluster_cfg_t;
+
+  typedef struct packed {
+    bit           EnRedMule; // RedMulE HWPE: engine + HCI HWPE port + OBI control port
+    bit           EnSpatzCC; // Spatz CC: core complex + bootrom + dedicated I$ + HCI/OBI master ports
+    bit           EnCluster; // PULP cluster: cv32e40p cores + shared I$ + OBI master ports
+    redmule_cfg_t RedMule;   // RedMulE parameters (valid iff EnRedMule)
+    spatz_cfg_t   Spatz;     // Spatz CC parameters (valid iff EnSpatzCC)
+    cluster_cfg_t Cluster;   // PULP cluster parameters (valid iff EnCluster)
+  } magia_tile_cfg_t;
+
+  // Default parameter sets
+
+  localparam redmule_cfg_t MagiaRedMuleDefaultCfg = '{
+    Height:      8,
+    Width:       8,
+    NumPipeRegs: 1
+  };
+
+ // Derived from the MAGIA Makefile (Reflects on spatz_pkg.sv in spatz_cluster dep)
+`ifdef SPATZ_RVD
+  localparam bit          MagiaSpatzRVD      = `SPATZ_RVD;
+`else
+  localparam bit          MagiaSpatzRVD      = 1'b0;
+`endif
+`ifdef SPATZ_RVF
+  localparam bit          MagiaSpatzRVF      = `SPATZ_RVF;
+`else
+  localparam bit          MagiaSpatzRVF      = 1'b1;
+`endif
+`ifdef SPATZ_RVV
+  localparam bit          MagiaSpatzRVV      = `SPATZ_RVV;
+`else
+  localparam bit          MagiaSpatzRVV      = 1'b1;
+`endif
+`ifdef SPATZ_N_IPU
+  localparam int unsigned MagiaSpatzNumIPU   = `SPATZ_N_IPU;
+`else
+  localparam int unsigned MagiaSpatzNumIPU   = 1;
+`endif
+`ifdef SPATZ_N_FPU
+  localparam int unsigned MagiaSpatzNumFPU   = `SPATZ_N_FPU;
+`else
+  localparam int unsigned MagiaSpatzNumFPU   = 4;
+`endif
+`ifdef SPATZ_XDIVSQRT
+  localparam bit          MagiaSpatzXDivSqrt = `SPATZ_XDIVSQRT;
+`else
+  localparam bit          MagiaSpatzXDivSqrt = 1'b0;
+`endif
+`ifdef SPATZ_XDMA
+  localparam bit          MagiaSpatzXDMA     = `SPATZ_XDMA;
+`else
+  localparam bit          MagiaSpatzXDMA     = 1'b0;
+`endif
+
+  localparam spatz_cfg_t MagiaSpatzDefaultCfg = '{
+    RVD:      MagiaSpatzRVD,
+    RVF:      MagiaSpatzRVF,
+    RVV:      MagiaSpatzRVV,
+    NumIPU:   MagiaSpatzNumIPU,
+    NumFPU:   MagiaSpatzNumFPU,
+    XDivSqrt: MagiaSpatzXDivSqrt,
+    XDMA:     MagiaSpatzXDMA
+  };
+
+  localparam cluster_cfg_t MagiaClusterDefaultCfg = '{
+    NumCores: 8
+  };
+
+  // All accelerators enabled (full tile)
+  localparam magia_tile_cfg_t MagiaTileDefaultCfg = '{
+    EnRedMule: 1'b1,
+    EnSpatzCC: 1'b1,
+    EnCluster: 1'b1,
+    RedMule:   MagiaRedMuleDefaultCfg,
+    Spatz:     MagiaSpatzDefaultCfg,
+    Cluster:   MagiaClusterDefaultCfg
+  };
+
+  // RedMulE-only tile
+  localparam magia_tile_cfg_t MagiaTileRedMuleCfg = '{
+    EnRedMule: 1'b1,
+    EnSpatzCC: 1'b0,
+    EnCluster: 1'b0,
+    RedMule:   MagiaRedMuleDefaultCfg,
+    Spatz:     MagiaSpatzDefaultCfg,
+    Cluster:   MagiaClusterDefaultCfg
+  };
+
+   // SpatzCC-only tile
+  localparam magia_tile_cfg_t MagiaTileSpatzCfg = '{
+    EnRedMule: 1'b0,
+    EnSpatzCC: 1'b1,
+    EnCluster: 1'b0,
+    RedMule:   MagiaRedMuleDefaultCfg,
+    Spatz:     MagiaSpatzDefaultCfg,
+    Cluster:   MagiaClusterDefaultCfg
+  };
+
+  // PulpCluster-only tile
+  localparam magia_tile_cfg_t MagiaTileClusterCfg = '{
+    EnRedMule: 1'b0,
+    EnSpatzCC: 1'b0,
+    EnCluster: 1'b1,
+    RedMule:   MagiaRedMuleDefaultCfg,
+    Spatz:     MagiaSpatzDefaultCfg,
+    Cluster:   MagiaClusterDefaultCfg
+  };
+
+  localparam magia_tile_cfg_t [N_TILES-1:0] HOMO_TILE_CFGS = '{
+    // Default Homogeneus Mesh
+    0:  MagiaTileDefaultCfg,
+    1:  MagiaTileDefaultCfg,
+    2:  MagiaTileDefaultCfg,
+    3:  MagiaTileDefaultCfg,
+    4:  MagiaTileDefaultCfg,
+    5:  MagiaTileDefaultCfg,
+    6:  MagiaTileDefaultCfg,
+    7:  MagiaTileDefaultCfg,
+    8:  MagiaTileDefaultCfg,
+    9:  MagiaTileDefaultCfg,
+    10: MagiaTileDefaultCfg,
+    11: MagiaTileDefaultCfg,
+    12: MagiaTileDefaultCfg,
+    13: MagiaTileDefaultCfg,
+    14: MagiaTileDefaultCfg,
+    15: MagiaTileDefaultCfg
+  };
+
+
+  localparam magia_tile_cfg_t [N_TILES-1:0] HETERO_TILE_CFGS = '{
+    // Row 0: full tiles
+    0:  MagiaTileDefaultCfg,
+    1:  MagiaTileDefaultCfg,
+    2:  MagiaTileDefaultCfg,
+    3:  MagiaTileDefaultCfg,
+    // Row 1: RedMulE-only
+    4:  MagiaTileRedMuleCfg,
+    5:  MagiaTileRedMuleCfg,
+    6:  MagiaTileRedMuleCfg,
+    7:  MagiaTileRedMuleCfg,
+    // Row 2: Spatz-only (vector tiles)
+    8:  MagiaTileSpatzCfg,
+    9:  MagiaTileSpatzCfg,
+    10: MagiaTileSpatzCfg,
+    11: MagiaTileSpatzCfg,
+    // Row 3: PULP cluster-only
+    12: MagiaTileClusterCfg,
+    13: MagiaTileClusterCfg,
+    14: MagiaTileClusterCfg,
+    15: MagiaTileClusterCfg
+  };
+
   // Parameters used by the NoC
   parameter int unsigned AXI_NOC_ID_W      = 6;                                // AXI NoC ID Width: matches slave side id_width (6 bits)
   parameter int unsigned AXI_NOC_U_W       = USR_W;
