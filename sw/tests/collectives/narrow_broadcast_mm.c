@@ -38,8 +38,8 @@ int main() {
     
     printf("Source of the broadcast\n");
 
-    *(volatile int*) (COLLECTIVE_ADDR_OFFSET + L1_BASE + L1_TILE_OFFSET + MEM_OFFSET) = (int) BROADCAST_WORD;
-    *(volatile int*) (COLLECTIVE_ADDR_OFFSET + L1_BASE + L1_TILE_OFFSET + END_OF_TEST_OFFSET) = (int) END_PATTERN;
+    *(volatile int*) (COLLECTIVE_ADDR_OFFSET + L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) = (int) BROADCAST_WORD;
+    *(volatile int*) (COLLECTIVE_ADDR_OFFSET + L1_BASE + get_hartid()*L1_TILE_OFFSET + END_OF_TEST_OFFSET) = (int) END_PATTERN;
     
   } else {
 

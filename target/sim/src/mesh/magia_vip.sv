@@ -251,7 +251,7 @@ module magia_vip
         end
         for (int k = 0; k < 2**magia_tb_pkg::L2_ID_W; k++) begin
           if (print_line[k] == 1'b1) begin
-            $write("[mhartid %0d] ", j*magia_tb_pkg::N_TILES_Y+i);
+            $write("[mhartid %0d] ", i*magia_tb_pkg::N_TILES_X+j);
             for (int j = 0; j < chars.size(); j++) begin
               if (chars[j].id == k) begin
                 $write("%c", chars[j].data);
