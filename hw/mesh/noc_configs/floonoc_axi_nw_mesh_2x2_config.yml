@@ -8,7 +8,9 @@ routing:
   collective:
     en_narrow_multicast: true
     en_wide_multicast: true
-
+    en_barrier: true
+    en_wide_reduction: true
+    
 protocols:
   - name: "narrow_data_mst"
     type: "narrow"
@@ -19,7 +21,6 @@ protocols:
     user_width:
       collective_mask: 32
       collective_op: 4
-      user: 5
   - name: "narrow_data_slv"
     type: "narrow"
     protocol: "AXI4"
@@ -29,7 +30,6 @@ protocols:
     user_width:
       collective_mask: 32
       collective_op: 4
-      user: 5
   - name: "wide_data_mst"
     type: "wide"
     protocol: "AXI4"
@@ -72,13 +72,19 @@ endpoints:
       - "wide_data_mst"
 
 routers:
-  - name: "router"
+  - name: "router_center"
     array: [2, 2]
+    degree: 5
+    xy_id_offset:
+      y: 0
+      x: 1
+  - name: "router_left"
+    array: [1, 2]
     degree: 5
 
 connections:
   - src: "magia_tile"
-    dst: "router"
+    dst: "router_center"
     src_range:
     - [0, 1]
     - [0, 1]
@@ -87,10 +93,20 @@ connections:
     - [0, 1]
     dst_dir: "Eject"
   - src: "L2"
-    dst: "router"
+    dst: "router_left"
     src_range:
     - [0, 1]
     dst_range:
     - [0, 0]
     - [0, 1]
+    dst_dir: "West"
+  - src: "router_left"
+    dst: "router_center"
+    src_range:
+      - [0, 0]
+      - [0, 1]
+    dst_range:
+      - [0, 0]
+      - [0, 1]
+    src_dir: "East"
     dst_dir: "West"
