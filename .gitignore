@@ -24,6 +24,8 @@ sw/tests/*/*/work/
 sw/tests/*/*/work
 sw/tests/*/*/transcript
 sw/tests/*/*/*.log
+sw/tests/*/traces/*/
+sw/tests/*/*/traces/*/
 
 spatz/bootrom/*.elf
 spatz/bootrom/*.bin
