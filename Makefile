@@ -166,8 +166,8 @@ ifneq ($(core), CV32E40P)
   CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
 	LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
 else
-  CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -U__riscv__ -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
-  LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -U__riscv__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
+  CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -U__riscv__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
+    LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -U__riscv__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
 endif
 
 # Spatz embedded binary support (via header)

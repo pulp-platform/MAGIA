@@ -29,29 +29,12 @@ ARCH     ?= rv
 XLEN     ?= 32
 core     ?= CV32E40P
 
-ifeq ($(core), CV32E40X)
-  XTEN := imafc
-  CC      = $(ISA)$(XLEN)-unknown-elf-gcc
-  OBJCOPY = $(ISA)$(XLEN)-unknown-elf-objcopy
-  OBJDUMP = $(ISA)$(XLEN)-unknown-elf-objdump
-  XABI :=f
-  ABI  := ilp
-else ifeq ($(core), RI5CY)
-  XTEN := imcxgap9
-  CC      = riscv$(XLEN)-unknown-elf-gcc
-  OBJCOPY = riscv$(XLEN)-unknown-elf-objcopy
-  OBJDUMP = riscv$(XLEN)-unknown-elf-objdump
-  XABI :=
-  ABI  := ilp
-else
-  # CV32E40P with ZFINX=1 (FP ops on GPRs) — see top Makefile.
-  XTEN := imc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfinx_zhinxmin
-  CC      = riscv64-unknown-elf-gcc
-  OBJCOPY = riscv64-unknown-elf-objcopy
-  OBJDUMP = riscv64-unknown-elf-objdump
-  XABI :=
-  ABI  := ilp
-endif
+XTEN := imc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfinx_zhinxmin
+CC      = riscv64-unknown-elf-gcc
+OBJCOPY = riscv64-unknown-elf-objcopy
+OBJDUMP = riscv64-unknown-elf-objdump
+XABI :=
+ABI  := ilp
 
 TEST_NAME      ?= base_pulp_test
 task           ?=
