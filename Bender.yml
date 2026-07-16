@@ -24,13 +24,13 @@ package:
     - "Luca Balboni (luca.balboni10@studio.unibo.it)"
 
 dependencies:
-  redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 944d4a4d45fe05147cfbf7f872af677578f3b15c } # branch: fc/ooo-mux
+  redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , version: 2.1.0                                } 
   cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: a90101211048ba1a16cedbe4db963ab6e12569d7 } # branch: vi/redmule_scaleup
   cv32e40p          : { git: "https://github.com/FondazioneChipsIT/cv32e40p.git"      , rev: 4458c6de85a04e144342b71279d3d81978f815b8 } # branch: ng/pulp_cluster
-  spatz             : { git: "https://github.com/pulp-platform/spatz.git"             , rev: 9380883fd36a4794d7f31e2c22e3fed3202aeb81 } # branch: lb/magia-spatz_cc
+  spatz             : { git: "https://github.com/pulp-platform/spatz.git"             , rev: 70b3d9af224fda15ff17b60bc8ea01eafa631328 } # branch: lb/magia-spatz_cc
   idma              : { git: "https://github.com/pulp-platform/iDMA.git"              , rev: ff5d56fffb3767814db88d6bf8f381974ea33aa5 } # version: 0.6.4
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
-  hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , version: 3.0.0                                }
+  hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , version: 3.1.0                                }
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , version: 2.3.0                                }
   cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , version: 0.2.0                                }
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
@@ -60,8 +60,10 @@ sources:
       - hw/mesh/magia_pkg.sv
       - hw/tile/magia_tile_pkg.sv
       # MAGIA Tile
-      - hw/tile/converters/data2obi.sv
-      - hw/tile/converters/obi2data.sv
+      - hw/tile/converters/cv32e40p_data2obi.sv
+      - hw/tile/converters/cv32e40x_data2obi.sv
+      - hw/tile/converters/cv32e40p_obi2data.sv
+      - hw/tile/converters/cv32e40x_obi2data.sv
       - hw/tile/converters/instr2obi.sv
       - hw/tile/converters/obi2instr.sv
       - hw/tile/converters/instr2cache.sv
@@ -90,13 +92,14 @@ sources:
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
       - hw/tile/obi_slave_ctrl_cluster.sv
-      - hw/tile/tile_csr.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
+      - hw/tile/core_data_demux.sv
       - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_tile_icache_wrap.sv
       - hw/tile/magia_redmule_wrap.sv
+      - hw/tile/magia_cluster_wrap.sv
       - hw/tile/magia_tile.sv
       # MAGIA DV
       - target/sim/src/tile/magia_tile_tb_pkg.sv
@@ -122,8 +125,10 @@ sources:
       - hw/tile/magia_tile_pkg.sv
       - hw/mesh/noc/magia_noc_pkg.sv
       # MAGIA Tile
-      - hw/tile/converters/data2obi.sv
-      - hw/tile/converters/obi2data.sv
+      - hw/tile/converters/cv32e40p_data2obi.sv
+      - hw/tile/converters/cv32e40x_data2obi.sv
+      - hw/tile/converters/cv32e40p_obi2data.sv
+      - hw/tile/converters/cv32e40x_obi2data.sv
       - hw/tile/converters/instr2obi.sv
       - hw/tile/converters/obi2instr.sv
       - hw/tile/converters/instr2cache.sv
@@ -152,13 +157,14 @@ sources:
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
       - hw/tile/obi_slave_ctrl_cluster.sv
-      - hw/tile/tile_csr.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
+      - hw/tile/core_data_demux.sv
       - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_tile_icache_wrap.sv
       - hw/tile/magia_redmule_wrap.sv
+      - hw/tile/magia_cluster_wrap.sv
       - hw/tile/magia_tile.sv
       # MAGIA
       - hw/mesh/magia.sv
@@ -183,8 +189,10 @@ sources:
       - hw/tile/magia_tile_pkg.sv
       - hw/mesh/noc/magia_noc_pkg.sv
       # MAGIA Tile
-      - hw/tile/converters/data2obi.sv
-      - hw/tile/converters/obi2data.sv
+      - hw/tile/converters/cv32e40p_data2obi.sv
+      - hw/tile/converters/cv32e40x_data2obi.sv
+      - hw/tile/converters/cv32e40p_obi2data.sv
+      - hw/tile/converters/cv32e40x_obi2data.sv
       - hw/tile/converters/instr2obi.sv
       - hw/tile/converters/obi2instr.sv
       - hw/tile/converters/instr2cache.sv
@@ -213,7 +221,6 @@ sources:
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
       - hw/tile/obi_slave_ctrl_cluster.sv
-      - hw/tile/tile_csr.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
