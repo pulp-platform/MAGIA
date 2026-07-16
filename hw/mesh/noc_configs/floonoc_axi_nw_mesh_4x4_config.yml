@@ -5,6 +5,11 @@ network_type: "narrow-wide"
 routing:
   route_algo: "XY"
   use_id_table: true
+  collective:
+    en_narrow_multicast: true
+    en_wide_multicast: true
+    en_barrier: true
+    en_wide_reduction: true
 
 protocols:
   - name: "narrow_data_mst"
@@ -13,28 +18,36 @@ protocols:
     data_width: 32
     addr_width: 32
     id_width: 3
-    user_width: 1
+    user_width:
+      collective_mask: 32
+      collective_op: 4
   - name: "narrow_data_slv"
     type: "narrow"
     protocol: "AXI4"
     data_width: 32
     addr_width: 32
     id_width: 6
-    user_width: 1
+    user_width:
+      collective_mask: 32
+      collective_op: 4
   - name: "wide_data_mst"
     type: "wide"
     protocol: "AXI4"
     data_width: 256
     addr_width: 32
     id_width: 2
-    user_width: 1
+    user_width:
+      collective_mask: 32
+      collective_op: 4
   - name: "wide_data_slv"
     type: "wide"
     protocol: "AXI4"
     data_width: 256
     addr_width: 32
     id_width: 2
-    user_width: 1
+    user_width:
+      collective_mask: 32
+      collective_op: 4
 
 endpoints:
   - name: "magia_tile"
@@ -42,6 +55,7 @@ endpoints:
     addr_range:
       base: 0x0000_0000
       size: 0x0010_0000
+      en_collective: true
     mgr_port_protocol:
       - "narrow_data_slv"
       - "wide_data_slv"
@@ -58,13 +72,19 @@ endpoints:
       - "wide_data_mst"
 
 routers:
-  - name: "router"
+  - name: "router_center"
     array: [4, 4]
+    degree: 5
+    xy_id_offset:
+      y: 0
+      x: 3
+  - name: "router_left"
+    array: [1, 4]
     degree: 5
 
 connections:
   - src: "magia_tile"
-    dst: "router"
+    dst: "router_center"
     src_range:
     - [0, 3]
     - [0, 3]
@@ -73,10 +93,20 @@ connections:
     - [0, 3]
     dst_dir: "Eject"
   - src: "L2"
-    dst: "router"
+    dst: "router_left"
     src_range:
     - [0, 3]
     dst_range:
     - [0, 0]
     - [0, 3]
+    dst_dir: "West"
+  - src: "router_left"
+    dst: "router_center"
+    src_range:
+      - [0, 0]
+      - [0, 3]
+    dst_range:
+      - [0, 0]
+      - [0, 3]
+    src_dir: "East"
     dst_dir: "West"
