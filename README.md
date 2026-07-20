@@ -170,6 +170,16 @@ Cluster task sources live under `sw/tests/<test>/pulp_task/`. A test directory c
 
 **RTL/TB** : The `N_TILES_X` and `N_TILES_Y` parameters in `hw/mesh/magia_pkg.sv` specifie the number of tiles and allows the derivation of the appropriate data and syncrhonization networks.
 
+## 🧪Local testing (semi-automatic)
+To facilitate the functional verification, the [`bwruntests.py`](scripts/bwruntests.py) Python script can be used to locally run the same tests executed by the CI in an automated fashion. The two available sets of tests are defined in [`tile_tests.yml`](sw/tests/tile_tests.yml) and [`mesh_tests`](sw/tests/mesh_tests.yml).
+
+The Python script is supposed to be invoked from the main directory of this repository as follows:
+```sh
+python3 scripts/bwruntests.py -y [test_file.yml]
+```
+
+Differently from the CI flow, **the RTL must be MANUALLY compiled** with the correct `mesh_dv` flag depending on the target to be tested, i.e. single tile or full mesh. For a faster execution `fast_sim=1` is suggested.
+
 ## 🔏 License
 MAGIA is an open-source project with a permissive license. All `software` sources are licensed under the Apache License 2.0 ([`LICENSE.APACHE`](LICENSE.APACHE)). All `hardware` sources are licensed under the Solderpad Hardware License 0.51 ([`LICENSE.SHL`](LICENSE.SHL)).
 
