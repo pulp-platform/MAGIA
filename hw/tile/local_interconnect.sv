@@ -31,7 +31,10 @@ module local_interconnect
   parameter int unsigned N_CORE                           = magia_tile_pkg::N_CORE,
   parameter int unsigned N_MEM                            = magia_pkg::N_MEM_BANKS,
   parameter int unsigned EXPFIFO                          = magia_tile_pkg::EXPFIFO,
-  parameter int unsigned FILTER_WRITE_R_VALID[0:N_HWPE-1] = '{default: 0},
+  //HCI default of 21 is unsafe here.
+  parameter int unsigned TS_BIT                           = magia_tile_pkg::TS_BIT,
+  parameter int unsigned
+    FILTER_WRITE_R_VALID[0:hci_package::iomsb(N_HWPE)]    = '{default: 0},
   parameter int unsigned MEM_DATA_W                       = 0,
   parameter int unsigned MEM_ADDR_W                       = 0,
   parameter int unsigned MEM_BYTE_W                       = 0,
@@ -48,7 +51,7 @@ module local_interconnect
   input logic                                clear_i,
   input hci_package::hci_interconnect_ctrl_t ctrl_i,
   
-  hci_core_intf.target                       hwpe[N_HWPE],
+  hci_core_intf.target                       hwpe[0:hci_package::iomsb(N_HWPE)],
   hci_core_intf.target                       dma [N_DMA],
   hci_core_intf.target                       core[N_CORE],
   hci_core_intf.initiator                    mem [N_MEM]
@@ -58,27 +61,6 @@ module local_interconnect
 /**   Parameter and Interface Definitions Beginning   **/
 /*******************************************************/
 
-  localparam hci_size_parameter_t `HCI_SIZE_PARAM(hwpe_mem) = '{
-    DW:  MEM_DATA_W,
-    AW:  MEM_ADDR_W,
-    BW:  MEM_BYTE_W,
-    UW:  MEM_USER_W,
-    IW:  MEM_ID_W,
-    EW:  hci_package::DEFAULT_EW,
-    EHW: hci_package::DEFAULT_EHW
-  };
-  `HCI_INTF_ARRAY(hwpe_mem, clk_i, 0:N_HWPE*N_MEM-1);
-
-  localparam hci_size_parameter_t `HCI_SIZE_PARAM(hwpe_mem_muxed) = '{
-    DW:  MEM_DATA_W,
-    AW:  MEM_ADDR_W,
-    BW:  MEM_BYTE_W,
-    UW:  MEM_USER_W,
-    IW:  MEM_ID_W,
-    EW:  hci_package::DEFAULT_EW,
-    EHW: hci_package::DEFAULT_EHW
-  };
-  `HCI_INTF_ARRAY(hwpe_mem_muxed, clk_i, 0:N_MEM-1);
 
   localparam hci_size_parameter_t `HCI_SIZE_PARAM(dma_mem) = '{
     DW:  MEM_DATA_W,
@@ -113,17 +95,6 @@ module local_interconnect
   };
   `HCI_INTF_ARRAY(hwpe_dma_mem_muxed, clk_i, 0:N_MEM-1);
 
-  localparam hci_size_parameter_t `HCI_SIZE_PARAM(core_mem) = '{
-    DW:  MEM_DATA_W,
-    AW:  MEM_ADDR_W,
-    BW:  MEM_BYTE_W,
-    UW:  MEM_USER_W,
-    IW:  MEM_ID_W,
-    EW:  hci_package::DEFAULT_EW,
-    EHW: hci_package::DEFAULT_EHW
-  };
-  `HCI_INTF_ARRAY(core_mem, clk_i, 0:N_CORE*N_MEM-1);
-
   localparam hci_size_parameter_t `HCI_SIZE_PARAM(core_mem_muxed) = '{
     DW:  MEM_DATA_W,
     AW:  MEM_ADDR_W,
@@ -138,41 +109,6 @@ module local_interconnect
 /*******************************************************/
 /**      Parameter and Interface Definitions End      **/
 /*******************************************************/
-/**       HWPE Routing and Arbitration Beginning      **/
-/*******************************************************/
-
-  for(genvar i = 0; i < N_HWPE; i++) begin : gen_hwpe_req2mem
-    hci_router #(
-      .FIFO_DEPTH           ( EXPFIFO                   ),
-      .NB_OUT_CHAN          ( N_MEM                     ),
-      .FILTER_WRITE_R_VALID ( FILTER_WRITE_R_VALID[i]   ),
-      .`HCI_SIZE_PARAM(in)  ( `HCI_SIZE_PARAM(hwpe)     ),
-      .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(hwpe_mem) )
-    ) i_hwpe_router (
-      .clk_i   ( clk_i                           ),
-      .rst_ni  ( rst_ni                          ),
-      .clear_i ( clear_i                         ),
-      .in      ( hwpe[i]                         ),
-      .out     ( hwpe_mem[i*N_MEM:(i+1)*N_MEM-1] )
-    );
-  end
-
-  hci_arbiter_tree #(
-    .NB_REQUESTS          ( N_HWPE                          ),
-    .NB_CHAN              ( N_MEM                           ),
-    .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(hwpe_mem_muxed) )
-  ) i_hwpe_wide_port_arbiter_tree (
-    .clk_i   ( clk_i          ),
-    .rst_ni  ( rst_ni         ),
-    .clear_i ( clear_i        ),
-    .ctrl_i  ( ctrl_i         ),
-    .in      ( hwpe_mem       ),
-    .out     ( hwpe_mem_muxed )
-  );
-
-/*******************************************************/
-/**          HWPE Routing and Arbitration End         **/
-/*******************************************************/
 /**       DMA Routing and Arbitration Beginning       **/
 /*******************************************************/
 
@@ -180,7 +116,7 @@ module local_interconnect
     hci_router #(
       .FIFO_DEPTH           ( EXPFIFO                  ),
       .NB_OUT_CHAN          ( N_MEM                    ),
-      .FILTER_WRITE_R_VALID ( FILTER_WRITE_R_VALID[i]  ),
+      .FILTER_WRITE_R_VALID ( 0                        ), // DMA needs r_valid on writes too
       .`HCI_SIZE_PARAM(in)  ( `HCI_SIZE_PARAM(dma)     ),
       .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(dma_mem) )
     ) i_dma_router (
@@ -208,55 +144,148 @@ module local_interconnect
 /*******************************************************/
 /**          DMA Routing and Arbitration End          **/
 /*******************************************************/
-/**         HWPE and DMA Arbitration Beginning        **/
+/**   HWPE Routing and HWPE/DMA Arbitration Beginning **/
 /*******************************************************/
+  if (N_HWPE > 0) begin : gen_hwpe
 
-  hci_arbiter #(
-    .NB_CHAN ( N_MEM )
-  ) i_hwpe_vs_dma_arbiter (
-    .clk_i   ( clk_i              ),
-    .rst_ni  ( rst_ni             ),
-    .clear_i ( clear_i            ),
-    .ctrl_i  ( ctrl_i             ),
-    .in_high ( hwpe_mem_muxed     ),
-    .in_low  ( dma_mem_muxed      ),
-    .out     ( hwpe_dma_mem_muxed )
-  );
+    localparam hci_size_parameter_t `HCI_SIZE_PARAM(hwpe_mem) = '{
+      DW:  MEM_DATA_W,
+      AW:  MEM_ADDR_W,
+      BW:  MEM_BYTE_W,
+      UW:  MEM_USER_W,
+      IW:  MEM_ID_W,
+      EW:  hci_package::DEFAULT_EW,
+      EHW: hci_package::DEFAULT_EHW
+    };
+    `HCI_INTF_ARRAY(hwpe_mem, clk_i, 0:N_HWPE*N_MEM-1);
+
+    localparam hci_size_parameter_t `HCI_SIZE_PARAM(hwpe_mem_muxed) = '{
+      DW:  MEM_DATA_W,
+      AW:  MEM_ADDR_W,
+      BW:  MEM_BYTE_W,
+      UW:  MEM_USER_W,
+      IW:  MEM_ID_W,
+      EW:  hci_package::DEFAULT_EW,
+      EHW: hci_package::DEFAULT_EHW
+    };
+    `HCI_INTF_ARRAY(hwpe_mem_muxed, clk_i, 0:N_MEM-1);
+
+    for(genvar i = 0; i < N_HWPE; i++) begin : gen_hwpe_req2mem
+      hci_router #(
+        .FIFO_DEPTH           ( EXPFIFO                   ),
+        .NB_OUT_CHAN          ( N_MEM                     ),
+        .FILTER_WRITE_R_VALID ( FILTER_WRITE_R_VALID[i]   ),
+        .`HCI_SIZE_PARAM(in)  ( `HCI_SIZE_PARAM(hwpe)     ),
+        .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(hwpe_mem) )
+      ) i_hwpe_router (
+        .clk_i   ( clk_i                           ),
+        .rst_ni  ( rst_ni                          ),
+        .clear_i ( clear_i                         ),
+        .in      ( hwpe[i]                         ),
+        .out     ( hwpe_mem[i*N_MEM:(i+1)*N_MEM-1] )
+      );
+    end
+
+    hci_arbiter_tree #(
+      .NB_REQUESTS          ( N_HWPE                          ),
+      .NB_CHAN              ( N_MEM                           ),
+      .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(hwpe_mem_muxed) )
+    ) i_hwpe_wide_port_arbiter_tree (
+      .clk_i   ( clk_i          ),
+      .rst_ni  ( rst_ni         ),
+      .clear_i ( clear_i        ),
+      .ctrl_i  ( ctrl_i         ),
+      .in      ( hwpe_mem       ),
+      .out     ( hwpe_mem_muxed )
+    );
+
+    hci_arbiter #(
+      .NB_CHAN ( N_MEM )
+    ) i_hwpe_vs_dma_arbiter (
+      .clk_i   ( clk_i              ),
+      .rst_ni  ( rst_ni             ),
+      .clear_i ( clear_i            ),
+      .ctrl_i  ( ctrl_i             ),
+      .in_high ( hwpe_mem_muxed     ),
+      .in_low  ( dma_mem_muxed      ),
+      .out     ( hwpe_dma_mem_muxed )
+    );
+
+  end else begin : gen_no_hwpe
+
+    // No HWPE to arbitrate against: the DMA owns the wide path outright.
+    for(genvar i = 0; i < N_MEM; i++) begin : gen_dma_only
+      hci_core_assign i_dma_only_assign (
+        .tcdm_target    ( dma_mem_muxed[i]      ),
+        .tcdm_initiator ( hwpe_dma_mem_muxed[i] )
+      );
+    end
+
+  end
 
 /*******************************************************/
-/**            HWPE and DMA Arbitration End           **/
+/**      HWPE Routing and HWPE/DMA Arbitration End    **/
 /*******************************************************/
 /**      Core Routing and Arbitration Beginning       **/
 /*******************************************************/
 
-  for(genvar i = 0; i < N_CORE; i++) begin : gen_core_req2mem
-    hci_router #(
-      .FIFO_DEPTH           ( EXPFIFO                   ),
-      .NB_OUT_CHAN          ( N_MEM                     ),
-      .FILTER_WRITE_R_VALID ( FILTER_WRITE_R_VALID[i]   ),
-      .`HCI_SIZE_PARAM(in)  ( `HCI_SIZE_PARAM(core)     ),
-      .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(core_mem) )
-    ) i_core_router (
-      .clk_i   ( clk_i                           ),
-      .rst_ni  ( rst_ni                          ),
-      .clear_i ( clear_i                         ),
-      .in      ( core[i]                         ),
-      .out     ( core_mem[i*N_MEM:(i+1)*N_MEM-1] )
-    );
-  end
+  if (N_CORE > 1) begin : gen_core_log_interconnect
 
-  hci_arbiter_tree #(
-    .NB_REQUESTS          ( N_CORE                          ),
-    .NB_CHAN              ( N_MEM                           ),
-    .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(core_mem_muxed) )
-  ) i_core_wide_port_arbiter_tree (
-    .clk_i   ( clk_i          ),
-    .rst_ni  ( rst_ni         ),
-    .clear_i ( clear_i        ),
-    .ctrl_i  ( ctrl_i         ),
-    .in      ( core_mem       ),
-    .out     ( core_mem_muxed )
-  );
+    localparam hci_size_parameter_t `HCI_SIZE_PARAM(core_lic_mem) = '{
+      DW:  MEM_DATA_W,
+      AW:  `HCI_SIZE_GET_AW(core),
+      BW:  MEM_BYTE_W,
+      UW:  MEM_USER_W,
+      IW:  MEM_ID_W,
+      EW:  hci_package::DEFAULT_EW,
+      EHW: hci_package::DEFAULT_EHW
+    };
+    `HCI_INTF_ARRAY(core_lic_mem, clk_i, 0:N_MEM-1);
+
+    hci_log_interconnect #(
+      .N_CH0  ( N_CORE                  ),
+      .N_CH1  ( 0                       ),  // DMA and ext keep their own wide path
+      .N_MEM  ( N_MEM                   ),
+      .AWC    ( `HCI_SIZE_GET_AW(core)  ),
+      .AWM    ( MEM_ADDR_W-2            ),  // MEM_ADDR_W is a byte address, the LIC wants words
+      .DW     ( MEM_DATA_W              ),
+      .BW     ( MEM_BYTE_W              ),
+      .TS_BIT ( TS_BIT                  ),
+      .IW     ( MEM_ID_W                ),
+      .UW     ( MEM_USER_W              ),
+      .EW     ( hci_package::DEFAULT_EW )
+    ) i_core_log_interconnect (
+      .clk_i  ( clk_i        ),
+      .rst_ni ( rst_ni       ),
+      .ctrl_i ( ctrl_i       ),
+      .cores  ( core         ),
+      .mems   ( core_lic_mem )
+    );
+
+    for(genvar i = 0; i < N_MEM; i++) begin : gen_core_lic_mem
+      hci_core_assign i_core_lic_mem_assign (
+        .tcdm_target    ( core_lic_mem[i]   ),
+        .tcdm_initiator ( core_mem_muxed[i] )
+      );
+    end
+
+  end else begin : gen_core_single
+
+    hci_router #(
+      .FIFO_DEPTH           ( EXPFIFO                         ),
+      .NB_OUT_CHAN          ( N_MEM                           ),
+      .FILTER_WRITE_R_VALID ( 0                               ),
+      .`HCI_SIZE_PARAM(in)  ( `HCI_SIZE_PARAM(core)           ),
+      .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(core_mem_muxed) )
+    ) i_core_router (
+      .clk_i   ( clk_i          ),
+      .rst_ni  ( rst_ni         ),
+      .clear_i ( clear_i        ),
+      .in      ( core[0]        ),
+      .out     ( core_mem_muxed )
+    );
+
+  end
 
 /*******************************************************/
 /**          Core Routing and Arbitration End         **/

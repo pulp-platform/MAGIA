@@ -145,7 +145,7 @@ module magia_tile
 
   localparam int unsigned NClusterCores = TileCfg.Cluster.NumCores;
 
-  localparam int unsigned NumHwpe = magia_tile_pkg::N_HWPE; // RedMulE; stays 1 if !EnRedMule (tied off) - local_interconnect is not 0-safe
+  localparam int unsigned NumHwpe = TileCfg.EnRedMule ? magia_tile_pkg::N_HWPE : 0; // 0 makes local_interconnect generate its whole HWPE branch away
   localparam int unsigned NumDma  = magia_tile_pkg::N_DMA;
   localparam int unsigned NumExt  = magia_tile_pkg::N_EXT;
 
@@ -930,7 +930,7 @@ module magia_tile
     EW:  hci_package::DEFAULT_EW,
     EHW: hci_package::DEFAULT_EHW
   };
-  `HCI_INTF_ARRAY(hci_redmule_if, sys_clk, 0:NumHwpe-1);
+  `HCI_INTF_ARRAY(hci_redmule_if, sys_clk, 0:hci_package::iomsb(NumHwpe));
 
   localparam hci_package::hci_size_parameter_t `HCI_SIZE_PARAM(hci_dma_if) = '{
     DW:  magia_tile_pkg::iDMA_DataWidth,
@@ -2233,15 +2233,13 @@ if (TileCfg.EnCluster) begin: gen_pulp_cluster
     .cluster_instr_rsp_i    ( cluster_instr_rsp    )
   );
 
-  // Peripheral path: each cluster core's OBI port drives one OBI xbar manager
-  // port (ObiMgr.cluster_base + i), created only when the cluster is on.
+  // OBI xbar manager path
   for (genvar idx_core = 0; idx_core < NClusterCores; idx_core++) begin: gen_cluster_obi_port
     assign obi_xbar_slv_req[ObiMgr.cluster_base + idx_core] = cluster_obi_data_req[idx_core];
     assign cluster_obi_data_rsp[idx_core] = obi_xbar_slv_rsp[ObiMgr.cluster_base + idx_core];
   end
 
-  // L1/TCDM fast path: each cluster core gets a dedicated HCI interconnect core
-  // port, placed right after the control core (0) and the Spatz TCDM ports.
+  // L1/TCDM fast path
   for (genvar idx_core = 0; idx_core < NClusterCores; idx_core++) begin: gen_cluster_hci_assign
     `HCI_ASSIGN_TO_INTF(hci_core_if[1 + NumSpatzHciPorts + idx_core], cluster_hci_data_req[idx_core], cluster_hci_data_rsp[idx_core])
   end

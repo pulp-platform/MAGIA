@@ -227,7 +227,7 @@ package magia_tile_pkg;
                           $clog2(magia_pkg::N_WORDS_BANK*DW_LIC/BW_LIC);                // Address width memory (master ports)
   parameter int unsigned UW_LIC  = magia_pkg::USR_W;                                    // User Width for Log Interconnect
   localparam int unsigned SW_LIC = DW_LIC/BW_LIC;                                       // Strobe Width for Log Interconnect
-  parameter int unsigned TS_BIT  = 21;                                                  // TEST_SET_BIT (for Log Interconnect)
+  parameter int unsigned TS_BIT  = 31;                                                  // TEST_SET_BIT (for Log Interconnect)
   parameter int unsigned IW      = N_HWPE+N_CORE+N_DMA+N_EXT;                           // ID Width HCI
   parameter int unsigned EXPFIFO = 0;                                                   // FIFO Depth for HWPE Interconnect
   parameter int unsigned DWH     = magia_pkg::MagiaRedMuleDefaultCfg.Height *
