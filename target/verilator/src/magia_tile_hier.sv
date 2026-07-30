@@ -13,6 +13,7 @@ module magia_tile_hier
   import magia_pkg::*;
   import magia_noc_pkg::*;
 #(
+  parameter magia_tile_pkg::magia_tile_cfg_t TileCfg       = magia_tile_pkg::MagiaTileDefaultCfg,
   parameter int unsigned N_MEM_BANKS  = magia_pkg::N_MEM_BANKS,
   parameter int unsigned N_WORDS_BANK = magia_pkg::N_WORDS_BANK,
   // Hierarchical Verilation (see verilator/magia_hier.vlt) only accepts
@@ -82,6 +83,7 @@ module magia_tile_hier
 
   magia_tile #(
     .N_MEM_BANKS(N_MEM_BANKS), .N_WORDS_BANK(N_WORDS_BANK),
+    .TileCfg      ( TileCfg ),
     .CORE_ISA(cv32e40x_pkg::rv32_e'(CORE_ISA)),
     .CORE_A(cv32e40x_pkg::a_ext_e'(CORE_A)),
     .CORE_B(cv32e40x_pkg::b_ext_e'(CORE_B)),
