@@ -36,18 +36,7 @@ static inline uint32_t get_hartid(void) {
     uint32_t hartid;
     asm volatile("csrr %0, mhartid"
                  :"=r"(hartid):);
-    #ifndef RI5CY
-        return hartid;
-    #else
-        // RI5CY mhartid CSR: { 21'b0, cluster_id_i[5:0], 1'b0, core_id_i[3:0] }
-        //   cluster_id_i = mhartid_tile + 1  (which tile/cluster, 1-indexed; 0 = standalone main core)
-        //   core_id_i    = i                 (which core within the cluster, 0-indexed)
-        uint32_t cluster_id = (hartid >> 5) & 0x3F;  // = tile_hartid + 1 (same for all cores in a tile)
-        uint32_t core_id    = hartid & 0xF;           // = i (unique per core within tile)
-        if (cluster_id == 0)
-            return core_id;  // standalone main tile core
-        return PULP_HARTID_BASE + (cluster_id - 1) * PULP_CORE_COUNT + core_id;
-    #endif
+    return hartid;
 }
 
 void hello_pulp_task(void *data) {
