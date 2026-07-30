@@ -31,7 +31,7 @@ The following *optional* parameters can be specified:
 
 `gui`: **0**|**1** (**Default**: 0). 0 simulation without GUI; 1 simulation with GUI.
 
-`core`: **CV32E40P**|**RI5CY**|**CV32E40X** (**Default**: CV32E40P). Control and cluster cores type.
+`core`: **CV32E40P**|**CV32E40X** (**Default**: CV32E40P). Control and cluster cores type.
 
 
 **Instructions to build HW/SW and run simulations**:
@@ -92,7 +92,7 @@ The central piece of the architecture is the MAGIA tile containing a GeMM accele
 Each tile is controlled by a [CV32E40P](https://github.com/pulp-platform/cv32e40p) main core. Control of iDMA, RedMulE, FractalSync, Spatz CC, and the PULP cluster follows a memory-mapped model, with the Event Unit handling event aggregation for system control.
 
 #### PULP Cluster
-Each tile embeds a cluster of 8 [CV32E40P](https://github.com/pulp-platform/cv32e40p) (or RI5CY) cores. Cluster cores share a Snitch instruction cache with an AXI refill path to L2, and each core has its own OBI master port into the tile crossbar for data accesses (L1, accelerator registers, PULP_CTRL). Cluster cores receive interrupts exclusively from the tile CSR (`PULP_CTRL`) — they are not connected to the Event Unit. The main core dispatches tasks to the cluster via the `PULP_CTRL` register block (`0x1740`), which provides: binary entry point (`PULP_BINARY`), per-core MEI dispatch (`PULP_START`), task function pointer (`PULP_TASKBIN`), data pointer (`PULP_DATA`), completion quorum (`PULP_NB_CORES_TO_WAIT`), and readiness/done handshake registers (`PULP_READY`, `PULP_DONE`). When the done quorum is reached, the tile CSR raises EU bit 12 on the main core's Event Unit, allowing the main core to sleep in WFE until the cluster finishes.
+Each tile embeds a cluster of 8 [CV32E40P](https://github.com/pulp-platform/cv32e40p) cores. Cluster cores share a Snitch instruction cache with an AXI refill path to L2, and each core has its own OBI master port into the tile crossbar for data accesses (L1, accelerator registers, PULP_CTRL). Cluster cores receive interrupts exclusively from the tile CSR (`PULP_CTRL`) — they are not connected to the Event Unit. The main core dispatches tasks to the cluster via the `PULP_CTRL` register block (`0x1740`), which provides: binary entry point (`PULP_BINARY`), per-core MEI dispatch (`PULP_START`), task function pointer (`PULP_TASKBIN`), data pointer (`PULP_DATA`), completion quorum (`PULP_NB_CORES_TO_WAIT`), and readiness/done handshake registers (`PULP_READY`, `PULP_DONE`). When the done quorum is reached, the tile CSR raises EU bit 12 on the main core's Event Unit, allowing the main core to sleep in WFE until the cluster finishes.
 
 ### Mesh
 Replicating the MAGIA tile, we scale up to a homogeneous two-dimensional (2D) mesh of compute tiles. The NoC allows access to the global west-side L2 through row-side interfaces, while tiles exchange traffic through FlooNoC router. The mesh uses XY routing and carries both AXI narrow channels (32-bit) and AXI wide channels (256-bit), with protocol conversion handled by per-tile Network Interfaces (NIs).
