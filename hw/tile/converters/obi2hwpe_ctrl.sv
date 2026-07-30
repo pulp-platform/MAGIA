@@ -23,7 +23,10 @@
 
 module obi2hwpe_ctrl
   import magia_tile_pkg::*;
-(
+#(
+  parameter type redmule_ctrl_req_t = magia_tile_pkg::redmule_ctrl_req_t,
+  parameter type redmule_ctrl_rsp_t = magia_tile_pkg::redmule_ctrl_rsp_t
+)(
   //OBI side
   input  core_obi_data_req_t obi_req_i,
   output core_obi_data_rsp_t obi_rsp_o,
