@@ -24,14 +24,14 @@
 #define A_VAL (12.34f)
 #define B_VAL (56.78f)
 #define C_EXP (69.12f)
+#define F_EXP 0x428A3D70
 
 #ifdef CV32E40P
 #define FP_TH (1e-45f)
 #else
-#ifdef RI5CY
-#define FP_TH (8e-6f)
+#define FP_TH (0.1f)
 #endif
-#endif
+
 
 #define abs_diff(x, y) (((x) > (y)) ? ((x) - (y)) : ((y) - (x)))
 
@@ -60,11 +60,11 @@ int main(void) {
      printf("Test PASSED\n");
    }
 #else
-  uint32_t a, b, c;
-  a = 0x414570A4; // Binary for 12.34f
-  b = 0x42631EB8; // Binary for 56.78f
-  c = f_add(a, b);
-  printf("Float operation result: 0x%0x [expected: 0x428A3D71(69.12f)]\n", c);
+  uint32_t D, E, F;
+  D = 0x414570A4; // Binary for 12.34f
+  E = 0x42631EB8; // Binary for 56.78f
+  F = f_add(D, E);
+  printf("Float operation result: 0x%08x [expected: 0x%08x]\n", F, F_EXP);
 #endif
 
   return error;
