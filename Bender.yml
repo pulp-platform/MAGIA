@@ -92,13 +92,14 @@ sources:
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
       - hw/tile/obi_slave_ctrl_cluster.sv
-      - hw/tile/tile_csr.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
+      - hw/tile/core_data_demux.sv
       - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_tile_icache_wrap.sv
       - hw/tile/magia_redmule_wrap.sv
+      - hw/tile/magia_cluster_wrap.sv
       - hw/tile/magia_tile.sv
       # MAGIA DV
       - target/sim/src/tile/magia_tile_tb_pkg.sv
@@ -156,13 +157,14 @@ sources:
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
       - hw/tile/obi_slave_ctrl_cluster.sv
-      - hw/tile/tile_csr.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
+      - hw/tile/core_data_demux.sv
       - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_tile_icache_wrap.sv
       - hw/tile/magia_redmule_wrap.sv
+      - hw/tile/magia_cluster_wrap.sv
       - hw/tile/magia_tile.sv
 
   - target: all(magia_dv, not(standalone_tile), verilator)
@@ -235,13 +237,14 @@ sources:
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
       - hw/tile/obi_slave_ctrl_cluster.sv
-      - hw/tile/tile_csr.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux_eu_direct.sv
+      - hw/tile/core_data_demux.sv
       - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_tile_icache_wrap.sv
       - hw/tile/magia_redmule_wrap.sv
+      - hw/tile/magia_cluster_wrap.sv
       - hw/tile/magia_tile.sv
       # MAGIA
       - hw/mesh/magia.sv

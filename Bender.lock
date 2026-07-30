@@ -242,7 +242,7 @@ packages:
     dependencies:
     - tech_cells_generic
   spatz:
-    revision: 9380883fd36a4794d7f31e2c22e3fed3202aeb81
+    revision: 70b3d9af224fda15ff17b60bc8ea01eafa631328
     version: null
     source:
       Git: https://github.com/pulp-platform/spatz.git

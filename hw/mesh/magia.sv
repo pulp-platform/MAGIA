@@ -31,6 +31,8 @@ module magia
   parameter int unsigned N_TILES_Y         = magia_pkg::N_TILES_Y,          // Number of Tile rowns
   parameter int unsigned N_TILES_X         = magia_pkg::N_TILES_X,          // Number of Tile columns
   parameter int unsigned N_TILES           = magia_pkg::N_TILES,            // Number of Tiles in the Mesh
+  // By Default is used the Homogeneous Mesh
+  parameter magia_pkg::magia_tile_cfg_t [N_TILES-1:0] TILE_CFGS = magia_pkg::HOMO_TILE_CFGS,
   parameter int unsigned N_MEM_BANKS       = magia_pkg::N_MEM_BANKS,        // Number of TCDM banks (1 extra bank for missaligned accesses) per Tile
   parameter int unsigned N_WORDS_BANK      = magia_pkg::N_WORDS_BANK,       // Number of words per TCDM bank
 
@@ -174,19 +176,15 @@ module magia
     for (genvar j = 0; j < N_TILES_X; j++) begin: gen_x_tile
 `ifdef VERILATOR
       magia_tile_hier #(
+        .TileCfg      ( TILE_CFGS[i*N_TILES_X+j] ),
         .N_MEM_BANKS  ( N_MEM_BANKS   ),
         .N_WORDS_BANK ( N_WORDS_BANK  )
       ) i_magia_tile (
 `else
       magia_tile #(
-        .N_MEM_BANKS  ( N_MEM_BANKS   ),
-        .N_WORDS_BANK ( N_WORDS_BANK  ),
-
-        .CORE_ISA     (               ),
-        .CORE_A       (               ),
-        .CORE_B       (               ),
-        .CORE_M       (               ),
-        .ERROR_CAP    (               )
+        .TileCfg      ( TILE_CFGS[i*N_TILES_X+j] ),
+        .N_MEM_BANKS  ( N_MEM_BANKS              ),
+        .N_WORDS_BANK ( N_WORDS_BANK             )
       ) i_magia_tile (
 `endif
         .clk_i                                                     ,
