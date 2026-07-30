@@ -6,6 +6,7 @@ update-ips.log
 synth-ips.log
 build-hw.log
 profile-ips.log
+vsim-scripts.log
 magia_venv/
 modelsim.ini
 regression_logs/
@@ -23,6 +24,8 @@ sw/tests/*/*/work/
 sw/tests/*/*/work
 sw/tests/*/*/transcript
 sw/tests/*/*/*.log
+sw/tests/*/traces/*/
+sw/tests/*/*/traces/*/
 
 spatz/bootrom/*.elf
 spatz/bootrom/*.bin
