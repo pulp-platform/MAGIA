@@ -126,7 +126,7 @@ packages:
       Git: https://github.com/pulp-platform/fpu_ss.git
     dependencies: []
   fractal_sync:
-    revision: fdb619f40f99d769cfceb20ac2117ff8d99e98a3
+    revision: df8e21b7e2b0e2d3198bf44a60b4ca67c334bcc2
     version: null
     source:
       Git: https://github.com/VictorIsachi/fractal_sync
