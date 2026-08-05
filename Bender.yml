@@ -41,7 +41,7 @@ dependencies:
   axi_obi           : { git: "https://github.com/pulp-platform/axi_obi.git"           , rev: 3f29bd67369a093cf5be4ea3fdac3c6c216424cc } # branch: vi/magia
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
-  fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: fdb619f40f99d769cfceb20ac2117ff8d99e98a3 } # branch: main
+  fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: df8e21b7e2b0e2d3198bf44a60b4ca67c334bcc2 } # branch: main
   floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , version: 0.6.1                                }
   event_unit_flex   : { git: "https://github.com/pulp-platform/event_unit_flex.git"   , rev: 763c3b9977970f656326c70a96debfb2ac0f85b2 } 
 
