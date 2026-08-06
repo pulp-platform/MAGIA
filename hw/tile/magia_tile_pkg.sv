@@ -268,9 +268,21 @@ package magia_tile_pkg;
   // Parameters used by cv32e40p core
   parameter bit          PULP_CLUSTER        = 1'b1;                                    // PULP cluster mode
   parameter bit          FPU                 = 1'b1;                                    // Enable FPU (main feature)
-  parameter bit          ZFINX_CV32E40P      = 1'b1;                                    // Zfinx extension (integer FP in GPR) of the CV32E40P cores (control and cluster)
   parameter bit          FP_DIVSQRT          = 1'b1;                                    // FP division and square root
   parameter logic[31:0]  DM_HALT_ADDR        = 32'h1A110800;                            // Debug module halt address
+
+  `ifdef ZFINX_CTRL
+    localparam bit ZFINX_CTRL_PARAM    = `ZFINX_CTRL;
+  `else
+    localparam bit ZFINX_CTRL_PARAM    = 1'b1;
+  `endif
+  `ifdef ZFINX_CLUSTER
+    localparam bit ZFINX_CLUSTER_PARAM = `ZFINX_CLUSTER;
+  `else
+    localparam bit ZFINX_CLUSTER_PARAM = 1'b1;
+  `endif
+  parameter bit           ZFINX_CTRL    = ZFINX_CTRL_PARAM;    // Zfinx for the control core
+  parameter bit           ZFINX_CLUSTER = ZFINX_CLUSTER_PARAM; // Zfinx for the PULP cluster cores
 
 `ifdef CV32E40X
   parameter int unsigned X_NUM_RS        = 3;                                           // Number of register file read ports that can be used by the eXtension interface
@@ -408,7 +420,6 @@ package magia_tile_pkg;
   parameter int unsigned CLUSTER_FILL_DW        = magia_pkg::DATA_W;                            // i$ Fill interface data width. Power of two; >= 8.
 
   // Parameters used by the FPU
-  parameter bit                             ZFINX_CV32E40X     = 0;                     // fpu_ss uses the F ISA extension, not Zfinx: CV32E40X is built with rv32imafc
   parameter int unsigned                    FPU_BUFFER_DEPTH   = 8;                     // FPU FIFO depth that buffers instructions coming from core
   parameter bit                             FPU_BUFFER_FT      = 0;                     // FPU FIFO fall through that buffers instructions coming from core
   parameter bit                             FPU_OOO            = 1;                     // FPU enable out-of-order execution

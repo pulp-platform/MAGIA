@@ -29,11 +29,18 @@ ARCH     ?= rv
 XLEN     ?= 32
 core     ?= CV32E40P
 
-XTEN := imc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfinx_zhinxmin
+zfinx ?= 1
+XTEN_BASE := xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw
+ifeq ($(zfinx),1)
+  XTEN := imc_$(XTEN_BASE)_zfinx_zhinxmin
+  XABI :=
+else
+  XTEN := imfc_$(XTEN_BASE)
+  XABI := f
+endif
 CC      = riscv64-unknown-elf-gcc
 OBJCOPY = riscv64-unknown-elf-objcopy
 OBJDUMP = riscv64-unknown-elf-objdump
-XABI :=
 ABI  := ilp
 
 TEST_NAME      ?= base_pulp_test

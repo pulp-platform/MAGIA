@@ -19,8 +19,6 @@
  *
  * OBI - CV32E40X Core Data RSP Converter
  *
- * CV32E40X consumes the exokay response bit. Used by the control core when it
- * is CV32E40X.
  */
 
 module cv32e40x_obi2data_rsp

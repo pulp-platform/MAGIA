@@ -402,11 +402,7 @@ module magia_tile
   magia_tile_pkg::eu_direct_req_t eu_direct_req;
   magia_tile_pkg::eu_direct_rsp_t eu_direct_rsp;
 
-  // Cluster core data interface (converted directly to OBI xbar).
-  // Cluster cores are always CV32E40P, so these are typed on the CV32E40P
-  // flavour and not on core_data_req_t, which follows the control core: with
-  // core=CV32E40X the extra atop/memtype/prot/dbg fields would never be driven
-  // and would propagate X into the OBI crossbar.
+  // Cluster core data interface (converted directly to OBI xbar)
   magia_tile_pkg::cv32e40p_core_data_req_t [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_data_req;
   magia_tile_pkg::cv32e40p_core_data_rsp_t [magia_tile_pkg::N_CLUSTER_CORES-1:0] cluster_data_rsp;
 
@@ -1297,7 +1293,7 @@ module magia_tile
     .COREV_PULP          ( 1                                   ), // For now this is a no
     .COREV_CLUSTER       ( 1                                   ),
     .FPU                 ( FPU                                 ),
-    .ZFINX               ( magia_tile_pkg::ZFINX_CV32E40P      ),
+    .ZFINX               ( magia_tile_pkg::ZFINX_CTRL          ),
     .FPU_ADDMUL_LAT      ( 1                                   ), // Match C_LAT_FP32=1 in fpnew wrapper
     .FPU_OTHERS_LAT      ( 1                                   ), // Match C_LAT_NONCOMP=1 in fpnew wrapper
     .NUM_MHPMCOUNTERS    ( 29                                  )
@@ -1816,7 +1812,7 @@ module magia_tile
 
 `ifdef CV32E40X
   fpu_ss #(
-    .PULP_ZFINX                ( magia_tile_pkg::ZFINX_CV32E40X     ),
+    .PULP_ZFINX                ( magia_tile_pkg::ZFINX_CTRL         ),
     .INPUT_BUFFER_DEPTH        ( magia_tile_pkg::FPU_BUFFER_DEPTH   ),
     .INPUT_BUFFER_FALL_THROUGH ( magia_tile_pkg::FPU_BUFFER_FT      ),
     .OUT_OF_ORDER              ( magia_tile_pkg::FPU_OOO            ),
@@ -2239,7 +2235,7 @@ generate
         .COREV_PULP          ( 1                                   ), // For now this is a no
         .COREV_CLUSTER       ( 1                                   ),
         .FPU                 ( FPU                                 ),
-        .ZFINX               ( magia_tile_pkg::ZFINX_CV32E40P      ),
+        .ZFINX               ( magia_tile_pkg::ZFINX_CLUSTER       ),
         .FPU_ADDMUL_LAT      ( 1                                   ), // Match C_LAT_FP32=1 in fpnew wrapper
         .FPU_OTHERS_LAT      ( 1                                   ), // Match C_LAT_NONCOMP=1 in fpnew wrapper
         .NUM_MHPMCOUNTERS    ( 29                                  )
