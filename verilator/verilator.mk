@@ -51,18 +51,30 @@ VERILATOR_ARGS += --timing --autoflush --trace-fst --trace-structs --trace-param
 
 # workaround for Bender not liking it if I add directly DPI C sources to the Bender.yml
 CV32E40P_ROOT ?= $(shell $(BENDER) path cv32e40p)
+FRACTAL_SYNC_ROOT ?= $(shell $(BENDER) path fractal_sync)
 VERILATOR_DPI = \
 	$(CV32E40P_ROOT)/tb/dm/remote_bitbang/sim_jtag.c \
 	$(CV32E40P_ROOT)/tb/dm/remote_bitbang/remote_bitbang.c
+
+VERILATOR_BENDER_TARGS = $(bender_targs) -t tech_cells_generic_include_deprecated \
+	-t verilator -t rtl_sim -t verilator_dpi -t magia_dv -t simulation \
+	-t cv32e40p_exclude_tracer
+ifeq ($(mesh_dv),0)
+VERILATOR_BENDER_TARGS += -t standalone_tile
+endif
 
 $(VERILATOR_BUILD_DIR):
 	mkdir -p $@
 
 $(VERILATOR_BUILD_DIR)/magia.f: Bender.lock Bender.yml $(VERILATOR_BUILD_DIR)
-	$(BENDER) script verilator -t tech_cells_generic_include_deprecated -t rtl -t verilator -t rtl_sim -t verilator_dpi -t magia_dv -t simulation -DSYNTHESIS -DVERILATOR > $@
+	$(BENDER) script verilator $(VERILATOR_BENDER_TARGS) $(bender_defs) -DSYNTHESIS -DVERILATOR > $@
+	echo +incdir+$(FRACTAL_SYNC_ROOT)/hw >> $@
 	echo $(VERILATOR_DPI) >> $@
 	sed -i '/pad_functional\.sv/d' $@
 	sed -i '/apb_test\.sv/d' $@
+	sed -i '/dmi_test\.sv/d' $@
+	sed -i '/reqrsp_test\.sv/d' $@
+	sed -i '/tcdm_test\.sv/d' $@
 
 .PHONY: clean-verilator-bender
 clean-verilator-bender:
