@@ -41,16 +41,28 @@ BENDER_DIR     ?= .
 ARCH           ?= rv
 XLEN           ?= 32
 
+zfinx         := 1
+cluster_zfinx := 1
+
+PULP_XTEN_BASE := xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw
+
 ifeq ($(core), CV32E40X)
-  XTEN = imafc
+  # zfinx is NOT a free parameter on CV32E40X: forced to 0 (F extension) — zfinx=1 offloaded-FPU forwarding is still broken (stalls) even after the fpu_ss fixes, do not re-enable until it's actually fixed.
   ISA = riscv
+  XTEN = imafc
   ABI            ?= ilp
   XABI           ?= f
 else
-  XTEN = imc_xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw_zfinx_zhinxmin
   ISA = cv32e40p
-  ABI            ?= ilp
-  XABI           ?=
+  ifeq ($(zfinx),1)
+    XTEN = imc_$(PULP_XTEN_BASE)_zfinx_zhinxmin
+    ABI            ?= ilp
+    XABI           ?=
+  else
+    XTEN = imfc_$(PULP_XTEN_BASE)
+    ABI            ?= ilp
+    XABI           ?= f
+  endif
 endif
 
 # Auto-detect test location under sw/tests/ recursively — no cluster= flag needed.
@@ -146,15 +158,9 @@ LINKSCRIPT := sw/kernel/link.ld
 
 PULP_SW_DIR := sw/kernel_pulp
 
-ifneq ($(core), CV32E40P)
-  CC=$(ISA)$(XLEN)-unknown-elf-gcc
-  OBJDUMP=$(ISA)$(XLEN)-unknown-elf-objdump
-  NM=$(ISA)$(XLEN)-unknown-elf-nm
-else
-  CC=riscv64-unknown-elf-gcc
-  OBJDUMP=riscv64-unknown-elf-objdump
-  NM=riscv64-unknown-elf-nm
-endif
+CC=riscv64-unknown-elf-gcc
+OBJDUMP=riscv64-unknown-elf-objdump
+NM=riscv64-unknown-elf-nm
 LD=$(CC)
 ifneq ($(core), CV32E40P)
   CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
@@ -221,7 +227,7 @@ spatz-header:
 pulp-header:
 	@if [ -n "$(PULP_TASKS)" ]; then \
 		echo "[PULP] Auto-detected tasks: $(PULP_TASKS)"; \
-		$(MAKE) -C $(PULP_SW_DIR) TEST_NAME=$(test) task="$(PULP_TASKS)" PULP_TASK_DIR=$(ROOT_DIR)/$(PULP_TASK_DIR_PATH) core=CV32E40P all; \
+		$(MAKE) -C $(PULP_SW_DIR) TEST_NAME=$(test) task="$(PULP_TASKS)" PULP_TASK_DIR=$(ROOT_DIR)/$(PULP_TASK_DIR_PATH) core=CV32E40P zfinx=$(cluster_zfinx) all; \
 	else \
 		echo "[PULP] No pulp_task/ directory — skipping PULP cluster compilation"; \
 	fi
@@ -348,6 +354,10 @@ else ifeq ($(core), CV32E40P)
 else
   $(error Detected unsupported core, must choose among CV32E40X or CV32E40P )
 endif
+
+effective_ctrl_zfinx := $(if $(filter CV32E40X,$(core)),0,$(zfinx))
+bender_defs += -D ZFINX_CTRL=$(effective_ctrl_zfinx)
+bender_defs += -D ZFINX_CLUSTER=$(cluster_zfinx)
 
 bender_targs += -t rtl
 bender_targs += -t test

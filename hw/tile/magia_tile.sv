@@ -1190,7 +1190,7 @@ end
     .COREV_PULP          ( 1                                   ), // For now this is a no
     .COREV_CLUSTER       ( 1                                   ),
     .FPU                 ( FPU                                 ),
-    .ZFINX               ( magia_tile_pkg::ZFINX_CV32E40P      ),
+    .ZFINX               ( magia_tile_pkg::ZFINX_CTRL          ),
     .FPU_ADDMUL_LAT      ( 1                                   ), // Match C_LAT_FP32=1 in fpnew wrapper
     .FPU_OTHERS_LAT      ( 1                                   ), // Match C_LAT_NONCOMP=1 in fpnew wrapper
     .NUM_MHPMCOUNTERS    ( 29                                  )
@@ -1741,7 +1741,7 @@ end
 
 `ifdef CV32E40X
   fpu_ss #(
-    .PULP_ZFINX                ( magia_tile_pkg::ZFINX_CV32E40X     ),
+    .PULP_ZFINX                ( magia_tile_pkg::ZFINX_CTRL         ),
     .INPUT_BUFFER_DEPTH        ( magia_tile_pkg::FPU_BUFFER_DEPTH   ),
     .INPUT_BUFFER_FALL_THROUGH ( magia_tile_pkg::FPU_BUFFER_FT      ),
     .OUT_OF_ORDER              ( magia_tile_pkg::FPU_OOO            ),

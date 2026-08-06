@@ -74,6 +74,11 @@ _start:
   li      t0, 0x8
   csrrs   zero, mie, t0
 
+#if defined(__riscv_f) && defined(__cv32e40p__)
+  li      t0, 0x2000
+  csrrs   zero, mstatus, t0
+#endif
+
   # Clear the BSS segment.
   la      t0, _bss_start
   la      t1, _bss_end

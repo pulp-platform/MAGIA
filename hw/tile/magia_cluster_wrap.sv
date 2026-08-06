@@ -124,7 +124,7 @@ module magia_cluster_wrap
         .COREV_PULP          ( 1                                   ),
         .COREV_CLUSTER       ( 1                                   ),
         .FPU                 ( FPU                                 ),
-        .ZFINX               ( magia_tile_pkg::ZFINX_CV32E40P      ),
+        .ZFINX               ( magia_tile_pkg::ZFINX_CLUSTER       ),
         .FPU_ADDMUL_LAT      ( 1                                   ), // Match C_LAT_FP32=1 in fpnew wrapper
         .FPU_OTHERS_LAT      ( 1                                   ), // Match C_LAT_NONCOMP=1 in fpnew wrapper
         .NUM_MHPMCOUNTERS    ( 29                                  )

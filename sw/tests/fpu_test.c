@@ -35,6 +35,12 @@
 
 #define abs_diff(x, y) (((x) > (y)) ? ((x) - (y)) : ((y) - (x)))
 
+static inline uint32_t f32_bits(float f){
+  uint32_t *p = (volatile uint32_t *)&f;
+  return *p;
+}
+
+// CV32E40X always builds with the F extension (zfinx is not a free parameter for it — see the top-level Makefile)
 inline uint32_t f_add(volatile uint32_t op_a, volatile uint32_t op_b){
   uint32_t result;
   asm volatile("fmv.s.x	ft0, %0" ::"r"(op_a));
@@ -44,9 +50,26 @@ inline uint32_t f_add(volatile uint32_t op_a, volatile uint32_t op_b){
   return result;
 }
 
+inline uint32_t f_sub(volatile uint32_t op_a, volatile uint32_t op_b){
+  uint32_t result;
+  asm volatile("fmv.s.x	ft2, %0" ::"r"(op_a));
+  asm volatile("fmv.s.x	ft3, %0" ::"r"(op_b));
+  asm volatile("fsub.s	ft2,ft2,ft3" ::);
+  asm volatile("fmv.x.s	%0,ft2" :"=r"(result):);
+  return result;
+}
+
+inline uint32_t f_lt(volatile uint32_t op_a, volatile uint32_t op_b){
+  volatile uint32_t result;
+  asm volatile("fmv.s.x	ft4, %0" ::"r"(op_a));
+  asm volatile("fmv.s.x	ft5, %0" ::"r"(op_b));
+  asm volatile("flt.s	%0,ft4,ft5" :"=r"(result):);
+  return result;
+}
+
 int main(void) {
   uint32_t error = 0;
-  
+
 #ifndef CV32E40X
   volatile float a, b, c;
   a = A_VAL;
@@ -60,11 +83,21 @@ int main(void) {
      printf("Test PASSED\n");
    }
 #else
-  uint32_t D, E, F;
-  D = 0x414570A4; // Binary for 12.34f
-  E = 0x42631EB8; // Binary for 56.78f
-  F = f_add(D, E);
-  printf("Float operation result: 0x%08x [expected: 0x%08x]\n", F, F_EXP);
+  volatile uint32_t a, b, c;
+  a = f32_bits(A_VAL);
+  b = f32_bits(B_VAL);
+  c = f_add(a, b);
+
+  uint32_t diff = f_sub(c, f32_bits(C_EXP));
+  if (f_lt(diff, 0))
+   diff = f_sub(0, diff);
+
+   if (f_lt(diff, f32_bits(FP_TH))){
+     printf("Test PASSED\n");
+   }else{
+     printf("Test FAILED\n");
+     error++;
+   }
 #endif
 
   return error;

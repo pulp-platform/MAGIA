@@ -121,6 +121,11 @@ _start:
     li      t0, 0x8
     csrrs   zero, mstatus, t0
 
+#ifdef __riscv_f
+    li      t0, 0x2000
+    csrrs   zero, mstatus, t0
+#endif
+
     /* Signal "core armed": write 1 to PULP_READY. CV32's pulp_init() polls
      * this until ClusterRegs has counted N_CLUSTER_CORES writes. */
     li      t0, PULP_READY_ADDR
