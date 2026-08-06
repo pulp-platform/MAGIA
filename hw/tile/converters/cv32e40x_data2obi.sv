@@ -19,8 +19,6 @@
  *
  * CV32E40X Core Data - OBI REQ Converter
  *
- * CV32E40X drives atop/memtype/prot/dbg on its data channel, which are mapped
- * onto the OBI optional fields. Used by the control core when it is CV32E40X.
  */
 
 module cv32e40x_data2obi_req
