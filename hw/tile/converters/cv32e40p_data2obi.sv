@@ -18,10 +18,6 @@
  *          Luca Balboni <luca.balboni@chips.it>
  *
  * CV32E40P Core Data - OBI REQ Converter
- *
- * CV32E40P has no atop/memtype/prot/dbg on its data channel, so those OBI
- * optional fields are tied to their inactive defaults. Used by the PULP
- * cluster cores (always CV32E40P) and by the control core when it is CV32E40P.
  */
 
 module cv32e40p_data2obi_req
