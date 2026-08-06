@@ -423,7 +423,7 @@ ifeq ($(core), RI5CY)
 else
 	@sed -i '/^  cv32e40p:$$/,/^  cv32e40x:/ { s|^    revision: .*|    revision: $(CV32E40P_REV)|; 			s|^      Git: .*|      Git: $(CV32E40P_GIT)|; 		}' Bender.lock
 endif
-	$(BENDER) update
+	$(BENDER) checkout
 	$(BENDER) script vsim          \
 	--vlog-arg="$(compile_flag)"   \
 	--vcom-arg="-pedanticerrors"   \
@@ -571,9 +571,9 @@ hw-clean:
 hw-all: hw-clean hw-lib hw-compile hw-opt
 
 # Nonfree components
-MAGIA_NONFREE_REMOTE ?= git@iis-git.ee.ethz.ch:pulp-restricted/magia-nonfree
+MAGIA_NONFREE_REMOTE ?= $(GITLAB_UNIBO_SSH_STRING)/magia/nonfree.git
 MAGIA_NONFREE_DIR ?= nonfree
-MAGIA_NONFREE_COMMIT ?= 825ec37e40a1b46749cbcd59ff77f75d7a8f0296
+MAGIA_NONFREE_COMMIT ?= 80125ef82668544234d2f2783a845c70349a3e8c
 
 .PHONY: magia-nonfree-init
 MAGIA_NONFREE_DEPS ?= 1
