@@ -22,8 +22,8 @@ jobs:
         # Skip on forks or pull requests from forks due to missing secrets.
         if: github.repository == 'pulp-platform/MAGIA' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         with:
-          domain: iis-git.ee.ethz.ch
-          repo: github-mirror/magia
-          token: ${{ secrets.GITLAB_TOKEN }}
+          domain: ${{ secrets.GITLAB_UNIBO_SERVER }}
+          repo: github-mirror/MAGIA
+          token: ${{ secrets.GITLAB_UNIBO_TOKEN }}
           poll-count: 1000
           poll-period: 60
