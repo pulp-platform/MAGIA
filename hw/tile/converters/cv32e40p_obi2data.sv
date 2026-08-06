@@ -19,8 +19,6 @@
  *
  * OBI - CV32E40P Core Data RSP Converter
  *
- * CV32E40P has no exokay on its data response. Used by the PULP cluster cores
- * (always CV32E40P) and by the control core when it is CV32E40P.
  */
 
 module cv32e40p_obi2data_rsp
