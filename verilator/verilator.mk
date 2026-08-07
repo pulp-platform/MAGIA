@@ -18,15 +18,21 @@ VERILATOR_TRACE         ?= 0
 VERILATOR_TRACE_STRUCTS ?= 0
 VERILATOR_TRACE_PARAMS  ?= 0
 VERILATOR_CFLAGS        ?= -O2
-# Not an optimization: --main makes Verilator add -DVL_TIME_CONTEXT for the
-# parent only (V3EmitCMain.cpp:45), so the hier_block child library compiles
-# against the legacy vl_time_stamp() path while the parent uses the context
-# one. The mismatch segfaults in VlDelayScheduler at time 0. Force it on both.
+# Not an optimization. Verilator defines VL_TIME_CONTEXT itself only as a side
+# effect of --main (V3EmitCMain.cpp:45), and only for the parent run, so the
+# hier_block child library would compile against the legacy vl_time_stamp()
+# path while the parent used the context one -- a mismatch that segfaults in
+# VlDelayScheduler at time 0. This flow does not use --main at all, so nothing
+# defines it implicitly: force it on both halves here.
 VERILATOR_ABI_CFLAGS    := -DVL_TIME_CONTEXT
 VERILATOR_RUN_TIMEOUT   ?= 120
 # Waveform file for verilate-run; needs a VERILATOR_TRACE=1 model. Empty means
-# the testbench never calls $dumpfile/$dumpvars, so tracing costs nothing.
+# the model is never asked for a dump, so tracing costs nothing.
 VERILATOR_FST           ?=
+# Owns waveform dumping instead of a testbench $dumpvars, and replaces the main
+# Verilator would generate with --main. See the file for why both are required
+# for hier_block internals to reach the FST.
+VERILATOR_MAIN          := $(MAGIA_ROOT)/verilator/magia_main.cpp
 VERILATOR_EXPECTED_TILE_SPECIALIZATIONS ?= 1
 
 _VERILATOR_JOBS_NUM := $(strip $(shell expr $(VERILATOR_JOBS) + 0 2>/dev/null))
@@ -96,6 +102,17 @@ VERILATOR_CODEGEN_LOG := $(VERILATOR_HIER_DIR)/codegen.log
 VERILATOR_BUILD_LOG := $(VERILATOR_HIER_DIR)/build.log
 VERILATOR_CLASSES_MK := $(VERILATOR_OBJ_DIR)/V$(VERILATOR_TOP)_classes.mk
 VERILATOR_TIME := $(shell command -v /usr/bin/time 2>/dev/null)
+
+# FST structure checker. Reads the dump with the same GTKWave fstapi Verilator
+# writes it with, which is the only reader trusted here: tsunami byte-swaps
+# wide values on these files. fstapi.c needs fastlz/lz4 compiled alongside it
+# (verilated_fst_c.cpp does the same) and POSIX declarations under strict C11.
+VERILATOR_INCLUDE_DIR := $(shell $(VERILATOR) --getenv VERILATOR_ROOT 2>/dev/null)/include
+VERILATOR_GTKWAVE_DIR := $(VERILATOR_INCLUDE_DIR)/gtkwave
+# Host compiler: CC is the RISC-V cross compiler in this repo.
+VERILATOR_HOST_CC ?= cc
+VERILATOR_FST_CHECK_SRC := $(MAGIA_ROOT)/verilator/check_fst.c
+VERILATOR_FST_CHECK_BIN := $(VERILATOR_HIER_DIR)/check_fst
 
 $(VERILATOR_BUILD_DIR) $(VERILATOR_HIER_DIR):
 	mkdir -p $@
@@ -172,6 +189,7 @@ $(VERILATOR_HIER_DIR)/.config-check: | $(VERILATOR_HIER_DIR)
 	  echo "verilator_args=$(VERILATOR_ARGS) --hierarchical"; \
 	  echo "control_sha256=$$(sha256sum $(VERILATOR_CONTROL) | cut -d' ' -f1)"; \
 	  echo "hier_params_sha256=$$(sha256sum $(VERILATOR_HIER_PARAMS) | cut -d' ' -f1)"; \
+	  echo "main=$(VERILATOR_MAIN)"; \
 	} > $(VERILATOR_CONFIG_STAMP).tmp
 	@if ! cmp -s $(VERILATOR_CONFIG_STAMP).tmp $(VERILATOR_CONFIG_STAMP) 2>/dev/null; then \
 	  mv $(VERILATOR_CONFIG_STAMP).tmp $(VERILATOR_CONFIG_STAMP); \
@@ -218,7 +236,7 @@ $(VERILATOR_HIER_MK): $(VERILATOR_FLIST) $(VERILATOR_CONFIG_STAMP) \
 		$(VERILATOR) $(VERILATOR_CONTROL) --hierarchical \
 		--hierarchical-params-file $(VERILATOR_HIER_PARAMS) \
 		$(VERILATOR_ARGS) $(VERILATOR_HIER_FLIST_FLAGS) \
-		--cc --main --exe -Mdir $(VERILATOR_OBJ_DIR) \
+		--cc --exe $(VERILATOR_MAIN) -Mdir $(VERILATOR_OBJ_DIR) \
 		-CFLAGS "$(VERILATOR_CFLAGS) $(VERILATOR_ABI_CFLAGS)" \
 		--top-module $(VERILATOR_TOP) \
 		-f $(VERILATOR_FLIST); \
@@ -226,11 +244,18 @@ $(VERILATOR_HIER_MK): $(VERILATOR_FLIST) $(VERILATOR_CONFIG_STAMP) \
 		| tee $(VERILATOR_CODEGEN_LOG); \
 		exit $$(cat $(VERILATOR_HIER_DIR)/.codegen.status)
 	@test -f $(VERILATOR_HIER_MK)
+# The planner has its own dependency check (V$(VERILATOR_TOP)__hierVer.d) and
+# leaves this file alone when the plan itself did not change, so a prerequisite
+# that is merely newer -- a rewritten config.stamp, say -- would otherwise make
+# every later `make` re-run Verilator forever. Touching this rule's own target
+# converges that. Note this is V$(VERILATOR_TOP)_hier.mk, not the stage-2
+# product V$(VERILATOR_TOP).mk, which must never be touched here.
+	@touch $(VERILATOR_HIER_MK)
 
 $(VERILATOR_CODEGEN_STAMP): $(VERILATOR_HIER_MK)
 	@touch $@
 
-$(VERILATOR_BIN): $(VERILATOR_CODEGEN_STAMP)
+$(VERILATOR_BIN): $(VERILATOR_CODEGEN_STAMP) $(VERILATOR_MAIN)
 	{ $(if $(VERILATOR_TIME),$(VERILATOR_TIME) -v -o $(VERILATOR_HIER_DIR)/build.time.log,) \
 		$(MAKE) -C $(VERILATOR_OBJ_DIR) -f V$(VERILATOR_TOP)_hier.mk -j $(VERILATOR_JOBS); \
 		echo $$? > $(VERILATOR_HIER_DIR)/.build.status; } 2>&1 \
@@ -277,6 +302,22 @@ verilate-run: verilate-hier all
 	  fi; \
 	  exit $$status
 endif
+
+$(VERILATOR_FST_CHECK_BIN): $(VERILATOR_FST_CHECK_SRC) | $(VERILATOR_HIER_DIR)
+	@test -d $(VERILATOR_GTKWAVE_DIR) || \
+	  { echo "error: no bundled fstapi under $(VERILATOR_GTKWAVE_DIR)" >&2; exit 1; }
+	$(VERILATOR_HOST_CC) -O2 -D_POSIX_C_SOURCE=200809L -I$(VERILATOR_INCLUDE_DIR) -o $@ $< \
+	  $(VERILATOR_GTKWAVE_DIR)/fstapi.c $(VERILATOR_GTKWAVE_DIR)/fastlz.c \
+	  $(VERILATOR_GTKWAVE_DIR)/lz4.c -lz
+
+# Fails unless the dump holds parent signals plus internals of every tile, so a
+# trace that silently lost the hier_block children cannot pass unnoticed.
+.PHONY: verilate-check-fst
+verilate-check-fst: $(VERILATOR_FST_CHECK_BIN)
+	@test -n "$(VERILATOR_FST)" || \
+	  { echo "error: verilate-check-fst requires VERILATOR_FST=<file>" >&2; exit 1; }
+	@fst='$(VERILATOR_FST)'; case "$$fst" in /*) ;; *) fst='$(TEST_BUILD_DIR)'/"$$fst";; esac; \
+	  echo "$(VERILATOR_FST_CHECK_BIN) $$fst"; $(VERILATOR_FST_CHECK_BIN) "$$fst"
 
 .PHONY: clean-verilate-hier clean-verilate
 clean-verilate-hier clean-verilate:

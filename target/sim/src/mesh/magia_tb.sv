@@ -39,18 +39,12 @@ module magia_tb;
     end
   end
 
-  // Waveform dumping, only when asked for: the model must be built with
-  // VERILATOR_TRACE=1 for these to do anything, and dumping costs a lot of
-  // run time. Verilator dumps the whole model regardless of the $dumpvars
-  // scope/level arguments.
-  string fst_file;
-  initial begin
-    if ($value$plusargs("FST=%s", fst_file)) begin
-      $display("[INFO] dumping waveform to %s", fst_file);
-      $dumpfile(fst_file);
-      $dumpvars(0, magia_tb);
-    end
-  end
+  // No $dumpfile/$dumpvars here on purpose. +FST=<file> is handled by the
+  // simulation main in `magia_main.cpp` instead, which opens the trace only
+  // after the first evaluation has constructed the magia_tile_hier children;
+  // a dump opened from an initial block runs before they exist and captures
+  // nothing inside any tile. There must be exactly one trace owner, and it is
+  // the C++ main.
 `endif
 
   initial begin

@@ -193,6 +193,42 @@ echo "=== Test 7 (Step 4): simulated stale Verilator-version stamp cannot be reu
   rm -f "$STAMP.bak"
 }
 
+echo "=== Test 8: simulation main edit -> main recompiles and executable relinks ==="
+{
+  MAIN_CPP="$ROOT/verilator/magia_main.cpp"
+  if [ ! -e "$MAIN_CPP" ]; then
+    echo "SKIP: test8: $MAIN_CPP not found"
+  else
+    # Content change, not just an mtime bump: the main is compiled by the
+    # generated parent makefile, and Verilator's planner does not rewrite
+    # V<top>_hier.mk for it, so this is the case a codegen-only dependency
+    # would silently miss.
+    cp "$MAIN_CPP" "$MAIN_CPP.bak"
+    m_bin_before=$(mtime "$BIN")
+    m_child_before=$(mtime "$CHILD_LIB")
+    printf '\n// invalidation_test.sh probe\n' >> "$MAIN_CPP"
+    log="$LOGDIR/8-main-edit.log"
+    run_make "$log"
+    mv -f "$MAIN_CPP.bak" "$MAIN_CPP"
+    ok=1
+    if [ "$(mtime "$BIN")" = "$m_bin_before" ]; then
+      failt "test8: editing the simulation main did not relink the executable"
+      ok=0
+    fi
+    if ! grep -q 'magia_main\.o' "$log"; then
+      failt "test8: editing the simulation main did not recompile magia_main.o"
+      ok=0
+    fi
+    if [ "$(mtime "$CHILD_LIB")" != "$m_child_before" ]; then
+      failt "test8: editing the simulation main rebuilt the child library"
+      ok=0
+    fi
+    [ "$ok" = 1 ] && pass "test8: a simulation main edit recompiles it and relinks, sparing the child library"
+    # Restore the executable to the committed main.
+    run_make "$LOGDIR/8-main-restore.log"
+  fi
+}
+
 echo ""
 if [ "$FAIL" = 0 ]; then
   echo "ALL INVALIDATION TESTS PASSED"

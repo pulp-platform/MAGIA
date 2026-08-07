@@ -929,19 +929,46 @@ alternative to installing a second Verilator). It uses only `touch`/
 `touch -d @<epoch>` for mtime manipulation, restores every file it
 touches, and asserts on artifact mtimes/existence rather than log text.
 
-**One real run was attempted and every scenario failed** — but that run
-is not trustworthy evidence of a real defect in tests 2-7: it executed
-while the open issue above was active, so the hier build was already
-re-invoking its codegen recipe on every single `make` call regardless of
-what the test touched, which confounds every mtime-based assertion the
-script makes (a target's mtime advancing no longer distinguishes "my
-specific touch mattered" from "the build was already unconditionally
-re-running"). Test 1 (no-change) failing was the correct, expected symptom
-of the open issue, not a script bug. **Not extracted: valid pass/fail
-results for tests 2-7.** The script itself was reviewed and appears
-logically sound; it should be re-run once the open issue above is
-resolved and a `make verilate-hier` immediately beforehand is confirmed to
-be a true zero-recipe no-op.
+An earlier run had every scenario fail, but was not trustworthy evidence
+of a real defect: it executed while the codegen recipe was re-running on
+every `make` call regardless of what the test touched, which confounds
+every mtime-based assertion the script makes.
+
+**That blocker is fixed** (see "Planner convergence" below), and the suite
+has now been run for the first time against a confirmed zero-recipe no-op
+baseline. Note the suite needs a `VERILATOR_JOBS=4` build to exist first:
+the job count is inside `verilator_args` in `config.stamp`, so a baseline
+built with any other value fails test 1 for that reason alone.
+
+Result: **6 of 8 pass** — 1 (no-change no-op), 4a/4b (Spatz define change
+and revert), 5 (control-file touch), 6 (DPI-source touch), 8 (simulation
+main edit).
+
+**Tests 2 and 3 fail, and the cause is not stale reuse in this Makefile.**
+Both change only mtimes. The codegen rule *does* re-invoke Verilator on
+the touched input — the logs show exactly one
+`magia_hier.vlt --hierarchical` — but Verilator 5.046 checks source
+*content* (`Vmagia_tb__hierVer.d`, `*.verilator_deplist`) and returns in
+0.027 s reporting "Built from 0.000 MB sources in 0 modules", so nothing
+is regenerated, nothing recompiles, and nothing relinks. The two tests
+encode a "touch implies rebuild" contract the toolchain deliberately does
+not provide; test 5 passes on the same kind of touch only because it
+asserts on the plan's mtime rather than on downstream artifacts. Rewrite
+them around content changes (as test 8 does) before treating a failure
+here as a build defect.
+
+#### Planner convergence
+
+The codegen rule ends with `@touch $(VERILATOR_HIER_MK)`. Verilator's
+planner has its own dependency check and leaves that file alone when the
+plan itself has not changed, so any prerequisite that is merely newer — a
+rewritten `config.stamp`, say — otherwise left the target permanently out
+of date and re-ran Verilator on every subsequent `make`, forever. This is
+what made the no-change no-op unattainable and the suite unusable.
+Touching the rule's own target converges it. This is
+`V$(VERILATOR_TOP)_hier.mk`, *not* the stage-2 product
+`V$(VERILATOR_TOP).mk`, which must never be touched here for the reason
+documented at that rule.
 
 ### Step 5 — object cache
 
@@ -991,19 +1018,25 @@ live build tree**, especially with background builds in flight.
   Verilator's own `.d`/`__hierVer.d` dependency files, multi-target hier
   codegen rule (Step 2); `clean-verilate-hier` moved out of the `mesh_dv`
   guard (Step 6)
-- `verilator/invalidation_test.sh` — new, Steps 3-4 (written; not yet
-  validated end-to-end, see above)
+- `verilator/invalidation_test.sh` — new, Steps 3-4 (validated end-to-end;
+  6/8 pass, see above), plus test 8 for the simulation main
 - `verilator/README.md` — this section
 
-### Exit-criterion verdict: NOT MET (partial)
+### Exit-criterion verdict: MET, with two tests re-scoped
 
-Configuration identity and source-dependency wiring are implemented and,
-for the flat path, verified. Clean-target scoping is implemented and
-verified. For the hierarchical path specifically: an unresolved staleness
-discrepancy blocks confirming the literal "no compilation and no link on a
-no-change rebuild" exit criterion, and the invalidation test suite has not
-produced trustworthy results. Both are clearly flagged above as *not
-extracted* rather than silently assumed to pass.
+Originally NOT MET: an unresolved staleness discrepancy blocked confirming
+the literal "no compilation and no link on a no-change rebuild" criterion
+for the hierarchical path, and the invalidation suite had produced no
+trustworthy results.
+
+Both are now resolved. The staleness discrepancy was the planner
+non-convergence described above; with `@touch $(VERILATOR_HIER_MK)` in the
+codegen rule, a no-change `make verilate-hier` runs zero recipes — verified
+over three consecutive invocations, and asserted by test 1, which passes.
+The suite runs end to end at 6/8. The two failures (2 and 3) are a
+"touch implies rebuild" premise Verilator 5.046 does not honour, not stale
+reuse in this Makefile; they need rewriting around content changes rather
+than treating as build defects.
 
 ## Cleanup phase: hierarchy-only flow, and the flat-parent defect
 
@@ -1154,18 +1187,69 @@ make verilate-run core=CV32E40P mesh_dv=1 VERILATOR_JOBS=64 \
 tracing is off. `VERILATOR_TRACE` is part of `config.stamp`, so it must be on
 the build command, not only the run command. Rebuild from clean when changing
 it: `VM_TRACE`/`VM_TRACE_FST` are compiler flags, which Verilator's generated
-makefiles do not track.
+makefiles do not track. `magia_main.cpp` is hashed into `config.stamp` and is a
+prerequisite of code generation, so editing it does invalidate the build.
 
-Dumping is driven by `$dumpfile`/`$dumpvars` in `magia_tb.sv`, gated behind a
-`+FST=<file>` plusarg inside the Verilator-only branch, so a trace-capable
-model that is run without the plusarg pays nothing. `VERILATOR_FST` passes the
-plusarg through `verilate-run`; the file is written in the test build
-directory. Verilator dumps the whole model regardless of the `$dumpvars`
-scope/level arguments.
+Dumping is driven by `verilator/magia_main.cpp`, the maintained simulation main
+this flow uses instead of the one `--main` generates. It opens a trace only for
+`+FST=<file>`, so a trace-capable model run without the plusarg pays nothing --
+not even `traceEverOn`. `VERILATOR_FST` passes the plusarg through
+`verilate-run`; the file is written in the test build directory. Verilator
+dumps the whole model; there is no scope/level selection.
 
-`--trace-fst` reaches the child library as well (it is not in
-`stripOptionsForChildRun`), so tile internals are traced. Verified: all 441
-child compiles carry `-DVM_TRACE_FST=1`, matching the parent.
+#### Why the C++ main owns the dump
+
+`magia_tb.sv` deliberately has no `$dumpfile`/`$dumpvars`. A `--hierarchical`
+model cannot be traced correctly from an initial block, and getting this wrong
+is silent -- the FST is large and perfectly readable, it just has nothing below
+`i_magia_tile`.
+
+Each `magia_tile_hier` instance is a protect-library child model. The generated
+SV wrapper constructs it through DPI during the *first* evaluation of the
+parent, and the child registers its trace callbacks in the shared
+`VerilatedContext` only at that point. The parent's own trace registration
+emits one `initLib()` lookup per instance
+(`Vmagia_tb__Trace__0__Slow.cpp`), matched by scope name against those child
+callbacks. So the ordering is fixed: **every child must exist and be connected
+before the trace is opened.** `$dumpvars` in an initial block runs inside the
+parent's `eval_initial`, before any child is constructed, and its 16 lookups
+match nothing.
+
+Do not take child compiler flags as evidence to the contrary. All 441 child
+compiles carry `-DVM_TRACE_FST=1` and Verilator emits their
+`Vmagia_tile_hier_f__Trace__*.cpp` either way; that proves the trace code was
+*generated*, not that it was ever *connected* to the dump. Only the scope tree
+of an actual FST proves that -- which is what `verilate-check-fst` exists for.
+
+The main therefore: evaluates once, connects `VerilatedFstC` through
+`Vmagia_tb::trace`, opens the file, dumps time zero, and dumps again after each
+subsequent evaluation.
+
+The model is constructed as `Vmagia_tb{contextp, "TOP"}` rather than with the
+empty name Verilator's generated `--main` passes. This is load-bearing: the
+parent builds each lookup key as model-name + `.` + instance path while the
+child registers under its wrapper's `$sformatf("%m")`, so an empty name yields
+a leading-dot key that matches nothing, the children's trace codes are never
+allocated, and the first `dump()` segfaults inside `fstWriterEmitValueChange`.
+The visible consequence is that dumped paths start with a `TOP` scope
+(`TOP.magia_tb....`), which is Verilator's own convention.
+
+#### Checking a dump
+
+```sh
+make verilate-check-fst core=CV32E40P mesh_dv=1 VERILATOR_FST=dump.fst
+```
+
+`verilator/check_fst.c` walks the FST hierarchy with the GTKWave `fstapi`
+bundled with Verilator -- the same writer's reader -- and fails unless the dump
+holds parent signals *and* signals inside all 16 default tile instances. A
+relative `VERILATOR_FST` is resolved against the test build directory, the same
+way `verilate-run` writes it. Pass `tiles_y tiles_x` to the binary directly for
+a non-default mesh.
+
+Do not validate these dumps with tsunami: it byte-swaps wide values on them
+(`boot_addr` reads back as `800000cc` instead of `cc000080`). The bundled
+`fstapi` gives the correct values.
 
 Cost against the same configuration without tracing:
 
@@ -1178,7 +1262,25 @@ Cost against the same configuration without tracing:
 | Executable / `obj_dir` | 12.5 MB / 692 MB | 51.4 MB / 1.3 GB |
 | Simulated time per wall second | ~1.2 us | ~0.7 us |
 
-A run killed by the `VERILATOR_RUN_TIMEOUT` (or any signal) does not close the
-FST cleanly, so the tail of the dump may be missing. For a usable waveform let
-the simulation reach `$finish`, or bound the dump with `$dumpon`/`$dumpoff`
-around the window of interest.
+Once the children are actually in the dump, the file is far bigger than the
+old, silently tile-less one: 5,183,100 variables, 319,810 of them per tile,
+against the 62,210 recorded in `BUG_REPORT.md`. A 12 us run costs ~20 MB and
+runs at ~0.4 us per wall second.
+
+The main closes the trace after `final()` on both normal exits (`$finish` and
+running out of events). Let the simulation reach one of them: a run killed by
+`VERILATOR_RUN_TIMEOUT` or any signal leaves the FST **unclosed, and an
+unclosed FST is not a file you can keep**. `fstWriterCreate` streams the
+hierarchy into a `<dump>.hier` companion and only folds it into the FST at
+close, so a killed run leaves a `.fst` that is missing its hierarchy plus a
+`.hier` beside it that is much larger than the dump itself (109 MB against a
+6.4 MB `dump.fst` here). Such a pair still reads -- but only in place; move or
+delete the `.hier` and every signal name is gone. A cleanly closed dump is
+self-contained and leaves no companion.
+
+To reach `$finish` while the L1 deadlock in `BUG_REPORT.md` is still open, note
+that `magia_vip.wait_for_eoc` polls the L2 array at `0xCCFF_0000 + 2*i`, which
+`magia_vip.init` clears after preload -- so it has to be written by the program,
+but only over the (working) AXI path. Eight hand-assembled instructions that
+store the exit code and park, never touching the stack, finish all 16 tiles at
+12 us.
