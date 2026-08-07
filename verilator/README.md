@@ -30,6 +30,12 @@ Verdict: setup only, no exit criterion.
 
 ## Phase 1 (`DETAILED_PLAN_1.md`): stable flat build and baseline
 
+> **Historical.** The flat flow described below no longer exists. Every
+> `verilate-flat*` / `clean-verilate-flat` target and the
+> `verilator/build/flat*` directories were removed in the cleanup phase;
+> there is one flow now, reached with `make verilate`. This section is kept
+> as the record of how the baseline was established, not as usage.
+
 ### Configuration
 
 - Verilator 5.046, Bender 0.32.0
@@ -1037,19 +1043,18 @@ The suite runs end to end at 6/8. The two failures (2 and 3) are a
 "touch implies rebuild" premise Verilator 5.046 does not honour, not stale
 reuse in this Makefile; they need rewriting around content changes rather
 than treating as build defects.
-
 ## Cleanup phase: hierarchy-only flow, and the flat-parent defect
 
 Plans 5/6 were superseded by `DETAILED_PLAN_CLEANUP.md`. The flat mesh flow is
-intentionally gone: `verilate` aliases `verilate-hier`, everything lives under
-`verilator/build/hier`, and Verilator-only sources live in
+intentionally gone: `verilate` aliases `verilate`, everything lives under
+`verilator/build`, and Verilator-only sources live in
 `target/verilator/src` (`magia_tile_hier.sv`, `magia_vip.sv`,
 `magia_fixture.sv`) with shared RTL differing only inside small
 `` `ifdef VERILATOR `` branches.
 
 ### The build reported success while producing a flat model
 
-`make verilate-hier` built, archived and linked `libmagia_tile_hier_f.a` and
+`make verilate` built, archived and linked `libmagia_tile_hier_f.a` and
 `verilate-check-hierarchy` passed — while the parent Verilated all 16 tiles
 inline. Evidence at the time: 2149 parent `.cpp` files (the flat baseline above
 is 2152), 451 `cv32e40p` and 344 `magia_tile_hier__N20_NB2000` entries in
@@ -1111,21 +1116,21 @@ plan: `VM_HIER_LIBS` must list the configured number of specializations
 (`--expected-count`, default 1), `V<top>_classes.mk` must contain no
 `<module>__<params>` clone, and the parent must reference a built child. The
 old plan-only check passed on the flat build; the new check fails it. It runs as
-part of `verilate-hier`.
+part of `verilate`.
 
 Both codegen and native build now tee to `codegen.log` and `build.log` while
 preserving the command's exit status. Previously `/usr/bin/time -v -o` captured
 only its own report and every Verilator diagnostic was lost, which is why an
 earlier failing build could not be diagnosed at all.
 
-A second `make verilate-hier` performs no codegen, compilation, archiving or
+A second `make verilate` performs no codegen, compilation, archiving or
 linking; only the hierarchy checker runs.
 
 ### Caveat
 
-`make -n verilate-hier` is **not** a dry run: the recipe contains `$(MAKE)`,
+`make -n verilate` is **not** a dry run: the recipe contains `$(MAKE)`,
 which GNU make executes even under `-n`, so it starts a real build. Use
-`make -n verilate-hier-gen` to inspect the codegen command instead.
+`make -n verilate-gen` to inspect the codegen command instead.
 
 ### Parent/child ABI mismatch (segfault at time 0)
 
@@ -1148,7 +1153,7 @@ from `VERILATOR_CFLAGS` because it is a correctness flag, not an optimization,
 and recorded in `config.stamp`. Verify with:
 
 ```sh
-grep 'Vmagia_tile_hier_f' verilator/build/hier/build.log | grep -c VL_TIME_CONTEXT
+grep 'Vmagia_tile_hier_f' verilator/build/build.log | grep -c VL_TIME_CONTEXT
 ```
 
 which must equal the child's compile count (312 today). A clean rebuild is
@@ -1176,8 +1181,8 @@ across the block boundary.
 Tracing is opt-in at build time and again at run time:
 
 ```sh
-make clean-verilate-hier core=CV32E40P mesh_dv=1
-make verilate-hier core=CV32E40P mesh_dv=1 VERILATOR_JOBS=64 VERILATOR_TRACE=1
+make clean-verilate core=CV32E40P mesh_dv=1
+make verilate core=CV32E40P mesh_dv=1 VERILATOR_JOBS=64 VERILATOR_TRACE=1
 make verilate-run core=CV32E40P mesh_dv=1 VERILATOR_JOBS=64 \
   test=hello_world VERILATOR_TRACE=1 VERILATOR_FST=dump.fst
 ```

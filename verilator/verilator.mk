@@ -6,8 +6,7 @@ VERILATOR   ?= verilator
 BASE_PYTHON ?= python3
 
 VERILATOR_BUILD_DIR ?= $(MAGIA_ROOT)/verilator/build
-VERILATOR_HIER_DIR   := $(VERILATOR_BUILD_DIR)/hier
-VERILATOR_OBJ_DIR    := $(VERILATOR_HIER_DIR)/obj_dir
+VERILATOR_OBJ_DIR    := $(VERILATOR_BUILD_DIR)/obj_dir
 VERILATOR_TOP        := magia_tb
 VERILATOR_CONTROL    := $(MAGIA_ROOT)/verilator/magia_hier.vlt
 # Required for hier_block substitution to happen at all; see the file itself.
@@ -88,20 +87,20 @@ VERILATOR_BENDER_TARGS := $(bender_targs) \
 	-t tech_cells_generic_include_deprecated -t verilator -t rtl_sim \
 	-t verilator_dpi -t magia_dv -t simulation -t cv32e40p_exclude_tracer
 
-VERILATOR_RAW_FLIST := $(VERILATOR_HIER_DIR)/magia.raw.f
-VERILATOR_FLIST := $(VERILATOR_HIER_DIR)/magia.f
-VERILATOR_BENDER_STAMP := $(VERILATOR_HIER_DIR)/bender.stamp
-VERILATOR_CONFIG_STAMP := $(VERILATOR_HIER_DIR)/config.stamp
-VERILATOR_VERSION_LOG := $(VERILATOR_HIER_DIR)/verilator-version.log
+VERILATOR_RAW_FLIST := $(VERILATOR_BUILD_DIR)/magia.raw.f
+VERILATOR_FLIST := $(VERILATOR_BUILD_DIR)/magia.f
+VERILATOR_BENDER_STAMP := $(VERILATOR_BUILD_DIR)/bender.stamp
+VERILATOR_CONFIG_STAMP := $(VERILATOR_BUILD_DIR)/config.stamp
+VERILATOR_VERSION_LOG := $(VERILATOR_BUILD_DIR)/verilator-version.log
 VERILATOR_PARENT_MK := $(VERILATOR_OBJ_DIR)/V$(VERILATOR_TOP).mk
 VERILATOR_HIER_MK := $(VERILATOR_OBJ_DIR)/V$(VERILATOR_TOP)_hier.mk
-VERILATOR_CODEGEN_STAMP := $(VERILATOR_HIER_DIR)/codegen.stamp
+VERILATOR_CODEGEN_STAMP := $(VERILATOR_BUILD_DIR)/codegen.stamp
 VERILATOR_BIN := $(VERILATOR_OBJ_DIR)/V$(VERILATOR_TOP)
-VERILATOR_RUN_LOG := $(VERILATOR_HIER_DIR)/run.log
-VERILATOR_CODEGEN_LOG := $(VERILATOR_HIER_DIR)/codegen.log
-VERILATOR_BUILD_LOG := $(VERILATOR_HIER_DIR)/build.log
+VERILATOR_RUN_LOG := $(VERILATOR_BUILD_DIR)/run.log
+VERILATOR_CODEGEN_LOG := $(VERILATOR_BUILD_DIR)/codegen.log
+VERILATOR_BUILD_LOG := $(VERILATOR_BUILD_DIR)/build.log
 VERILATOR_CLASSES_MK := $(VERILATOR_OBJ_DIR)/V$(VERILATOR_TOP)_classes.mk
-VERILATOR_TRACE_MODE := $(VERILATOR_HIER_DIR)/trace.mode
+VERILATOR_TRACE_MODE := $(VERILATOR_BUILD_DIR)/trace.mode
 VERILATOR_TIME := $(shell command -v /usr/bin/time 2>/dev/null)
 
 # FST structure checker. Reads the dump with the same GTKWave fstapi Verilator
@@ -113,13 +112,13 @@ VERILATOR_GTKWAVE_DIR := $(VERILATOR_INCLUDE_DIR)/gtkwave
 # Host compiler: CC is the RISC-V cross compiler in this repo.
 VERILATOR_HOST_CC ?= cc
 VERILATOR_FST_CHECK_SRC := $(MAGIA_ROOT)/verilator/check_fst.c
-VERILATOR_FST_CHECK_BIN := $(VERILATOR_HIER_DIR)/check_fst
+VERILATOR_FST_CHECK_BIN := $(VERILATOR_BUILD_DIR)/check_fst
 
-$(VERILATOR_BUILD_DIR) $(VERILATOR_HIER_DIR):
+$(VERILATOR_BUILD_DIR):
 	mkdir -p $@
 
-.PHONY: $(VERILATOR_HIER_DIR)/.bender-check
-$(VERILATOR_HIER_DIR)/.bender-check: | $(VERILATOR_HIER_DIR)
+.PHONY: $(VERILATOR_BUILD_DIR)/.bender-check
+$(VERILATOR_BUILD_DIR)/.bender-check: | $(VERILATOR_BUILD_DIR)
 	@command -v $(BENDER) >/dev/null 2>&1 || { echo "error: bender not found: $(BENDER)" >&2; exit 1; }
 	@{ \
 	  echo "path=$$(command -v $(BENDER))"; \
@@ -131,11 +130,11 @@ $(VERILATOR_HIER_DIR)/.bender-check: | $(VERILATOR_HIER_DIR)
 	  mv $(VERILATOR_BENDER_STAMP).tmp $(VERILATOR_BENDER_STAMP); \
 	else rm -f $(VERILATOR_BENDER_STAMP).tmp; fi
 
-$(VERILATOR_BENDER_STAMP): $(VERILATOR_HIER_DIR)/.bender-check
+$(VERILATOR_BENDER_STAMP): $(VERILATOR_BUILD_DIR)/.bender-check
 	@test -f $@
 
 $(VERILATOR_RAW_FLIST): Bender.yml Bender.lock Makefile bender_common.mk \
-	bender_sim.mk bender_synth.mk bender_profile.mk $(VERILATOR_BENDER_STAMP) | $(VERILATOR_HIER_DIR)
+	bender_sim.mk bender_synth.mk bender_profile.mk $(VERILATOR_BENDER_STAMP) | $(VERILATOR_BUILD_DIR)
 	$(BENDER) script verilator $(VERILATOR_BENDER_TARGS) $(bender_defs) -DSYNTHESIS -DVERILATOR > $@.tmp
 	echo +incdir+$(FRACTAL_SYNC_ROOT)/hw >> $@.tmp
 	for f in $(VERILATOR_DPI); do echo $$f >> $@.tmp; done
@@ -143,7 +142,7 @@ $(VERILATOR_RAW_FLIST): Bender.yml Bender.lock Makefile bender_common.mk \
 
 $(VERILATOR_FLIST): $(VERILATOR_RAW_FLIST) \
 	$(MAGIA_ROOT)/verilator/filter_filelist.py \
-	$(MAGIA_ROOT)/verilator/check_filelist.py | $(VERILATOR_HIER_DIR)
+	$(MAGIA_ROOT)/verilator/check_filelist.py | $(VERILATOR_BUILD_DIR)
 	$(BASE_PYTHON) $(MAGIA_ROOT)/verilator/filter_filelist.py --output $@.tmp < $(VERILATOR_RAW_FLIST)
 	$(BASE_PYTHON) $(MAGIA_ROOT)/verilator/check_filelist.py $@.tmp \
 		--top $(VERILATOR_TOP) \
@@ -154,8 +153,8 @@ $(VERILATOR_FLIST): $(VERILATOR_RAW_FLIST) \
 .PHONY: verilator-bender
 verilator-bender: $(VERILATOR_FLIST)
 
-.PHONY: $(VERILATOR_HIER_DIR)/.config-check
-$(VERILATOR_HIER_DIR)/.config-check: | $(VERILATOR_HIER_DIR)
+.PHONY: $(VERILATOR_BUILD_DIR)/.config-check
+$(VERILATOR_BUILD_DIR)/.config-check: | $(VERILATOR_BUILD_DIR)
 	@command -v $(VERILATOR) >/dev/null 2>&1 || { echo "error: verilator not found: $(VERILATOR)" >&2; exit 1; }
 	@test -f $(VERILATOR_CONTROL) || { echo "error: missing $(VERILATOR_CONTROL)" >&2; exit 1; }
 	@version="$$($(VERILATOR) --version)"; \
@@ -196,7 +195,7 @@ $(VERILATOR_HIER_DIR)/.config-check: | $(VERILATOR_HIER_DIR)
 	  mv $(VERILATOR_CONFIG_STAMP).tmp $(VERILATOR_CONFIG_STAMP); \
 	else rm -f $(VERILATOR_CONFIG_STAMP).tmp; fi
 
-$(VERILATOR_CONFIG_STAMP): $(VERILATOR_HIER_DIR)/.config-check
+$(VERILATOR_CONFIG_STAMP): $(VERILATOR_BUILD_DIR)/.config-check
 	@test -f $@
 
 # Verilator 5.046 does not forward +define/+incdir entries expanded from -f
@@ -208,7 +207,7 @@ VERILATOR_HIER_FLIST_FLAGS = $(shell grep -E '^\+(define|incdir)' $(VERILATOR_FL
 # hierarchy makefile, so keep only the prerequisite list and attach it to the
 # codegen product this Makefile does own.
 VERILATOR_HIER_DEP    := $(VERILATOR_OBJ_DIR)/V$(VERILATOR_TOP)__hierVer.d
-VERILATOR_HIER_DEP_MK := $(VERILATOR_HIER_DIR)/hierVer.mk
+VERILATOR_HIER_DEP_MK := $(VERILATOR_BUILD_DIR)/hierVer.mk
 
 -include $(VERILATOR_HIER_DEP_MK)
 
@@ -218,7 +217,7 @@ VERILATOR_HIER_DEP_MK := $(VERILATOR_HIER_DIR)/hierVer.mk
 # Unconditional mv: make re-executes itself after remaking an included
 # makefile, so this target must always end up newer than its prerequisite or
 # the restart repeats forever.
-$(VERILATOR_HIER_DEP_MK): $(VERILATOR_HIER_DEP) | $(VERILATOR_HIER_DIR)
+$(VERILATOR_HIER_DEP_MK): $(VERILATOR_HIER_DEP) | $(VERILATOR_BUILD_DIR)
 	@{ printf '%s:' '$(VERILATOR_HIER_MK)'; \
 	   sed -e 's|^[^:]*:||' -e 's|[^ ]*$(VERILATOR_OBJ_DIR)[^ ]*||g' $<; } > $@.tmp \
 	  && mv -f $@.tmp $@
@@ -231,9 +230,9 @@ $(VERILATOR_HIER_DEP_MK): $(VERILATOR_HIER_DEP) | $(VERILATOR_HIER_DIR)
 # flat parent is compiled and linked instead.
 $(VERILATOR_HIER_MK): $(VERILATOR_FLIST) $(VERILATOR_CONFIG_STAMP) \
 	$(VERILATOR_CONTROL) $(VERILATOR_HIER_PARAMS) $(VERILATOR_VERSION_LOG) \
-	| $(VERILATOR_HIER_DIR)
-	cd $(VERILATOR_HIER_DIR) && \
-		{ $(if $(VERILATOR_TIME),$(VERILATOR_TIME) -v -o $(VERILATOR_HIER_DIR)/codegen.time.log,) \
+	| $(VERILATOR_BUILD_DIR)
+	cd $(VERILATOR_BUILD_DIR) && \
+		{ $(if $(VERILATOR_TIME),$(VERILATOR_TIME) -v -o $(VERILATOR_BUILD_DIR)/codegen.time.log,) \
 		$(VERILATOR) $(VERILATOR_CONTROL) --hierarchical \
 		--hierarchical-params-file $(VERILATOR_HIER_PARAMS) \
 		$(VERILATOR_ARGS) $(VERILATOR_HIER_FLIST_FLAGS) \
@@ -241,9 +240,9 @@ $(VERILATOR_HIER_MK): $(VERILATOR_FLIST) $(VERILATOR_CONFIG_STAMP) \
 		-CFLAGS "$(VERILATOR_CFLAGS) $(VERILATOR_ABI_CFLAGS)" \
 		--top-module $(VERILATOR_TOP) \
 		-f $(VERILATOR_FLIST); \
-		echo $$? > $(VERILATOR_HIER_DIR)/.codegen.status; } 2>&1 \
+		echo $$? > $(VERILATOR_BUILD_DIR)/.codegen.status; } 2>&1 \
 		| tee $(VERILATOR_CODEGEN_LOG); \
-		exit $$(cat $(VERILATOR_HIER_DIR)/.codegen.status)
+		exit $$(cat $(VERILATOR_BUILD_DIR)/.codegen.status)
 	@test -f $(VERILATOR_HIER_MK)
 # The planner has its own dependency check (V$(VERILATOR_TOP)__hierVer.d) and
 # leaves this file alone when the plan itself did not change, so a prerequisite
@@ -272,26 +271,26 @@ $(VERILATOR_BIN): $(VERILATOR_CODEGEN_STAMP) $(VERILATOR_MAIN)
 	  find $(VERILATOR_OBJ_DIR) \( -name '*.o' -o -name '*.a' -o -name '*.d' \) -delete; \
 	fi; \
 	printf '%s\n' "$$mode" > $(VERILATOR_TRACE_MODE)
-	{ $(if $(VERILATOR_TIME),$(VERILATOR_TIME) -v -o $(VERILATOR_HIER_DIR)/build.time.log,) \
+	{ $(if $(VERILATOR_TIME),$(VERILATOR_TIME) -v -o $(VERILATOR_BUILD_DIR)/build.time.log,) \
 		$(MAKE) -C $(VERILATOR_OBJ_DIR) -f V$(VERILATOR_TOP)_hier.mk -j $(VERILATOR_JOBS); \
-		echo $$? > $(VERILATOR_HIER_DIR)/.build.status; } 2>&1 \
+		echo $$? > $(VERILATOR_BUILD_DIR)/.build.status; } 2>&1 \
 		| tee $(VERILATOR_BUILD_LOG); \
-		exit $$(cat $(VERILATOR_HIER_DIR)/.build.status)
+		exit $$(cat $(VERILATOR_BUILD_DIR)/.build.status)
 	@test -x $@
 
 ifeq ($(mesh_dv),0)
-.PHONY: verilate-hier-gen verilate-hier-build verilate-hier verilate verilate-check-hierarchy verilate-run
-verilate-hier-gen verilate-hier-build verilate-hier verilate verilate-check-hierarchy verilate-run:
+.PHONY: verilate-gen verilate-build verilate verilate-check-hierarchy verilate-run
+verilate-gen verilate-build verilate verilate-check-hierarchy verilate-run:
 	$(error $@ requires mesh_dv=1)
 else ifeq ($(core),CV32E40X)
-.PHONY: verilate-hier-gen verilate-hier-build verilate-hier verilate verilate-check-hierarchy verilate-run
-verilate-hier-gen verilate-hier-build verilate-hier verilate verilate-check-hierarchy verilate-run:
+.PHONY: verilate-gen verilate-build verilate verilate-check-hierarchy verilate-run
+verilate-gen verilate-build verilate verilate-check-hierarchy verilate-run:
 	$(error CV32E40X hierarchical CORE_TRACES needs runtime per-tile filenames)
 else
-.PHONY: verilate-hier-gen verilate-hier-build verilate-hier verilate
-verilate-hier-gen: $(VERILATOR_CODEGEN_STAMP)
-verilate-hier-build: $(VERILATOR_BIN)
-verilate-hier verilate: $(VERILATOR_BIN) verilate-check-hierarchy
+.PHONY: verilate-gen verilate-build verilate
+verilate-gen: $(VERILATOR_CODEGEN_STAMP)
+verilate-build: $(VERILATOR_BIN)
+verilate: $(VERILATOR_BIN) verilate-check-hierarchy
 
 # Checks the built parent, not just the plan: a parent that inlined the tile
 # instead of linking the child library is a failed hierarchical build.
@@ -303,7 +302,7 @@ verilate-check-hierarchy: $(VERILATOR_BIN)
 		--classes-mk $(VERILATOR_CLASSES_MK) --obj-dir $(VERILATOR_OBJ_DIR)
 
 .PHONY: verilate-run
-verilate-run: verilate-hier all
+verilate-run: verilate all
 	@command -v timeout >/dev/null 2>&1 || { echo "error: timeout utility is required" >&2; exit 1; }
 	@cd $(TEST_BUILD_DIR) && \
 	  timeout --foreground $(VERILATOR_RUN_TIMEOUT)s $(VERILATOR_BIN) \
@@ -319,7 +318,7 @@ verilate-run: verilate-hier all
 	  exit $$status
 endif
 
-$(VERILATOR_FST_CHECK_BIN): $(VERILATOR_FST_CHECK_SRC) | $(VERILATOR_HIER_DIR)
+$(VERILATOR_FST_CHECK_BIN): $(VERILATOR_FST_CHECK_SRC) | $(VERILATOR_BUILD_DIR)
 	@test -d $(VERILATOR_GTKWAVE_DIR) || \
 	  { echo "error: no bundled fstapi under $(VERILATOR_GTKWAVE_DIR)" >&2; exit 1; }
 	$(VERILATOR_HOST_CC) -O2 -D_POSIX_C_SOURCE=200809L -I$(VERILATOR_INCLUDE_DIR) -o $@ $< \
@@ -335,10 +334,10 @@ verilate-check-fst: $(VERILATOR_FST_CHECK_BIN)
 	@fst='$(VERILATOR_FST)'; case "$$fst" in /*) ;; *) fst='$(TEST_BUILD_DIR)'/"$$fst";; esac; \
 	  echo "$(VERILATOR_FST_CHECK_BIN) $$fst"; $(VERILATOR_FST_CHECK_BIN) "$$fst"
 
-.PHONY: clean-verilate-hier clean-verilate
-clean-verilate-hier clean-verilate:
-	@test -n "$(VERILATOR_HIER_DIR)"
-	@test "$(VERILATOR_HIER_DIR)" = "$(VERILATOR_BUILD_DIR)/hier"
-	rm -rf $(VERILATOR_HIER_DIR)
+.PHONY: clean-verilate
+clean-verilate:
+	@test -n "$(VERILATOR_BUILD_DIR)"
+	@test "$(VERILATOR_BUILD_DIR)" = "$(MAGIA_ROOT)/verilator/build"
+	rm -rf $(VERILATOR_BUILD_DIR)
 
 .PHONY: verilator

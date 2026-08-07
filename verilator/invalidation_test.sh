@@ -2,7 +2,7 @@
 #
 # Plan 4: automated invalidation tests for the hierarchical Verilator build.
 #
-# Prerequisite: a successful `make verilate-hier core=CV32E40P mesh_dv=1
+# Prerequisite: a successful `make verilate core=CV32E40P mesh_dv=1
 # VERILATOR_JOBS=4` build already exists (this script does not create the
 # first build itself, to keep each scenario's baseline explicit and to
 # avoid hiding a cold-build failure inside a test run).
@@ -23,14 +23,14 @@ ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
 MAKE_ARGS=(core=CV32E40P mesh_dv=1 VERILATOR_JOBS=4)
-HIER_DIR="$ROOT/verilator/build/hier"
-OBJ="$HIER_DIR/obj_dir"
+BUILD_DIR="$ROOT/verilator/build"
+OBJ="$BUILD_DIR/obj_dir"
 HIER_MK="$OBJ/Vmagia_tb_hier.mk"
 PARENT_MK="$OBJ/Vmagia_tb.mk"
 CHILD_LIB="$OBJ/Vmagia_tile_hier_f/libmagia_tile_hier_f.a"
 BIN="$OBJ/Vmagia_tb"
-STAMP="$HIER_DIR/config.stamp"
-LOGDIR="$HIER_DIR/invalidation-test-logs"
+STAMP="$BUILD_DIR/config.stamp"
+LOGDIR="$BUILD_DIR/invalidation-test-logs"
 mkdir -p "$LOGDIR"
 
 FAIL=0
@@ -40,7 +40,7 @@ failt() { echo "FAIL: $1"; FAIL=1; }
 require() {
   if [ ! -e "$1" ]; then
     echo "error: prerequisite artifact missing: $1" >&2
-    echo "run: make verilate-hier ${MAKE_ARGS[*]} first" >&2
+    echo "run: make verilate ${MAKE_ARGS[*]} first" >&2
     exit 2
   fi
 }
@@ -53,7 +53,7 @@ mtime() { stat -c '%Y' "$1" 2>/dev/null || echo "MISSING"; }
 
 run_make() {
   local logfile="$1"
-  make verilate-hier "${MAKE_ARGS[@]}" >"$logfile" 2>&1
+  make verilate "${MAKE_ARGS[@]}" >"$logfile" 2>&1
 }
 
 touched_child() {
@@ -122,7 +122,7 @@ echo "=== Test 4: tile parameter/define change -> compatible rebuild, no stale r
 {
   m_bin_before=$(mtime "$BIN")
   log="$LOGDIR/4a-define-change.log"
-  make verilate-hier "${MAKE_ARGS[@]}" SPATZ_N_FPU=2 >"$log" 2>&1
+  make verilate "${MAKE_ARGS[@]}" SPATZ_N_FPU=2 >"$log" 2>&1
   ok=1
   [ "$(mtime "$BIN")" != "$m_bin_before" ] || { failt "test4: binary unchanged after a Spatz define change (stale reuse?)"; ok=0; }
   python3 "$ROOT/verilator/check_hierarchy.py" "$HIER_MK" --module magia_tile_hier >>"$log" 2>&1 \
@@ -131,7 +131,7 @@ echo "=== Test 4: tile parameter/define change -> compatible rebuild, no stale r
 
   # restore default configuration
   log2="$LOGDIR/4b-define-restore.log"
-  make verilate-hier "${MAKE_ARGS[@]}" >"$log2" 2>&1
+  make verilate "${MAKE_ARGS[@]}" >"$log2" 2>&1
   python3 "$ROOT/verilator/check_hierarchy.py" "$HIER_MK" --module magia_tile_hier >>"$log2" 2>&1 \
     && pass "test4b: reverting SPATZ_N_FPU restores default build with one specialization" \
     || failt "test4b: failed to restore default configuration"
