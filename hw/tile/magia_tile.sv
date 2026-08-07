@@ -139,11 +139,15 @@ module magia_tile
   // A hierarchical block cannot be observed through parent dotted paths.
   always_comb begin
     observe_o              = '0;
-    observe_o.axi_aw_addr  = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_OBI_IDX].aw.addr;
-    observe_o.axi_aw_id    = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_OBI_IDX].aw.id;
-    observe_o.axi_aw_valid = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_OBI_IDX].aw_valid;
-    observe_o.axi_w_data   = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_OBI_IDX].w.data;
-    observe_o.axi_w_valid  = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_OBI_IDX].w_valid;
+    // The print peripheral (0xFFFF_0000/0xFFFF_0004) matches no address rule
+    // and therefore leaves through the default master port ('0), i.e. the ext
+    // port. This is the port the pre-hierarchy VIP snooped as
+    // i_axi_xbar.mst_ports_req_o[0]; observing the OBI port sees no prints.
+    observe_o.axi_aw_addr  = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_EXT_IDX].aw.addr;
+    observe_o.axi_aw_id    = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_EXT_IDX].aw.id;
+    observe_o.axi_aw_valid = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_EXT_IDX].aw_valid;
+    observe_o.axi_w_data   = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_EXT_IDX].w.data;
+    observe_o.axi_w_valid  = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_EXT_IDX].w_valid;
 `ifdef CV32E40X
     observe_o.instr_ex = i_cv32e40x_ctrl_core.core_i.id_stage_i.id_ex_pipe_o.instr.bus_resp.rdata;
     observe_o.instr_id = i_cv32e40x_ctrl_core.core_i.id_stage_i.if_id_pipe_i.instr.bus_resp.rdata;
@@ -271,8 +275,8 @@ module magia_tile
   magia_tile_pkg::axi_xbar_slv_req_t[magia_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_slv_req; // Index 2 -> ext, Index 1 -> Core Data, Index 0 -> Core Instruction
   magia_tile_pkg::axi_xbar_slv_rsp_t[magia_tile_pkg::AxiXbarNoSlvPorts-1:0] axi_xbar_slv_rsp; // Index 2 -> ext, Index 1 -> Core Data, Index 0 -> Core Instruction
 
-  magia_pkg::axi_xbar_mst_req_t[magia_tile_pkg::AxiXbarNoMstPorts-1:0] axi_xbar_mst_req;  // Index 1 -> ext, Index 0 -> OBI XBAR
-  magia_pkg::axi_xbar_mst_rsp_t[magia_tile_pkg::AxiXbarNoMstPorts-1:0] axi_xbar_mst_rsp;  // Index 1 -> ext, Index 0 -> OBI XBAR
+  magia_pkg::axi_xbar_mst_req_t[magia_tile_pkg::AxiXbarNoMstPorts-1:0] axi_xbar_mst_req;  // Index 0 -> ext, Index 1 -> OBI XBAR, Index 2 -> Spatz bootrom
+  magia_pkg::axi_xbar_mst_rsp_t[magia_tile_pkg::AxiXbarNoMstPorts-1:0] axi_xbar_mst_rsp;  // Index 0 -> ext, Index 1 -> OBI XBAR, Index 2 -> Spatz bootrom
 
   logic[magia_tile_pkg::axi_xbar_cfg.NoSlvPorts-1:0] en_default_mst_port;
   

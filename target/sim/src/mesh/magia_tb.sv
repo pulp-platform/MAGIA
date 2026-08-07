@@ -28,6 +28,18 @@ module magia_tb;
 
   magia_fixture fixture();
 
+`ifdef VERILATOR
+  // When running under Verilator this testbench prints nothing until the first
+  // tile output, so emit a heartbeat to tell a slow run from a stalled one.
+  // $time is scaled to the module timeunit (1ns), hence the /1000 to get us.
+  initial begin
+    forever begin
+      $display("[INFO] %0d us elapsed in simulation.", $time/1000);
+      #10000;
+    end
+  end
+`endif
+
   initial begin
     // Fetch plusargs or use safe (fail-fast) defaults
     if (!$value$plusargs("INST_HEX=%s" ,      inst_hex))      inst_hex      = "";
