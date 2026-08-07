@@ -772,6 +772,25 @@ package magia_tile_pkg;
   `FSYNC_TYPEDEF_ALL(hn_tile_fsync, logic[FSYNC_NBR_AGGR_W-1:0], logic[FSYNC_NBR_LVL_W-1:0], logic[FSYNC_NBR_ID_W-1:0])
   `FSYNC_TYPEDEF_ALL(vn_tile_fsync, logic[FSYNC_NBR_AGGR_W-1:0], logic[FSYNC_NBR_LVL_W-1:0], logic[FSYNC_NBR_ID_W-1:0])
 
+`ifdef VERILATOR
+  // Packed observation boundary required by hierarchical Verilation.
+  typedef struct packed {
+    logic [magia_pkg::ADDR_W-1:0]     axi_aw_addr;
+    // axi_aw_id is driven from axi_xbar_mst_req_t.aw.id (magia_pkg's NoC AXI
+    // alias), whose ID width is magia_pkg::AXI_NOC_ID_W. This tile package's
+    // own AXI_ID_W (3 bits) sizes a *different* xbar (the tile-internal one
+    // with 5 slave ports) and must not be reused here.
+    logic [magia_pkg::AXI_NOC_ID_W-1:0] axi_aw_id;
+    logic                             axi_aw_valid;
+    logic [magia_pkg::DATA_W-1:0] axi_w_data;
+    logic                         axi_w_valid;
+    logic [31:0]                  instr_ex;
+    logic [31:0]                  instr_id;
+    logic [31:0]                  instr_wb;
+    logic [31:0]                  wb_data;
+  } magia_tile_observe_t;
+`endif
+
   /*******************************************************************/
   /*              Spatz Core Complex Wrapper Types                   */
   /*******************************************************************/

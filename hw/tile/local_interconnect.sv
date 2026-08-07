@@ -31,7 +31,9 @@ module local_interconnect
   parameter int unsigned N_CORE                           = magia_tile_pkg::N_CORE,
   parameter int unsigned N_MEM                            = magia_pkg::N_MEM_BANKS,
   parameter int unsigned EXPFIFO                          = magia_tile_pkg::EXPFIFO,
-  parameter int unsigned FILTER_WRITE_R_VALID[0:N_HWPE-1] = '{default: 0},
+  parameter int unsigned FILTER_WRITE_R_VALID[0:((N_HWPE > N_DMA ? N_HWPE : N_DMA) > N_CORE ?
+                                                  (N_HWPE > N_DMA ? N_HWPE : N_DMA) : N_CORE)-1] =
+                                                  '{default: 0},
   parameter int unsigned MEM_DATA_W                       = 0,
   parameter int unsigned MEM_ADDR_W                       = 0,
   parameter int unsigned MEM_BYTE_W                       = 0,

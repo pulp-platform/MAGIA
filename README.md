@@ -82,6 +82,94 @@ make all test=fsync_test
 make run test=fsync_test
 ```
 
+### Simulation with Verilator
+
+MAGIA can also be simulated with [Verilator](https://verilator.org) instead of
+QuestaSim. The flow is independent of the `vsim` one above: it has its own
+targets, its own build directory (`verilator/build`), and needs no
+`build-hw`/`vsim-scripts` step.
+
+Verilator builds the mesh **hierarchically**: the tile is compiled once into a
+separate library (`magia_tile_hier`) and instantiated 16 times, instead of
+being flattened 16 times over. This is what keeps the build tractable, and it
+is why the flow requires `mesh_dv=1` — there is no single-tile Verilator
+target at this time.
+
+The following *optional* parameters can be specified:
+
+`core`: **CV32E40P** (**Default**: CV32E40P). CV32E40X is not supported by this
+flow.
+
+`VERILATOR_JOBS`: **N** (**Default**: 4). Parallelism used to *build* the model.
+Unrelated to simulation speed.
+
+`VERILATOR_THREADS`: **N** (**Default**: 1). Threads the *simulation itself* runs on. See
+the note below before changing it.
+
+`VERILATOR_FST`: **&lt;file&gt;** (**Default**: empty). Dump a waveform to this file.
+
+**Instructions to build and run a Verilator simulation**:
+
+**1)** *Build* the model (`MAGIA` folder):
+```bash
+make verilate core=CV32E40P mesh_dv=1 VERILATOR_JOBS=16
+```
+**2)** *Compile and run* a test (`MAGIA` folder):
+```bash
+make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test
+```
+`verilate-run` compiles the test itself, so step **1** is optional — it is
+listed separately only because the model build takes a couple of minutes and
+you usually want to do it once.
+
+**Full example**:
+```bash
+source setup_env.sh
+make verilate core=CV32E40P mesh_dv=1 VERILATOR_JOBS=16
+make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test
+```
+
+Other targets: `verilate-gen` (code generation only), `verilate-build` (native
+compile only), `verilate-check-hierarchy` (asserts the model really links the
+tile library instead of inlining it), and `clean-verilate`.
+
+#### Waveforms (FST)
+
+The model is **always** built with tracing compiled in, so no rebuild is needed
+to capture a waveform. Dumping is off until a run asks for it, and a run that
+does not ask pays nothing beyond a larger binary:
+
+```bash
+make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test VERILATOR_FST=dump.fst
+```
+
+The file is written in the test's build directory. Waveforms include the
+internals of every tile.
+
+**Let the simulation reach `$finish`.** A run killed before it gets there
+leaves the FST unclosed, and an unclosed FST is not a file you can keep: the hierarchy is still sitting in a `<dump>.fst.hier`
+companion, so the dump reads only in place and loses every signal name the
+moment it is moved.
+
+#### Multithreaded simulation (experimental)
+
+`VERILATOR_THREADS=8` runs the model on 8 threads:
+
+```bash
+make verilate core=CV32E40P mesh_dv=1 VERILATOR_JOBS=16 VERILATOR_THREADS=8
+make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test VERILATOR_THREADS=8
+```
+
+`VERILATOR_THREADS` must be identical on the build and the run: it is compiled into the
+model, and the two commands must agree or the model is rebuilt.
+
+**This is experimental and only partially tested.** What is actually known:
+
+- `VERILATOR_THREADS=8` halved `inter_l1_test` (132 s → 66 s, same result, same
+  `$finish` time). Only that one test was checked, once.
+- `VERILATOR_THREADS=4` **segfaults at time zero**, deterministically, in an
+  `eval_initial` coroutine — from a clean build, same flags but the count.
+
 ## ⚙️ Architecture
 
 ![](doc/MAGIA.png)
