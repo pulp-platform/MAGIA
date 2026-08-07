@@ -126,11 +126,45 @@ module magia_tile
   input  logic                              fetch_enable_i,
   output logic                              core_sleep_o,
   input  logic                              wu_wfe_i
+`ifdef VERILATOR
+  , output magia_tile_observe_t             observe_o
+`endif
 );
 
 /*******************************************************/
 /**       Internal Signal Definitions Beginning       **/
 /*******************************************************/
+
+`ifdef VERILATOR
+  // A hierarchical block cannot be observed through parent dotted paths.
+  always_comb begin
+    observe_o              = '0;
+    observe_o.axi_aw_addr  = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_OBI_IDX].aw.addr;
+    observe_o.axi_aw_id    = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_OBI_IDX].aw.id;
+    observe_o.axi_aw_valid = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_OBI_IDX].aw_valid;
+    observe_o.axi_w_data   = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_OBI_IDX].w.data;
+    observe_o.axi_w_valid  = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_OBI_IDX].w_valid;
+`ifdef CV32E40X
+    observe_o.instr_ex = i_cv32e40x_ctrl_core.core_i.id_stage_i.id_ex_pipe_o.instr.bus_resp.rdata;
+    observe_o.instr_id = i_cv32e40x_ctrl_core.core_i.id_stage_i.if_id_pipe_i.instr.bus_resp.rdata;
+    observe_o.instr_wb = i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr_valid ?
+                         i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
+    observe_o.wb_data  = observe_o.instr_wb;
+`else
+    // CORE_TRACES is unconditionally defined for the magia_dv target (see
+    // Bender.yml), so i_cv32e40p_ctrl_core is always a cv32e40p_wrapper
+    // instance, which instantiates cv32e40p_top as cv32e40p_top_i, which in
+    // turn instantiates cv32e40p_core as core_i.
+    observe_o.instr_ex = i_cv32e40p_ctrl_core.cv32e40p_top_i.core_i.ex_valid ?
+                         i_cv32e40p_ctrl_core.cv32e40p_top_i.core_i.id_stage_i.instr_rdata_i : '0;
+    observe_o.instr_id = i_cv32e40p_ctrl_core.cv32e40p_top_i.core_i.id_stage_i.instr_rdata_i;
+    observe_o.instr_wb = i_cv32e40p_ctrl_core.cv32e40p_top_i.core_i.wb_valid ?
+                         i_cv32e40p_ctrl_core.cv32e40p_top_i.core_i.instr_rdata_id : '0;
+    observe_o.wb_data  = i_cv32e40p_ctrl_core.cv32e40p_top_i.core_i.wb_valid ?
+                         i_cv32e40p_ctrl_core.cv32e40p_top_i.core_i.regfile_wdata : '0;
+`endif
+  end
+`endif
 
   logic[magia_pkg::ADDR_W-1:0] tile_l1_start_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_l1_end_addr;

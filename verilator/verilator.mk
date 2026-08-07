@@ -1,102 +1,237 @@
 # Copyright 2026 ETH Zurich and University of Bologna
+# SPDX-License-Identifier: Apache-2.0
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+MAGIA_ROOT  ?= $(shell git rev-parse --show-toplevel)
+VERILATOR   ?= verilator
+BASE_PYTHON ?= python3
 
-#     http://www.apache.org/licenses/LICENSE-2.0
+VERILATOR_BUILD_DIR ?= $(MAGIA_ROOT)/verilator/build
+VERILATOR_HIER_DIR   := $(VERILATOR_BUILD_DIR)/hier
+VERILATOR_OBJ_DIR    := $(VERILATOR_HIER_DIR)/obj_dir
+VERILATOR_TOP        := magia_tb
+VERILATOR_CONTROL    := $(MAGIA_ROOT)/verilator/magia_hier.vlt
 
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+VERILATOR_JOBS          ?= 4
+VERILATOR_TRACE         ?= 0
+VERILATOR_TRACE_STRUCTS ?= 0
+VERILATOR_TRACE_PARAMS  ?= 0
+VERILATOR_CFLAGS        ?= -O2
+VERILATOR_RUN_TIMEOUT   ?= 120
+VERILATOR_EXPECTED_TILE_SPECIALIZATIONS ?= 1
 
-ifeq ($(mesh_dv),1)
-	tb         := magia_tb
-else
-	tb         := magia_tile_tb
+_VERILATOR_JOBS_NUM := $(strip $(shell expr $(VERILATOR_JOBS) + 0 2>/dev/null))
+ifeq ($(_VERILATOR_JOBS_NUM),)
+$(error VERILATOR_JOBS must be a positive integer, got '$(VERILATOR_JOBS)')
+endif
+ifeq ($(_VERILATOR_JOBS_NUM),0)
+$(error VERILATOR_JOBS must be a positive integer, got '$(VERILATOR_JOBS)')
 endif
 
-MAGIA_ROOT ?= $(shell git rev-parse --show-toplevel)
-VERILATOR ?= verilator
+_VERILATOR_EXPECTED_NUM := $(strip $(shell expr $(VERILATOR_EXPECTED_TILE_SPECIALIZATIONS) + 0 2>/dev/null))
+ifeq ($(_VERILATOR_EXPECTED_NUM),)
+$(error VERILATOR_EXPECTED_TILE_SPECIALIZATIONS must be a positive integer)
+endif
+ifeq ($(_VERILATOR_EXPECTED_NUM),0)
+$(error VERILATOR_EXPECTED_TILE_SPECIALIZATIONS must be a positive integer)
+endif
 
-VERILATOR_BUILD_DIR = $(MAGIA_ROOT)/verilator/build
+ifeq ($(VERILATOR_TRACE),0)
+ifneq ($(VERILATOR_TRACE_STRUCTS),0)
+$(error VERILATOR_TRACE_STRUCTS=1 requires VERILATOR_TRACE=1)
+endif
+ifneq ($(VERILATOR_TRACE_PARAMS),0)
+$(error VERILATOR_TRACE_PARAMS=1 requires VERILATOR_TRACE=1)
+endif
+endif
 
-VERILATOR_ARGS  = --binary -j 0 -Wno-fatal
+VERILATOR_ARGS = -j $(VERILATOR_JOBS) -Wno-fatal \
+	-Wno-style -Wno-timescalemod -Wno-redefmacro -Wno-implicit \
+	-Wno-ascrange -Wno-widthexpand -Wno-widthconcat -Wno-misindent \
+	-Wno-pinmissing -Wno-widthtrunc -Wno-unsigned -Wno-cmpconst \
+	-Wno-userfatal -Wno-caseincomplete -Wno-combdly -Wno-latch \
+	-Wno-unoptflat -Wno-blkandnblk -Wno-ENUMVALUE \
+	--timing --autoflush
 
-# disable all warnings in MAGIA (at least for now)
-VERILATOR_ARGS += -Wno-style \
-                  -Wno-timescalemod \
-                  -Wno-redefmacro \
-                  -Wno-implicit \
-                  -Wno-ascrange \
-                  -Wno-widthexpand \
-                  -Wno-widthconcat \
-                  -Wno-misindent \
-                  -Wno-pinmissing \
-                  -Wno-widthtrunc \
-                  -Wno-unsigned \
-                  -Wno-cmpconst \
-                  -Wno-userfatal \
-                  -Wno-caseincomplete \
-                  -Wno-combdly \
-                  -Wno-latch \
-                  -Wno-unoptflat \
-				  -Wno-blkandnblk \
-				  -Wno-ENUMVALUE
+ifeq ($(VERILATOR_TRACE),1)
+VERILATOR_ARGS += --trace-fst
+ifeq ($(VERILATOR_TRACE_STRUCTS),1)
+VERILATOR_ARGS += --trace-structs
+endif
+ifeq ($(VERILATOR_TRACE_PARAMS),1)
+VERILATOR_ARGS += --trace-params
+endif
+endif
 
-# activate tracing
-VERILATOR_ARGS += --timing --autoflush --trace-fst --trace-structs --trace-params
-
-# workaround for Bender not liking it if I add directly DPI C sources to the Bender.yml
-CV32E40P_ROOT ?= $(shell $(BENDER) path cv32e40p)
+RISCV_DBG_ROOT    ?= $(shell $(BENDER) path riscv-dbg)
 FRACTAL_SYNC_ROOT ?= $(shell $(BENDER) path fractal_sync)
-VERILATOR_DPI = \
-	$(CV32E40P_ROOT)/tb/dm/remote_bitbang/sim_jtag.c \
-	$(CV32E40P_ROOT)/tb/dm/remote_bitbang/remote_bitbang.c
+VERILATOR_DPI := \
+	$(RISCV_DBG_ROOT)/tb/remote_bitbang/sim_jtag.c \
+	$(RISCV_DBG_ROOT)/tb/remote_bitbang/remote_bitbang.c
 
-VERILATOR_BENDER_TARGS = $(bender_targs) -t tech_cells_generic_include_deprecated \
-	-t verilator -t rtl_sim -t verilator_dpi -t magia_dv -t simulation \
-	-t cv32e40p_exclude_tracer
-ifeq ($(mesh_dv),0)
-VERILATOR_BENDER_TARGS += -t standalone_tile
-endif
+VERILATOR_BENDER_TARGS := $(bender_targs) \
+	-t tech_cells_generic_include_deprecated -t verilator -t rtl_sim \
+	-t verilator_dpi -t magia_dv -t simulation -t cv32e40p_exclude_tracer
 
-$(VERILATOR_BUILD_DIR):
+VERILATOR_RAW_FLIST := $(VERILATOR_HIER_DIR)/magia.raw.f
+VERILATOR_FLIST := $(VERILATOR_HIER_DIR)/magia.f
+VERILATOR_BENDER_STAMP := $(VERILATOR_HIER_DIR)/bender.stamp
+VERILATOR_CONFIG_STAMP := $(VERILATOR_HIER_DIR)/config.stamp
+VERILATOR_VERSION_LOG := $(VERILATOR_HIER_DIR)/verilator-version.log
+VERILATOR_PARENT_MK := $(VERILATOR_OBJ_DIR)/V$(VERILATOR_TOP).mk
+VERILATOR_HIER_MK := $(VERILATOR_OBJ_DIR)/V$(VERILATOR_TOP)_hier.mk
+VERILATOR_CODEGEN_STAMP := $(VERILATOR_HIER_DIR)/codegen.stamp
+VERILATOR_BIN := $(VERILATOR_OBJ_DIR)/V$(VERILATOR_TOP)
+VERILATOR_RUN_LOG := $(VERILATOR_HIER_DIR)/run.log
+VERILATOR_TIME := $(shell command -v /usr/bin/time 2>/dev/null)
+
+$(VERILATOR_BUILD_DIR) $(VERILATOR_HIER_DIR):
 	mkdir -p $@
 
-$(VERILATOR_BUILD_DIR)/magia.f: Bender.lock Bender.yml $(VERILATOR_BUILD_DIR)
-	$(BENDER) script verilator $(VERILATOR_BENDER_TARGS) $(bender_defs) -DSYNTHESIS -DVERILATOR > $@
-	echo +incdir+$(FRACTAL_SYNC_ROOT)/hw >> $@
-	echo $(VERILATOR_DPI) >> $@
-	sed -i '/pad_functional\.sv/d' $@
-	sed -i '/apb_test\.sv/d' $@
-	sed -i '/dmi_test\.sv/d' $@
-	sed -i '/reqrsp_test\.sv/d' $@
-	sed -i '/tcdm_test\.sv/d' $@
+.PHONY: $(VERILATOR_HIER_DIR)/.bender-check
+$(VERILATOR_HIER_DIR)/.bender-check: | $(VERILATOR_HIER_DIR)
+	@command -v $(BENDER) >/dev/null 2>&1 || { echo "error: bender not found: $(BENDER)" >&2; exit 1; }
+	@{ \
+	  echo "path=$$(command -v $(BENDER))"; \
+	  echo "version=$$($(BENDER) --version)"; \
+	  echo "targets=$(VERILATOR_BENDER_TARGS)"; \
+	  echo "defines=$(bender_defs)"; \
+	} > $(VERILATOR_BENDER_STAMP).tmp
+	@if ! cmp -s $(VERILATOR_BENDER_STAMP).tmp $(VERILATOR_BENDER_STAMP) 2>/dev/null; then \
+	  mv $(VERILATOR_BENDER_STAMP).tmp $(VERILATOR_BENDER_STAMP); \
+	else rm -f $(VERILATOR_BENDER_STAMP).tmp; fi
 
-.PHONY: clean-verilator-bender
-clean-verilator-bender:
-	rm -rf $(VERILATOR_BUILD_DIR)/magia.f
+$(VERILATOR_BENDER_STAMP): $(VERILATOR_HIER_DIR)/.bender-check
+	@test -f $@
+
+$(VERILATOR_RAW_FLIST): Bender.yml Bender.lock Makefile bender_common.mk \
+	bender_sim.mk bender_synth.mk bender_profile.mk $(VERILATOR_BENDER_STAMP) | $(VERILATOR_HIER_DIR)
+	$(BENDER) script verilator $(VERILATOR_BENDER_TARGS) $(bender_defs) -DSYNTHESIS -DVERILATOR > $@.tmp
+	echo +incdir+$(FRACTAL_SYNC_ROOT)/hw >> $@.tmp
+	for f in $(VERILATOR_DPI); do echo $$f >> $@.tmp; done
+	@if ! cmp -s $@.tmp $@ 2>/dev/null; then mv $@.tmp $@; else rm -f $@.tmp; fi
+
+$(VERILATOR_FLIST): $(VERILATOR_RAW_FLIST) \
+	$(MAGIA_ROOT)/verilator/filter_filelist.py \
+	$(MAGIA_ROOT)/verilator/check_filelist.py | $(VERILATOR_HIER_DIR)
+	$(BASE_PYTHON) $(MAGIA_ROOT)/verilator/filter_filelist.py --output $@.tmp < $(VERILATOR_RAW_FLIST)
+	$(BASE_PYTHON) $(MAGIA_ROOT)/verilator/check_filelist.py $@.tmp \
+		--top $(VERILATOR_TOP) \
+		--dpi $(RISCV_DBG_ROOT)/tb/remote_bitbang/sim_jtag.c \
+		--dpi $(RISCV_DBG_ROOT)/tb/remote_bitbang/remote_bitbang.c
+	@if ! cmp -s $@.tmp $@ 2>/dev/null; then mv $@.tmp $@; else rm -f $@.tmp; fi
 
 .PHONY: verilator-bender
-verilator-bender: $(VERILATOR_BUILD_DIR)/magia.f
+verilator-bender: $(VERILATOR_FLIST)
 
-## Simulate RTL using Verilator
-$(VERILATOR_BUILD_DIR)/obj_dir/V$(tb): $(VERILATOR_BUILD_DIR)/magia.f
-	cd $(VERILATOR_BUILD_DIR); $(VERILATOR) $(VERILATOR_ARGS) -CFLAGS "-O2" --top $(tb) -f  $(VERILATOR_BUILD_DIR)/magia.f
+.PHONY: $(VERILATOR_HIER_DIR)/.config-check
+$(VERILATOR_HIER_DIR)/.config-check: | $(VERILATOR_HIER_DIR)
+	@command -v $(VERILATOR) >/dev/null 2>&1 || { echo "error: verilator not found: $(VERILATOR)" >&2; exit 1; }
+	@test -f $(VERILATOR_CONTROL) || { echo "error: missing $(VERILATOR_CONTROL)" >&2; exit 1; }
+	@version="$$($(VERILATOR) --version)"; \
+	numeric="$$(printf '%s\n' "$$version" | grep -oE '[0-9]+\.[0-9]+' | head -1)"; \
+	awk -v got="$$numeric" 'BEGIN { split(got,a,"."); exit !((a[1]*1000+a[2]) >= 5046) }' || \
+	  { echo "error: hierarchical Verilation requires Verilator >= 5.046; got $$version" >&2; exit 1; }; \
+	printf '%s\n' "$$version" > $(VERILATOR_VERSION_LOG).tmp
+	@if ! cmp -s $(VERILATOR_VERSION_LOG).tmp $(VERILATOR_VERSION_LOG) 2>/dev/null; then \
+	  mv $(VERILATOR_VERSION_LOG).tmp $(VERILATOR_VERSION_LOG); \
+	else rm -f $(VERILATOR_VERSION_LOG).tmp; fi
+	@{ \
+	  echo "verilator_path=$$(command -v $(VERILATOR))"; \
+	  echo "verilator_version=$$($(VERILATOR) --version)"; \
+	  echo "bender_path=$$(command -v $(BENDER))"; \
+	  echo "bender_version=$$($(BENDER) --version 2>/dev/null)"; \
+	  echo "top=$(VERILATOR_TOP)"; \
+	  echo "mesh_dv=$(mesh_dv)"; \
+	  echo "core=$(core)"; \
+	  echo "bender_targets=$(VERILATOR_BENDER_TARGS)"; \
+	  echo "bender_defines=$(bender_defs)"; \
+	  echo "trace=$(VERILATOR_TRACE)"; \
+	  echo "trace_structs=$(VERILATOR_TRACE_STRUCTS)"; \
+	  echo "trace_params=$(VERILATOR_TRACE_PARAMS)"; \
+	  echo "cflags=$(VERILATOR_CFLAGS)"; \
+	  echo "cppflags=$(CPPFLAGS)"; \
+	  echo "cxxflags=$(CXXFLAGS)"; \
+	  echo "ldflags=$(LDFLAGS)"; \
+	  echo "cxx_path=$$(command -v $(CXX) 2>/dev/null || echo $(CXX))"; \
+	  echo "cxx_version=$$($(CXX) --version 2>/dev/null | head -1)"; \
+	  echo "objcache=$$(if [ -n "$$OBJCACHE" ]; then printf '%s' "$$OBJCACHE"; else command -v ccache 2>/dev/null || echo none; fi)"; \
+	  echo "dpi=$(VERILATOR_DPI)"; \
+	  echo "verilator_args=$(VERILATOR_ARGS) --hierarchical"; \
+	  echo "control_sha256=$$(sha256sum $(VERILATOR_CONTROL) | cut -d' ' -f1)"; \
+	} > $(VERILATOR_CONFIG_STAMP).tmp
+	@if ! cmp -s $(VERILATOR_CONFIG_STAMP).tmp $(VERILATOR_CONFIG_STAMP) 2>/dev/null; then \
+	  mv $(VERILATOR_CONFIG_STAMP).tmp $(VERILATOR_CONFIG_STAMP); \
+	else rm -f $(VERILATOR_CONFIG_STAMP).tmp; fi
 
-.PHONY: verilate
-verilate: clean-verilator-bender verilator-bender $(VERILATOR_BUILD_DIR)/obj_dir/V$(tb)
-ifneq ($(VERILATOR_PATH), $(MAGIA_ROOT)/build/verilator)
-	@echo ""
-	@echo "To run a simulation directly with the PULP runtime or SDK \`make run\` commands execute the following:"
-	@echo ""
-	@echo "	export VERILATOR_PATH=$(MAGIA_ROOT)/build/verilator"
+$(VERILATOR_CONFIG_STAMP): $(VERILATOR_HIER_DIR)/.config-check
+	@test -f $@
+
+# Verilator 5.046 does not forward +define/+incdir entries expanded from -f
+# to child runs, so mirror those flags from the authoritative Bender list.
+VERILATOR_HIER_FLIST_FLAGS = $(shell grep -E '^\+(define|incdir)' $(VERILATOR_FLIST))
+
+-include $(VERILATOR_OBJ_DIR)/V$(VERILATOR_TOP)__hierVer.d
+
+$(VERILATOR_PARENT_MK): $(VERILATOR_FLIST) $(VERILATOR_CONFIG_STAMP) \
+	$(VERILATOR_CONTROL) $(VERILATOR_VERSION_LOG) | $(VERILATOR_HIER_DIR)
+	cd $(VERILATOR_HIER_DIR) && \
+		$(if $(VERILATOR_TIME),$(VERILATOR_TIME) -v -o $(VERILATOR_HIER_DIR)/codegen.time.log,) \
+		$(VERILATOR) $(VERILATOR_CONTROL) --hierarchical \
+		$(VERILATOR_ARGS) $(VERILATOR_HIER_FLIST_FLAGS) \
+		--cc --main --exe -Mdir $(VERILATOR_OBJ_DIR) \
+		-CFLAGS "$(VERILATOR_CFLAGS)" --top-module $(VERILATOR_TOP) \
+		-f $(VERILATOR_FLIST)
+	@test -f $(VERILATOR_PARENT_MK)
+	@test -f $(VERILATOR_HIER_MK)
+	@touch $(VERILATOR_PARENT_MK)
+
+$(VERILATOR_CODEGEN_STAMP): $(VERILATOR_PARENT_MK)
+	@touch $@
+
+$(VERILATOR_BIN): $(VERILATOR_CODEGEN_STAMP)
+	$(if $(VERILATOR_TIME),$(VERILATOR_TIME) -v -o $(VERILATOR_HIER_DIR)/build.time.log,) \
+		$(MAKE) -C $(VERILATOR_OBJ_DIR) -f V$(VERILATOR_TOP)_hier.mk -j $(VERILATOR_JOBS)
+	@test -x $@
+
+ifeq ($(mesh_dv),0)
+.PHONY: verilate-hier-gen verilate-hier-build verilate-hier verilate verilate-check-hierarchy verilate-run
+verilate-hier-gen verilate-hier-build verilate-hier verilate verilate-check-hierarchy verilate-run:
+	$(error $@ requires mesh_dv=1)
+else ifeq ($(core),CV32E40X)
+.PHONY: verilate-hier-gen verilate-hier-build verilate-hier verilate verilate-check-hierarchy verilate-run
+verilate-hier-gen verilate-hier-build verilate-hier verilate verilate-check-hierarchy verilate-run:
+	$(error CV32E40X hierarchical CORE_TRACES needs runtime per-tile filenames)
+else
+.PHONY: verilate-hier-gen verilate-hier-build verilate-hier verilate
+verilate-hier-gen: $(VERILATOR_CODEGEN_STAMP)
+verilate-hier-build verilate-hier verilate: $(VERILATOR_BIN)
+
+.PHONY: verilate-check-hierarchy
+verilate-check-hierarchy: $(VERILATOR_CODEGEN_STAMP)
+	$(BASE_PYTHON) $(MAGIA_ROOT)/verilator/check_hierarchy.py \
+		$(VERILATOR_HIER_MK) --module magia_tile_hier \
+		--expected-count $(VERILATOR_EXPECTED_TILE_SPECIALIZATIONS)
+
+.PHONY: verilate-run
+verilate-run: verilate-hier all
+	@command -v timeout >/dev/null 2>&1 || { echo "error: timeout utility is required" >&2; exit 1; }
+	@cd $(TEST_BUILD_DIR) && \
+	  timeout --foreground $(VERILATOR_RUN_TIMEOUT)s $(VERILATOR_BIN) \
+	    +INST_HEX=$(inst_hex_name) +DATA_HEX=$(data_hex_name) \
+	    +INST_ENTRY=$(inst_entry) +DATA_ENTRY=$(data_entry) \
+	    +BOOT_ADDR=$(boot_addr) +itb_file=$(itb_file) \
+	    > $(VERILATOR_RUN_LOG) 2>&1; \
+	  status=$$?; cat $(VERILATOR_RUN_LOG); \
+	  if [ $$status -eq 124 ]; then \
+	    echo "error: hierarchical simulation timed out after $(VERILATOR_RUN_TIMEOUT)s" >&2; \
+	  fi; \
+	  exit $$status
 endif
 
-clean-verilate:
-	rm -rf $(VERILATOR_BUILD_DIR)/obj_dir
+.PHONY: clean-verilate-hier clean-verilate
+clean-verilate-hier clean-verilate:
+	@test -n "$(VERILATOR_HIER_DIR)"
+	@test "$(VERILATOR_HIER_DIR)" = "$(VERILATOR_BUILD_DIR)/hier"
+	rm -rf $(VERILATOR_HIER_DIR)
 
 .PHONY: verilator

@@ -19,7 +19,9 @@
  * MAGIA
  */
 
+`ifndef VERILATOR
 `include "fractal_sync/assign.svh"
+`endif
 
 module magia 
   import magia_pkg::*;
@@ -74,6 +76,9 @@ module magia
 
   input  floo_wide_t [N_TILES_Y-1:0]            l2_noc_wide_i,
   output floo_wide_t [N_TILES_Y-1:0]            l2_noc_wide_o
+`ifdef VERILATOR
+  , output magia_tile_observe_t                  tile_observe_o[N_TILES]
+`endif
 );
 
 /*******************************************************/
@@ -112,6 +117,7 @@ module magia
 
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
+`ifndef VERILATOR
 /*******************************************************/
 /**           Interface Definitions Beginning         **/
 /*******************************************************/
@@ -140,6 +146,7 @@ module magia
 
 /*******************************************************/
 /**             Interface Assignments End             **/
+`endif
 /*******************************************************/
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
@@ -165,16 +172,23 @@ module magia
 
   for (genvar i = 0; i < N_TILES_Y; i++) begin: gen_y_tile
     for (genvar j = 0; j < N_TILES_X; j++) begin: gen_x_tile
+`ifdef VERILATOR
+      magia_tile_hier #(
+        .N_MEM_BANKS  ( N_MEM_BANKS   ),
+        .N_WORDS_BANK ( N_WORDS_BANK  )
+      ) i_magia_tile (
+`else
       magia_tile #(
         .N_MEM_BANKS  ( N_MEM_BANKS   ),
         .N_WORDS_BANK ( N_WORDS_BANK  ),
-  
+
         .CORE_ISA     (               ),
         .CORE_A       (               ),
         .CORE_B       (               ),
         .CORE_M       (               ),
         .ERROR_CAP    (               )
       ) i_magia_tile (
+`endif
         .clk_i                                                     ,
         .rst_ni                                                    ,
         .test_mode_i                                               ,
@@ -209,10 +223,21 @@ module magia
         .x_id_i              ( j                                  ),
         .y_id_i              ( i                                  ),
   
+`ifdef VERILATOR
+        .ht_fsync_req_o      ( ht_tile_fsync_req[i*N_TILES_X+j][0] ),
+        .ht_fsync_rsp_i      ( ht_tile_fsync_rsp[i*N_TILES_X+j][0] ),
+        .hn_fsync_req_o      ( hn_tile_fsync_req[i*N_TILES_X+j]    ),
+        .hn_fsync_rsp_i      ( hn_tile_fsync_rsp[i*N_TILES_X+j]    ),
+        .vt_fsync_req_o      ( vt_tile_fsync_req[i*N_TILES_X+j][0] ),
+        .vt_fsync_rsp_i      ( vt_tile_fsync_rsp[i*N_TILES_X+j][0] ),
+        .vn_fsync_req_o      ( vn_tile_fsync_req[i*N_TILES_X+j]    ),
+        .vn_fsync_rsp_i      ( vn_tile_fsync_rsp[i*N_TILES_X+j]    ),
+`else
         .ht_fsync_if_o       ( ht_fsync_if[i*N_TILES_X+j]         ),
         .hn_fsync_if_o       ( hn_fsync_if[i*N_TILES_X+j]         ),
         .vt_fsync_if_o       ( vt_fsync_if[i*N_TILES_X+j]         ),
         .vn_fsync_if_o       ( vn_fsync_if[i*N_TILES_X+j]         ),
+`endif
         
         .scan_cg_en_i                                              ,
   
@@ -243,11 +268,16 @@ module magia
         .fetch_enable_i                                            ,
         .core_sleep_o        ( core_sleep_o[i*N_TILES_X+j]        ),
         .wu_wfe_i
+`ifdef VERILATOR
+        , .observe_o         ( tile_observe_o[i*N_TILES_X+j]      )
+`endif
       );
   `ifdef CORE_TRACES
   `ifdef CV32E40X
+`ifndef VERILATOR
       localparam string core_trace_file_name = $sformatf("%s%0d", "log_file_", i*N_TILES_X+j);
       defparam i_magia_tile.i_cv32e40x_ctrl_core.rvfi_i.tracer_i.LOGFILE_PATH_PLUSARG = core_trace_file_name;
+`endif
   `endif
   // Note: cv32e40p tracer generates its own filename: trace_core_{cluster_id}_{core_id}.log
   `endif

@@ -170,6 +170,22 @@ sources:
       - hw/tile/magia_tile_icache_wrap.sv
       - hw/tile/magia_redmule_wrap.sv
       - hw/tile/magia_tile.sv
+
+  - target: all(magia_dv, not(standalone_tile), verilator)
+    files:
+      - target/verilator/src/magia_tile_hier.sv
+      # MAGIA
+      - hw/mesh/magia.sv
+      # MAGIA DV
+      - target/sim/src/tile/magia_tile_tb_pkg.sv
+      - target/sim/src/mesh/magia_tb_pkg.sv
+      - target/sim/src/mesh/magia_l2_mem_wrapper.sv
+      - target/verilator/src/magia_vip.sv
+      - target/verilator/src/magia_fixture.sv
+      - target/sim/src/mesh/magia_tb.sv
+
+  - target: all(magia_dv, not(standalone_tile), not(verilator))
+    files:
       # MAGIA
       - hw/mesh/magia.sv
       # MAGIA DV
