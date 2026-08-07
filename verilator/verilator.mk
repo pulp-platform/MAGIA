@@ -101,6 +101,7 @@ VERILATOR_RUN_LOG := $(VERILATOR_HIER_DIR)/run.log
 VERILATOR_CODEGEN_LOG := $(VERILATOR_HIER_DIR)/codegen.log
 VERILATOR_BUILD_LOG := $(VERILATOR_HIER_DIR)/build.log
 VERILATOR_CLASSES_MK := $(VERILATOR_OBJ_DIR)/V$(VERILATOR_TOP)_classes.mk
+VERILATOR_TRACE_MODE := $(VERILATOR_HIER_DIR)/trace.mode
 VERILATOR_TIME := $(shell command -v /usr/bin/time 2>/dev/null)
 
 # FST structure checker. Reads the dump with the same GTKWave fstapi Verilator
@@ -255,7 +256,22 @@ $(VERILATOR_HIER_MK): $(VERILATOR_FLIST) $(VERILATOR_CONFIG_STAMP) \
 $(VERILATOR_CODEGEN_STAMP): $(VERILATOR_HIER_MK)
 	@touch $@
 
+# VM_TRACE/VM_TRACE_FST are compiler flags, and Verilator's generated makefiles
+# do not track them. Toggling VERILATOR_TRACE regenerates the sources whose
+# content changed, but every .o whose source happened to stay byte-identical is
+# reused -- compiled against the previous headers. Tracing adds members to the
+# generated root class, so the resulting mix shifts member offsets and the model
+# segfaults in its own constructor, dereferencing a vlNamep that is not a
+# pointer any more. Nothing about that failure points back at the trace flag.
+# Drop the objects when the trace configuration changes; identical mode leaves
+# the tree untouched, so a no-change rebuild stays a no-op.
 $(VERILATOR_BIN): $(VERILATOR_CODEGEN_STAMP) $(VERILATOR_MAIN)
+	@mode="trace=$(VERILATOR_TRACE) structs=$(VERILATOR_TRACE_STRUCTS) params=$(VERILATOR_TRACE_PARAMS)"; \
+	if [ -d $(VERILATOR_OBJ_DIR) ] && [ "$$mode" != "$$(cat $(VERILATOR_TRACE_MODE) 2>/dev/null)" ]; then \
+	  echo "trace configuration changed to [$$mode]; dropping stale objects"; \
+	  find $(VERILATOR_OBJ_DIR) \( -name '*.o' -o -name '*.a' -o -name '*.d' \) -delete; \
+	fi; \
+	printf '%s\n' "$$mode" > $(VERILATOR_TRACE_MODE)
 	{ $(if $(VERILATOR_TIME),$(VERILATOR_TIME) -v -o $(VERILATOR_HIER_DIR)/build.time.log,) \
 		$(MAKE) -C $(VERILATOR_OBJ_DIR) -f V$(VERILATOR_TOP)_hier.mk -j $(VERILATOR_JOBS); \
 		echo $$? > $(VERILATOR_HIER_DIR)/.build.status; } 2>&1 \
