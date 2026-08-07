@@ -1178,22 +1178,31 @@ across the block boundary.
 
 ### Waveforms
 
-Tracing is opt-in at build time and again at run time:
+The model is always built with `--trace-fst`. Dumping is opt-in at run time:
 
 ```sh
-make clean-verilate core=CV32E40P mesh_dv=1
-make verilate core=CV32E40P mesh_dv=1 VERILATOR_JOBS=64 VERILATOR_TRACE=1
+make verilate core=CV32E40P mesh_dv=1 VERILATOR_JOBS=64
 make verilate-run core=CV32E40P mesh_dv=1 VERILATOR_JOBS=64 \
-  test=hello_world VERILATOR_TRACE=1 VERILATOR_FST=dump.fst
+  test=hello_world VERILATOR_FST=dump.fst
 ```
 
-`VERILATOR_TRACE=1` adds `--trace-fst`; `VERILATOR_TRACE_STRUCTS=1` and
-`VERILATOR_TRACE_PARAMS=1` are separate opt-ins under it and error out when
-tracing is off. `VERILATOR_TRACE` is part of `config.stamp`, so it must be on
-the build command, not only the run command. Rebuild from clean when changing
-it: `VM_TRACE`/`VM_TRACE_FST` are compiler flags, which Verilator's generated
-makefiles do not track. `magia_main.cpp` is hashed into `config.stamp` and is a
-prerequisite of code generation, so editing it does invalidate the build.
+**There is no `VERILATOR_TRACE=0`.** A non-tracing model builds and boots, but
+does not behave like the tracing one: `boot_test` passes either way, while
+`hello_mesh` and `inter_l1_test` complete only with tracing and otherwise run
+forever without printing a single character. The sources are identical and the
+compiler flags are consistent, so the difference is in what Verilator's
+optimizer is free to do once signals no longer have to stay observable -- and
+this flow waives `-Wno-unoptflat -Wno-blkandnblk -Wno-combdly -Wno-latch`,
+which is the class of construct where that changes behaviour rather than just
+speed. A model whose results depend on whether you can watch it is worse than a
+slower one, so the option is gone rather than documented as a footgun. The
+underlying divergence is not root-caused.
+
+`VERILATOR_TRACE_STRUCTS=1` and `VERILATOR_TRACE_PARAMS=1` remain separate
+opt-ins. They are part of `config.stamp`, so they belong on the build command;
+changing either drops the objects, because `VM_TRACE*` are compiler flags that
+Verilator's generated makefiles do not track. `magia_main.cpp` is a
+prerequisite of the executable, so editing it recompiles and relinks.
 
 Dumping is driven by `verilator/magia_main.cpp`, the maintained simulation main
 this flow uses instead of the one `--main` generates. It opens a trace only for
@@ -1258,7 +1267,7 @@ Do not validate these dumps with tsunami: it byte-swaps wide values on them
 
 Cost against the same configuration without tracing:
 
-| | no trace | `VERILATOR_TRACE=1` |
+| | no trace (removed) | tracing |
 | --- | --- | --- |
 | Child / parent C++ files | 310 / 136 | 439 / 192 |
 | Generated C++ | 178 + 38 MB | 453 + 94 MB |

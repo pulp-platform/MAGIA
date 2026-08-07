@@ -13,7 +13,13 @@ VERILATOR_CONTROL    := $(MAGIA_ROOT)/verilator/magia_hier.vlt
 VERILATOR_HIER_PARAMS := $(MAGIA_ROOT)/verilator/magia_hier_params.v
 
 VERILATOR_JOBS          ?= 4
-VERILATOR_TRACE         ?= 0
+# Tracing is always on. There is no VERILATOR_TRACE=0: the non-tracing model
+# builds and boots, but diverges from the tracing one on any test that does real
+# memory traffic -- boot_test passes either way, hello_mesh and inter_l1_test
+# only with tracing -- and nothing about that failure announces itself. A model
+# that runs a test differently depending on whether it can be observed is worse
+# than a slower one. Opening a dump is still opt-in at run time via +FST, so a
+# run that does not ask for a waveform pays only the larger binary.
 VERILATOR_TRACE_STRUCTS ?= 0
 VERILATOR_TRACE_PARAMS  ?= 0
 VERILATOR_CFLAGS        ?= -O2
@@ -25,8 +31,8 @@ VERILATOR_CFLAGS        ?= -O2
 # defines it implicitly: force it on both halves here.
 VERILATOR_ABI_CFLAGS    := -DVL_TIME_CONTEXT
 VERILATOR_RUN_TIMEOUT   ?= 120
-# Waveform file for verilate-run; needs a VERILATOR_TRACE=1 model. Empty means
-# the model is never asked for a dump, so tracing costs nothing.
+# Waveform file for verilate-run. Empty means the model is never asked for a
+# dump, so tracing costs nothing beyond the larger binary.
 VERILATOR_FST           ?=
 # Owns waveform dumping instead of a testbench $dumpvars, and replaces the main
 # Verilator would generate with --main. See the file for why both are required
@@ -50,15 +56,6 @@ ifeq ($(_VERILATOR_EXPECTED_NUM),0)
 $(error VERILATOR_EXPECTED_TILE_SPECIALIZATIONS must be a positive integer)
 endif
 
-ifeq ($(VERILATOR_TRACE),0)
-ifneq ($(VERILATOR_TRACE_STRUCTS),0)
-$(error VERILATOR_TRACE_STRUCTS=1 requires VERILATOR_TRACE=1)
-endif
-ifneq ($(VERILATOR_TRACE_PARAMS),0)
-$(error VERILATOR_TRACE_PARAMS=1 requires VERILATOR_TRACE=1)
-endif
-endif
-
 VERILATOR_ARGS = -j $(VERILATOR_JOBS) -Wno-fatal \
 	-Wno-style -Wno-timescalemod -Wno-redefmacro -Wno-implicit \
 	-Wno-ascrange -Wno-widthexpand -Wno-widthconcat -Wno-misindent \
@@ -67,14 +64,12 @@ VERILATOR_ARGS = -j $(VERILATOR_JOBS) -Wno-fatal \
 	-Wno-unoptflat -Wno-blkandnblk -Wno-ENUMVALUE \
 	--timing --autoflush
 
-ifeq ($(VERILATOR_TRACE),1)
 VERILATOR_ARGS += --trace-fst
 ifeq ($(VERILATOR_TRACE_STRUCTS),1)
 VERILATOR_ARGS += --trace-structs
 endif
 ifeq ($(VERILATOR_TRACE_PARAMS),1)
 VERILATOR_ARGS += --trace-params
-endif
 endif
 
 RISCV_DBG_ROOT    ?= $(shell $(BENDER) path riscv-dbg)
@@ -175,7 +170,6 @@ $(VERILATOR_BUILD_DIR)/.config-check: | $(VERILATOR_BUILD_DIR)
 	  echo "core=$(core)"; \
 	  echo "bender_targets=$(VERILATOR_BENDER_TARGS)"; \
 	  echo "bender_defines=$(bender_defs)"; \
-	  echo "trace=$(VERILATOR_TRACE)"; \
 	  echo "trace_structs=$(VERILATOR_TRACE_STRUCTS)"; \
 	  echo "trace_params=$(VERILATOR_TRACE_PARAMS)"; \
 	  echo "cflags=$(VERILATOR_CFLAGS) $(VERILATOR_ABI_CFLAGS)"; \
@@ -256,16 +250,16 @@ $(VERILATOR_CODEGEN_STAMP): $(VERILATOR_HIER_MK)
 	@touch $@
 
 # VM_TRACE/VM_TRACE_FST are compiler flags, and Verilator's generated makefiles
-# do not track them. Toggling VERILATOR_TRACE regenerates the sources whose
-# content changed, but every .o whose source happened to stay byte-identical is
-# reused -- compiled against the previous headers. Tracing adds members to the
+# do not track them. Toggling --trace-structs/--trace-params regenerates the
+# sources whose content changed, but every .o whose source happened to stay
+# byte-identical is reused -- compiled against the previous headers. Tracing adds members to the
 # generated root class, so the resulting mix shifts member offsets and the model
 # segfaults in its own constructor, dereferencing a vlNamep that is not a
 # pointer any more. Nothing about that failure points back at the trace flag.
 # Drop the objects when the trace configuration changes; identical mode leaves
 # the tree untouched, so a no-change rebuild stays a no-op.
 $(VERILATOR_BIN): $(VERILATOR_CODEGEN_STAMP) $(VERILATOR_MAIN)
-	@mode="trace=$(VERILATOR_TRACE) structs=$(VERILATOR_TRACE_STRUCTS) params=$(VERILATOR_TRACE_PARAMS)"; \
+	@mode="structs=$(VERILATOR_TRACE_STRUCTS) params=$(VERILATOR_TRACE_PARAMS)"; \
 	if [ -d $(VERILATOR_OBJ_DIR) ] && [ "$$mode" != "$$(cat $(VERILATOR_TRACE_MODE) 2>/dev/null)" ]; then \
 	  echo "trace configuration changed to [$$mode]; dropping stale objects"; \
 	  find $(VERILATOR_OBJ_DIR) \( -name '*.o' -o -name '*.a' -o -name '*.d' \) -delete; \
