@@ -79,7 +79,15 @@ module magia_vip
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
 
-  assign test_mode         = 1'b0;
+  // Held during reset so the tile's gated sys_clk keeps running while rst_n is
+  // low. Without it the tile is never reset at all: its clock gate is enabled
+  // by a flop that itself resets to 0, so sys_clk produces its first edge only
+  // after reset is released, and in a 2-state simulator rst_n powers up at 0 so
+  // clk_rst_gen's drive to 1'b0 at time 0 is not a falling edge either. The
+  // tile therefore sees neither of the two events `always_ff @(posedge clk_i or
+  // negedge rst_ni)` needs. Questa is unaffected because rst_n is X until time
+  // 0 and X -> 0 is a falling edge.
+  assign test_mode         = ~rst_n;
   assign tile_enable       = 1'b1;
   assign scan_cg_en        = 1'b0;
   assign mtvec_addr        = '0;
