@@ -108,10 +108,6 @@ the note below before changing it.
 
 `VERILATOR_FST`: **&lt;file&gt;** (**Default**: empty). Dump a waveform to this file.
 
-`VERILATOR_RUN_TIMEOUT`: **N** (**Default**: 120). Seconds before a run is
-killed. Verilator simulates roughly 1 us of the mesh per wall-clock second, so
-raise this for anything longer than a smoke test.
-
 **Instructions to build and run a Verilator simulation**:
 
 **1)** *Build* the model (`MAGIA` folder):
@@ -120,7 +116,7 @@ make verilate core=CV32E40P mesh_dv=1 VERILATOR_JOBS=16
 ```
 **2)** *Compile and run* a test (`MAGIA` folder):
 ```bash
-make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test VERILATOR_RUN_TIMEOUT=600
+make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test
 ```
 `verilate-run` compiles the test itself, so step **1** is optional — it is
 listed separately only because the model build takes a couple of minutes and
@@ -130,7 +126,7 @@ you usually want to do it once.
 ```bash
 source setup_env.sh
 make verilate core=CV32E40P mesh_dv=1 VERILATOR_JOBS=16
-make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test VERILATOR_RUN_TIMEOUT=600
+make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test
 ```
 
 Other targets: `verilate-gen` (code generation only), `verilate-build` (native
@@ -144,16 +140,14 @@ to capture a waveform. Dumping is off until a run asks for it, and a run that
 does not ask pays nothing beyond a larger binary:
 
 ```bash
-make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test \
-  VERILATOR_FST=dump.fst VERILATOR_RUN_TIMEOUT=600
+make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test VERILATOR_FST=dump.fst
 ```
 
 The file is written in the test's build directory. Waveforms include the
 internals of every tile.
 
-**Let the simulation reach `$finish`.** A run killed by
-`VERILATOR_RUN_TIMEOUT` leaves the FST unclosed, and an unclosed FST is not a
-file you can keep: the hierarchy is still sitting in a `<dump>.fst.hier`
+**Let the simulation reach `$finish`.** A run killed before it gets there
+leaves the FST unclosed, and an unclosed FST is not a file you can keep: the hierarchy is still sitting in a `<dump>.fst.hier`
 companion, so the dump reads only in place and loses every signal name the
 moment it is moved.
 
@@ -171,7 +165,7 @@ Do not read these dumps with tsunami — it byte-swaps wide values on them.
 
 ```bash
 make verilate core=CV32E40P mesh_dv=1 VERILATOR_JOBS=16 VERILATOR_THREADS=8
-make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test VERILATOR_THREADS=8 VERILATOR_RUN_TIMEOUT=600
+make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test VERILATOR_THREADS=8
 ```
 
 `VERILATOR_THREADS` must be identical on the build and the run: it is compiled into the

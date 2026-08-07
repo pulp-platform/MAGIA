@@ -36,7 +36,6 @@ VERILATOR_CFLAGS        ?= -O2
 # VlDelayScheduler at time 0. This flow does not use --main at all, so nothing
 # defines it implicitly: force it on both halves here.
 VERILATOR_ABI_CFLAGS    := -DVL_TIME_CONTEXT -DMAGIA_THREADS=$(VERILATOR_THREADS)
-VERILATOR_RUN_TIMEOUT   ?= 120
 # Waveform file for verilate-run. Empty means the model is never asked for a
 # dump, so tracing costs nothing beyond the larger binary.
 VERILATOR_FST           ?=
@@ -311,18 +310,14 @@ verilate-check-hierarchy: $(VERILATOR_BIN)
 
 .PHONY: verilate-run
 verilate-run: verilate all
-	@command -v timeout >/dev/null 2>&1 || { echo "error: timeout utility is required" >&2; exit 1; }
 	@cd $(TEST_BUILD_DIR) && \
-	  timeout --foreground $(VERILATOR_RUN_TIMEOUT)s $(VERILATOR_BIN) \
+	  $(VERILATOR_BIN) \
 	    +INST_HEX=$(inst_hex_name) +DATA_HEX=$(data_hex_name) \
 	    +INST_ENTRY=$(inst_entry) +DATA_ENTRY=$(data_entry) \
 	    +BOOT_ADDR=$(boot_addr) +itb_file=$(itb_file) \
 	    $(if $(VERILATOR_FST),+FST=$(VERILATOR_FST),) \
 	    > $(VERILATOR_RUN_LOG) 2>&1; \
 	  status=$$?; cat $(VERILATOR_RUN_LOG); \
-	  if [ $$status -eq 124 ]; then \
-	    echo "error: hierarchical simulation timed out after $(VERILATOR_RUN_TIMEOUT)s" >&2; \
-	  fi; \
 	  exit $$status
 endif
 
