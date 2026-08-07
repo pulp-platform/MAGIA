@@ -24,7 +24,7 @@
  * - EU direct link for low-latency Event Unit access (WFE control)
  * 
  * The demux decision is based on address range:
- * - EVENT_UNIT_ADDR_START to EVENT_UNIT_ADDR_END -> EU direct link
+ * - CTRL_EU_ADDR_START to CTRL_EU_ADDR_END -> EU direct link
  * - All other addresses -> Regular crossbar
  * 
  */
@@ -33,8 +33,8 @@ module core_data_demux_eu_direct
   import magia_tile_pkg::*;
   import magia_pkg::*;
 #(
-  parameter logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_START = magia_tile_pkg::EVENT_UNIT_ADDR_START,
-  parameter logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_END   = magia_tile_pkg::EVENT_UNIT_ADDR_END
+  parameter logic [magia_pkg::ADDR_W-1:0] CTRL_EU_ADDR_START = magia_tile_pkg::CTRL_EU_ADDR_START,
+  parameter logic [magia_pkg::ADDR_W-1:0] CTRL_EU_ADDR_END   = magia_tile_pkg::CTRL_EU_ADDR_END
 )(
   input  logic clk_i,
   input  logic rst_ni,
@@ -59,8 +59,8 @@ module core_data_demux_eu_direct
   logic use_eu_direct;
 
   assign use_eu_direct = core_data_req_i.req &&
-                         (core_data_req_i.addr >= EVENT_UNIT_ADDR_START) &&
-                         (core_data_req_i.addr <  EVENT_UNIT_ADDR_END);
+                         (core_data_req_i.addr >= CTRL_EU_ADDR_START) &&
+                         (core_data_req_i.addr <  CTRL_EU_ADDR_END);
 
   // ---------------------------------------------------------------------------
   // In-order response tracking — 2-entry FIFO of issued destinations
@@ -228,7 +228,7 @@ module core_data_demux_eu_direct
 
   // To EU direct link
   assign eu_direct_req_o.req   = core_data_req_i.req && use_eu_direct && can_issue;
-  assign eu_direct_req_o.addr  = core_data_req_i.addr - EVENT_UNIT_ADDR_START;
+  assign eu_direct_req_o.addr  = core_data_req_i.addr - CTRL_EU_ADDR_START;
   assign eu_direct_req_o.wen   = ~core_data_req_i.we;
   assign eu_direct_req_o.wdata = core_data_req_i.wdata;
   assign eu_direct_req_o.be    = core_data_req_i.be;

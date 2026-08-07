@@ -179,6 +179,7 @@ module magia_tile
   localparam int unsigned RuleFsync   = RuleIdma  + 1;
   localparam int unsigned RuleEu      = RuleFsync + 1;
   localparam int unsigned RuleCsr     = RuleEu    + 1;                // valid iff HasCsrPort
+  localparam int unsigned RuleClusterEu = RuleCsr + 1;                // valid iff EnCluster (implies HasCsrPort)
 
 /*******************************************************/
 /**       Configuration-Derived Localparams End       **/
@@ -365,9 +366,6 @@ module magia_tile
   logic core_clk;           // Clock gated per il core
   logic core_clk_en;        // Enable dal tile (sempre attivo)
 
-  // Core output signals
-  logic[magia_pkg::N_IRQ-1:0] irq;
-
   magia_tile_pkg::eu_events_t eu_events;
 
   logic                                clic_irq;
@@ -425,9 +423,9 @@ module magia_tile
   logic [magia_tile_pkg::EVENT_UNIT_IRQ_WIDTH-1:0] eu_core_irq_ack_id;
   logic                                           eu_core_clk_en;
   logic                                           eu_core_dbg_req;
-  // Per-core 32-bit irq vector for CV32E40P. EU IRQ is mapped to MEI (bit 11),
-  // all other bits forced to 0 to avoid X-propagation through irq_i.
-  logic [31:0]                                   core_irq_vec;  // Ctrl core IRQ vector only (cluster cores use cluster_irq_vec)
+  
+  // Per-core 32-bit irq vector
+  logic [31:0]                                   core_irq_vec;
 
   // Core data demux signals
   magia_tile_pkg::core_data_req_t core_data_req_to_xbar;
@@ -468,8 +466,8 @@ module magia_tile
   assign tile_idma_ctrl_end_addr      = magia_tile_pkg::IDMA_CTRL_ADDR_END;
   assign tile_fsync_ctrl_start_addr   = magia_tile_pkg::FSYNC_CTRL_ADDR_START;
   assign tile_fsync_ctrl_end_addr     = magia_tile_pkg::FSYNC_CTRL_ADDR_END;
-  assign tile_event_unit_start_addr   = magia_tile_pkg::EVENT_UNIT_ADDR_START;
-  assign tile_event_unit_end_addr     = magia_tile_pkg::EVENT_UNIT_ADDR_END;
+  assign tile_event_unit_start_addr   = magia_tile_pkg::CTRL_EU_ADDR_START;
+  assign tile_event_unit_end_addr     = magia_tile_pkg::CTRL_EU_ADDR_END;
   assign tile_reserved_start_addr     = magia_tile_pkg::RESERVED_ADDR_START + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
   assign tile_reserved_end_addr       = magia_tile_pkg::RESERVED_ADDR_END   + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
   assign tile_l1_start_addr           = magia_tile_pkg::L1_ADDR_START       + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
@@ -489,6 +487,10 @@ module magia_tile
 
   if (HasCsrPort) begin: gen_csr_rule
     assign obi_xbar_rule[RuleCsr] = '{idx: ObiSbr.csr,   start_addr: magia_tile_pkg::TILE_CSR_START,   end_addr: magia_tile_pkg::TILE_CSR_END    };
+  end
+
+  if (TileCfg.EnCluster) begin: gen_cluster_eu_rule
+    assign obi_xbar_rule[RuleClusterEu] = '{idx: ObiSbr.cluster_eu, start_addr: magia_tile_pkg::CLUSTER_EU_ADDR_START, end_addr: magia_tile_pkg::CLUSTER_EU_ADDR_END };
   end
 
   assign axi_xbar_rule[0] = '{idx: AxiMst.ext, start_addr: magia_tile_pkg::L2_ADDR_START, end_addr: magia_tile_pkg::L2_ADDR_END };
@@ -540,15 +542,6 @@ module magia_tile
   assign flush_valid[0]     = fencei_flush_req; // Single port i$
   assign fencei_flush_ack   = flush_ready[0];   // Signle port i$
 
-  assign irq[N_IRQ-1:19] = '0;
-  assign irq[18:16] = irq_i[18:16];
-  assign irq[15:12]                                 = '0;
-  assign irq[11]                                    = eu_core_irq_req; // Event Unit IRQ mapped to external interrupt (bit 11)
-  assign irq[10:8]                                  = '0;
-  assign irq[7]                                     = irq_i[7];
-  assign irq[6:4]                                   = '0;
-  assign irq[3]                                     = irq_i[3];
-  assign irq[2:0]                                   = '0;
   // CLIC unused
   assign clic_irq       = 1'b0;
   assign clic_irq_id    = '0;
@@ -559,15 +552,9 @@ module magia_tile
   // Icache control signals
   assign enable_prefetching = 1'b0;
   assign flush_valid        = '0;
-
-  assign irq[magia_pkg::N_IRQ-1:12] = '0;                 // Clear all high IRQs
-  assign irq[11]                    = eu_core_irq_req; // Event Unit IRQ mapped to external interrupt (bit 11)
-  assign irq[10:8]                  = '0;                 // Clear IRQs 8-10
-  assign irq[7]                     = 1'b0;               // Timer interrupt (unused)
-  assign irq[6:4]                   = '0;                 // Clear IRQs 4-6
-  assign irq[3]                     = 1'b0;               // Software interrupt (unused)
-  assign irq[2:0]                   = '0;                 // Clear IRQs 0-2
 `endif
+  // core_irq_vec (declared above, assigned in "Event Unit Beginning" below)
+  // is shared by both branches -- no per-core-type irq vector needed here.
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -1194,7 +1181,7 @@ end
     .xif_result_if       ( xif_if.cpu_result      ),
 
      // Interrupt interface
-    .irq_i               ( irq                    ),
+    .irq_i               ( core_irq_vec           ),
 
     .clic_irq_i          ( clic_irq               ),
     .clic_irq_id_i       ( clic_irq_id            ),
@@ -1876,24 +1863,28 @@ end
   assign eu_events.other[magia_tile_pkg::EU_OTHER_FSYNC_DONE]  = fsync_done;
   assign eu_events.other[magia_tile_pkg::EU_OTHER_FSYNC_ERROR] = fsync_error;
 
-  assign eu_events.other[magia_tile_pkg::EU_OTHER_CLUSTER_DONE-1 : 0] = '0;
-  assign eu_events.other[magia_tile_pkg::EU_OTHER_SPATZ_START-1  :
-                         magia_tile_pkg::EU_OTHER_CLUSTER_DONE+1] = '0;
+  // External, off-tile interrupts: with NB_CORES==1
+  assign eu_events.other[18:16] = irq_i[18:16];
 
-  // The cluster i$ control signals (prefetch enable, flush) are driven inside
-  // gen_pulp_cluster, next to the i$ they belong to.
+  assign eu_events.other[magia_tile_pkg::EU_OTHER_CLUSTER_DONE-1 : 0] = '0;
+  assign eu_events.other[15:13] = '0;
+  assign eu_events.other[magia_tile_pkg::EU_OTHER_SPATZ_START-1 : 19] = '0;
+
 
   // Core busy for the Event Unit (control core)
   assign eu_core_busy = ~core_sleep_o;
 
-  assign core_irq_vec = {13'b0, irq_i[18:16], 4'b0, eu_core_irq_req,
-                         3'b0, irq_i[7], 3'b0, irq_i[3], 3'b0};
+  // Every Event Unit cause now routed into the core_irq_vec. Software must take the trap and
+  // read the EU's own status (EU_CORE_BUFFER_IRQ_MASKED) to find out what and use the EU_CORE_BUFFER_CLEAR to deassert!!!
+  always_comb begin
+    core_irq_vec = '0;
+    if (eu_core_irq_req) core_irq_vec[11] = 1'b1;
+  end
 
 `ifdef CV32E40X
-  assign eu_core_irq_ack    = eu_core_irq_req;
-  assign eu_core_irq_ack_id = eu_core_irq_id;
+  assign eu_core_irq_ack = eu_core_irq_req;
 `endif
-  
+
  magia_event_unit #(
     .NB_CORES         ( 1                                          ),  // control core only
     .NB_SW_EVT        ( 1                                          ), 
@@ -1914,11 +1905,12 @@ end
     .timer_events_i   ( eu_events.timer                            ),
     .other_events_i   ( eu_events.other                            ),
 
-    // Core IRQ interface
+    // core_irq_ack_i tied to 0: the ack always reports id 11, so honoring
+    // it would blindly clear event_buffer_DP[11] regardless of the real cause.
     .core_irq_req_o   ( eu_core_irq_req                            ),
     .core_irq_id_o    ( eu_core_irq_id                             ),
-    .core_irq_ack_i   ( eu_core_irq_ack                            ),
-    .core_irq_ack_id_i( eu_core_irq_ack_id                         ),
+    .core_irq_ack_i   ( 1'b0                                       ),
+    .core_irq_ack_id_i( '0                                         ),
 
     // Core control
     .core_busy_i      ( eu_core_busy                               ),
@@ -1937,7 +1929,11 @@ end
     .eu_direct_rvalid_o   ( eu_direct_rvalid_flat                  ),
     .eu_direct_rdata_o    ( eu_direct_rdata_flat                   ),
     .eu_direct_err_o      ( eu_direct_err_flat                     ),
-    
+
+    .soc_periph_evt_valid_i ( 1'b0                                 ),
+    .soc_periph_evt_ready_o (                                      ),
+    .soc_periph_evt_data_i  ( '0                                   ),
+
     // OBI Peripheral Slave Interface
     .obi_req_i        ( core_mem_data_req[ObiSbr.eu]                               ),
     .obi_rsp_o        ( core_mem_data_rsp[ObiSbr.eu]                               )
@@ -2193,13 +2189,13 @@ if (TileCfg.EnCluster) begin: gen_pulp_cluster
 
   // Cluster control-register signals
   logic [31:0]              cluster_boot_addr [NClusterCores-1:0];
-  logic [NClusterCores-1:0] cluster_clk_en;
+  logic                     cluster_clk_en;
   logic [NClusterCores-1:0] cluster_fetch_enable;
-  logic [NClusterCores-1:0] cluster_start_irq;
+  logic                     cluster_start_irq;
   logic                     cluster_done;
 
-  // Per-core gated clocks
-  logic [NClusterCores-1:0] cluster_clk;
+  // Gated clock of cluster block
+  logic                     cluster_clk;
 
   // Per-core OBI data manager ports (tile OBI crossbar) 
   // per-core HCI data manager ports (HCI interconnect)
@@ -2235,15 +2231,13 @@ if (TileCfg.EnCluster) begin: gen_pulp_cluster
   // Cluster Events
   assign eu_events.other[magia_tile_pkg::EU_OTHER_CLUSTER_DONE] = cluster_done;
 
-  // Per-core cluster clock cells: pass-through
-  for (genvar j = 0; j < NClusterCores; j++) begin : gen_cluster_clk_gate
-    tc_clk_gating i_cluster_clk_gate (
-      .clk_i     ( sys_clk           ),
-      .en_i      ( cluster_clk_en[j] ),
-      .test_en_i ( test_mode_i       ),
-      .clk_o     ( cluster_clk[j]    )
-    );
-  end
+  // Clock gating for the cluster block
+  tc_clk_gating i_cluster_clk_gate (
+    .clk_i     ( sys_clk        ),
+    .en_i      ( cluster_clk_en ),
+    .test_en_i ( test_mode_i    ),
+    .clk_o     ( cluster_clk    )
+  );
 
   // Cluster cores + per-core data demux + OBI/HCI converters.
   magia_cluster_wrap #(
@@ -2252,25 +2246,27 @@ if (TileCfg.EnCluster) begin: gen_pulp_cluster
     .hci_req_t     ( tile_hci_data_req_t ),
     .hci_rsp_t     ( tile_hci_data_rsp_t )
   ) i_cluster (
-    .sys_clk_i              ( sys_clk              ),  // Gated system clock (dispatch-IRQ FSM)
-    .rst_ni                 ( rst_ni               ),
-    .test_mode_i            ( test_mode_i          ),
-    .cluster_clk_i          ( cluster_clk          ),  // Per-core gated clocks
-    .mhartid_i              ( mhartid_i            ),
-    .tile_l1_start_addr_i   ( tile_l1_start_addr   ),
-    .tile_l1_end_addr_i     ( tile_l1_end_addr     ),
+    .clk_i                  ( cluster_clk                            ),  // Gated clock of the whole block
+    .rst_ni                 ( rst_ni                                 ),
+    .test_mode_i            ( test_mode_i                            ),
+    .mhartid_i              ( mhartid_i                              ),
+    .tile_l1_start_addr_i   ( tile_l1_start_addr                     ),
+    .tile_l1_end_addr_i     ( tile_l1_end_addr                       ),
     // Control from the cluster CSR
-    .cluster_boot_addr_i    ( cluster_boot_addr    ),
-    .cluster_fetch_enable_i ( cluster_fetch_enable ),
-    .cluster_start_irq_i    ( cluster_start_irq    ),
+    .cluster_boot_addr_i    ( cluster_boot_addr                      ),
+    .cluster_fetch_enable_i ( cluster_fetch_enable                   ),
+    .cluster_start_irq_i    ( cluster_start_irq                      ),
+    // Memory-mapped port of the cluster-private Event Unit
+    .cluster_eu_obi_req_i    ( core_mem_data_req[ObiSbr.cluster_eu]  ),
+    .cluster_eu_obi_rsp_o    ( core_mem_data_rsp[ObiSbr.cluster_eu]  ),
     // Per-core data manager ports
-    .cluster_obi_data_req_o ( cluster_obi_data_req ),
-    .cluster_obi_data_rsp_i ( cluster_obi_data_rsp ),
-    .cluster_hci_data_req_o ( cluster_hci_data_req ),
-    .cluster_hci_data_rsp_i ( cluster_hci_data_rsp ),
+    .cluster_obi_data_req_o ( cluster_obi_data_req                   ),
+    .cluster_obi_data_rsp_i ( cluster_obi_data_rsp                   ),
+    .cluster_hci_data_req_o ( cluster_hci_data_req                   ),
+    .cluster_hci_data_rsp_i ( cluster_hci_data_rsp                   ),
     // Per-core instruction fetch ports (shared cluster i$)
-    .cluster_instr_req_o    ( cluster_instr_req    ),
-    .cluster_instr_rsp_i    ( cluster_instr_rsp    )
+    .cluster_instr_req_o    ( cluster_instr_req                      ),
+    .cluster_instr_rsp_i    ( cluster_instr_rsp                      )
   );
 
   // OBI xbar path

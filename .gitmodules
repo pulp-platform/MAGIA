@@ -1,3 +1,6 @@
 [submodule "magia-sdk"]
 	path = magia-sdk
 	url = https://github.com/pulp-platform/magia-sdk.git
+[submodule "PLAY"]
+	path = PLAY
+	url = https://github.com/FondazioneChipsIT/PLAY
