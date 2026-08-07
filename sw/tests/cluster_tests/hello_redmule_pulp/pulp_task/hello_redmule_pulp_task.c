@@ -22,11 +22,17 @@
  * All 8 cores serialize on hwpe_acquire_job(); the winner programs RedMulE
  * and polls STATUS. Each core writes into its own Y slot (Y_BASE + id*Y_STRIDE)
  * so there is no shared-buffer race. crt0 writes PULP_DONE on return.
+ *
+ * Only core 0 is ever dispatched directly (pulp_crt0.S's single mailbox);
+ * hello_redmule_pulp_task forks the actual body onto all 8 cores with
+ * pi_cl_team_fork() so cores 1-7 -- parked in worker_wait otherwise -- run
+ * it too.
  */
 
 #include "magia_tile_utils.h"
 #include "redmule_mm_utils.h"
 #include "magia_utils.h"
+#include "cluster_utils.h"
 
 /* Do NOT include x_input.h/w_input.h/y_input.h: with ORIGIN=0 their symbol
    addresses alias tile MMIO at runtime. Use X_BASE/W_BASE/Y_BASE instead. */
@@ -59,7 +65,7 @@ static inline void enable_fpu(void) {
     );
 }
 
-void hello_redmule_pulp_task(void *data) {
+static void hello_redmule_pulp_fork_entry(void *data) {
     (void)data;
     enable_fpu();
 
@@ -105,5 +111,9 @@ void hello_redmule_pulp_task(void *data) {
       printf("[Tile %u PULP-%u mhartid %u] RedMulE done, exiting\n",
                tile_id, local_id, hartid);
     }
-    /* trap_handler writes 1 to PULP_DONE on return. */
+}
+
+void hello_redmule_pulp_task(void *data) {
+    pi_cl_team_fork(PULP_CORE_COUNT, hello_redmule_pulp_fork_entry, data);
+    /* pulp_crt0.S dispatcher writes 1 to PULP_DONE on return. */
 }

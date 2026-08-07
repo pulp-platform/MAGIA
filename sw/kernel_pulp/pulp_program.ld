@@ -66,6 +66,17 @@ SECTIONS
         . = ALIGN(4);
     } > prog
 
+    /* GOT: entries baked as ORIGIN=0 absolute (plain static link, no
+     * dynamic loader). pulp_crt0.S fixes them up in software on core 0. */
+    .got : {
+        . = ALIGN(4);
+        __got_start__ = .;
+        *(.got)
+        *(.got.plt)
+        . = ALIGN(4);
+        __got_end__ = .;
+    } > prog
+
     .bss : {
         . = ALIGN(4);
         __bss_start = .;

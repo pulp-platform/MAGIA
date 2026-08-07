@@ -20,15 +20,19 @@
 /*
  * hello_spatz_pulp — PULP cluster-core task.
  *
- * Dispatched via cluster_dispatch_task(HELLO_SPATZ_PULP_TASK, 0xFF). Each of the
- * 8 cluster cores reads its 1/8th slice of the Z vector (filled by Spatz on
- * the CV32 side: Z[i] = 1.0 + 2.0 = 3.0 FP16 = 0x4200), sums the raw uint16
- * bit-patterns into a uint32 partial sum, and writes the result to its
- * per-core L2 slot. On return the trap handler writes 1 to PULP_DONE.
+ * Dispatched via cluster_dispatch_task(HELLO_SPATZ_PULP_TASK), which lands
+ * on core 0 only (pulp_crt0.S's single mailbox). hello_spatz_pulp_task
+ * forks hello_spatz_pulp_fork_entry onto all 8 cores with pi_cl_team_fork()
+ * so cores 1-7 -- otherwise parked in worker_wait -- run it too. Each
+ * core's slice of the Z vector (filled by Spatz on the CV32 side: Z[i] =
+ * 1.0 + 2.0 = 3.0 FP16 = 0x4200) gets summed (raw uint16 bit-patterns into
+ * a uint32 partial sum) and written to its per-core L2 slot. After the
+ * fork's implicit barrier, core 0 reduces all 8 partials and returns the
+ * grand total through PULP_RETURN.
  *
  * Memory layout (shared with main.c):
  *   Z_BASE      = L1_BASE + 0x00002000   (256 FP16 elements, Spatz output)
- *   RESULT_BASE = L2_BASE + 0x00060000   (8 × uint32, one per cluster core)
+ *   RESULT_BASE = L2_BASE + 0x00060000   (8 x uint32, one per cluster core)
  */
 
 #include <stdint.h>
@@ -39,7 +43,7 @@
 #define Z_BASE      (L1_BASE + 0x00002000)
 #define RESULT_BASE (L2_BASE + 0x00060000)
 
-void hello_spatz_pulp_task(void *data) {
+static void hello_spatz_pulp_fork_entry(void *data) {
     (void)data;
 
     uint32_t local_id = cluster_core_id();
@@ -56,4 +60,16 @@ void hello_spatz_pulp_task(void *data) {
 
     if (local_id == 0)
         printf("[PULP core 0] partial_sum=0x%08x\n", partial_sum);
+}
+
+int hello_spatz_pulp_task(void *data) {
+    pi_cl_team_fork(PULP_CORE_COUNT, hello_spatz_pulp_fork_entry, data);
+
+    /* Safe to read every partial now -- the fork's barrier guarantees
+     * every core's write already happened. */
+    uint32_t grand_total = 0;
+    for (int i = 0; i < PULP_CORE_COUNT; i++) {
+        grand_total += mmio32(RESULT_BASE + 4 * i);
+    }
+    return (int)grand_total;
 }

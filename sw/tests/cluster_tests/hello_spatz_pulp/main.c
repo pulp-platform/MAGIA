@@ -142,7 +142,7 @@ int main(void) {
     printf("[CV32] Booting PULP cluster cores...\n");
     cluster_boot(PULP_BINARY_START);
     cluster_arm_done_event();
-    cluster_dispatch_task(HELLO_SPATZ_PULP_TASK, 0xFFu);
+    cluster_dispatch_task(HELLO_SPATZ_PULP_TASK);
     cluster_wait_done_eu();
 
     /* ------------------------------------------------------------------
@@ -167,6 +167,15 @@ int main(void) {
     } else {
         printf("[CV32] Grand total=0x%08x expected=0x%08x FAIL\n",
                grand_total, (unsigned)GOLDEN_TOTAL);
+        errors++;
+    }
+
+    /* Cross-check: hello_spatz_pulp_task also returns grand_total through
+     * PULP_RETURN, computed independently on the cluster side. */
+    uint32_t returned_total = (uint32_t)cluster_get_return_value();
+    if (returned_total != grand_total) {
+        printf("[CV32] PULP_RETURN=0x%08x != L2 grand_total=0x%08x FAIL\n",
+               returned_total, grand_total);
         errors++;
     }
 

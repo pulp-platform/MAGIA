@@ -55,7 +55,7 @@ int main(void) {
     /* Arm EU before dispatching the task to avoid missing DONE. */
     cluster_arm_done_event();
 
-    cluster_dispatch_task(FPU_CLUSTER_TEST_TASK, 0xFFu);
+    cluster_dispatch_task(FPU_CLUSTER_TEST_TASK);
 
     /* Sleep (cv.elw) until all cluster cores have signalled task done. */
     cluster_wait_done_eu();
@@ -90,6 +90,14 @@ int main(void) {
                    total_errors, passed_cores, PULP_CORE_COUNT);
     }
 
+    /* Cross-check: fpu_cluster_test_task also returns the same total error
+     * count through PULP_RETURN, summed independently on the cluster side. */
+    int returned_errors = cluster_get_return_value();
+    if (print_summary && returned_errors != (int)total_errors) {
+        printf("[fpu_cluster_test] PULP_RETURN=%d != L2 total_errors=%u FAIL\n",
+               returned_errors, total_errors);
+        total_errors++;
+    }
+
     return (int)total_errors;
-    
 }

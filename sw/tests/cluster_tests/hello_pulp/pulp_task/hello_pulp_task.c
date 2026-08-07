@@ -21,13 +21,19 @@
  * hello_pulp — PULP cluster-core task.
  *
  * Linked at 0x0 (PIC, ORIGIN=0) and embedded as .pulp_binary inside the
- * CV32 ELF (single-binary flow). The PULP cores boot here via crt0 and
- * stay in their dispatcher loop until the CV32 dispatches this function
- * with cluster_dispatch_task(HELLO_PULP_TASK, mask).
+ * CV32 ELF (single-binary flow). Core 0 boots into pulp_crt0.S's
+ * dispatcher_loop and jumps here when the CV32 calls
+ * cluster_dispatch_task(HELLO_PULP_TASK). Cores 1-7 stay parked on the
+ * Event Unit dispatch FIFO (pulp_crt0.S's worker_wait): this task runs on
+ * core 0 only, since it never forks work onto them (e.g. via
+ * pi_cl_team_fork()) -- the local_id==0 check below is therefore always
+ * true here, kept only so the print still makes sense if this task is
+ * ever extended to fork.
  *
  * The task is entered as `void hello_pulp_task(void *data)`; `data` is
  * whatever pointer the CV32 wrote to PULP_DATA (NULL here). When it
- * returns, the trap handler writes 1 to PULP_DONE and re-enters WFI.
+ * returns, pulp_crt0.S's dispatcher_loop writes 1 to PULP_DONE and goes
+ * back to sleep (cv.elw), not a trap/WFI.
  */
 
 #include "magia_tile_utils.h"

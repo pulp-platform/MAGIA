@@ -33,11 +33,11 @@ module obi_slave_ctrl_cluster
   output core_obi_data_rsp_t                               obi_rsp_o,
 
   // Control outputs to PULP cluster cores
-  output logic [NumCores-1:0] clk_en_o,                  // broadcast (replicated)
+  output logic                clk_en_o,                  // gates the whole cluster block
   output logic [31:0]         boot_addr_o [NumCores-1:0],
   output logic [NumCores-1:0] fetch_en_o,                // broadcast (replicated)
-  output logic                done_o,                    // DONE IRQ pulse when all selected cores complete
-  output logic [NumCores-1:0] start_irq_o                // per-core 1-cycle dispatch IRQ pulse
+  output logic                done_o,                    // 1-cycle pulse on a DONE write
+  output logic                start_irq_o                // 1-cycle event pulse, wired directly into core 0's Cluster Event Unit Buffer
 );
 
 //-----------------------------------------------------------------------------
@@ -45,25 +45,22 @@ module obi_slave_ctrl_cluster
 //   0x00 CLK_EN          : RW broadcast (1=enable all cores, 0=disable all)
 //                              writing CLK_EN also resets the READY counter
 //   0x04 BINARY          : RW PULP binary entry point (boot address)
-//   0x08 NB_CORES_TO_WAIT: RW number of cores expected to ACK + DONE per dispatch
-//   0x0C DONE            : W  each PULP core writes 1 after task returns;
-//                              after NB_CORES_TO_WAIT writes done_o pulses
-//   0x10 TASKBIN         : RW task function address; read by PULP cores
-//   0x14 DATA            : RW context pointer passed as arg0 to the task
-//   0x18 START           : RW CV32 writes one-hot core_mask -> 1-cycle IRQ pulse
-//                              PULP cores write 0 to ACK (before task);
-//                              register clears when all NB_CORES_TO_WAIT ACKs received
-//   0x1C READY           : R  reads as 1 once NumCores cores have written;
+//   0x08 DONE            : W  the dispatcher core writes 1 after the task returns -> done_o pulses
+//   0x0C TASKBIN         : RW task function address; read by PULP cores
+//   0x10 DATA            : RW context pointer passed as arg0 to the task
+//   0x14 START           : RW CV32 writes non-zero -> 1-cycle dispatch event on Cluster core 0's Event Unit; core 0 writes 0 to ACK
+//   0x18 READY           : R  reads as 1 once NumCores cores have written;
 //                          W  each PULP core writes 1 after boot (counter increment)
+//   0x1C RETURN          : RW task exit code; the dispatcher core writes it right before DONE
 //-----------------------------------------------------------------------------
 localparam logic [31:0] CLUSTER_CLK_EN            = 32'h00;
 localparam logic [31:0] CLUSTER_BINARY            = 32'h04;
-localparam logic [31:0] CLUSTER_NB_CORES_TO_WAIT  = 32'h08;
-localparam logic [31:0] CLUSTER_DONE              = 32'h0C;
-localparam logic [31:0] CLUSTER_TASKBIN           = 32'h10;
-localparam logic [31:0] CLUSTER_DATA              = 32'h14;
-localparam logic [31:0] CLUSTER_START             = 32'h18;
-localparam logic [31:0] CLUSTER_READY             = 32'h1C;
+localparam logic [31:0] CLUSTER_DONE              = 32'h08;
+localparam logic [31:0] CLUSTER_TASKBIN           = 32'h0C;
+localparam logic [31:0] CLUSTER_DATA              = 32'h10;
+localparam logic [31:0] CLUSTER_START             = 32'h14;
+localparam logic [31:0] CLUSTER_READY             = 32'h18;
+localparam logic [31:0] CLUSTER_RETURN            = 32'h1C;
 
 localparam int unsigned NumCoresW = magia_tile_pkg::gen_idx_width(NumCores);
 
@@ -78,19 +75,17 @@ assign addr_valid  = (obi_req_i.a.addr >= BaseAddr) &&
 // Registers
 logic                clk_en_q,           clk_en_d;
 logic [31:0]         entry_point_q,      entry_point_d;
-logic [NumCoresW:0]  nb_cores_to_wait_q, nb_cores_to_wait_d;
 logic                done_q,             done_d;
 logic [31:0]         taskbin_q,          taskbin_d;
 logic [31:0]         data_q,             data_d;
-logic [NumCores-1:0] start_q,            start_d;
+logic                start_q,            start_d;
+logic [31:0]         retval_q,           retval_d;
 
-// Counters
-logic [NumCoresW:0]  nb_recv_done_reqs_q,  nb_recv_done_reqs_d;
-logic [NumCoresW:0]  nb_recv_ack_reqs_q,   nb_recv_ack_reqs_d;
+// Boot counter (READY): still per-core, every hart reports once
 logic [NumCoresW:0]  nb_recv_ready_reqs_q, nb_recv_ready_reqs_d;
 
 // One-cycle start IRQ pulse register
-logic [NumCores-1:0] start_irq_q, start_irq_d;
+logic                start_irq_q, start_irq_d;
 
 // Response pipeline
 logic        rvalid_q, rvalid_d;
@@ -110,13 +105,11 @@ always_comb begin
   // Defaults: hold
   clk_en_d             = clk_en_q;
   entry_point_d        = entry_point_q;
-  nb_cores_to_wait_d   = nb_cores_to_wait_q;
   done_d               = 1'b0;
   taskbin_d            = taskbin_q;
   data_d               = data_q;
   start_d              = start_q;
-  nb_recv_done_reqs_d  = nb_recv_done_reqs_q;
-  nb_recv_ack_reqs_d   = nb_recv_ack_reqs_q;
+  retval_d             = retval_q;
   nb_recv_ready_reqs_d = nb_recv_ready_reqs_q;
   start_irq_d          = '0;  // default: no IRQ pulse this cycle
 
@@ -131,12 +124,10 @@ always_comb begin
       CLUSTER_BINARY: begin
         entry_point_d = obi_req_i.a.wdata;
       end
-      CLUSTER_NB_CORES_TO_WAIT: begin
-        nb_cores_to_wait_d = obi_req_i.a.wdata[NumCoresW:0];
-      end
       CLUSTER_DONE: begin
-        // Each PULP core writes 1 here on completion (write data ignored)
-        nb_recv_done_reqs_d = nb_recv_done_reqs_q + 1;
+        // The dispatcher core writes 1 here when the task returns (data ignored):
+        // one write is one completed dispatch, no quorum involved.
+        done_d = 1'b1;
       end
       CLUSTER_TASKBIN: begin
         taskbin_d = obi_req_i.a.wdata;
@@ -144,16 +135,18 @@ always_comb begin
       CLUSTER_DATA: begin
         data_d = obi_req_i.a.wdata;
       end
+      CLUSTER_RETURN: begin
+        // The dispatcher core writes the task's exit code here, right before DONE.
+        retval_d = obi_req_i.a.wdata;
+      end
       CLUSTER_START: begin
         if (obi_req_i.a.wdata != 32'h0) begin
-          // CV32 dispatch: latch core_mask, reset counters, fire 1-cycle IRQ pulses
-          start_d             = obi_req_i.a.wdata[NumCores-1:0];
-          nb_recv_ack_reqs_d  = '0;
-          nb_recv_done_reqs_d = '0;
-          start_irq_d         = obi_req_i.a.wdata[NumCores-1:0];
+          // CV32 dispatch: latch the request and fire the 1-cycle event pulse
+          start_d     = 1'b1;
+          start_irq_d = 1'b1;
         end else begin
-          // PULP core ACK (write 0): count; when all done, clear register
-          nb_recv_ack_reqs_d = nb_recv_ack_reqs_q + 1;
+          // ACK from core 0: clear the register, unblocking the CV32 poll
+          start_d = 1'b0;
         end
       end
       CLUSTER_READY: begin
@@ -165,18 +158,6 @@ always_comb begin
       default: ;
     endcase
   end
-
-  // Fire a one-cycle DONE pulse when all expected cores have completed.
-  if (nb_recv_done_reqs_d >= nb_cores_to_wait_q && nb_cores_to_wait_q != '0) begin
-    done_d              = 1'b1;
-    nb_recv_done_reqs_d = '0;
-  end
-
-  // Clear PULP_START when all expected cores have ACK'd (write 0)
-  if (nb_recv_ack_reqs_d >= nb_cores_to_wait_q && nb_cores_to_wait_q != '0) begin
-    start_d            = '0;
-    nb_recv_ack_reqs_d = '0;
-  end
 end
 
 // ============================================
@@ -186,27 +167,23 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
   if (!rst_ni) begin
     clk_en_q             <= 1'b0;
     entry_point_q        <= 32'hCC000080;
-    nb_cores_to_wait_q   <= NumCores;
     done_q               <= 1'b0;
     taskbin_q            <= 32'h0;
     data_q               <= 32'h0;
-    start_q              <= '0;
-    nb_recv_done_reqs_q  <= '0;
-    nb_recv_ack_reqs_q   <= '0;
+    start_q              <= 1'b0;
+    retval_q             <= 32'h0;
     nb_recv_ready_reqs_q <= '0;
-    start_irq_q          <= '0;
+    start_irq_q          <= 1'b0;
     rvalid_q             <= 1'b0;
     rdata_q              <= 32'h0;
   end else begin
     clk_en_q             <= clk_en_d;
     entry_point_q        <= entry_point_d;
-    nb_cores_to_wait_q   <= nb_cores_to_wait_d;
     done_q               <= done_d;
     taskbin_q            <= taskbin_d;
     data_q               <= data_d;
     start_q              <= start_d;
-    nb_recv_done_reqs_q  <= nb_recv_done_reqs_d;
-    nb_recv_ack_reqs_q   <= nb_recv_ack_reqs_d;
+    retval_q             <= retval_d;
     nb_recv_ready_reqs_q <= nb_recv_ready_reqs_d;
     start_irq_q          <= start_irq_d;
     rvalid_q             <= rvalid_d;
@@ -228,19 +205,19 @@ always_comb begin
     case (addr_offset)
       CLUSTER_CLK_EN:           rdata_d = {31'h0, clk_en_q};
       CLUSTER_BINARY:           rdata_d = entry_point_q;
-      CLUSTER_NB_CORES_TO_WAIT: rdata_d = {{(32-NumCoresW-1){1'b0}}, nb_cores_to_wait_q};
       CLUSTER_DONE:             rdata_d = {31'h0, done_q};
       CLUSTER_TASKBIN:          rdata_d = taskbin_q;
       CLUSTER_DATA:             rdata_d = data_q;
-      CLUSTER_START:            rdata_d = {{(32-NumCores){1'b0}}, start_q};
+      CLUSTER_RETURN:           rdata_d = retval_q;
+      CLUSTER_START:            rdata_d = {31'h0, start_q};
       CLUSTER_READY:            rdata_d = {31'h0, ready_reg_val};
       default:                  rdata_d = 32'hDEADBEEF;
     endcase
   end
 end
 
-// Outputs: broadcast clk_en and fetch_en to all cores (replicated bit)
-assign clk_en_o     = {NumCores{clk_en_q}};
+// Outputs: single clock enable for the cluster block, fetch_en replicated per core
+assign clk_en_o     = clk_en_q;
 assign fetch_en_o   = {NumCores{clk_en_q}};
 assign done_o       = done_q;
 assign start_irq_o  = start_irq_q;

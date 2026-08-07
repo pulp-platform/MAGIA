@@ -47,34 +47,44 @@
  *                                 to disable. Writes also reset READY counter.
  *   +0x04 PULP_BINARY           : entry point address (boot vector) for all
  *                                 cluster cores
- *   +0x08 PULP_NB_CORES_TO_WAIT : popcount of dispatch mask (ACK + DONE quorum)
- *   +0x0C PULP_DONE             : W = each PULP hart signals completion;
- *                                 after the quorum the CSR emits EU bit 12
- *   +0x10 PULP_TASKBIN          : R/W per-dispatch task function address read
- *                                 by each PULP core in its trap handler
- *   +0x14 PULP_DATA             : R/W per-dispatch opaque data ptr passed as
+ *   +0x08 PULP_DONE             : W = the dispatcher core signals completion;
+ *                                 each write emits EU bit 12 to the CV32
+ *   +0x0C PULP_TASKBIN          : R/W per-dispatch task function address, read
+ *                                 by core 0 in its dispatcher_loop
+ *   +0x10 PULP_DATA             : R/W per-dispatch opaque data ptr passed as
  *                                 first argument to the task
- *   +0x18 PULP_START            : R/W CV32 writes one-hot mask -> per-core
- *                                 1-cycle MEI pulse; cores write 0 to ACK; the
- *                                 register self-clears when all N ACKs arrive
- *   +0x1C PULP_READY            : R = 1 once N_CLUSTER_CORES cores have booted;
+ *   +0x14 PULP_START            : R/W CV32 writes any non-zero value -> 1-cycle
+ *                                 doorbell event on core 0's Event Unit slice
+ *                                 (EU_OTHER_CLUSTER_START, bit 13), same pattern
+ *                                 as SPATZ_START on the Spatz CSR; core 0 writes
+ *                                 0 to ACK, which clears the register. Only core
+ *                                 0 ever talks to the control core -- no mask.
+ *   +0x18 PULP_READY            : R = 1 once N_CLUSTER_CORES cores have booted;
  *                                 W = each core posts 1 when its dispatcher is
  *                                 armed (counter increment)
+ *   +0x1C PULP_RETURN           : R/W task exit code; dispatcher writes it right
+ *                                 before PULP_DONE, CV32 reads it after PULP_DONE
+ *                                 fires. Real for tasks that `return` an int;
+ *                                 existing `void` tasks leave it meaningless.
  */
 #define PULP_CTRL_BASE        (0x00001740)
 #define PULP_CLK_EN           (PULP_CTRL_BASE + 0x00)
 #define PULP_BINARY           (PULP_CTRL_BASE + 0x04)
-#define PULP_NB_CORES_TO_WAIT (PULP_CTRL_BASE + 0x08)
-#define PULP_DONE             (PULP_CTRL_BASE + 0x0C)
-#define PULP_TASKBIN          (PULP_CTRL_BASE + 0x10)
-#define PULP_DATA             (PULP_CTRL_BASE + 0x14)
-#define PULP_START            (PULP_CTRL_BASE + 0x18)
-#define PULP_READY            (PULP_CTRL_BASE + 0x1C)
+#define PULP_DONE             (PULP_CTRL_BASE + 0x08)
+#define PULP_TASKBIN          (PULP_CTRL_BASE + 0x0C)
+#define PULP_DATA             (PULP_CTRL_BASE + 0x10)
+#define PULP_START            (PULP_CTRL_BASE + 0x14)
+#define PULP_READY            (PULP_CTRL_BASE + 0x18)
+#define PULP_RETURN           (PULP_CTRL_BASE + 0x1C)
 #define PULP_CTRL_END         (0x000017FF)
 #define PULP_CORE_COUNT       (8)
 #define PULP_HARTID_BASE      (32)   /* 2 * NUM_CLUSTERS (16) */
-#define RESERVED_START  (0x00001800)   
-#define RESERVED_END    (0x0000FFFF)   
+#define CLUSTER_EU_DIRECT_BASE (0x00001800)
+#define CLUSTER_EU_DIRECT_END  (0x000027FF)
+#define CLUSTER_EU_BASE       (0x00002800)
+#define CLUSTER_EU_END        (0x000037FF)
+#define RESERVED_START  (0x00003800)
+#define RESERVED_END    (0x0000FFFF)
 #define STACK_START     (0x00010000)
 #define STACK_END       (0x0001FFFF)
 #define L1_BASE         (0x00020000)

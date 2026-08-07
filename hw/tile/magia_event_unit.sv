@@ -15,22 +15,29 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- *          
- * Wrapper module for MAGIA Event Unit optimized for single-core systems
-*/
+ *
+ * Wrapper module for the MAGIA Event Unit (event_unit_flex).
+ *
+ * Instantiated twice in a tile:
+ *   - control core:  NB_CORES = 1, minimal barrier/dispatch resources
+ *   - PULP cluster:  NB_CORES = TileCfg.Cluster.NumCores, full resources
+ */
 
 module magia_event_unit
 import magia_tile_pkg::*;
 #(
-  // MAGIA Event Unit Parameters - Optimized for single-core system
-  parameter int unsigned NB_CORES = 1,              // Single core system
-  parameter int unsigned NB_SW_EVT = 1,             // Minimal SW events for basic functionality
-  parameter int unsigned NB_BARR  = 2,              // Minimum 2 barriers (workaround: $clog2(1)=0 causes issues)
-  parameter int unsigned NB_HW_MUT = 2,             // Minimum 2 mutexes (workaround: $clog2(1)=0 causes issues)
-  parameter int unsigned MUTEX_MSG_W = 32,          // Mutex message width (unused but kept for compatibility)
-  parameter int unsigned DISP_FIFO_DEPTH = 1,       // Minimal dispatcher FIFO (workaround for synthesis)
+  parameter int unsigned NB_CORES = 1,              // Number of cores served by this instance
+  parameter int unsigned NB_SW_EVT = 1,             // SW events
+  parameter int unsigned NB_BARR  = 2,              // HW barriers (minimum 2: $clog2(1)=0 causes issues)
+  parameter int unsigned NB_HW_MUT = 2,             // HW mutexes (minimum 2: $clog2(1)=0 causes issues)
+  parameter int unsigned MUTEX_MSG_W = 32,          // Mutex message width
+  parameter int unsigned DISP_FIFO_DEPTH = 1,       // Dispatcher FIFO depth
   parameter int unsigned EVNT_WIDTH = 8,            // SOC event width (external events)
-  parameter int unsigned SOC_FIFO_DEPTH = 8         // SOC event FIFO depth (external events)
+  parameter int unsigned SOC_FIFO_DEPTH = 8,        // SOC event FIFO depth (external events)
+
+  // Memory-mapped (speriph) window served by the OBI slave port below
+  parameter logic [magia_pkg::ADDR_W-1:0] EU_ADDR_START = magia_tile_pkg::CTRL_EU_ADDR_START,
+  parameter logic [magia_pkg::ADDR_W-1:0] EU_ADDR_END   = magia_tile_pkg::CTRL_EU_ADDR_END
 )
 (
   // clock and reset
@@ -69,6 +76,11 @@ import magia_tile_pkg::*;
   output logic [NB_CORES-1:0][31:0] eu_direct_rdata_o,
   output logic [NB_CORES-1:0]       eu_direct_err_o,
 
+  // SoC/peripheral event 
+  input  logic                      soc_periph_evt_valid_i,
+  output logic                      soc_periph_evt_ready_o,
+  input  logic [EVNT_WIDTH-1:0]     soc_periph_evt_data_i,
+
    // OBI slave connection
   input  core_obi_data_req_t        obi_req_i,
   output core_obi_data_rsp_t        obi_rsp_o
@@ -78,9 +90,6 @@ import magia_tile_pkg::*;
   XBAR_PERIPH_BUS #(.ID_WIDTH(NB_CORES+1)) eu_direct_link[NB_CORES-1:0]();
   XBAR_PERIPH_BUS #(.ID_WIDTH(NB_CORES+1)) speriph_slave();
 
-  // Internal signals
-  logic soc_periph_evt_ready_internal;
-  
   // Convert abstract eu_direct interface to XBAR_PERIPH_BUS (one per core)
   // eu_direct_addr_i already contains relative offset (subtracted by demux)
   generate
@@ -100,13 +109,12 @@ import magia_tile_pkg::*;
   endgenerate
 
   // Address range check and offset calculation
-  localparam logic [magia_pkg::ADDR_W-1:0] EU_BASE_ADDR = magia_tile_pkg::EVENT_UNIT_ADDR_START;
   logic addr_in_range;
   logic [magia_pkg::ADDR_W-1:0] addr_offset;
-  
-  assign addr_in_range = (obi_req_i.a.addr >= magia_tile_pkg::EVENT_UNIT_ADDR_START) &&
-                         (obi_req_i.a.addr <  magia_tile_pkg::EVENT_UNIT_ADDR_END);
-  assign addr_offset   = obi_req_i.a.addr - EU_BASE_ADDR;
+
+  assign addr_in_range = (obi_req_i.a.addr >= EU_ADDR_START) &&
+                         (obi_req_i.a.addr <  EU_ADDR_END);
+  assign addr_offset   = obi_req_i.a.addr - EU_ADDR_START;
   
   // OBI to XBAR_PERIPH_BUS conversion - pass RELATIVE address (offset from base)
   assign speriph_slave.req   = obi_req_i.req && addr_in_range;
@@ -152,9 +160,9 @@ import magia_tile_pkg::*;
     .core_clock_en_o          ( core_clock_en_o               ),
     .dbg_req_i                ( dbg_req_i                     ),
     .core_dbg_req_o           ( core_dbg_req_o                ),
-    .soc_periph_evt_valid_i   ( 1'b0                          ),
-    .soc_periph_evt_ready_o   ( soc_periph_evt_ready_internal ),
-    .soc_periph_evt_data_i    ( '0                            ),
+    .soc_periph_evt_valid_i   ( soc_periph_evt_valid_i        ),
+    .soc_periph_evt_ready_o   ( soc_periph_evt_ready_o        ),
+    .soc_periph_evt_data_i    ( soc_periph_evt_data_i         ),
     .speriph_slave            ( speriph_slave                 ),
     .eu_direct_link           ( eu_direct_link                )
   );
