@@ -93,7 +93,7 @@ Verilator builds the mesh **hierarchically**: the tile is compiled once into a
 separate library (`magia_tile_hier`) and instantiated 16 times, instead of
 being flattened 16 times over. This is what keeps the build tractable, and it
 is why the flow requires `mesh_dv=1` — there is no single-tile Verilator
-target.
+target at this time.
 
 The following *optional* parameters can be specified:
 
@@ -157,8 +157,6 @@ To check that a dump really contains the tile internals:
 make verilate-check-fst core=CV32E40P mesh_dv=1 test=inter_l1_test VERILATOR_FST=dump.fst
 ```
 
-Do not read these dumps with tsunami — it byte-swaps wide values on them.
-
 #### Multithreaded simulation (experimental)
 
 `VERILATOR_THREADS=8` runs the model on 8 threads:
@@ -177,16 +175,6 @@ model, and the two commands must agree or the model is rebuilt.
   `$finish` time). Only that one test was checked, once.
 - `VERILATOR_THREADS=4` **segfaults at time zero**, deterministically, in an
   `eval_initial` coroutine — from a clean build, same flags but the count.
-
-So a working thread count is not something that can be predicted, and 8 working
-is not evidence that it is *correct* — only that one test passed one time.
-Multithreading also makes evaluation order nondeterministic, which is exactly
-how an intermittent failure hides. Treat any result under `VERILATOR_THREADS>1` as
-suspect until the mesh regression passes repeatedly, and keep the default of 1
-for anything whose answer you intend to trust.
-
-Note the cost too: 8 threads bought 2x, using ~8x the CPU time and ~5x the
-memory.
 
 ## ⚙️ Architecture
 

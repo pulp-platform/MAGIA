@@ -38,13 +38,6 @@ module magia_tb;
       #10000;
     end
   end
-
-  // No $dumpfile/$dumpvars here on purpose. +FST=<file> is handled by the
-  // simulation main in `magia_main.cpp` instead, which opens the trace only
-  // after the first evaluation has constructed the magia_tile_hier children;
-  // a dump opened from an initial block runs before they exist and captures
-  // nothing inside any tile. There must be exactly one trace owner, and it is
-  // the C++ main.
 `endif
 
   initial begin
