@@ -151,12 +151,6 @@ leaves the FST unclosed, and an unclosed FST is not a file you can keep: the hie
 companion, so the dump reads only in place and loses every signal name the
 moment it is moved.
 
-To check that a dump really contains the tile internals:
-
-```bash
-make verilate-check-fst core=CV32E40P mesh_dv=1 test=inter_l1_test VERILATOR_FST=dump.fst
-```
-
 #### Multithreaded simulation (experimental)
 
 `VERILATOR_THREADS=8` runs the model on 8 threads:
