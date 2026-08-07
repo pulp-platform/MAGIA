@@ -69,10 +69,14 @@ CFLAGS     = $(ARCH_FLAGS) -O2 -g -Wall -Wextra -Wno-unused-parameter \
              -fPIC -mcmodel=medany \
              -fno-jump-tables \
              -msmall-data-limit=0 \
+             -mno-relax \
              -nostartfiles -nostdlib \
              -DPULP_CORE_COUNT=$(PULP_CORE_COUNT) \
              -D$(core) -U__riscv__
 CFLAGS    += -I../utils -I../../hw/include -I.
+
+# PLAY (submodule) include path and cluster/core count for pulp_program.ld
+CFLAGS    += -I../../PLAY/include -DCLUSTER=1 -DNUM_CORES=$(PULP_CORE_COUNT)
 
 LDFLAGS   = $(ARCH_FLAGS) -nostartfiles -nostdlib \
             -Wl,--gc-sections -Wl,--allow-multiple-definition \
