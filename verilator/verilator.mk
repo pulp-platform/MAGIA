@@ -13,6 +13,12 @@ VERILATOR_CONTROL    := $(MAGIA_ROOT)/verilator/magia_hier.vlt
 VERILATOR_HIER_PARAMS := $(MAGIA_ROOT)/verilator/magia_hier_params.v
 
 VERILATOR_JOBS          ?= 4
+# Threads the *simulation* runs on (VERILATOR_JOBS is build parallelism, which
+# is unrelated). Experimental: VERILATOR_THREADS=8 halved inter_l1_test, but 4
+# segfaults at time zero, deterministically, in an eval_initial coroutine. Same
+# design, same flags but the count -- so the working values are not understood
+# and none of them are trusted. Leave at 1 unless you are investigating this.
+VERILATOR_THREADS       ?= 1
 # Tracing is always on. There is no VERILATOR_TRACE=0: the non-tracing model
 # builds and boots, but diverges from the tracing one on any test that does real
 # memory traffic -- boot_test passes either way, hello_mesh and inter_l1_test
@@ -29,7 +35,7 @@ VERILATOR_CFLAGS        ?= -O2
 # path while the parent used the context one -- a mismatch that segfaults in
 # VlDelayScheduler at time 0. This flow does not use --main at all, so nothing
 # defines it implicitly: force it on both halves here.
-VERILATOR_ABI_CFLAGS    := -DVL_TIME_CONTEXT
+VERILATOR_ABI_CFLAGS    := -DVL_TIME_CONTEXT -DMAGIA_THREADS=$(VERILATOR_THREADS)
 VERILATOR_RUN_TIMEOUT   ?= 120
 # Waveform file for verilate-run. Empty means the model is never asked for a
 # dump, so tracing costs nothing beyond the larger binary.
@@ -48,6 +54,14 @@ ifeq ($(_VERILATOR_JOBS_NUM),0)
 $(error VERILATOR_JOBS must be a positive integer, got '$(VERILATOR_JOBS)')
 endif
 
+_VERILATOR_THREADS_NUM := $(strip $(shell expr $(VERILATOR_THREADS) + 0 2>/dev/null))
+ifeq ($(_VERILATOR_THREADS_NUM),)
+$(error VERILATOR_THREADS must be a positive integer, got '$(VERILATOR_THREADS)')
+endif
+ifeq ($(_VERILATOR_THREADS_NUM),0)
+$(error VERILATOR_THREADS must be a positive integer, got '$(VERILATOR_THREADS)')
+endif
+
 _VERILATOR_EXPECTED_NUM := $(strip $(shell expr $(VERILATOR_EXPECTED_TILE_SPECIALIZATIONS) + 0 2>/dev/null))
 ifeq ($(_VERILATOR_EXPECTED_NUM),)
 $(error VERILATOR_EXPECTED_TILE_SPECIALIZATIONS must be a positive integer)
@@ -62,7 +76,7 @@ VERILATOR_ARGS = -j $(VERILATOR_JOBS) -Wno-fatal \
 	-Wno-pinmissing -Wno-widthtrunc -Wno-unsigned -Wno-cmpconst \
 	-Wno-userfatal -Wno-caseincomplete -Wno-combdly -Wno-latch \
 	-Wno-unoptflat -Wno-blkandnblk -Wno-ENUMVALUE \
-	--timing --autoflush
+	--timing --autoflush --threads $(VERILATOR_THREADS)
 
 VERILATOR_ARGS += --trace-fst
 ifeq ($(VERILATOR_TRACE_STRUCTS),1)

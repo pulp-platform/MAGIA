@@ -25,6 +25,12 @@
 #include <cstring>
 #include <memory>
 
+// Mirrors --threads from verilator.mk. It has to match: VerilatedContext sizes
+// its pool to every core on the machine when nobody sets it.
+#ifndef MAGIA_THREADS
+#define MAGIA_THREADS 1
+#endif
+
 #if VM_TRACE
 // Path from +FST=<path>, or nullptr when no waveform was requested.
 static const char* fstPath(VerilatedContext* contextp) {
@@ -37,7 +43,7 @@ static const char* fstPath(VerilatedContext* contextp) {
 int main(int argc, char** argv, char**) {
     Verilated::debug(0);
     const std::unique_ptr<VerilatedContext> contextp{new VerilatedContext};
-    contextp->threads(1);
+    contextp->threads(MAGIA_THREADS);
     contextp->commandArgs(argc, argv);
 
 #if VM_TRACE
