@@ -18,6 +18,11 @@ VERILATOR_TRACE         ?= 0
 VERILATOR_TRACE_STRUCTS ?= 0
 VERILATOR_TRACE_PARAMS  ?= 0
 VERILATOR_CFLAGS        ?= -O2
+# Not an optimization: --main makes Verilator add -DVL_TIME_CONTEXT for the
+# parent only (V3EmitCMain.cpp:45), so the hier_block child library compiles
+# against the legacy vl_time_stamp() path while the parent uses the context
+# one. The mismatch segfaults in VlDelayScheduler at time 0. Force it on both.
+VERILATOR_ABI_CFLAGS    := -DVL_TIME_CONTEXT
 VERILATOR_RUN_TIMEOUT   ?= 120
 VERILATOR_EXPECTED_TILE_SPECIALIZATIONS ?= 1
 
@@ -153,7 +158,7 @@ $(VERILATOR_HIER_DIR)/.config-check: | $(VERILATOR_HIER_DIR)
 	  echo "trace=$(VERILATOR_TRACE)"; \
 	  echo "trace_structs=$(VERILATOR_TRACE_STRUCTS)"; \
 	  echo "trace_params=$(VERILATOR_TRACE_PARAMS)"; \
-	  echo "cflags=$(VERILATOR_CFLAGS)"; \
+	  echo "cflags=$(VERILATOR_CFLAGS) $(VERILATOR_ABI_CFLAGS)"; \
 	  echo "cppflags=$(CPPFLAGS)"; \
 	  echo "cxxflags=$(CXXFLAGS)"; \
 	  echo "ldflags=$(LDFLAGS)"; \
@@ -211,7 +216,8 @@ $(VERILATOR_HIER_MK): $(VERILATOR_FLIST) $(VERILATOR_CONFIG_STAMP) \
 		--hierarchical-params-file $(VERILATOR_HIER_PARAMS) \
 		$(VERILATOR_ARGS) $(VERILATOR_HIER_FLIST_FLAGS) \
 		--cc --main --exe -Mdir $(VERILATOR_OBJ_DIR) \
-		-CFLAGS "$(VERILATOR_CFLAGS)" --top-module $(VERILATOR_TOP) \
+		-CFLAGS "$(VERILATOR_CFLAGS) $(VERILATOR_ABI_CFLAGS)" \
+		--top-module $(VERILATOR_TOP) \
 		-f $(VERILATOR_FLIST); \
 		echo $$? > $(VERILATOR_HIER_DIR)/.codegen.status; } 2>&1 \
 		| tee $(VERILATOR_CODEGEN_LOG); \
