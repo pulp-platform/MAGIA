@@ -69,14 +69,20 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_START   = IDMA_CTRL_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_SIZE         = 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_END     = FSYNC_CTRL_ADDR_START + FSYNC_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_START   = FSYNC_CTRL_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_SIZE         = 32'h0000_1000;
-  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_END     = EVENT_UNIT_ADDR_START + EVENT_UNIT_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_START          = EVENT_UNIT_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] CTRL_EU_ADDR_START   = FSYNC_CTRL_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] CTRL_EU_SIZE         = 32'h0000_1000;
+  localparam logic [magia_pkg::ADDR_W-1:0] CTRL_EU_ADDR_END     = CTRL_EU_ADDR_START + CTRL_EU_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_START          = CTRL_EU_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_SIZE           = 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_END            = TILE_CSR_START + TILE_CSR_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = TILE_CSR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE           = 32'h0000_E800;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_DIRECT_START  = TILE_CSR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_DIRECT_SIZE   = 32'h0000_1000;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_DIRECT_END    = CLUSTER_EU_DIRECT_START + CLUSTER_EU_DIRECT_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_ADDR_START   = CLUSTER_EU_DIRECT_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_SIZE         = 32'h0000_1000;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_ADDR_END     = CLUSTER_EU_ADDR_START + CLUSTER_EU_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = CLUSTER_EU_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE           = 32'h0000_C800;
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END       = RESERVED_ADDR_START + RESERVED_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START        = RESERVED_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE              = 32'h0001_0000;
@@ -282,6 +288,14 @@ package magia_tile_pkg;
   // Parameters used by Event Unit
   parameter int unsigned EVENT_UNIT_IRQ_WIDTH = 5;                                      // Width of Event Unit IRQ ID signals (supports up to 32 different event types)
 
+  // Cluster-private Event Unit configuration
+  parameter int unsigned CLUSTER_EU_NB_SW_EVT       = 8;                                // SW events (pulp-sdk uses up to 8)
+  parameter int unsigned CLUSTER_EU_NB_HW_MUT       = 1;                                // HW mutexes (pulp_cluster default)
+  parameter int unsigned CLUSTER_EU_MUTEX_MSG_W     = 32;                               // HW mutex message width
+  parameter int unsigned CLUSTER_EU_DISP_FIFO_DEPTH = 8;                                // Dispatch FIFO depth (IP default; >=4 needed for fork/join)
+  parameter int unsigned CLUSTER_EU_EVNT_WIDTH      = 8;                                // SoC event ID width
+  parameter int unsigned CLUSTER_EU_SOC_FIFO_DEPTH  = 8;                                // SoC event FIFO depth
+
   parameter int unsigned REDMULE_DW         = DWH-32;                                   // RedMulE Data Width (default; per-tile in magia_tile.sv)
   parameter int unsigned REDMULE_UW         = UWH;                                      // RedMulE User Width
 
@@ -333,11 +347,9 @@ package magia_tile_pkg;
     int unsigned redmule;    // RedMulE control port (valid iff EnRedMule)
     int unsigned idma;       // iDMA control port
     int unsigned fsync;      // FractalSync control port
-    int unsigned eu;         // Event Unit port
-    int unsigned csr;        // Shared control-register port (valid iff EnSpatzCC or EnCluster).
-                             // The Spatz and cluster register blocks hang off it from
-                             // inside their own generate blocks; magia_tile muxes their
-                             // OBI responses (non-overlapping ranges, at most one grants).
+    int unsigned eu;         // Event Unit port (control core)
+    int unsigned cluster_eu; // Cluster-private Event Unit, memory-mapped view (valid iff EnCluster)
+    int unsigned csr;        // Shared control-register port (valid iff EnSpatzCC or EnCluster)
   } obi_sbr_map_t;
 
   function automatic obi_sbr_map_t gen_obi_sbr_map(magia_tile_cfg_t cfg);
@@ -351,9 +363,10 @@ package magia_tile_pkg;
     ret.idma  = idx++;
     ret.fsync = idx++;
     ret.eu    = idx++;
+    if (cfg.EnCluster) ret.cluster_eu = idx++;
     if (cfg.EnSpatzCC || cfg.EnCluster) ret.csr = idx++;  // hosts only Spatz/cluster control registers
     ret.num_sbr = idx;
-    ret.num_rules = 7 + 32'(cfg.EnRedMule) + 32'(cfg.EnSpatzCC || cfg.EnCluster);
+    ret.num_rules = 7 + 32'(cfg.EnRedMule) + 32'(cfg.EnSpatzCC || cfg.EnCluster) + 32'(cfg.EnCluster);
     return ret;
   endfunction
 
@@ -369,6 +382,7 @@ package magia_tile_pkg;
   localparam int unsigned EU_DMA_O2A_DONE        = 1;
 
   localparam int unsigned EU_OTHER_CLUSTER_DONE  = 12;
+  localparam int unsigned EU_OTHER_CLUSTER_START = 13;
   localparam int unsigned EU_OTHER_SPATZ_START   = 23;
   localparam int unsigned EU_OTHER_FSYNC_DONE    = 24;
   localparam int unsigned EU_OTHER_FSYNC_ERROR   = 25;

@@ -30,8 +30,8 @@
  *      CLK_EN, polls PULP_READY).
  *   3) Arm the CV32 Event Unit for PULP_DONE (EU bit 12).
  *   4) Dispatch the hello task to all 8 PULP cores by programming
- *      NB_CORES_TO_WAIT, TASKBIN and START.
- *   5) Sleep in WFE until the DONE quorum reaches the Event Unit.
+ *      TASKBIN and START.
+ *   5) Sleep in WFE until PULP_DONE reaches the Event Unit.
  *   6) Print the "done" message.
  */
 
@@ -58,7 +58,7 @@ int main(void) {
     cluster_arm_done_event();
 
     /* Dispatch the hello task to all 8 cluster cores of this tile. */
-    cluster_dispatch_task(HELLO_PULP_TASK, 0xFFu);
+    cluster_dispatch_task(HELLO_PULP_TASK);
 
     /* Sleep (cv.elw) until every cluster core of this tile has signalled
      * task completion. */

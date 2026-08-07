@@ -32,12 +32,9 @@ module magia_cluster_wrap
   parameter type                             hci_req_t     = magia_tile_pkg::core_hci_data_req_t,
   parameter type                             hci_rsp_t     = magia_tile_pkg::core_hci_data_rsp_t
 )(
-  input  logic sys_clk_i,  // Gated system clock (dispatch-IRQ stretch FSM)
+  input  logic clk_i,
   input  logic rst_ni,
   input  logic test_mode_i,
-
-  // Per-core gated clocks (one clock gate per core, driven in magia_tile).
-  input  logic [NClusterCores-1:0] cluster_clk_i,
 
   // Tile hart-id base (control core is 0; cluster cores start after the tiles' ctrl cores)
   input  logic [31:0] mhartid_i,
@@ -50,7 +47,11 @@ module magia_cluster_wrap
   // Control outputs from the cluster CSR (in magia_tile).
   input  logic [31:0]              cluster_boot_addr_i    [NClusterCores-1:0],
   input  logic [NClusterCores-1:0] cluster_fetch_enable_i,
-  input  logic [NClusterCores-1:0] cluster_start_irq_i,     // 1-cycle dispatch IRQ pulse per core
+  input  logic                     cluster_start_irq_i,     // 1-cycle pulse injected into cluster Event Unit as EU_OTHER_CLUSTER_START
+
+  // Memory-mapped (speriph) port of the cluster-private Event Unit, on the tile OBI xbar
+  input  magia_tile_pkg::core_obi_data_req_t cluster_eu_obi_req_i,
+  output magia_tile_pkg::core_obi_data_rsp_t cluster_eu_obi_rsp_o,
 
   // Per-core OBI data manager ports (peripheral path -> tile OBI crossbar)
   output magia_tile_pkg::core_obi_data_req_t [NClusterCores-1:0] cluster_obi_data_req_o,
@@ -65,16 +66,15 @@ module magia_cluster_wrap
   input  magia_tile_pkg::core_instr_rsp_t [NClusterCores-1:0] cluster_instr_rsp_i
 );
 
-  // Data-demux slave map: [0] = TCDM (L1) fast path, [1] = OBI (peripherals / default).
-  localparam int unsigned CLUSTER_DATA_N_SLV    = 2;
-  localparam int unsigned CLUSTER_DATA_TCDM_IDX = 0;
-  localparam int unsigned CLUSTER_DATA_OBI_IDX  = 1;
+  // Data-demux slave map: [0] = TCDM (L1) fast path, [1] = OBI (peripherals / default), [2] = cluster Event Unit demux window
+  localparam int unsigned CLUSTER_DATA_DEMUX_N_SLV    = 3;
+  localparam int unsigned CLUSTER_DATA_DEMUX_TCDM_IDX = 0;
+  localparam int unsigned CLUSTER_DATA_DEMUX_OBI_IDX  = 1;
+  localparam int unsigned CLUSTER_DATA_DEMUX_EU_IDX   = 2;
 
-  // ---------------------------------------------------------------------------
-  // Per-core sleep status, data/instruction interfaces and interrupt plumbing
-  // ---------------------------------------------------------------------------
-  // Kept for waveform/debug visibility of the WFI state (the Event Unit is
-  // control-core only, so this is not consumed elsewhere).
+  // -------------------------------------------------------------------------
+  // Per-core sleep status, data/instruction interfaces and interrupt signals
+  // -------------------------------------------------------------------------
   logic [NClusterCores-1:0] cluster_core_sleep;
 
   // Cluster core data interface (CV32E40P native channel type).
@@ -82,34 +82,38 @@ module magia_cluster_wrap
   magia_tile_pkg::cv32e40p_core_data_rsp_t [NClusterCores-1:0] cluster_data_rsp;
 
   // Per-core demux downstream ports ([i][TCDM], [i][OBI]).
-  magia_tile_pkg::cv32e40p_core_data_req_t [NClusterCores-1:0][CLUSTER_DATA_N_SLV-1:0] cluster_ddemux_req;
-  magia_tile_pkg::cv32e40p_core_data_rsp_t [NClusterCores-1:0][CLUSTER_DATA_N_SLV-1:0] cluster_ddemux_rsp;
+  magia_tile_pkg::cv32e40p_core_data_req_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_req;
+  magia_tile_pkg::cv32e40p_core_data_rsp_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_rsp;
 
-  // IRQ ack/id + stretched dispatch IRQ and the per-core 32-bit vector.
-  logic [NClusterCores-1:0]                                        cluster_irq_ack;
-  logic [NClusterCores-1:0][magia_tile_pkg::CLIC_ID_W_CLUSTER-1:0] cluster_irq_id;
-  logic [NClusterCores-1:0]                                        cluster_start_irq_pending;
+  // Per-core 32-bit interrupt vector
   logic [NClusterCores-1:0][31:0]                                  cluster_irq_vec;
 
-  // Dispatch IRQ is a 1-cycle pulse from the CSR; stretch it until the core acks.
-  always_ff @(posedge sys_clk_i or negedge rst_ni) begin
-    if (!rst_ni) begin
-      cluster_start_irq_pending <= '0;
-    end else begin
-      for (int unsigned i = 0; i < NClusterCores; i++) begin
-        if (cluster_irq_ack[i]) begin
-          cluster_start_irq_pending[i] <= 1'b0;
-        end else if (cluster_start_irq_i[i]) begin
-          cluster_start_irq_pending[i] <= 1'b1;
-        end
-      end
-    end
-  end
+  // Event Unit <-> core IRQ
+  logic [NClusterCores-1:0]                                        cluster_eu_irq_req;
+  logic [NClusterCores-1:0][magia_tile_pkg::EVENT_UNIT_IRQ_WIDTH-1:0] cluster_eu_irq_id;
+  logic [NClusterCores-1:0]                                        cluster_eu_clock_en;
 
-  // Per-core IRQ vector: MEI bit (11) driven by the stretched dispatch request,
-  // all other interrupt bits forced to 0.
+  // Per-core Event Unit direct link
+  logic [NClusterCores-1:0]       cluster_eu_direct_req;
+  logic [NClusterCores-1:0][31:0] cluster_eu_direct_addr;
+  logic [NClusterCores-1:0]       cluster_eu_direct_wen;
+  logic [NClusterCores-1:0][31:0] cluster_eu_direct_wdata;
+  logic [NClusterCores-1:0][3:0]  cluster_eu_direct_be;
+  logic [NClusterCores-1:0]       cluster_eu_direct_gnt;
+  logic [NClusterCores-1:0]       cluster_eu_direct_rvalid;
+  logic [NClusterCores-1:0][31:0] cluster_eu_direct_rdata;
+  logic [NClusterCores-1:0]       cluster_eu_direct_err;
+
+  //The cluster Event Unit is private: from outside it sees only the per-core dispatch pulse from the cluster CSR
+  logic [NClusterCores-1:0][31:0] cluster_eu_other_events;
+
+  // Per-core IRQ vector. Every Event Unit cause is OR'd onto the single Machine External Interrupt line (bit 11)
+  // Software disambiguates by reading the EU's own status (EU_CORE_BUFFER_IRQ_MASKED) after taking the trap
   for (genvar k = 0; k < NClusterCores; k++) begin : gen_cluster_irq_vec
-    assign cluster_irq_vec[k] = {20'b0, cluster_start_irq_pending[k], 11'b0};
+    always_comb begin
+      cluster_irq_vec[k] = '0;
+      if (cluster_eu_irq_req[k]) cluster_irq_vec[k][11] = 1'b1;
+    end
   end
 
   // ---------------------------------------------------------------------------
@@ -130,12 +134,9 @@ module magia_cluster_wrap
         .NUM_MHPMCOUNTERS    ( 29                                  )
       ) i_cv32e40p_core (
         // Clock and Reset
-        .clk_i                  ( cluster_clk_i[i]      ),  // Per-core gated clock
+        .clk_i                  ( clk_i                 ),  // Gated cluster clock
         .rst_ni                 ( rst_ni                ),
-
-        // Clock Interface — cluster cores always have clock enabled; rely on
-        // WFI / MEI (dispatch IRQ) for sleep/wake.
-        .pulp_clock_en_i        ( 1'b1                        ),  // For now without custom event unit
+        .pulp_clock_en_i        ( cluster_eu_clock_en[i]      ),
         .scan_cg_en_i           ( test_mode_i                 ),
         .boot_addr_i            ( cluster_boot_addr_i[i]      ),  // From cluster CSR, dynamic per tile
         .mtvec_addr_i           ( cluster_boot_addr_i[i]      ),  // mtvec defaults to boot vector; SW can override via csrw
@@ -157,11 +158,10 @@ module magia_cluster_wrap
         .data_gnt_i             ( cluster_data_rsp[i].gnt              ),
         .data_rvalid_i          ( cluster_data_rsp[i].rvalid           ),
         .data_rdata_i           ( cluster_data_rsp[i].rdata            ),
-        // Interrupts: PULP cluster cores receive only the per-core dispatch IRQ
-        // (MEI bit 11) from the cluster CSR. They are disconnected from the event unit.
+        // Interrupts: Event Unit cause OR'd onto MEI (bit 11), software disambiguates by reading the EU's own status (EU_CORE_BUFFER_IRQ_MASKED) after taking the trap
         .irq_i                  ( cluster_irq_vec[i]                  ),
-        .irq_ack_o              ( cluster_irq_ack[i]                  ),
-        .irq_id_o               ( cluster_irq_id[i]                   ),
+        .irq_ack_o              (                                     ),
+        .irq_id_o               (                                     ),
     
         .debug_req_i            ( 1'b0                                ),
         // Debug status outputs unused: no tile-level output exposes per-cluster-core debug status.
@@ -174,33 +174,35 @@ module magia_cluster_wrap
       );
   end
 
-  // ---------------------------------------------------------------------------
-  // Per-core data demux: L1/TCDM window -> dedicated HCI port, rest -> OBI xbar
-  // ---------------------------------------------------------------------------
+  // -------------------------------------------------------------------------------------------------------------------------------
+  // Per-core data demux: L1/TCDM window -> dedicated HCI port, EU demux window -> per-core Event Unit direct link, rest -> OBI xbar
+  // -------------------------------------------------------------------------------------------------------------------------------
   for (genvar i = 0; i < NClusterCores; i++) begin : gen_cluster_data_demux
 
-    // Runtime slave address ranges: TCDM = this tile's L1 window, OBI = default.
-    logic [magia_pkg::ADDR_W-1:0] cluster_ddemux_start_addr [CLUSTER_DATA_N_SLV-1:0];
-    logic [magia_pkg::ADDR_W-1:0] cluster_ddemux_end_addr   [CLUSTER_DATA_N_SLV-1:0];
-    assign cluster_ddemux_start_addr[CLUSTER_DATA_TCDM_IDX] = tile_l1_start_addr_i;
-    assign cluster_ddemux_end_addr  [CLUSTER_DATA_TCDM_IDX] = tile_l1_end_addr_i;
-    assign cluster_ddemux_start_addr[CLUSTER_DATA_OBI_IDX]  = '0; // unused (default slave)
-    assign cluster_ddemux_end_addr  [CLUSTER_DATA_OBI_IDX]  = '0; // unused (default slave)
+    logic [magia_pkg::ADDR_W-1:0] cluster_data_demux_start_addr [CLUSTER_DATA_DEMUX_N_SLV-1:0];
+    logic [magia_pkg::ADDR_W-1:0] cluster_data_demux_end_addr   [CLUSTER_DATA_DEMUX_N_SLV-1:0];
+
+    assign cluster_data_demux_start_addr[CLUSTER_DATA_DEMUX_TCDM_IDX] = tile_l1_start_addr_i;
+    assign cluster_data_demux_end_addr  [CLUSTER_DATA_DEMUX_TCDM_IDX] = tile_l1_end_addr_i;
+    assign cluster_data_demux_start_addr[CLUSTER_DATA_DEMUX_OBI_IDX]  = '0; // unused (default slave)
+    assign cluster_data_demux_end_addr  [CLUSTER_DATA_DEMUX_OBI_IDX]  = '0; // unused (default slave)
+    assign cluster_data_demux_start_addr[CLUSTER_DATA_DEMUX_EU_IDX]   = magia_tile_pkg::CLUSTER_EU_DIRECT_START;
+    assign cluster_data_demux_end_addr  [CLUSTER_DATA_DEMUX_EU_IDX]   = magia_tile_pkg::CLUSTER_EU_DIRECT_END - 1;
 
     core_data_demux #(
-      .NumSlv     ( CLUSTER_DATA_N_SLV                       ),
-      .DefaultSlv ( CLUSTER_DATA_OBI_IDX                     ),
+      .NumSlv     ( CLUSTER_DATA_DEMUX_N_SLV                       ),
+      .DefaultSlv ( CLUSTER_DATA_DEMUX_OBI_IDX                     ),
       .req_t      ( magia_tile_pkg::cv32e40p_core_data_req_t ),
       .rsp_t      ( magia_tile_pkg::cv32e40p_core_data_rsp_t )
     ) i_cluster_data_demux (
-      .clk_i            ( cluster_clk_i[i]          ),
+      .clk_i            ( clk_i                     ),
       .rst_ni           ( rst_ni                    ),
       .core_data_req_i  ( cluster_data_req[i]       ),
       .core_data_rsp_o  ( cluster_data_rsp[i]       ),
-      .slv_start_addr_i ( cluster_ddemux_start_addr ),
-      .slv_end_addr_i   ( cluster_ddemux_end_addr   ),
-      .slv_data_req_o   ( cluster_ddemux_req[i]     ),
-      .slv_data_rsp_i   ( cluster_ddemux_rsp[i]     )
+      .slv_start_addr_i ( cluster_data_demux_start_addr ),
+      .slv_end_addr_i   ( cluster_data_demux_end_addr   ),
+      .slv_data_req_o   ( cluster_data_demux_req[i]     ),
+      .slv_data_rsp_i   ( cluster_data_demux_rsp[i]     )
     );
   end
 
@@ -213,13 +215,13 @@ module magia_cluster_wrap
 
     // --- OBI (peripheral) path ---
     cv32e40p_data2obi_req i_cluster_data2obi (
-      .data_req_i ( cluster_ddemux_req[i][CLUSTER_DATA_OBI_IDX] ),
+      .data_req_i ( cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_OBI_IDX] ),
       .obi_req_o  ( cluster_obi_data_req_o[i]                   )
     );
 
     cv32e40p_obi2data_rsp i_cluster_obi2data (
       .obi_rsp_i  ( cluster_obi_data_rsp_i[i]                   ),
-      .data_rsp_o ( cluster_ddemux_rsp[i][CLUSTER_DATA_OBI_IDX] )
+      .data_rsp_o ( cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_OBI_IDX] )
     );
 
     // --- TCDM (L1) path: native mem -> OBI -> HCI dedicated interconnect port ---
@@ -227,13 +229,13 @@ module magia_cluster_wrap
     magia_tile_pkg::core_obi_data_rsp_t cluster_tcdm_obi_rsp;
 
     cv32e40p_data2obi_req i_cluster_tcdm_data2obi (
-      .data_req_i ( cluster_ddemux_req[i][CLUSTER_DATA_TCDM_IDX] ),
+      .data_req_i ( cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_TCDM_IDX] ),
       .obi_req_o  ( cluster_tcdm_obi_req                         )
     );
 
     cv32e40p_obi2data_rsp i_cluster_tcdm_obi2data (
       .obi_rsp_i  ( cluster_tcdm_obi_rsp                         ),
-      .data_rsp_o ( cluster_ddemux_rsp[i][CLUSTER_DATA_TCDM_IDX] )
+      .data_rsp_o ( cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_TCDM_IDX] )
     );
 
     obi2hci_req #(
@@ -252,5 +254,88 @@ module magia_cluster_wrap
       .obi_rsp_o ( cluster_tcdm_obi_rsp      )
     );
   end
+
+  // ---------------------------------------------------------------------------
+  // Cluster-private Event Unit
+  // ---------------------------------------------------------------------------
+
+  // Demux EU port (native core channel) -> EU direct link signals. The EU decodes
+  // offsets relative to its demux window, so the base address is subtracted here.
+  for (genvar i = 0; i < NClusterCores; i++) begin : gen_cluster_eu_direct
+    assign cluster_eu_direct_req[i]   = cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_EU_IDX].req;
+    assign cluster_eu_direct_addr[i]  = cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_EU_IDX].addr - magia_tile_pkg::CLUSTER_EU_DIRECT_START;
+    assign cluster_eu_direct_wen[i]   = ~cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_EU_IDX].we;
+    assign cluster_eu_direct_wdata[i] = cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_EU_IDX].wdata;
+    assign cluster_eu_direct_be[i]    = cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_EU_IDX].be;
+
+    assign cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_EU_IDX].gnt    = cluster_eu_direct_gnt[i];
+    assign cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_EU_IDX].rvalid = cluster_eu_direct_rvalid[i];
+    assign cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_EU_IDX].rdata  = cluster_eu_direct_rdata[i];
+    assign cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_EU_IDX].err    = cluster_eu_direct_err[i];
+
+    // Only event source wired from outside the cluster: the control-core pulse, which reaches core 0 only
+    always_comb begin
+      cluster_eu_other_events[i] = '0;
+      if (i == 0) begin
+        cluster_eu_other_events[i][magia_tile_pkg::EU_OTHER_CLUSTER_START] = cluster_start_irq_i;
+      end
+    end
+  end
+
+  magia_event_unit #(
+    .NB_CORES        ( NClusterCores                                ),
+    .NB_SW_EVT       ( magia_tile_pkg::CLUSTER_EU_NB_SW_EVT         ),
+    .NB_BARR         ( NClusterCores                                ),  // as in pulp_cluster
+    .NB_HW_MUT       ( magia_tile_pkg::CLUSTER_EU_NB_HW_MUT         ),
+    .MUTEX_MSG_W     ( magia_tile_pkg::CLUSTER_EU_MUTEX_MSG_W       ),
+    .DISP_FIFO_DEPTH ( magia_tile_pkg::CLUSTER_EU_DISP_FIFO_DEPTH   ),
+    .EVNT_WIDTH      ( magia_tile_pkg::CLUSTER_EU_EVNT_WIDTH        ),
+    .SOC_FIFO_DEPTH  ( magia_tile_pkg::CLUSTER_EU_SOC_FIFO_DEPTH    ),
+    .EU_ADDR_START   ( magia_tile_pkg::CLUSTER_EU_ADDR_START        ),
+    .EU_ADDR_END     ( magia_tile_pkg::CLUSTER_EU_ADDR_END          )
+  ) i_cluster_event_unit (
+    // Same gated clock as the cores: the Event Unit is part of the cluster block
+    .clk_i                  ( clk_i                    ),
+    .rst_ni                 ( rst_ni                   ),
+    .test_mode_i            ( test_mode_i              ),
+
+    // No tile accelerator / DMA / timer event reaches the cluster Event Unit
+    .acc_events_i           ( '0                       ),
+    .dma_events_i           ( '0                       ),
+    .timer_events_i         ( '0                       ),
+    .other_events_i         ( cluster_eu_other_events  ),
+
+    // core_irq_ack_i tied to 0, same as the control core: each core's ack
+    // always reports id 11, so honoring it would blindly clear the wrong cause.
+    .core_irq_req_o         ( cluster_eu_irq_req       ),
+    .core_irq_id_o          ( cluster_eu_irq_id        ),
+    .core_irq_ack_i         ( '0                       ),
+    .core_irq_ack_id_i      ( '0                       ),
+
+    .core_busy_i            ( ~cluster_core_sleep      ),
+    .core_clock_en_o        ( cluster_eu_clock_en      ),
+
+    // Cluster cores have no debug interface in MAGIA (debug_req_i tied to 0 above)
+    .dbg_req_i              ( '0                       ),
+    .core_dbg_req_o         (                          ),
+
+    .eu_direct_req_i        ( cluster_eu_direct_req    ),
+    .eu_direct_addr_i       ( cluster_eu_direct_addr   ),
+    .eu_direct_wen_i        ( cluster_eu_direct_wen    ),
+    .eu_direct_wdata_i      ( cluster_eu_direct_wdata  ),
+    .eu_direct_be_i         ( cluster_eu_direct_be     ),
+    .eu_direct_gnt_o        ( cluster_eu_direct_gnt    ),
+    .eu_direct_rvalid_o     ( cluster_eu_direct_rvalid ),
+    .eu_direct_rdata_o      ( cluster_eu_direct_rdata  ),
+    .eu_direct_err_o        ( cluster_eu_direct_err    ),
+
+    // Unused: ctrl-core -> core 0 notification goes through EU_OTHER_CLUSTER_START
+    .soc_periph_evt_valid_i ( 1'b0                      ),
+    .soc_periph_evt_ready_o (                           ),
+    .soc_periph_evt_data_i  ( '0                        ),
+
+    .obi_req_i              ( cluster_eu_obi_req_i     ),
+    .obi_rsp_o              ( cluster_eu_obi_rsp_o     )
+  );
 
 endmodule: magia_cluster_wrap

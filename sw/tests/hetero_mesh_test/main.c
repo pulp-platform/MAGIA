@@ -157,7 +157,7 @@ static unsigned int run_cluster(void) {
     eu_init();
     cluster_boot(PULP_BINARY_START);
     eu_cluster_done_init();
-    cluster_dispatch_task(HETERO_CLUSTER_TASK, (1u << PULP_CORE_COUNT) - 1u);
+    cluster_dispatch_task(HETERO_CLUSTER_TASK);
     eu_cluster_done_wait(EU_WAIT_MODE_WFE);
 
     uint32_t base = CL_RESULT_BASE + get_hartid() * CL_RESULT_STRIDE;
