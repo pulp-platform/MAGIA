@@ -41,3 +41,4 @@ sw/kernel_pulp/headers_bin/
 
 *.wlf
 *.dbg
+verilator/build

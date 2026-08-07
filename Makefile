@@ -583,4 +583,5 @@ magia-nonfree-init:
 	cd $(MAGIA_NONFREE_DIR) && git checkout $(MAGIA_NONFREE_COMMIT)
 	if [ "$(MAGIA_NONFREE_DEPS)" -eq "1" ]; then $(MAKE) nonfree-init-dep ; fi 
 
+include verilator/verilator.mk
 -include $(MAGIA_NONFREE_DIR)/nonfree.mk
