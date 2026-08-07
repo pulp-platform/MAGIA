@@ -38,6 +38,19 @@ module magia_tb;
       #10000;
     end
   end
+
+  // Waveform dumping, only when asked for: the model must be built with
+  // VERILATOR_TRACE=1 for these to do anything, and dumping costs a lot of
+  // run time. Verilator dumps the whole model regardless of the $dumpvars
+  // scope/level arguments.
+  string fst_file;
+  initial begin
+    if ($value$plusargs("FST=%s", fst_file)) begin
+      $display("[INFO] dumping waveform to %s", fst_file);
+      $dumpfile(fst_file);
+      $dumpvars(0, magia_tb);
+    end
+  end
 `endif
 
   initial begin

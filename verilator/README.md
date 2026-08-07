@@ -1137,3 +1137,48 @@ is what makes this measurable. Runtime speed was explicitly out of scope for the
 build work; see `verilator/IDEAS.md`. Note the hierarchical model is expected to
 be somewhat slower per cycle than a flat one, since Verilator cannot optimize
 across the block boundary.
+
+### Waveforms
+
+Tracing is opt-in at build time and again at run time:
+
+```sh
+make clean-verilate-hier core=CV32E40P mesh_dv=1
+make verilate-hier core=CV32E40P mesh_dv=1 VERILATOR_JOBS=64 VERILATOR_TRACE=1
+make verilate-run core=CV32E40P mesh_dv=1 VERILATOR_JOBS=64 \
+  test=hello_world VERILATOR_TRACE=1 VERILATOR_FST=dump.fst
+```
+
+`VERILATOR_TRACE=1` adds `--trace-fst`; `VERILATOR_TRACE_STRUCTS=1` and
+`VERILATOR_TRACE_PARAMS=1` are separate opt-ins under it and error out when
+tracing is off. `VERILATOR_TRACE` is part of `config.stamp`, so it must be on
+the build command, not only the run command. Rebuild from clean when changing
+it: `VM_TRACE`/`VM_TRACE_FST` are compiler flags, which Verilator's generated
+makefiles do not track.
+
+Dumping is driven by `$dumpfile`/`$dumpvars` in `magia_tb.sv`, gated behind a
+`+FST=<file>` plusarg inside the Verilator-only branch, so a trace-capable
+model that is run without the plusarg pays nothing. `VERILATOR_FST` passes the
+plusarg through `verilate-run`; the file is written in the test build
+directory. Verilator dumps the whole model regardless of the `$dumpvars`
+scope/level arguments.
+
+`--trace-fst` reaches the child library as well (it is not in
+`stripOptionsForChildRun`), so tile internals are traced. Verified: all 441
+child compiles carry `-DVM_TRACE_FST=1`, matching the parent.
+
+Cost against the same configuration without tracing:
+
+| | no trace | `VERILATOR_TRACE=1` |
+| --- | --- | --- |
+| Child / parent C++ files | 310 / 136 | 439 / 192 |
+| Generated C++ | 178 + 38 MB | 453 + 94 MB |
+| Codegen wall / peak RSS | 1:30.98 / 2.31 GB | 2:09.32 / 2.31 GB |
+| Native build wall / peak RSS | 22.17 s / 0.41 GB | 3:19.73 / 0.88 GB |
+| Executable / `obj_dir` | 12.5 MB / 692 MB | 51.4 MB / 1.3 GB |
+| Simulated time per wall second | ~1.2 us | ~0.7 us |
+
+A run killed by the `VERILATOR_RUN_TIMEOUT` (or any signal) does not close the
+FST cleanly, so the tail of the dump may be missing. For a usable waveform let
+the simulation reach `$finish`, or bound the dump with `$dumpon`/`$dumpoff`
+around the window of interest.

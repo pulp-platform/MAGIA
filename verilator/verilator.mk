@@ -24,6 +24,9 @@ VERILATOR_CFLAGS        ?= -O2
 # one. The mismatch segfaults in VlDelayScheduler at time 0. Force it on both.
 VERILATOR_ABI_CFLAGS    := -DVL_TIME_CONTEXT
 VERILATOR_RUN_TIMEOUT   ?= 120
+# Waveform file for verilate-run; needs a VERILATOR_TRACE=1 model. Empty means
+# the testbench never calls $dumpfile/$dumpvars, so tracing costs nothing.
+VERILATOR_FST           ?=
 VERILATOR_EXPECTED_TILE_SPECIALIZATIONS ?= 1
 
 _VERILATOR_JOBS_NUM := $(strip $(shell expr $(VERILATOR_JOBS) + 0 2>/dev/null))
@@ -266,6 +269,7 @@ verilate-run: verilate-hier all
 	    +INST_HEX=$(inst_hex_name) +DATA_HEX=$(data_hex_name) \
 	    +INST_ENTRY=$(inst_entry) +DATA_ENTRY=$(data_entry) \
 	    +BOOT_ADDR=$(boot_addr) +itb_file=$(itb_file) \
+	    $(if $(VERILATOR_FST),+FST=$(VERILATOR_FST),) \
 	    > $(VERILATOR_RUN_LOG) 2>&1; \
 	  status=$$?; cat $(VERILATOR_RUN_LOG); \
 	  if [ $$status -eq 124 ]; then \
