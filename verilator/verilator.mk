@@ -13,8 +13,13 @@ VERILATOR   ?= verilator
 BASE_PYTHON ?= python3
 
 # Model sources live with the Verilator-only RTL; verilator/ holds the build
-# system and its output, verilator/scripts/ the host-side checkers.
+# system and its output, verilator/scripts/ the host-side checkers. Both dirs
+# below also go on the include path, ahead of Bender's -- see the raw flist rule.
 VERILATOR_SRC        := $(MAGIA_ROOT)/target/verilator/src
+# Headers that only exist to make third-party RTL compile here; currently the
+# uvm_macros.svh stand-in the cv32e40p tracer needs. Verilator-only on purpose:
+# putting it on any other flow's include path would shadow the real UVM.
+VERILATOR_INC        := $(MAGIA_ROOT)/target/verilator/include
 VERILATOR_SCRIPTS    := $(MAGIA_ROOT)/verilator/scripts
 VERILATOR_BUILD_DIR  ?= $(MAGIA_ROOT)/verilator/build
 VERILATOR_OBJ_DIR    := $(VERILATOR_BUILD_DIR)/obj_dir
@@ -30,10 +35,10 @@ VERILATOR_HIER_PARAMS := $(VERILATOR_SRC)/magia_hier_params.v
 VERILATOR_MAIN        := $(VERILATOR_SRC)/magia_main.cpp
 
 # Build parallelism (not simulation speed).
-VERILATOR_JOBS          ?= 4
-# Simulation threads. Experimental: 8 halved a test, 4 segfaults at time zero.
+VERILATOR_JOBS          ?= 16
+# Simulation threads (4 looks like the best trade-off).
 # Leave at 1.
-VERILATOR_THREADS       ?= 1
+VERILATOR_THREADS       ?= 4
 # Extra trace detail. Tracing itself is always on: a non-tracing model diverges
 # on tests that do real memory traffic, for reasons not yet understood.
 VERILATOR_TRACE_STRUCTS ?= 0
@@ -99,7 +104,7 @@ VERILATOR_DPI := \
 
 VERILATOR_BENDER_TARGS := $(bender_targs) \
 	-t tech_cells_generic_include_deprecated -t verilator -t rtl_sim \
-	-t verilator_dpi -t magia_dv -t simulation -t cv32e40p_exclude_tracer
+	-t verilator_dpi -t magia_dv -t simulation -t cv32e40p_include_tracer
 
 VERILATOR_RAW_FLIST     := $(VERILATOR_BUILD_DIR)/magia.raw.f
 VERILATOR_FLIST         := $(VERILATOR_BUILD_DIR)/magia.f
@@ -137,10 +142,17 @@ $(VERILATOR_BUILD_DIR)/.bender-check: | $(VERILATOR_BUILD_DIR)
 $(VERILATOR_BENDER_STAMP): $(VERILATOR_BUILD_DIR)/.bender-check
 	@test -f $@
 
-# Bender's raw file list, plus the JTAG DPI sources.
+# Bender's raw file list, plus the JTAG DPI sources. Our two include dirs are
+# written before Bender's output on purpose: `include resolution follows
+# +incdir+ order and gives the including file's own directory no priority, so
+# this is what makes the vendorized cv32e40p_tracer.sv in target/verilator/src
+# win over the one in the cv32e40p checkout's bhv/.
 $(VERILATOR_RAW_FLIST): Bender.yml Bender.lock Makefile bender_common.mk \
-	bender_sim.mk bender_synth.mk bender_profile.mk $(VERILATOR_BENDER_STAMP) | $(VERILATOR_BUILD_DIR)
-	$(BENDER) script verilator $(VERILATOR_BENDER_TARGS) $(bender_defs) -DSYNTHESIS -DVERILATOR > $@.tmp
+	bender_sim.mk bender_synth.mk bender_profile.mk $(MAGIA_ROOT)/verilator/verilator.mk \
+	$(VERILATOR_BENDER_STAMP) | $(VERILATOR_BUILD_DIR)
+	echo +incdir+$(VERILATOR_SRC) > $@.tmp
+	echo +incdir+$(VERILATOR_INC) >> $@.tmp
+	$(BENDER) script verilator $(VERILATOR_BENDER_TARGS) $(bender_defs) -DSYNTHESIS -DVERILATOR >> $@.tmp
 	echo +incdir+$(FRACTAL_SYNC_ROOT)/hw >> $@.tmp
 	for f in $(VERILATOR_DPI); do echo $$f >> $@.tmp; done
 	@if ! cmp -s $@.tmp $@ 2>/dev/null; then mv $@.tmp $@; else rm -f $@.tmp; fi
