@@ -5,7 +5,7 @@
 # once into a library and instantiated 16 times, so mesh_dv=1 is required.
 #
 #   make verilate       build the model
-#   make verilate-run   build + run test=<name>
+#   make verilate-run   compile + run test=<name> against the built model
 #   make clean-verilate remove verilator/build
 
 MAGIA_ROOT  ?= $(shell git rev-parse --show-toplevel)
@@ -294,10 +294,17 @@ verilate-check-hierarchy: $(VERILATOR_BIN)
 		--expected-count $(VERILATOR_EXPECTED_TILE_SPECIALIZATIONS) \
 		--classes-mk $(VERILATOR_CLASSES_MK) --obj-dir $(VERILATOR_OBJ_DIR)
 
+# Uses whatever model is already in obj_dir: it deliberately does not depend on
+# $(VERILATOR_BIN), so an edit anywhere in the RTL cannot turn a run into a
+# multi-minute rebuild. Build the model yourself with `make verilate`.
 # Runs in the test's build dir, so a relative VERILATOR_FST lands there.
 # Output goes straight to the terminal; nothing bounds a hung run.
 .PHONY: verilate-run
-verilate-run: verilate all
+verilate-run: all
+	@test -x $(VERILATOR_BIN) || { \
+	  echo "error: no Verilator model at $(VERILATOR_BIN)" >&2; \
+	  echo "       build it first: make verilate core=$(core) mesh_dv=$(mesh_dv)" >&2; \
+	  exit 1; }
 	@cd $(TEST_BUILD_DIR) && \
 	  $(VERILATOR_BIN) \
 	    +INST_HEX=$(inst_hex_name) +DATA_HEX=$(data_hex_name) \
