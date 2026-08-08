@@ -118,9 +118,10 @@ make verilate core=CV32E40P mesh_dv=1 VERILATOR_JOBS=16
 ```bash
 make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test
 ```
-`verilate-run` compiles the test itself, so step **1** is optional — it is
-listed separately only because the model build takes a couple of minutes and
-you usually want to do it once.
+Step **1** is *required at least once*: `verilate-run` compiles the test but
+never the model — it runs the `Vmagia_tb` that is already in
+`verilator/build/obj_dir`, and errors out if there is none.
+**After changing the RTL, re-run `make verilate` yourself**, or you will keep simulating the old model.
 
 **Full example**:
 ```bash
@@ -157,11 +158,12 @@ moment it is moved.
 
 ```bash
 make verilate core=CV32E40P mesh_dv=1 VERILATOR_JOBS=16 VERILATOR_THREADS=8
-make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test VERILATOR_THREADS=8
+make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test
 ```
 
-`VERILATOR_THREADS` must be identical on the build and the run: it is compiled into the
-model, and the two commands must agree or the model is rebuilt.
+`VERILATOR_THREADS` is compiled *into* the model, so it belongs on `verilate`
+only — passing it to `verilate-run` does nothing, and does not rebuild anything.
+To change the thread count, re-run `make verilate` with the new value.
 
 **This is experimental and only partially tested.** What is actually known:
 
