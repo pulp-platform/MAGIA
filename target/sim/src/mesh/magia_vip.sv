@@ -93,13 +93,39 @@ module magia_vip
 /**             Clock and Reset Beginning             **/
 /*******************************************************/
 
-  clk_rst_gen #(
-    .ClkPeriod    ( CLK_PERIOD ),
-    .RstClkCycles ( RST_CYCLES )
-  ) i_clk_rst_sys (
-    .clk_o  ( clk   ),
-    .rst_no ( rst_n )
-  );
+  // Clock and reset are generated here rather than by clk_rst_gen, which drives
+  // rst_no to 1'b0 from an initial block: in a simulator whose signals power up
+  // at 0 that is not a falling edge, so no `always_ff @(posedge clk_i or negedge
+  // rst_ni)` in the design is ever reset. A four-state simulator only papers
+  // over it with an X -> 0 transition, which is luck, not portability.
+  //
+  // The sequence below is therefore: rst_n high at power-up, a real 1 -> 0 edge,
+  // RST_CYCLES of reset, then high for the rest of the simulation. The clock is
+  // held low across the high phase and only starts once reset is already
+  // asserted, so no flop is ever clocked while its state is still unknown, and
+  // the two transitions never land in the same time step.
+  localparam time RST_ASSERT_TIME = CLK_PERIOD;      // rst_n 1 -> 0 here
+  localparam time CLK_START_TIME  = 2 * CLK_PERIOD;  // first clock edge here
+
+  // Waveform identical to clk_rst_gen's, integer division included.
+  initial begin: p_clk_gen
+    clk = 1'b0;
+    #(CLK_START_TIME);
+    forever begin
+      clk = 1'b1;
+      #(CLK_PERIOD / 2);
+      clk = 1'b0;
+      #((CLK_PERIOD + 1) / 2);
+    end
+  end
+
+  initial begin: p_rst_gen
+    rst_n = 1'b1;
+    #(RST_ASSERT_TIME);
+    rst_n = 1'b0;
+    repeat (RST_CYCLES) @(negedge clk);
+    rst_n = 1'b1;
+  end
 
 /*******************************************************/
 /**                Clock and Reset End                **/
@@ -117,7 +143,10 @@ module magia_vip
     $readmemh(image, i_l2_mem.i_l2_mem.mem);
   endtask: data_preload
 
+  // The falling edge first: rst_n is high at power-up (see p_rst_gen), so
+  // waiting only for its rising edge would return immediately at time 0.
   task wait_for_reset;
+    @(negedge rst_n);
     @(posedge rst_n);
     @(posedge clk);
   endtask: wait_for_reset
