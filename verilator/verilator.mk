@@ -43,7 +43,7 @@ VERILATOR_THREADS       ?= 4
 # on tests that do real memory traffic, for reasons not yet understood.
 VERILATOR_TRACE_STRUCTS ?= 0
 VERILATOR_TRACE_PARAMS  ?= 0
-VERILATOR_CFLAGS        ?= -O2
+VERILATOR_CFLAGS        ?= -march=native
 # Parent and child must agree on where simulated time lives, or they segfault
 # at time 0. Nothing sets VL_TIME_CONTEXT implicitly here, so force it on both.
 # MAGIA_THREADS must match --threads: magia_main.cpp sizes the pool with it.
@@ -84,7 +84,8 @@ VERILATOR_ARGS = -j $(VERILATOR_JOBS) -Wno-fatal \
 	-Wno-ascrange -Wno-widthexpand -Wno-widthconcat -Wno-misindent \
 	-Wno-pinmissing -Wno-widthtrunc -Wno-unsigned -Wno-cmpconst \
 	-Wno-userfatal -Wno-caseincomplete -Wno-combdly -Wno-latch \
-	-Wno-unoptflat -Wno-blkandnblk -Wno-ENUMVALUE \
+	-Wno-blkandnblk -Wno-ENUMVALUE \
+	-O3 --x-assign fast --x-initial fast --no-assert \
 	--timing --autoflush --threads $(VERILATOR_THREADS)
 
 VERILATOR_ARGS += --trace-fst
