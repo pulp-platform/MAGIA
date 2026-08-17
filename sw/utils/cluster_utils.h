@@ -28,6 +28,7 @@
  *     cluster_done_pending()       non-blocking EU done-event check
  *     cluster_wait_done_eu()       WFE on PULP_DONE (EU bit 12)
  *     cluster_stop()               de-assert PULP CLK_EN
+ *     cluster_task_crashed()       true if core 0 trapped instead of returning
  *
  *   PULP cluster core — worker:
  *     cluster_core_id()            local index within the cluster (0..N-1)
@@ -95,6 +96,14 @@ static inline void cluster_wait_done_eu(void) {
 
 static inline int32_t cluster_get_return_value(void) {
     return (int32_t)mmio32(PULP_RETURN);
+}
+
+static inline int cluster_task_crashed(void) {
+    return (mmio32(PULP_RETURN) & PULP_RETURN_CRASHED_BIT) != 0;
+}
+
+static inline uint32_t cluster_get_mcause(void) {
+    return mmio32(PULP_RETURN) & ~PULP_RETURN_CRASHED_BIT;
 }
 
 // =============================================================================
