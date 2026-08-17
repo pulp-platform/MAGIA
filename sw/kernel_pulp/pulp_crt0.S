@@ -242,6 +242,8 @@ worker_wait:
 .global trap_handler
 trap_handler:
     csrr    t0, mcause
+    li      t2, 0x80000000          /* poison tag: real mcause never sets bit 31 here */
+    or      t0, t0, t2
     li      t1, PULP_RETURN_ADDR
     sw      t0, 0(t1)
     li      t1, PULP_DONE_ADDR
