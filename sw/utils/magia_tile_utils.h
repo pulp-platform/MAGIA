@@ -66,6 +66,7 @@
  *                                 before PULP_DONE, CV32 reads it after PULP_DONE
  *                                 fires. Real for tasks that `return` an int;
  *                                 existing `void` tasks leave it meaningless.
+ *                                 Bit 31 = 1 if the task crashed (core 0 trapped instead of returning)
  */
 #define PULP_CTRL_BASE        (0x00001740)
 #define PULP_CLK_EN           (PULP_CTRL_BASE + 0x00)
@@ -76,6 +77,7 @@
 #define PULP_START            (PULP_CTRL_BASE + 0x14)
 #define PULP_READY            (PULP_CTRL_BASE + 0x18)
 #define PULP_RETURN           (PULP_CTRL_BASE + 0x1C)
+#define PULP_RETURN_CRASHED_BIT (0x80000000u)
 #define PULP_CTRL_END         (0x000017FF)
 #define PULP_CORE_COUNT       (8)
 #define PULP_HARTID_BASE      (32)   /* 2 * NUM_CLUSTERS (16) */
