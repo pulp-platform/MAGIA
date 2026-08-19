@@ -14,45 +14,48 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Authors: Carlotta Chiarini
+ * Authors: Carlotta Chiarini, Fondazione Chips-IT
  * 
  * MAGIA Column multicast test over the narrow channel.
+ * 1) The source tile (SOURCE_HART_ID) multicast a single 32-bit word over the narrow channel.
+ * 2) The test passes if all the destination tiles successfully receive the 32-bit word.
  */
 
 #include "magia_utils.h"
 #include "magia_coll_utils.h"
 
 #define MEM_OFFSET (0x1000)
-#define END_OF_TEST_OFFSET (0x0)
-#define END_PATTERN (0xCCAA)
 #define BROADCAST_WORD (0x12345678)
 
 #define SOURCE_HART_ID 3
 
 int main() {
   
+  // Before the hardware can correctly process a collective operation, two registers (collective_mask, collective_op) must be configured
   set_collective_mask(gen_collective_mask(COLUMN));
   set_collective_op(MULTICAST);
     
   if(get_hartid() == SOURCE_HART_ID) {
-    
+
     printf("Source of the broadcast\n");
 
-    *(volatile int*) (COLLECTIVE_ADDR_OFFSET + L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) = (int) BROADCAST_WORD;
-    *(volatile int*) (COLLECTIVE_ADDR_OFFSET + L1_BASE + get_hartid()*L1_TILE_OFFSET + END_OF_TEST_OFFSET) = (int) END_PATTERN;
+    // The source tile multicast a single 32-bit word
+    // COLLECTIVE_ADDR_OFFSET tells the hardware that this 32-bit word should be treated as part of a collective operation
+    mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) = BROADCAST_WORD;
     
   } else {
-        if(GET_X_ID(get_hartid()) == GET_X_ID(SOURCE_HART_ID)){
-            printf("Destination of the multicast\n");
 
-            while(*(volatile int*) (L1_BASE + get_hartid()*L1_TILE_OFFSET + END_OF_TEST_OFFSET) != (int) END_PATTERN) {};
+    // Only the tiles that have the same X coordinate as the source tile participate in the collective operation
+    if(GET_X_ID(get_hartid()) == GET_X_ID(SOURCE_HART_ID)){
+        printf("Destination of the multicast\n");
 
-            if(*(volatile int*) (L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) == BROADCAST_WORD)
-                printf("TEST PASSED\n");
-            else
-                printf("ERROR: Expected 0x%x; Actual: 0x%x\n", BROADCAST_WORD, *(volatile int *)(L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET));
-        }
-    }   
+        // The destination tile waits the reception of the broadcast word
+        while(mmio32(L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) != BROADCAST_WORD) {};
+        
+        // The broadcast word is successfully received
+        printf("TEST PASSED\n");
+    }
+  }   
 
   return 0;
 }
