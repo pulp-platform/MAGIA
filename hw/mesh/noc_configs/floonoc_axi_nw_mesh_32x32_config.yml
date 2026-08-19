@@ -9,7 +9,7 @@ routing:
     en_narrow_multicast: true
     en_wide_multicast: true
     en_barrier: true
-    en_wide_reduction: true
+    en_narrow_reduction: true
 
 protocols:
   - name: "narrow_data_mst"
