@@ -42,7 +42,7 @@ dependencies:
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
   fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: df8e21b7e2b0e2d3198bf44a60b4ca67c334bcc2 } # branch: main
-  floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , version: 0.8.0                                }
+  floo_noc          : { git: "https://github.com/FondazioneChipsIT/FlooNoC.git"       , rev: 2db2e6470d14921a0c32455f3b2647d600b6c681 } # branch: cc/row-major
   event_unit_flex   : { git: "https://github.com/pulp-platform/event_unit_flex.git"   , rev: 763c3b9977970f656326c70a96debfb2ac0f85b2 } 
 
 export_include_dirs:
