@@ -15,11 +15,10 @@
  * SPDX-License-Identifier: SHL-0.51
  * Authors: Carlotta Chiarini
  
- * Mcast Generator
+ * Collective Generator
  
  * This module sets up the user field for a collective operation.
  * If the MSB is B, the transaction is recognized as a collective operation.
- * Currently the only the Broadcast (coll_op = 0x0) and LsbAnd (coll_op = 0x1) reduce are supported. 
  * The collective_mask is used to identify the tiles that take part to the collective operation.
  */
 
@@ -28,8 +27,8 @@ module collective_gen
 (
   input clk_i,
   input rst_ni,
-  input logic[31:0] collective_mask_i;
-  output logic[3:0] collective_op_i;
+  input logic[31:0] collective_mask_i,
+  input logic[3:0] collective_op_i,
   input  magia_pkg::axi_xbar_mst_req_t data_req_i,
   output magia_pkg::axi_xbar_mst_req_t data_req_o
 );
