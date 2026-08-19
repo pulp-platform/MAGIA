@@ -65,7 +65,7 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_SIZE         = 32'h0000_1000;
   localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_END     = EVENT_UNIT_ADDR_START + EVENT_UNIT_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_START          = EVENT_UNIT_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_SIZE           = 32'h0000_0100;
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_SIZE           = 32'h0000_0200;
   localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_END            = TILE_CSR_START + TILE_CSR_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = TILE_CSR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE           = 32'h0000_E800;
