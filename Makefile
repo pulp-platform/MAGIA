@@ -417,6 +417,8 @@ update-ips:
 	> ${compile_script}
 
 vsim-scripts:
+	$(BENDER) checkout
+	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_ADD_IDS=$(IDMA_ADD_IDS)
 	$(BENDER) script vsim          \
 	--vlog-arg="$(compile_flag)"   \
 	--vcom-arg="-pedanticerrors"   \
