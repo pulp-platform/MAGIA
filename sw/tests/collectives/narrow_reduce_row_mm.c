@@ -16,7 +16,7 @@
  *
  * Author: Carlotta Chiarini, Fondazione Chips-IT
  * 
- * MAGIA Column Reduce test over the narrow channel using the built-in FlooNoC collectives
+ * MAGIA Row Reduce test over the narrow channel using the built-in FlooNoC collectives
  *
  */
 
@@ -38,15 +38,15 @@ int main() {
   /*
   * Hardware configuration:
   * 1) Collective Operation opcode -> INT_ADD
-  * 2) Nodes taking part to the transactions -> COLUMN
+  * 2) Nodes taking part to the transactions -> ROW
   */
   set_collective_op(INT_ADD);
-  set_collective_mask(gen_collective_mask(COLUMN));
+  set_collective_mask(gen_collective_mask(ROW));
 
   /*
-  * Only the nodes on the same column of the DESTINATION_HART_ID node are taking part to the transaction.
+  * Only the nodes on the same row of the DESTINATION_HART_ID node are taking part to the transaction.
   */
-  if(GET_X_ID(get_hartid()) == GET_X_ID(DESTINATION_HART_ID)){
+  if(GET_Y_ID(get_hartid()) == GET_Y_ID(DESTINATION_HART_ID)){
     printf("Summing...\n");
     mmio32(COLLECTIVE_ADDR_OFFSET +  L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + REDUCE_OFFSET) = unreduced_data;
   }
@@ -60,27 +60,31 @@ int main() {
     */
     reduced_data = unreduced_data * MESH_X_TILES;
     while(mmio32(L1_BASE + get_hartid()*L1_TILE_OFFSET + REDUCE_OFFSET) != reduced_data) {};
-    printf("SUM TEST PASSED | RESULT 0x%x\n", reduced_data);
+    printf("SUM TEST PASSED\n");
   }
+
 
   // ************************* INT MUL TEST ********************** //
   unreduced_data = 2;
   /*
   * Hardware configuration:
-  * 1) Collective Operation opcode -> INT_ADD
-  * 2) Nodes taking part to the transactions -> COLUMN
+  * 1) Collective Operation opcode -> INT_MUL
+  * 2) Nodes taking part to the transactions -> ROW
   */
   set_collective_op(INT_MUL);
-  set_collective_mask(gen_collective_mask(COLUMN));
+  set_collective_mask(gen_collective_mask(ROW));
 
   /*
-  * Only the nodes on the same column of the DESTINATION_HART_ID node are taking part to the transaction.
+  * Only the nodes on the same row of the DESTINATION_HART_ID node are taking part to the transaction.
   */
-  if(GET_X_ID(get_hartid()) == GET_X_ID(DESTINATION_HART_ID)){
+  if(GET_Y_ID(get_hartid()) == GET_Y_ID(DESTINATION_HART_ID)){
     printf("Multiplying...\n");
-    mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + REDUCE_OFFSET) = unreduced_data;
+    mmio32(COLLECTIVE_ADDR_OFFSET +  L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + REDUCE_OFFSET) = unreduced_data;
   }
 
+  /*
+  * If the current node is the DESTINATION_HART_ID node, it waits for the final reduced data.
+  */
   if(get_hartid() == DESTINATION_HART_ID){
     /*
     * Compute the expected reduction result and check it against the final result.
@@ -89,7 +93,7 @@ int main() {
     for(int i = 0; i < (MESH_X_TILES-1); i++)
       reduced_data = reduced_data*unreduced_data;
     while(mmio32(L1_BASE + get_hartid()*L1_TILE_OFFSET + REDUCE_OFFSET) != reduced_data) {};
-    printf("MUL TEST PASSED | RESULT 0x%x\n", reduced_data);
+    printf("MUL TEST PASSED\n");
   }
 
   return 0;

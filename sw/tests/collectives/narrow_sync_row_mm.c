@@ -25,26 +25,36 @@
 #define MEM_OFFSET (0x1000)
 #define DESTINATION_HART_ID 0
 #define CACHE_HEAT_CYCLES (5)
+#define SYNC_PATTERN 3
 
 int main() {
 
+  /*
+  * Hardware configuration:
+  * 1) Collective Operation opcode -> LSBAND
+  * 2) Nodes taking part to the transactions -> ROW
+  */
   set_collective_mask(gen_collective_mask(ROW));
   set_collective_op(LSBAND);
 
   if(GET_Y_ID(get_hartid()) == GET_Y_ID(DESTINATION_HART_ID)){
     printf("Synchronizing...\n");
-    // Execute synchronization multiple times to pre-heat the cache
+    /*
+    * Execute synchronization multiple times to pre-heat the cache
+    */
     for (int i = 0; i < CACHE_HEAT_CYCLES; i++) {
         // Data to be reduced (LsbAND)
         sentinel_start();
-        *(volatile int*) (COLLECTIVE_ADDR_OFFSET + L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + MEM_OFFSET) = 3;
+        mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + MEM_OFFSET) = SYNC_PATTERN;
         magia_fence();
         sentinel_end();
     }
   }
-
+  /*
+  * If the current node is the DESTINATION_HART_ID node, it waits for the final reduced data.
+  */
   if(get_hartid() == DESTINATION_HART_ID){
-    while(*(volatile int*) (L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) != 3) {};
+    while(mmio32(L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) != SYNC_PATTERN) {};
     printf("TEST PASSED\n");
   }
 
