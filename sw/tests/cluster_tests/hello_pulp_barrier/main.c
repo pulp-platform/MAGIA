@@ -13,31 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
- *
- * Authors: Niccolò Giuliani, Fondazione Chips-IT
  */
 
 /*
- * hello_pulp — main core (CV32) binary.
+ * hello_pulp_barrier — main core (CV32) binary.
  *
- * This ELF is linked at 0xCC000000 and executed by the CV32 main core
- * of each tile (mhartid 0..NUM_CLUSTERS-1).
- *
- * Flow:
- *   1) Print a "hello" banner.
- *   2) Boot the PULP cluster cores into their dispatcher loop
- *      (cluster_boot -> pulp_init: programs PULP_BINARY, broadcasts
- *      CLK_EN, polls PULP_READY).
- *   3) Arm the CV32 Event Unit for PULP_DONE (EU bit 12).
- *   4) Dispatch the hello task to all 8 PULP cores by programming
- *      TASKBIN and START.
- *   5) Sleep in WFE until PULP_DONE reaches the Event Unit.
- *   6) Print the "done" message.
+ * Same single-mailbox dispatch as hello_pulp: the CV32 boots the cluster
+ * and dispatches ONE task to core 0. See hello_pulp_barrier_task.c for the
+ * point of this test -- pi_cl_team_barrier() called on a properly
+ * configured 1-core team, as opposed to hello_pulp_task.c's bare call
+ * (which hangs, see that file's history).
  */
 
 #include "magia_tile_utils.h"
 #include "cluster_utils.h"
-#include "hello_pulp_pulp_task_bin.h"
+#include "hello_pulp_barrier_pulp_task_bin.h"
 
 static inline uint32_t get_hartid(void) {
     uint32_t hartid;
@@ -57,15 +47,11 @@ int main(void) {
     /* Arm EU before dispatching the task to avoid missing DONE. */
     cluster_arm_done_event();
 
-    /* Dispatch the hello task to cluster core 0 of this tile. */
-    cluster_dispatch_task(HELLO_PULP_TASK);
+    /* Dispatch the task to core 0 (the usual single-mailbox model). */
+    cluster_dispatch_task(HELLO_PULP_BARRIER_TASK);
 
-    /* Sleep (cv.elw) until every cluster core of this tile has signalled
-     * task completion. */
+    /* Sleep (cv.elw) until core 0 has signalled task completion. */
     cluster_wait_done_eu();
-    /*
-    printf("[Main core %u] All %d cluster cores done!\n",
-           hartid, PULP_CORE_COUNT);
-    */
+
     return 0;
 }
