@@ -138,8 +138,8 @@ package magia_tile_pkg;
   endfunction
 
   function automatic int unsigned gen_tile_num_hci_core(magia_tile_cfg_t cfg);
-    // ctrl core + Spatz TCDM ports + one dedicated L1/TCDM port per cluster core
-    return 1 + gen_tile_spatz_hci_ports(cfg) + (cfg.EnCluster ? cfg.Cluster.NumCores : 0);
+    // external/mesh L1 route (via xbar) + ctrl core dedicated direct L1/TCDM port + Spatz TCDM ports + one dedicated L1/TCDM port per cluster core
+    return 1 + 1 + gen_tile_spatz_hci_ports(cfg) + (cfg.EnCluster ? cfg.Cluster.NumCores : 0);
   endfunction
   localparam int unsigned SPATZ_HCI_PORTS = gen_spatz_hci_ports(magia_pkg::MagiaSpatzDefaultCfg);
 
@@ -215,9 +215,9 @@ package magia_tile_pkg;
 
 
   // Parameters used by the HCI
-  parameter int unsigned N_CLUSTER_CORES = magia_pkg::MagiaClusterDefaultCfg.NumCores;  // Upper bound for TileCfg.Cluster.NumCores
-  parameter int unsigned N_HWPE  = 1;                                                   // Number of HWPEs attached to the port
-  parameter int unsigned N_CORE  = 1 + SPATZ_HCI_PORTS + N_CLUSTER_CORES;               // MAX core-side HCI ports (ctrl + Spatz + cluster); actual count from gen_tile_num_hci_core(), only sizes IW
+  parameter int unsigned N_CLUSTER_CORES = magia_pkg::MagiaClusterDefaultCfg.NumCores;   // Upper bound for TileCfg.Cluster.NumCores, from the cluster default cfg (per-tile count still comes from the config via gen_tile_num_hci_core) - kept above N_CORE so it can size the cluster L1/TCDM HCI ports. Mirrors how SPATZ_HCI_PORTS derives from MagiaSpatzDefaultCfg.
+  parameter int unsigned N_HWPE  = 1;                                                // Number of HWPEs attached to the port
+  parameter int unsigned N_CORE  = 1 + 1 + SPATZ_HCI_PORTS + N_CLUSTER_CORES;           // MAX number of core-side HCI ports (obi ext/mesh route + ctrl core direct TCDM port + Spatz TCDM ports + cluster cores L1/TCDM ports) - actual number comes from gen_tile_num_hci_core(); only IW is sized on it
   parameter int unsigned N_DMA   = 4;                                                   // Number of DMA ports (1 out read channel, 1 out write channel, 1 in read channel and 1 in write channel)
   typedef enum logic[1:0]{
     HCI_DMA_OUT_CH_READ_IDX  = 2'b00,
@@ -575,6 +575,12 @@ package magia_tile_pkg;
   typedef cv32e40p_core_data_req_t core_data_req_t;
   typedef cv32e40p_core_data_rsp_t core_data_rsp_t;
 `endif
+
+  // Core data demux signals: [0] = TCDM (L1) direct path, [1] = OBI xbar (default), [2] = EU direct link window
+  localparam int unsigned CORE_DATA_DEMUX_N_SLV    = 3;
+  localparam int unsigned CORE_DATA_DEMUX_TCDM_IDX = 0;
+  localparam int unsigned CORE_DATA_DEMUX_OBI_IDX  = 1;
+  localparam int unsigned CORE_DATA_DEMUX_EU_IDX   = 2;
 
   // EU Direct Link interface types
   typedef struct packed {
