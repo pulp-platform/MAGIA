@@ -20,7 +20,9 @@
  *
  * Each core sums its own tiny slice and writes it to a per-tile L2 slot, so
  * every cluster tile stays in a disjoint region with no cross-tile race.
- * On return the trap handler sets PULP_DONE.
+ * Dispatched to core 0 only (pulp_crt0.S's mailbox); forks onto all 8 cores
+ * with pi_cl_team_fork() so cores 1-7 -- otherwise parked in worker_wait --
+ * run it too. dispatcher_loop writes PULP_DONE on return.
  *
  * The address map MUST match main.c.
  */
@@ -33,7 +35,7 @@
 #define RESULT_BASE    (L2_BASE + 0x00080000)
 #define RESULT_STRIDE  (0x00000100)           /* 256 B per tile (>= 8 slots) */
 
-void hetero_cluster_task(void *data) {
+static void hetero_cluster_fork_entry(void *data) {
     (void)data;
 
     uint32_t tile_id  = cluster_tile_id();
@@ -45,4 +47,8 @@ void hetero_cluster_task(void *data) {
         acc += local_id + i;
 
     mmio32(RESULT_BASE + tile_id * RESULT_STRIDE + 4 * local_id) = acc;
+}
+
+void hetero_cluster_task(void *data) {
+    pi_cl_team_fork(PULP_CORE_COUNT, hetero_cluster_fork_entry, data);
 }

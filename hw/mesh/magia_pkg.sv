@@ -175,23 +175,8 @@ package magia_pkg;
   };
 
   localparam magia_tile_cfg_t [N_TILES-1:0] HOMO_TILE_CFGS = '{
-    // Default Homogeneus Mesh
-    0:  MagiaTileDefaultCfg,
-    1:  MagiaTileDefaultCfg,
-    2:  MagiaTileDefaultCfg,
-    3:  MagiaTileDefaultCfg,
-    4:  MagiaTileDefaultCfg,
-    5:  MagiaTileDefaultCfg,
-    6:  MagiaTileDefaultCfg,
-    7:  MagiaTileDefaultCfg,
-    8:  MagiaTileDefaultCfg,
-    9:  MagiaTileDefaultCfg,
-    10: MagiaTileDefaultCfg,
-    11: MagiaTileDefaultCfg,
-    12: MagiaTileDefaultCfg,
-    13: MagiaTileDefaultCfg,
-    14: MagiaTileDefaultCfg,
-    15: MagiaTileDefaultCfg
+    // Default Homogeneus Mesh: every tile gets the full-accelerator default, regardless of N_TILES
+    default: MagiaTileDefaultCfg
   };
 
 
@@ -215,7 +200,9 @@ package magia_pkg;
     12: MagiaTileClusterCfg,
     13: MagiaTileClusterCfg,
     14: MagiaTileClusterCfg,
-    15: MagiaTileClusterCfg
+    15: MagiaTileClusterCfg,
+    // Tiles 16..N_TILES-1 (rows beyond the original 4x4 layout): full-accelerator default
+    default: MagiaTileDefaultCfg
   };
 
   // Parameters used by the NoC
