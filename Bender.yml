@@ -94,7 +94,6 @@ sources:
       - hw/tile/obi_slave_ctrl_cluster.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
-      - hw/tile/core_data_demux_eu_direct.sv
       - hw/tile/core_data_demux.sv
       - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_tile_icache_wrap.sv
@@ -159,7 +158,6 @@ sources:
       - hw/tile/obi_slave_ctrl_cluster.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
-      - hw/tile/core_data_demux_eu_direct.sv
       - hw/tile/core_data_demux.sv
       - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_tile_icache_wrap.sv
@@ -223,7 +221,6 @@ sources:
       - hw/tile/obi_slave_ctrl_cluster.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
-      - hw/tile/core_data_demux_eu_direct.sv
       - hw/tile/core_data_demux.sv
       - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_tile_icache_wrap.sv
