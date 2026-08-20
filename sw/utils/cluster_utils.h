@@ -183,6 +183,7 @@ static inline void pi_cl_team_critical_enter(void) {
 
 static inline void pi_cl_team_critical_exit(void) {
     mmio32(CLUSTER_EU_MUTEX0_ADDR) = 0;
+    __asm__ __volatile__("" ::: "memory");  /* compiler barrier: unlock is a plain volatile store, not a "memory"-clobbered asm like evt_read32() */
 }
 
 static inline void pi_cl_team_barrier_id(unsigned int barrier_id) {

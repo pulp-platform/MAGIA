@@ -27,7 +27,7 @@
 #define RESULT_BASE    (L2_BASE + 0x00080000)
 #define RESULT_STRIDE  (0x00000100)           
 
-void hetero_cluster_task(void *data) {
+static void hetero_cluster_fork_entry(void *data) {
     (void)data;
 
     uint32_t tile_id  = cluster_tile_id();
@@ -39,4 +39,8 @@ void hetero_cluster_task(void *data) {
         acc += local_id + i;
 
     mmio32(RESULT_BASE + tile_id * RESULT_STRIDE + 4 * local_id) = acc;
+}
+
+void hetero_cluster_task(void *data) {
+    pi_cl_team_fork(PULP_CORE_COUNT, hetero_cluster_fork_entry, data);
 }
