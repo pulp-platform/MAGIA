@@ -16,8 +16,8 @@
  *
  * Authors: Carlotta Chiarini, Fondazione Chips-IT
  * 
- * MAGIA Column multicast test over the narrow channel.
- * 1) The source tile (SOURCE_HART_ID) multicast a single 32-bit word over the narrow channel.
+ * MAGIA Broadcast test over the FlooNoC narrow channel
+ * 1) The source tile (SOURCE_HART_ID) broadcast a single 32-bit word over the narrow channel.
  * 2) The test passes if all the destination tiles successfully receive the 32-bit word.
  */
 
@@ -31,31 +31,35 @@
 
 int main() {
   
-  // Before the hardware can correctly process a collective operation, two registers (collective_mask, collective_op) must be configured
-  set_collective_mask(gen_collective_mask(COLUMN));
+  /*
+  * Hardware configuration:
+  * 1) Collective Operation opcode -> MULTICAST
+  * 2) Nodes taking part to the transactions -> ALL
+  */
+  set_collective_mask(gen_collective_mask(ALL));
   set_collective_op(MULTICAST);
     
   if(get_hartid() == SOURCE_HART_ID) {
-
+    
     printf("Source of the broadcast\n");
 
-    // The source tile multicast a single 32-bit word
-    // COLLECTIVE_ADDR_OFFSET tells the hardware that this 32-bit word should be treated as part of a collective operation
+    /*
+    * The source tile broadcast a single 32-bit word.
+    * COLLECTIVE_ADDR_OFFSET tells the hardware that this 32-bit word should be treated as part of a collective operation.
+    */ 
     mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) = BROADCAST_WORD;
     
   } else {
 
-    // Only the tiles that have the same X coordinate as the source tile participate in the collective operation
-    if(GET_X_ID(get_hartid()) == GET_X_ID(SOURCE_HART_ID)){
-        printf("Destination of the multicast\n");
+    printf("Destination of the broadcast\n");
 
-        // The destination tile waits the reception of the broadcast word
-        while(mmio32(L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) != BROADCAST_WORD) {};
-        
-        // The broadcast word is successfully received
-        printf("TEST PASSED\n");
-    }
-  }   
+    /*
+    * The destination tile waits the reception of the broadcast word.
+    */
+    while(mmio32(L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) != BROADCAST_WORD) {};
+
+    printf("TEST PASSED\n");
+  }
 
   return 0;
 }

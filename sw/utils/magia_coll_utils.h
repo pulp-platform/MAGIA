@@ -37,7 +37,7 @@
 #define FP_ADD 3
 #define FP_MUL 4
 #define FP_MIN 5
-#define FP_MIN 6
+#define FP_MAX 6
 #define INT_ADD 7
 #define INT_MUL 8
 #define INT_MINS 9

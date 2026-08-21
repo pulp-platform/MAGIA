@@ -31,7 +31,11 @@
 
 int main() {
   
-  // Before the hardware can correctly process a collective operation, two registers (collective_mask, collective_op) must be configured
+  /*
+  * Hardware configuration:
+  * 1) Collective Operation opcode -> MULTICAST
+  * 2) Nodes taking part to the transactions -> ALL
+  */
   set_collective_mask(gen_collective_mask(ROW));
   set_collective_op(MULTICAST);
     
@@ -39,20 +43,23 @@ int main() {
     
     printf("Source of the broadcast\n");
 
-    // The source tile multicast a single 32-bit word
-    // COLLECTIVE_ADDR_OFFSET tells the hardware that this 32-bit word should be treated as part of a collective operation
+  /*
+  * The source tile broadcast a single 32-bit word.
+  * COLLECTIVE_ADDR_OFFSET tells the hardware that this 32-bit word should be treated as part of a collective operation.
+  */ 
     mmio32(COLLECTIVE_ADDR_OFFSET + get_hartid()*L1_TILE_OFFSET + L1_BASE + MEM_OFFSET) = BROADCAST_WORD;
     
-  } else {
-
-    // Only the tiles that have the same Y coordinate as the source tile participate in the collective operation
-    if(GET_Y_ID(get_hartid()) == GET_Y_ID(SOURCE_HART_ID)){
+    /*
+    * Only the tiles that have the same Y coordinate as the source tile participate in the collective operation
+    */
+  } else if(GET_Y_ID(get_hartid()) == GET_Y_ID(SOURCE_HART_ID)){
         printf("Destination of the multicast\n");
 
-        // The destination tile waits the reception of the broadcast word
+        /*
+        * The destination tile waits the reception of the broadcast word
+        */
         while(mmio32(L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) != BROADCAST_WORD) {};
         
-        // The broadcast word is successfully received
         printf("TEST PASSED\n");
     }
   }
