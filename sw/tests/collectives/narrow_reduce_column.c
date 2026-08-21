@@ -16,7 +16,7 @@
  *
  * Author: Carlotta Chiarini, Fondazione Chips-IT
  * 
- * MAGIA Row Reduce test over the narrow channel using the built-in FlooNoC collectives
+ * MAGIA Column Reduce test over the narrow channel using the built-in FlooNoC collectives
  *
  */
 
@@ -24,8 +24,10 @@
 #include "magia_coll_utils.h"
 
 #define REDUCE_OFFSET (0x1000)
+#define SYNC_OFFSET (0x2000)
+
 #define DESTINATION_HART_ID 0
-#define CACHE_HEAT_CYCLES (5)
+#define SYNC_PATTERN 3
 
 int main() {
     
@@ -38,17 +40,17 @@ int main() {
   /*
   * Hardware configuration:
   * 1) Collective Operation opcode -> INT_ADD
-  * 2) Nodes taking part to the transactions -> ROW
+  * 2) Nodes taking part to the transactions -> COLUMN
   */
   set_collective_op(INT_ADD);
-  set_collective_mask(gen_collective_mask(ROW));
+  set_collective_mask(gen_collective_mask(COLUMN));
 
   /*
-  * Only the nodes on the same row of the DESTINATION_HART_ID node are taking part to the transaction.
+  * Only the nodes on the same column of the DESTINATION_HART_ID node are taking part to the transaction.
   */
-  if(GET_Y_ID(get_hartid()) == GET_Y_ID(DESTINATION_HART_ID)){
+  if(GET_X_ID(get_hartid()) == GET_X_ID(DESTINATION_HART_ID)){
     printf("Summing...\n");
-    mmio32(COLLECTIVE_ADDR_OFFSET +  L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + REDUCE_OFFSET) = unreduced_data;
+    mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + REDUCE_OFFSET) = unreduced_data;
   }
 
   /*
@@ -58,33 +60,41 @@ int main() {
     /*
     * Compute the expected reduction result and check it against the final result.
     */
+    printf("Waiting data...\n");
     reduced_data = unreduced_data * MESH_X_TILES;
     while(mmio32(L1_BASE + get_hartid()*L1_TILE_OFFSET + REDUCE_OFFSET) != reduced_data) {};
-    printf("SUM TEST PASSED\n");
+    printf("SUM TEST PASSED | RESULT 0x%x\n", reduced_data);
   }
 
+  // ************************** BARRIER ***************************** //
+  /*
+  * To avoid overlapping the SUM and MUL test, we use a barrier.
+  */
+  if(GET_X_ID(get_hartid()) == GET_X_ID(DESTINATION_HART_ID)){
+    printf("Barrier...\n");
+    set_collective_mask(gen_collective_mask(COLUMN));
+    set_collective_op(LSBAND);
+    mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + SYNC_OFFSET) = SYNC_PATTERN;
+  }
 
   // ************************* INT MUL TEST ********************** //
   unreduced_data = 2;
   /*
   * Hardware configuration:
-  * 1) Collective Operation opcode -> INT_MUL
-  * 2) Nodes taking part to the transactions -> ROW
+  * 1) Collective Operation opcode -> INT_ADD
+  * 2) Nodes taking part to the transactions -> COLUMN
   */
   set_collective_op(INT_MUL);
-  set_collective_mask(gen_collective_mask(ROW));
+  set_collective_mask(gen_collective_mask(COLUMN));
 
   /*
-  * Only the nodes on the same row of the DESTINATION_HART_ID node are taking part to the transaction.
+  * Only the nodes on the same column of the DESTINATION_HART_ID node are taking part to the transaction.
   */
-  if(GET_Y_ID(get_hartid()) == GET_Y_ID(DESTINATION_HART_ID)){
+  if(GET_X_ID(get_hartid()) == GET_X_ID(DESTINATION_HART_ID)){
     printf("Multiplying...\n");
-    mmio32(COLLECTIVE_ADDR_OFFSET +  L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + REDUCE_OFFSET) = unreduced_data;
+    mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + REDUCE_OFFSET) = unreduced_data;
   }
 
-  /*
-  * If the current node is the DESTINATION_HART_ID node, it waits for the final reduced data.
-  */
   if(get_hartid() == DESTINATION_HART_ID){
     /*
     * Compute the expected reduction result and check it against the final result.
@@ -93,7 +103,7 @@ int main() {
     for(int i = 0; i < (MESH_X_TILES-1); i++)
       reduced_data = reduced_data*unreduced_data;
     while(mmio32(L1_BASE + get_hartid()*L1_TILE_OFFSET + REDUCE_OFFSET) != reduced_data) {};
-    printf("MUL TEST PASSED\n");
+    printf("MUL TEST PASSED | RESULT 0x%x\n", reduced_data);
   }
 
   return 0;

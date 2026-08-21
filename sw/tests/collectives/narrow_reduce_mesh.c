@@ -34,7 +34,6 @@
 #define SYNC_OFFSET (0x2000)
 
 #define DESTINATION_HART_ID 0
-#define CACHE_HEAT_CYCLES (5)
 #define SYNC_PATTERN 3
 
 

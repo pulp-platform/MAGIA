@@ -14,10 +14,8 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- *         Based on idma_test.c by Victor Isachi
  * 
- * MAGIA Columns multicast test over iDMA using Memory-Mapped Control
+ * MAGIA Column multicast test over iDMA using Memory-Mapped Control
  */
 #include "magia_utils.h"
 #include "magia_tile_utils.h"
@@ -30,13 +28,13 @@
 #define Y_BASE (L1_BASE + 0x00016048)
 #define Z_BASE (L2_BASE + 0x00001000)
 
-#define M_SIZE (16)
-#define N_SIZE (16)
+#define M_SIZE (32)
+#define N_SIZE (32)
 
 #define VERBOSE (0)
 
-#define END_OF_TEST_OFFSET (0x0)
-#define END_PATTERN (0xCCAA)
+#define SYNC_OFFSET (0x2000)
+#define SYNC_PATTERN 3
 
 #define SOURCE_HART_ID 3
 
@@ -81,20 +79,18 @@ int main(void) {
 
     // Use polling to wait for completion
     dma_wait(transfer_id_1);
+  }
 
-    // Inform all the cores about the newly arrived data
-    printf("Sending end of test signal...\n");
+  if(GET_X_ID(get_hartid()) == GET_X_ID(SOURCE_HART_ID)){
+    
+    printf("Barrier...\n");
     set_collective_mask(gen_collective_mask(COLUMN));
-    set_collective_op(MULTICAST);
-    *(volatile int*) (COLLECTIVE_ADDR_OFFSET + get_hartid()*L1_TILE_OFFSET + L1_BASE + END_OF_TEST_OFFSET) = (int) END_PATTERN;
+    set_collective_op(LSBAND);
+    mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + SOURCE_HART_ID*L1_TILE_OFFSET + SYNC_OFFSET) = SYNC_PATTERN;
 
+    if(get_hartid() != SOURCE_HART_ID) {
 
-  } else {
-    if(GET_X_ID(get_hartid()) == GET_X_ID(SOURCE_HART_ID)){
-      
-      printf("Destination of the multicast...\n");
-      // Polling on the end_of_test address offset
-      while(*(volatile int*) (L1_BASE + get_hartid()*L1_TILE_OFFSET + END_OF_TEST_OFFSET) != (int) END_PATTERN) {};
+      printf("Checking data...\n");
 
       uint16_t detected_l1, detected_l2, expected;
       unsigned int num_errors = 0;
