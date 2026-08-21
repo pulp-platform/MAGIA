@@ -104,10 +104,15 @@ module magia_l2_mem_wrapper
       .id_t                 ( id_t                                     ),
       .rob_idx_t            ( rob_idx_t                                ),
       .hdr_t                ( hdr_t                                    ),
-      .sam_rule_t           ( collective_sam_rule_t                    ),
-      .sam_idx_t            ( collective_idx_t                         ),
-      .mask_sel_t           ( collective_mask_sel_t                    ),
-      .Sam                  ( CollectiveSam                            ),
+`ifndef TARGET_STANDALONE_TILE
+    .sam_rule_t           ( collective_sam_rule_t                    ),
+    .sam_idx_t            ( collective_idx_t                         ),
+    .mask_sel_t           ( collective_mask_sel_t                    ),
+    .Sam                  ( CollectiveSam                            ),
+`else
+    .sam_rule_t           ( sam_rule_t                               ),
+    .Sam                  ( Sam                                      ),
+`endif
       .axi_narrow_in_req_t  ( axi_narrow_data_slv_req_t                ),
       .axi_narrow_in_rsp_t  ( axi_narrow_data_slv_rsp_t                ),
       .axi_narrow_out_req_t ( axi_narrow_data_mst_req_t                ),

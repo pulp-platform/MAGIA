@@ -1661,13 +1661,13 @@ module magia_tile
 /**             FlooNoC Modules Beginning             **/
 /*******************************************************/
   
-  red_wide_req_t offload_wide_req;
-  red_wide_rsp_t offload_wide_rsp;
+red_wide_req_t offload_wide_req;
+red_wide_rsp_t offload_wide_rsp;
 
-  red_narrow_req_t offload_narrow_req;
-  red_narrow_rsp_t offload_narrow_rsp;
+red_narrow_req_t offload_narrow_req;
+red_narrow_rsp_t offload_narrow_rsp;
 
-  logic[63:0] narrow_alu_result;
+logic[63:0] narrow_alu_result;
 
 floo_reduction_alu i_narrow_floo_alu (
   .clk_i(sys_clk),
@@ -1686,23 +1686,23 @@ floo_reduction_alu i_narrow_floo_alu (
 assign offload_narrow_rsp.rsp.result = narrow_alu_result[31:0];
 
   floo_nw_router #(
-    .AxiCfgN        ( AxiCfgN                ),
-    .AxiCfgW        ( AxiCfgW                ),
-    .RouteAlgo      ( XYRouting              ),
-    .NumRoutes      ( 5                      ),
-    .NumInputs      ( 5                      ),
-    .NumOutputs     ( 5                      ),
-    .InFifoDepth    ( 2                      ),
-    .OutFifoDepth   ( 2                      ),
-    .NoLoopback     ( 1'b0                   ),
-    .CollectiveCfg  ( RouteCfg.CollectiveCfg ),
-    .id_t           ( id_t                   ),
-    .hdr_t          ( hdr_t                  ),
-    .floo_req_t     ( floo_req_t             ),
-    .floo_rsp_t     ( floo_rsp_t             ),
-    .floo_wide_t    ( floo_wide_t            ),
-    .red_wide_req_t ( red_wide_req_t         ),
-    .red_wide_rsp_t ( red_wide_rsp_t         ),
+    .AxiCfgN          ( AxiCfgN                ),
+    .AxiCfgW          ( AxiCfgW                ),
+    .RouteAlgo        ( XYRouting              ),
+    .NumRoutes        ( 5                      ),
+    .NumInputs        ( 5                      ),
+    .NumOutputs       ( 5                      ),
+    .InFifoDepth      ( 2                      ),
+    .OutFifoDepth     ( 2                      ),
+    .NoLoopback       ( 1'b0                   ),
+    .CollectiveCfg    ( RouteCfg.CollectiveCfg ),
+    .id_t             ( id_t                   ),
+    .hdr_t            ( hdr_t                  ),
+    .floo_req_t       ( floo_req_t             ),
+    .floo_rsp_t       ( floo_rsp_t             ),
+    .floo_wide_t      ( floo_wide_t            ),
+    .red_wide_req_t   ( red_wide_req_t         ),
+    .red_wide_rsp_t   ( red_wide_rsp_t         ),
     .red_narrow_req_t ( red_narrow_req_t       ),
     .red_narrow_rsp_t ( red_narrow_rsp_t       )
   ) i_magia_tile_router (
@@ -1775,10 +1775,15 @@ assign offload_narrow_rsp.rsp.result = narrow_alu_result[31:0];
     .id_t                 ( id_t                                     ),
     .rob_idx_t            ( rob_idx_t                                ),
     .hdr_t                ( hdr_t                                    ),
+`ifndef TARGET_STANDALONE_TILE
     .sam_rule_t           ( collective_sam_rule_t                    ),
     .sam_idx_t            ( collective_idx_t                         ),
     .mask_sel_t           ( collective_mask_sel_t                    ),
     .Sam                  ( CollectiveSam                            ),
+`else
+    .sam_rule_t           ( sam_rule_t                               ),
+    .Sam                  ( Sam                                      ),
+`endif
     .user_wide_struct_t   ( axi_wide_data_slv_user_t                 ),
     .user_narrow_struct_t ( axi_narrow_data_slv_user_t               ),
     .axi_narrow_in_req_t  ( axi_narrow_data_slv_req_t                ),
