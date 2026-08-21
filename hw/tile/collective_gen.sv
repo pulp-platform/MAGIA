@@ -23,7 +23,6 @@
  */
 
 module collective_gen
-  import magia_noc_pkg::*;
 (
   input clk_i,
   input rst_ni,
