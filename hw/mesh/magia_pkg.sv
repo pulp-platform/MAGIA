@@ -60,10 +60,19 @@ package magia_pkg;
     int unsigned NumFPU;    // Number of FP processing units
     bit          XDivSqrt;  // FP division/sqrt enable
     bit          XDMA;      // DMA inside the Spatz CC
+    int unsigned ICacheL0LineCount; // private L0 tier lines, per core
+    int unsigned ICacheLineWidth;   // cache line width in bits (both tiers)
+    int unsigned ICacheLineCount;   // shared-tier set count
+    int unsigned ICacheWays;        // shared-tier set associativity
   } spatz_cfg_t;
 
   typedef struct packed {
     int unsigned NumCores;  // Number of cv32e40p cluster cores
+    int unsigned IcachePrivateSize;     // private L0 tier size in bytes, per core
+    int unsigned IcacheSharedSize;      // shared tier size in bytes (whole cluster)
+    int unsigned IcacheNumWays;         // shared-tier set associativity
+    int unsigned IcachePrivateDataWidth; // fetch data width in bits
+    int unsigned IcacheLineWidth;       // cache line width in bits (both tiers)
   } cluster_cfg_t;
 
   typedef struct packed {
@@ -127,11 +136,20 @@ package magia_pkg;
     NumIPU:   MagiaSpatzNumIPU,
     NumFPU:   MagiaSpatzNumFPU,
     XDivSqrt: MagiaSpatzXDivSqrt,
-    XDMA:     MagiaSpatzXDMA
+    XDMA:     MagiaSpatzXDMA,
+    ICacheL0LineCount: 8,
+    ICacheLineWidth:   256,
+    ICacheLineCount:   32,
+    ICacheWays:        2
   };
 
   localparam cluster_cfg_t MagiaClusterDefaultCfg = '{
-    NumCores: 8
+    NumCores: 8,
+    IcachePrivateSize:      512,
+    IcacheSharedSize:       4*1024,
+    IcacheNumWays:          4,
+    IcachePrivateDataWidth: 32,
+    IcacheLineWidth:        256
   };
 
   // All accelerators enabled (full tile)
