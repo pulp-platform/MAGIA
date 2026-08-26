@@ -462,18 +462,7 @@ package magia_tile_pkg;
   parameter int unsigned FILL_AW        = magia_pkg::ADDR_W;                            // i$ Fill interface address width. Same as FILL_AW; >= 1.
   parameter int unsigned FILL_DW        = magia_pkg::DATA_W;                            // i$ Fill interface data width. Power of two; >= 8.
 
-  // Spatz ICache parameters (dedicated icache for Spatz CC)
-  parameter int unsigned SPATZ_ICACHE_LINE_WIDTH = 256;                                 // Spatz i$ cache line width (should be investigated which is the best value)
-  parameter int unsigned SPATZ_ICACHE_LINE_COUNT = 32;                                  // Spatz i$ number of cache lines
-  parameter int unsigned SPATZ_ICACHE_WAYS       = 2;                                   // Spatz i$ number of ways (2-way set associative)
-  localparam int unsigned SPATZ_L0_EARLY_TAG_W   = snitch_pkg::PAGE_SHIFT - $clog2(SPATZ_ICACHE_LINE_WIDTH/8); // L0 early tag width
-  
   //Cluster ICache parameters (dedicated icache for cluster cores)
-  parameter int unsigned CLUSTER_LINES_PER_CORE = 32;                                           // i$ cache lines per cluster core
-  parameter int unsigned CLUSTER_NR_FETCH_PORTS = N_CLUSTER_CORES;                              // i$ Number of request (fetch) ports
-  parameter int unsigned CLUSTER_L0_LINE_COUNT  = CLUSTER_LINES_PER_CORE*N_CLUSTER_CORES;       // i$ L0 Cache Line Count
-  parameter int unsigned CLUSTER_LINE_WIDTH     = 128;                                          // i$ Cache Line Width; >= 64
-  parameter int unsigned CLUSTER_WAY_COUNT      = 32;                                           // i$ The set associativity of the cache. Power of two; >= 1.
   parameter int unsigned CLUSTER_L0_PARITY_W    = 0;                                            // i$ Parity of the L0 cache
   parameter int unsigned CLUSTER_L1_PARITY_W    = CLUSTER_L0_PARITY_W;                          // i$ Parity of the L1 cache
   parameter int unsigned CLUSTER_FETCH_AW       = magia_pkg::ADDR_W;                            // i$ Fetch interface address width. Same as FETCH_AW; >= 1.

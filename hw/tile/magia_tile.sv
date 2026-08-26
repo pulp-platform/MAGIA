@@ -2076,14 +2076,15 @@ if (TileCfg.EnSpatzCC) begin: gen_spatz_cc
 /**              Spatz ICache Beginning               **/
 /*******************************************************/
 
-  assign spatz_enable_prefetching = 1'b0;  
+  assign spatz_enable_prefetching = 1'b0;
+  localparam int unsigned SpatzIcacheL0EarlyTagW = snitch_pkg::PAGE_SHIFT - $clog2(TileCfg.Spatz.ICacheLineWidth/8);
 
   snitch_icache #(
     .NR_FETCH_PORTS     ( 1                                                  ), // Single Spatz CC core
-    .L0_LINE_COUNT      ( 8                                                  ), // L0 cache lines
-    .LINE_WIDTH         ( magia_tile_pkg::SPATZ_ICACHE_LINE_WIDTH            ), // 256 bits
-    .LINE_COUNT         ( magia_tile_pkg::SPATZ_ICACHE_LINE_COUNT            ), // 32 lines
-    .WAY_COUNT          ( magia_tile_pkg::SPATZ_ICACHE_WAYS                  ), // 2-way set associative
+    .L0_LINE_COUNT      ( TileCfg.Spatz.ICacheL0LineCount                    ), // L0 cache lines
+    .LINE_WIDTH         ( TileCfg.Spatz.ICacheLineWidth                     ), // 256 bits
+    .LINE_COUNT         ( TileCfg.Spatz.ICacheLineCount                     ), // 32 sets
+    .WAY_COUNT          ( TileCfg.Spatz.ICacheWays                          ), // 2-way set associative
     .FETCH_AW           ( magia_pkg::ADDR_W                                  ), // Address width
     .FETCH_DW           ( 32                                                 ), // 32-bit instructions
     .FILL_AW            ( magia_pkg::ADDR_W                                  ), // AXI address width
@@ -2092,7 +2093,7 @@ if (TileCfg.EnSpatzCC) begin: gen_spatz_cc
     .L1_TAG_SCM         ( 0                                                  ),
     .NUM_AXI_OUTSTANDING( 2                                                  ),
     .EARLY_LATCH        ( 0                                                  ),
-    .L0_EARLY_TAG_WIDTH ( magia_tile_pkg::SPATZ_L0_EARLY_TAG_W               ),
+    .L0_EARLY_TAG_WIDTH ( SpatzIcacheL0EarlyTagW                            ),
     .ISO_CROSSING       ( 1'b0                                               ),
     .axi_req_t          ( magia_tile_pkg::core_axi_instr_req_t               ),
     .axi_rsp_t          ( magia_tile_pkg::core_axi_instr_rsp_t               )
@@ -2187,7 +2188,8 @@ end
 
 if (TileCfg.EnCluster) begin: gen_pulp_cluster
 
-  localparam int unsigned ClusterIcacheLineCount = magia_tile_pkg::CLUSTER_LINES_PER_CORE * NClusterCores;
+  localparam int unsigned ClusterIcacheL0LineCount = TileCfg.Cluster.IcachePrivateSize / (TileCfg.Cluster.IcacheLineWidth/8);
+  localparam int unsigned ClusterIcacheLineCount    = TileCfg.Cluster.IcacheSharedSize  / (TileCfg.Cluster.IcacheLineWidth/8) / TileCfg.Cluster.IcacheNumWays;
 
   // Cluster control-register signals
   logic [31:0]              cluster_boot_addr [NClusterCores-1:0];
@@ -2314,16 +2316,14 @@ if (TileCfg.EnCluster) begin: gen_pulp_cluster
 
   magia_tile_icache_wrap #(
     .NumFetchPorts       ( NClusterCores                        ),
-    .L0_LINE_COUNT       ( ClusterIcacheLineCount               ),
-    .LINE_WIDTH          ( magia_tile_pkg::CLUSTER_LINE_WIDTH   ),
+    .L0_LINE_COUNT       ( ClusterIcacheL0LineCount             ),
+    .LINE_WIDTH          ( TileCfg.Cluster.IcacheLineWidth      ),
     .LINE_COUNT          ( ClusterIcacheLineCount               ),
-    .WAY_COUNT           ( magia_tile_pkg::CLUSTER_WAY_COUNT    ),
+    .WAY_COUNT           ( TileCfg.Cluster.IcacheNumWays        ),
     .FetchAddrWidth      ( magia_tile_pkg::CLUSTER_FETCH_AW     ),
-    .FetchDataWidth      ( magia_tile_pkg::CLUSTER_FETCH_DW     ),
+    .FetchDataWidth      ( TileCfg.Cluster.IcachePrivateDataWidth ),
     .AxiAddrWidth        ( magia_tile_pkg::CLUSTER_FILL_AW      ),
     .AxiDataWidth        ( magia_tile_pkg::CLUSTER_FILL_DW      ),
-    .sram_cfg_data_t     ( /* Not Used */                       ),
-    .sram_cfg_tag_t      ( /* Not Used */                       ),
     .axi_req_t           ( magia_tile_pkg::core_axi_instr_req_t ),
     .axi_rsp_t           ( magia_tile_pkg::core_axi_instr_rsp_t )
   ) cluster_icache_top_i (
