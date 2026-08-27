@@ -145,7 +145,7 @@ module magia_tile
 
   localparam int unsigned NClusterCores = TileCfg.Cluster.NumCores;
 
-  localparam int unsigned NumHwpe = magia_tile_pkg::N_HWPE; // RedMulE; stays 1 if !EnRedMule (tied off) - local_interconnect is not 0-safe
+  localparam int unsigned NumHwpe = TileCfg.EnRedMule ? 1 : 0; // RedMulE HCI slot; 0 removes its router/arbiter leaf from magia_hci_interconnect
   localparam int unsigned NumDma  = magia_tile_pkg::N_DMA;
   localparam int unsigned NumExt  = magia_tile_pkg::N_EXT;
 
@@ -508,7 +508,7 @@ module magia_tile
   assign floo_id = '{x: (x_id_i+1), y: y_id_i, port_id: 0};
 
   assign hci_clear = 1'b0;
-  assign hci_ctrl  = '0;
+  assign hci_ctrl  = '0; // Unprogrammed for now: magia_hci_interconnect falls back to its fair 1/2 QoS default; wire to a CSR to make it runtime-tunable.
 
   assign idma_clear = 1'b0;
 
@@ -1033,7 +1033,8 @@ module magia_tile
     EW:  hci_package::DEFAULT_EW,
     EHW: hci_package::DEFAULT_EHW
   };
-  `HCI_INTF_ARRAY(hci_redmule_if, sys_clk, 0:NumHwpe-1);
+  // Always 1 element (NumHwpe is 0 or 1); declared directly, not inside a generate block, because other code below refers to hci_redmule_if[0] by name.
+  `HCI_INTF_ARRAY(hci_redmule_if, sys_clk, 0:0);
 
   localparam hci_package::hci_size_parameter_t `HCI_SIZE_PARAM(hci_dma_if) = '{
     DW:  magia_tile_pkg::iDMA_DataWidth,
@@ -1491,7 +1492,7 @@ end
 /**         Local Interconnect (HCI) Beginning        **/
 /*******************************************************/
 
-   local_interconnect #(
+   magia_hci_interconnect #(
     // Same localparams TileIW is built from - see their definition.
     .N_HWPE               ( NumHwpe                         ),
     .N_DMA                ( NumDma                          ),
@@ -1507,7 +1508,7 @@ end
     .HCI_SIZE_dma         (`HCI_SIZE_PARAM(hci_dma_if)      ),
     .HCI_SIZE_core        (`HCI_SIZE_PARAM(hci_core_if)     ),
     .HCI_SIZE_mem         (`HCI_SIZE_PARAM(hci_tcdm_sram_if))
-  ) i_local_interconnect (
+  ) i_magia_hci_interconnect (
     .clk_i   ( sys_clk          ),
     .rst_ni  ( rst_ni           ),
 
