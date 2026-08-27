@@ -7,9 +7,9 @@
 // this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
-// 
-// Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
-
+//
+// Authors: Luca Balboni <luca.balboni@chips.it>
+//
 interface XBAR_PERIPH_BUS #(
   parameter int ID_WIDTH = 2  // typically number of cores plus one
 );
@@ -39,4 +39,35 @@ interface XBAR_PERIPH_BUS #(
     output gnt, r_rdata, r_opc, r_id, r_valid
   );
 
-endinterface
+endinterface: XBAR_PERIPH_BUS
+
+interface MESSAGE_BUS #(
+  parameter int ID_WIDTH = 2  // typically number of cores plus one
+);
+
+  // Request Channel
+  logic                req;
+  logic         [31:0] add;
+  logic                wen;
+  logic         [31:0] wdata;
+  logic          [3:0] be;
+  logic [ID_WIDTH-1:0] id;
+  logic                gnt;
+
+  // Response Channel
+  logic                r_valid;
+  logic                r_opc;
+  logic [ID_WIDTH-1:0] r_id;
+  logic         [31:0] r_rdata;
+
+  modport Master (
+    output req, add, wen, wdata, be, id,
+    input  gnt, r_rdata, r_opc, r_id, r_valid
+  );
+
+  modport Slave (
+    input  req, add, wen, wdata, be, id,
+    output gnt, r_rdata, r_opc, r_id, r_valid
+  );
+
+endinterface: MESSAGE_BUS
