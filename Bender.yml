@@ -43,7 +43,7 @@ dependencies:
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
   fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: df8e21b7e2b0e2d3198bf44a60b4ca67c334bcc2 } # branch: main
   floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , version: 0.6.1                                }
-  event_unit_flex   : { git: "https://github.com/pulp-platform/event_unit_flex.git"   , rev: 763c3b9977970f656326c70a96debfb2ac0f85b2 } 
+  event_unit_flex   : { git: "https://github.com/pulp-platform/event_unit_flex.git"   , rev: 28e0499374117c7b0ef4c6ad81b60d7526af886f} 
 
 export_include_dirs:
   - hw/include
@@ -80,7 +80,7 @@ sources:
       - hw/tile/converters/tcdm64_to_dual_tcdm32.sv
       - hw/tile/converters/tcdm64_to_dual_hci32_atomic.sv
       - hw/tile/converters/reqrsp64_to_obi32.sv
-      - hw/tile/xbar_periph_bus_if.sv
+      - hw/tile/pulp_interfaces.sv
       - hw/tile/cluster_event_map.sv
       - hw/tile/magia_event_unit.sv
       - hw/tile/obi_demux_addr.sv
@@ -144,7 +144,7 @@ sources:
       - hw/tile/converters/tcdm64_to_dual_tcdm32.sv
       - hw/tile/converters/tcdm64_to_dual_hci32_atomic.sv
       - hw/tile/converters/reqrsp64_to_obi32.sv
-      - hw/tile/xbar_periph_bus_if.sv
+      - hw/tile/pulp_interfaces.sv
       - hw/tile/cluster_event_map.sv
       - hw/tile/magia_event_unit.sv
       - hw/tile/obi_demux_addr.sv
@@ -207,7 +207,7 @@ sources:
       - hw/tile/converters/tcdm64_to_dual_tcdm32.sv
       - hw/tile/converters/tcdm64_to_dual_hci32_atomic.sv
       - hw/tile/converters/reqrsp64_to_obi32.sv
-      - hw/tile/xbar_periph_bus_if.sv
+      - hw/tile/pulp_interfaces.sv
       - hw/tile/cluster_event_map.sv
       - hw/tile/magia_event_unit.sv
       - hw/tile/obi_demux_addr.sv

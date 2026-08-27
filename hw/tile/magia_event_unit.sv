@@ -90,6 +90,17 @@ import magia_tile_pkg::*;
   XBAR_PERIPH_BUS #(.ID_WIDTH(NB_CORES+1)) eu_direct_link[NB_CORES-1:0]();
   XBAR_PERIPH_BUS #(.ID_WIDTH(NB_CORES+1)) speriph_slave();
 
+  MESSAGE_BUS #(.ID_WIDTH(NB_CORES+1)) message_bus_dummy();
+
+  logic [NB_BARR-1:0] barrier_matched_unused;
+  
+  // Event unit binding
+  assign message_bus_dummy.gnt     = 1'b1; 
+  assign message_bus_dummy.r_valid = 1'b1;
+  assign message_bus_dummy.r_opc   = 1'b0;
+  assign message_bus_dummy.r_id    = '0;
+  assign message_bus_dummy.r_rdata = '0;
+
   // Convert abstract eu_direct interface to XBAR_PERIPH_BUS (one per core)
   // eu_direct_addr_i already contains relative offset (subtracted by demux)
   generate
@@ -164,7 +175,9 @@ import magia_tile_pkg::*;
     .soc_periph_evt_ready_o   ( soc_periph_evt_ready_o        ),
     .soc_periph_evt_data_i    ( soc_periph_evt_data_i         ),
     .speriph_slave            ( speriph_slave                 ),
-    .eu_direct_link           ( eu_direct_link                )
+    .eu_direct_link           ( eu_direct_link                ),
+    .barrier_matched_o        ( barrier_matched_unused        ),
+    .message_master           ( message_bus_dummy             )
   );
  
 endmodule: magia_event_unit
