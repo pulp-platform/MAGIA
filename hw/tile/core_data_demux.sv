@@ -34,6 +34,8 @@ module core_data_demux
   input  logic clk_i,
   input  logic rst_ni,
 
+  input  logic core_clock_en_i,
+
   // Core data interface (input from the core)
   input  req_t core_data_req_i,
   output rsp_t core_data_rsp_o,
@@ -104,13 +106,12 @@ module core_data_demux
     assign err_eff[s]    = slv_data_rsp_i[s].rvalid ? slv_data_rsp_i[s].err   : cap_err_q[s];
   end
 
-  // Response forwarded to the core this cycle
   logic resp_valid_to_core;
   always_comb begin : _RESP_VALID_MUX_
     if (num_outstanding == '0)
       resp_valid_to_core = 1'b0;
     else
-      resp_valid_to_core = rvalid_eff[head];
+      resp_valid_to_core = rvalid_eff[head] && core_clock_en_i;
   end
 
   // Capture/clear FFs
@@ -120,9 +121,9 @@ module core_data_demux
       cap_rdata_q  <= '{default: '0};
       cap_err_q    <= '0;
     end else begin
-      // Per slave: capture when rvalid arrives and the slave is not at head; clear when the slave's response is forwarded to the core.
       for (int unsigned s = 0; s < NumSlv; s++) begin
-        if (slv_data_rsp_i[s].rvalid && (num_outstanding > 0) && (head != SelW'(s))) begin
+        if (slv_data_rsp_i[s].rvalid && (num_outstanding > 0) &&
+            ((head != SelW'(s)) || !core_clock_en_i)) begin
           cap_rvalid_q[s] <= 1'b1;
           cap_rdata_q[s]  <= slv_data_rsp_i[s].rdata;
           cap_err_q[s]    <= slv_data_rsp_i[s].err;
