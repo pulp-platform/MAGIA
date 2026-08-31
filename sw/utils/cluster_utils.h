@@ -197,6 +197,13 @@ static inline void pi_cl_team_barrier(void) {
     (void)evt_read32(CLUSTER_EU_BARRIER0_ADDR, CLUSTER_EU_BARR_WAIT_CLEAR);
 }
 
+static inline void pi_cl_team_barrier_setup(unsigned int barrier_id, uint32_t core_mask) {
+    uint32_t addr = CLUSTER_EU_DIRECT_BASE + CLUSTER_EU_BARRIER_OFFSET
+                   + barrier_id * CLUSTER_EU_BARRIER_SIZE;
+    mmio32(addr + CLUSTER_EU_BARR_TRIGGER_MASK) = core_mask;
+    mmio32(addr + CLUSTER_EU_BARR_TARGET_MASK)  = core_mask;
+}
+
 static inline void pi_cl_team_fork(int nb_cores, void (*entry)(void *), void *arg) {
     uint32_t core_mask = (nb_cores >= 32) ? 0xFFFFFFFFu : ((1u << nb_cores) - 1u);
 
@@ -222,14 +229,6 @@ static inline void pi_cl_team_push_other(uint32_t core_mask, void (*entry)(void 
     mmio32(CLUSTER_EU_DISPATCH_TEAM_CFG) = core_mask;
     mmio32(CLUSTER_EU_DISPATCH_FIFO) = ((uint32_t)entry) | 1u;  /* bit 0 set: other entry, no auto barrier */
     mmio32(CLUSTER_EU_DISPATCH_FIFO) = (uint32_t)arg;
-}
-
-
-static inline void pi_cl_team_barrier_setup(unsigned int barrier_id, uint32_t core_mask) {
-    uint32_t addr = CLUSTER_EU_DIRECT_BASE + CLUSTER_EU_BARRIER_OFFSET
-                   + barrier_id * CLUSTER_EU_BARRIER_SIZE;
-    mmio32(addr + CLUSTER_EU_BARR_TRIGGER_MASK) = core_mask;
-    mmio32(addr + CLUSTER_EU_BARR_TARGET_MASK)  = core_mask;
 }
 
 #endif /* CLUSTER_UTILS_H */

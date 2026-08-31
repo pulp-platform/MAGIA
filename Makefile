@@ -44,6 +44,8 @@ XLEN           ?= 32
 zfinx         := 1
 cluster_zfinx := 1
 
+stats         ?= 0
+
 PULP_XTEN_BASE := xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw
 
 ifeq ($(core), CV32E40X)
@@ -162,12 +164,14 @@ CC=riscv64-unknown-elf-gcc
 OBJDUMP=riscv64-unknown-elf-objdump
 NM=riscv64-unknown-elf-nm
 LD=$(CC)
+CV32E40P_TUNE := $(shell $(CC) -mtune=cv32e40p -E -x c /dev/null >/dev/null 2>&1 && echo -mtune=cv32e40p)
+
 ifneq ($(core), CV32E40P)
-  CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
+  CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O3 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
 	LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
 else
-  CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O2 -U__riscv__ -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
-  LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -U__riscv__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
+  CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) $(CV32E40P_TUNE) -D__$(ISA)__ -O3 -U__riscv__ -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
+  LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) $(CV32E40P_TUNE) -D__$(ISA)__ -U__riscv__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
 endif
 
 # Spatz embedded binary support (via header)
@@ -225,7 +229,7 @@ spatz-header:
 pulp-header:
 	@if [ -n "$(PULP_TASKS)" ]; then \
 		echo "[PULP] Auto-detected tasks: $(PULP_TASKS)"; \
-		$(MAKE) -C $(PULP_SW_DIR) TEST_NAME=$(test) task="$(PULP_TASKS)" PULP_TASK_DIR=$(ROOT_DIR)/$(PULP_TASK_DIR_PATH) core=CV32E40P zfinx=$(cluster_zfinx) all; \
+		$(MAKE) -C $(PULP_SW_DIR) TEST_NAME=$(test) task="$(PULP_TASKS)" PULP_TASK_DIR=$(ROOT_DIR)/$(PULP_TASK_DIR_PATH) core=CV32E40P zfinx=$(cluster_zfinx) stats=$(stats) all; \
 	else \
 		echo "[PULP] No pulp_task/ directory — skipping PULP cluster compilation"; \
 	fi
@@ -356,6 +360,15 @@ endif
 effective_ctrl_zfinx := $(if $(filter CV32E40X,$(core)),0,$(zfinx))
 bender_defs += -D ZFINX_CTRL=$(effective_ctrl_zfinx)
 bender_defs += -D ZFINX_CLUSTER=$(cluster_zfinx)
+
+# Debug instrumentation ($display on state changes) added while investigating
+# the vector_dot cv.elw barrier deadlock: cv32e40p_load_store_unit.sv (the
+# only file that still has the block). Off by default now that the root
+# cause is found; set event_unit_hang_debug=1 to recompile with it back on.
+event_unit_hang_debug ?= 0
+ifeq ($(event_unit_hang_debug),1)
+  bender_defs += -D EVENT_UNIT_HANG_DEBUG
+endif
 
 bender_targs += -t rtl
 bender_targs += -t test

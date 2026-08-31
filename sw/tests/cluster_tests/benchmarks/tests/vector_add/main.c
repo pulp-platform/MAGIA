@@ -46,7 +46,7 @@
 #include "cluster_utils.h"
 
 #define TARGET_IS_PULP_OPEN 1
-#include "../../../../PLAY/test/vector_add/test_data/data.h"
+#include "../../../../../../PLAY/test/vector_add/test_data/data.h"
 
 #include "vector_add_pulp_task_bin.h"
 

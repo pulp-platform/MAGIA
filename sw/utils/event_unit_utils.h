@@ -137,7 +137,7 @@ typedef enum {
 static inline unsigned int evt_read32(unsigned int base, unsigned int offset) {
     unsigned int value;
     unsigned int addr = base + offset;
-#if defined(CV32E40P)
+#if defined(CV32E40P) && !defined(EU_FORCE_PLAIN_LW_DEBUG)
     __asm__ __volatile__ (
         "cv.elw %0, 0(%1)"
         : "=r" (value)

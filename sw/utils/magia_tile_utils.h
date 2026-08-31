@@ -171,7 +171,7 @@ static inline void sentinel_end(){
 
 static inline void ccount_en(){
 #if defined(CV32E40X) || defined(CV32E40P)
-    asm volatile("csrrci zero, 0x320, 0x1" ::);
+    asm volatile("csrrci zero, 0x320, 0x5" ::);
 #else
     asm volatile("csrw 0x7E0, %0" :: "r"(0x1));
     asm volatile("csrw 0x7E1, %0" :: "r"(0x1));
@@ -180,7 +180,7 @@ static inline void ccount_en(){
 
 static inline void ccount_dis(){
 #if defined(CV32E40X) || defined(CV32E40P)
-    asm volatile("csrrsi zero, 0x320, 0x1" ::);
+    asm volatile("csrrsi zero, 0x320, 0x5" ::);
 #else
     asm volatile("csrw 0x7E1, %0" :: "r"(0x0));
 #endif
@@ -204,11 +204,36 @@ static inline uint32_t get_cycleh(){
     return cycleh;
 }
 
-uint32_t get_cycle(){
+static inline uint32_t get_cycle(){
     uint32_t cyclel = get_cyclel();
     uint32_t cycleh = get_cycleh();
     if (cycleh) return 0;
     return cyclel;
+}
+
+static inline uint32_t get_instretl(){
+    uint32_t instretl;
+#if defined(CV32E40X) || defined(CV32E40P)
+    asm volatile("csrr %0, instret"
+                 :"=r"(instretl):);
+#else
+    asm volatile("csrr %0, 0x781" : "=r"(instretl));
+#endif
+    return instretl;
+}
+
+static inline uint32_t get_instreth(){
+    uint32_t instreth;
+    asm volatile("csrr %0, instreth"
+                 :"=r"(instreth):);
+    return instreth;
+}
+
+static inline uint32_t get_instret(){
+    uint32_t instretl = get_instretl();
+    uint32_t instreth = get_instreth();
+    if (instreth) return 0;
+    return instretl;
 }
 
 static inline uint32_t get_timel(){

@@ -26,6 +26,13 @@ sw/tests/*/*/transcript
 sw/tests/*/*/*.log
 sw/tests/*/traces/*/
 sw/tests/*/*/traces/*/
+sw/tests/cluster_tests/benchmarks/tests/*/build/
+sw/tests/cluster_tests/benchmarks/tests/*/logs/
+sw/tests/cluster_tests/benchmarks/tests/*/traces/
+sw/tests/cluster_tests/benchmarks/tests/*/work/
+sw/tests/cluster_tests/benchmarks/tests/*/work
+sw/tests/cluster_tests/benchmarks/tests/*/transcript
+sw/tests/cluster_tests/benchmarks/tests/*/*.log
 
 spatz/bootrom/*.elf
 spatz/bootrom/*.bin
@@ -44,3 +51,5 @@ sw/kernel_pulp/headers_bin/
 
 *.wlf
 *.dbg
+vish_stacktrace.vstf
+

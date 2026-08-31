@@ -47,7 +47,9 @@ TEST_NAME      ?= base_pulp_test
 task           ?=
 PULP_TASK_DIR  ?=
 
-ARCH_FLAGS = -march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI)
+CV32E40P_TUNE := $(shell $(CC) -mtune=cv32e40p -E -x c /dev/null >/dev/null 2>&1 && echo -mtune=cv32e40p)
+
+ARCH_FLAGS = -march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) $(CV32E40P_TUNE)
 # -msmall-data-limit=0: never use gp/zero-relative addressing for globals.
 #     Required because the PIC binary is linked with ORIGIN=0, so .sdata
 #     symbols would otherwise be accessed via `lw rd, imm(zero)`, which
@@ -63,7 +65,7 @@ ARCH_FLAGS = -march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI)
 #     cluster icache stalls forever on a fill that loops in the NoC.
 #     Forcing compare-chains keeps every branch PC-relative (PIC-safe).
 #     Affects both mesh_dv settings.
-CFLAGS     = $(ARCH_FLAGS) -O2 -g -Wall -Wextra -Wno-unused-parameter \
+CFLAGS     = $(ARCH_FLAGS) -O3 -g -Wall -Wextra -Wno-unused-parameter \
              -Wno-unused-variable -Wno-unused-function -Wundef \
              -ffunction-sections -fdata-sections \
              -fPIC -mcmodel=medany \
@@ -77,6 +79,12 @@ CFLAGS    += -I../utils -I../../hw/include -I.
 
 # PLAY (submodule) include path and cluster/core count for pulp_program.ld
 CFLAGS    += -I../../PLAY/include -DCLUSTER=1 -DNUM_CORES=$(PULP_CORE_COUNT)
+
+# stats=1: enable PLAY-style HOTTING/REPEAT cycle-count reporting (sw/utils/stats.h)
+stats ?= 0
+ifeq ($(stats),1)
+CFLAGS    += -DSTATS
+endif
 
 LDFLAGS   = $(ARCH_FLAGS) -nostartfiles -nostdlib \
             -Wl,--gc-sections -Wl,--allow-multiple-definition \

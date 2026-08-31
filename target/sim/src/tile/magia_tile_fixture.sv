@@ -100,7 +100,7 @@ module magia_tile_fixture;
 /*******************************************************/
 
   magia_tile #(
-    .TileCfg      ( magia_tile_pkg::MagiaTileDefaultCfg ),
+    .TileCfg      ( magia_pkg::MagiaTileClusterCfg ),
     .N_MEM_BANKS  ( magia_tile_tb_pkg::N_MEM_BANKS  ),
     .N_WORDS_BANK ( magia_tile_tb_pkg::N_WORDS_BANK ),
 
