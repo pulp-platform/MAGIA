@@ -196,6 +196,7 @@ module magia_cluster_wrap
     ) i_cluster_data_demux (
       .clk_i            ( clk_i                     ),
       .rst_ni           ( rst_ni                    ),
+      .core_clock_en_i  ( cluster_eu_clock_en[i]    ),
       .core_data_req_i  ( cluster_data_req[i]       ),
       .core_data_rsp_o  ( cluster_data_rsp[i]       ),
       .slv_start_addr_i ( cluster_data_demux_start_addr ),
