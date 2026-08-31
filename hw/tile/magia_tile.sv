@@ -878,6 +878,7 @@ module magia_tile
   ) i_core_data_demux (
     .clk_i            ( sys_clk                     ),
     .rst_ni           ( rst_ni                      ),
+    .core_clock_en_i  ( sys_clk_en                  ),
     .core_data_req_i  ( core_data_req               ),
     .core_data_rsp_o  ( core_data_rsp               ),
     .slv_start_addr_i ( core_data_demux_start_addr  ),
