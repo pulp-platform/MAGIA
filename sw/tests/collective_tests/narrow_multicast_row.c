@@ -21,7 +21,6 @@
  * 2) The test passes if all the destination tiles successfully receive the 32-bit word.
  */
 
-#include "magia_utils.h"
 #include "magia_coll_utils.h"
 
 #define MEM_OFFSET (0x1000)
@@ -34,7 +33,7 @@ int main() {
   /*
   * Hardware configuration:
   * 1) Collective Operation opcode -> MULTICAST
-  * 2) Nodes taking part to the transactions -> ALL
+  * 2) Nodes taking part to the transactions -> ROW
   */
   set_collective_mask(gen_collective_mask(ROW));
   set_collective_op(MULTICAST);
@@ -61,7 +60,6 @@ int main() {
         while(mmio32(L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) != BROADCAST_WORD) {};
         
         printf("TEST PASSED\n");
-    }
   }
 
   return 0;

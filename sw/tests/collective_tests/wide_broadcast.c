@@ -14,10 +14,12 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
+ * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
+ *         Based on idma_test.c by Victor Isachi
  * 
- * MAGIA Column multicast test over iDMA using Memory-Mapped Control
+ * MAGIA Broadcast test over iDMA using Memory-Mapped Control
  */
-#include "magia_utils.h"
+
 #include "magia_tile_utils.h"
 #include "idma_mm_utils.h"
 #include "magia_coll_utils.h"
@@ -33,8 +35,8 @@
 
 #define VERBOSE (0)
 
-#define SYNC_OFFSET (0x2000)
-#define SYNC_PATTERN 3
+#define FLOO_SYNC_OFFSET (0x2000)
+#define FLOO_SYNC_PATTERN 3
 
 #define SOURCE_HART_ID 3
 
@@ -74,24 +76,22 @@ int main(void) {
 
 
     // **************** BROADCASTING ************** //
-    uint32_t transfer_id_1 = collective(dst_addr, broad_addr, len, gen_collective_mask(COLUMN), MULTICAST);
-    printf("Multicast over the column...\n");
+    uint32_t transfer_id_1 = collective(dst_addr, broad_addr, len, gen_collective_mask(ALL), MULTICAST);
+    printf("Broadcasting...\n");
 
     // Use polling to wait for completion
     dma_wait(transfer_id_1);
   }
+  
+  printf("Barrier...\n");
+  set_collective_mask(gen_collective_mask(ALL));
+  set_collective_op(LSBAND);
+  mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + SOURCE_HART_ID*L1_TILE_OFFSET + FLOO_SYNC_OFFSET) = FLOO_SYNC_PATTERN;
 
-  if(GET_X_ID(get_hartid()) == GET_X_ID(SOURCE_HART_ID)){
-    
-    printf("Barrier...\n");
-    set_collective_mask(gen_collective_mask(COLUMN));
-    set_collective_op(LSBAND);
-    mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + SOURCE_HART_ID*L1_TILE_OFFSET + SYNC_OFFSET) = SYNC_PATTERN;
-
-    if(get_hartid() != SOURCE_HART_ID) {
+  if(get_hartid() != SOURCE_HART_ID) {
 
       printf("Checking data...\n");
-
+      
       uint16_t detected_l1, detected_l2, expected;
       unsigned int num_errors = 0;
       for(int i = 0; i < M_SIZE*N_SIZE; i++){
@@ -103,7 +103,8 @@ int main(void) {
         }
       }
       printf("Finished test with %0d errors\n", num_errors);
-    }
+
+
   }
   return 0;
 }

@@ -16,42 +16,49 @@
  *
  * Authors: Carlotta Chiarini
  * 
- * MAGIA Reduction test over the narrow channel
+ * MAGIA Column synchronization test over the narrow channel
+ * using the built-in FlooNoC collectives
  */
 
-#include "magia_utils.h"
 #include "magia_coll_utils.h"
 
-#define MEM_OFFSET (0x1000)
+#define FLOO_SYNC_OFFSET (0x1000)
+#define FLOO_SYNC_PATTERN 3
+
 #define DESTINATION_HART_ID 0
 #define CACHE_HEAT_CYCLES (5)
-#define SYNC_PATTERN 3
 
 int main() {
 
   /*
   * Hardware configuration:
   * 1) Collective Operation opcode -> LSBAND
-  * 2) Nodes taking part to the transactions -> ALL
+  * 2) Nodes taking part to the transactions -> COLUMN
   */
-  set_collective_mask(gen_collective_mask(ALL));
+  set_collective_mask(gen_collective_mask(COLUMN));
   set_collective_op(LSBAND);
 
   /*
-  * Execute synchronization multiple times to pre-heat the cache
+  * Only the nodes on the same column of the DESTINATION_HART_ID node are taking part to the sync.
   */
-  for (int i = 0; i < CACHE_HEAT_CYCLES; i++) {
-    // Data to be reduced (LsbAND)
-    sentinel_start();
-    mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + MEM_OFFSET) = SYNC_PATTERN;
-    magia_fence();
-    sentinel_end();
+  if(GET_X_ID(get_hartid()) == GET_X_ID(DESTINATION_HART_ID)){
+    printf("Synchronizing...\n");
+    /* 
+    * Execute synchronization multiple times to pre-heat the cache
+    */
+    for (int i = 0; i < CACHE_HEAT_CYCLES; i++) {
+        // Data to be reduced (LsbAND)
+        sentinel_start();
+        mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + FLOO_SYNC_OFFSET) = FLOO_SYNC_PATTERN;
+        magia_fence();
+        sentinel_end();
+    }
   }
   /*
   * If the current node is the DESTINATION_HART_ID node, it waits for the final reduced data.
   */
   if(get_hartid() == DESTINATION_HART_ID){
-    while(mmio32(L1_BASE + get_hartid()*L1_TILE_OFFSET + MEM_OFFSET) != SYNC_PATTERN) {};
+    while(mmio32(L1_BASE + get_hartid()*L1_TILE_OFFSET + FLOO_SYNC_OFFSET) != FLOO_SYNC_PATTERN) {};
     printf("TEST PASSED\n");
   }
 

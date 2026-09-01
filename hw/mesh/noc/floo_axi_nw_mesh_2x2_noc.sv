@@ -75,7 +75,7 @@ typedef struct packed {
 localparam sam_rule_t[SamNumRules-1:0] Sam = '{
 '{    idx: '{x: 0, y: 1, port_id: 0},
     start_addr: 32'he0000000,
-    end_addr: 32'h100000000},// L21
+    end_addr: 32'hffffffff},// L21
 '{    idx: '{x: 0, y: 0, port_id: 0},
     start_addr: 32'hc0000000,
     end_addr: 32'he0000000},// L20
@@ -83,11 +83,11 @@ localparam sam_rule_t[SamNumRules-1:0] Sam = '{
     start_addr: 32'h00300000,
     end_addr: 32'h00400000},// MagiaTileX1Y1
 '{    idx: '{x: 2, y: 1, port_id: 0},
-    start_addr: 32'h00100000,
-    end_addr: 32'h00200000},// MagiaTileX0Y1
-'{    idx: '{x: 3, y: 0, port_id: 0},
     start_addr: 32'h00200000,
-    end_addr: 32'h00300000},// MagiaTileX1Y0
+    end_addr: 32'h00300000},// MagiaTileX0Y1
+'{    idx: '{x: 3, y: 0, port_id: 0},
+    start_addr: 32'h00100000,
+    end_addr: 32'h00200000},// MagiaTileX1Y0
 '{    idx: '{x: 2, y: 0, port_id: 0},
     start_addr: 32'h00000000,
     end_addr: 32'h00100000} // MagiaTileX0Y0
@@ -119,7 +119,7 @@ localparam collective_sam_rule_t[CollectiveSamNumRules-1:0] CollectiveSam = '{
     mask_x: '{    default: '0},
     mask_y: '{    default: '0}},
     start_addr: 32'he0000000,
-    end_addr: 32'h100000000},// L21
+    end_addr: 32'hffffffff},// L21
 '{    idx: '{    id: '{x: 0, y: 0, port_id: 0},
     mask_x: '{    default: '0},
     mask_y: '{    default: '0}},

@@ -152,39 +152,6 @@ package magia_noc_pkg;
     // Actual declaration of RouteCfg
     localparam route_cfg_t RouteCfg = gen_route_config(N_TILES);
 
-/*
-
-    typedef logic[ADDR_W-1:0]  axi_narrow_data_mst_addr_t;
-    typedef logic[DATA_W-1:0]  axi_narrow_data_mst_data_t;
-    typedef logic[STRB_W-1:0]  axi_narrow_data_mst_strb_t;
-    typedef logic[L2_ID_W-1:0] axi_narrow_data_mst_id_t;
-    typedef logic[iDMA_UserWidth-1:0]  axi_narrow_data_mst_user_t;
-
-    `AXI_TYPEDEF_ALL_CT(axi_narrow_data_mst, axi_narrow_data_mst_req_t, axi_narrow_data_mst_rsp_t, axi_narrow_data_mst_addr_t, axi_narrow_data_mst_id_t, axi_narrow_data_mst_data_t, axi_narrow_data_mst_strb_t, axi_narrow_data_mst_user_t)
-
-    typedef logic[ADDR_W-1:0]       axi_narrow_data_slv_addr_t;
-    typedef logic[DATA_W-1:0]       axi_narrow_data_slv_data_t;
-    typedef logic[STRB_W-1:0]       axi_narrow_data_slv_strb_t;
-    typedef logic[AXI_NOC_ID_W-1:0] axi_narrow_data_slv_id_t;
-    typedef logic[iDMA_UserWidth-1:0]  axi_narrow_data_slv_user_t;
-
-    `AXI_TYPEDEF_ALL_CT(axi_narrow_data_slv, axi_narrow_data_slv_req_t, axi_narrow_data_slv_rsp_t, axi_narrow_data_slv_addr_t, axi_narrow_data_slv_id_t, axi_narrow_data_slv_data_t, axi_narrow_data_slv_strb_t, axi_narrow_data_slv_user_t)
-
-    typedef logic[ADDR_W-1:0]          axi_wide_data_mst_addr_t;
-    typedef logic[WIDE_DATA_W-1:0]     axi_wide_data_mst_data_t;
-    typedef logic[WIDE_STRB_W-1:0]     axi_wide_data_mst_strb_t;
-    typedef logic[iDMA_AxiIdWidth-1:0] axi_wide_data_mst_id_t;
-    typedef logic[iDMA_UserWidth-1:0]  axi_wide_data_mst_user_t;
-    `AXI_TYPEDEF_ALL_CT(axi_wide_data_mst, axi_wide_data_mst_req_t, axi_wide_data_mst_rsp_t, axi_wide_data_mst_addr_t, axi_wide_data_mst_id_t, axi_wide_data_mst_data_t, axi_wide_data_mst_strb_t, axi_wide_data_mst_user_t)
-
-    typedef logic[ADDR_W-1:0]          axi_wide_data_slv_addr_t;
-    typedef logic[WIDE_DATA_W-1:0]     axi_wide_data_slv_data_t;
-    typedef logic[WIDE_STRB_W-1:0]     axi_wide_data_slv_strb_t;
-    typedef logic[iDMA_AxiIdWidth-1:0] axi_wide_data_slv_id_t;
-    typedef logic[iDMA_UserWidth-1:0]  axi_wide_data_slv_user_t;
-    `AXI_TYPEDEF_ALL_CT(axi_wide_data_slv, axi_wide_data_slv_req_t, axi_wide_data_slv_rsp_t, axi_wide_data_slv_addr_t, axi_wide_data_slv_id_t, axi_wide_data_slv_data_t, axi_wide_data_slv_strb_t, axi_wide_data_slv_user_t)
-*/
-
     typedef logic[ADDR_W-1:0] axi_narrow_data_mst_addr_t;
     typedef logic[DATA_W-1:0] axi_narrow_data_mst_data_t;
     typedef logic[STRB_W-1:0] axi_narrow_data_mst_strb_t;

@@ -21,7 +21,6 @@
  * 2) The test passes if all the destination tiles successfully receive the 32-bit word.
  */
 
-#include "magia_utils.h"
 #include "magia_coll_utils.h"
 
 #define MEM_OFFSET (0x1000)

@@ -17,7 +17,7 @@
  *
  * MAGIA Column multicast test over iDMA using Memory-Mapped Control
  */
-#include "magia_utils.h"
+
 #include "magia_tile_utils.h"
 #include "idma_mm_utils.h"
 #include "magia_coll_utils.h"
@@ -33,8 +33,8 @@
 
 #define VERBOSE (0)
 
-#define SYNC_OFFSET (0x2000)
-#define SYNC_PATTERN 3
+#define FLOO_SYNC_OFFSET (0x2000)
+#define FLOO_SYNC_PATTERN 3
 
 #define SOURCE_HART_ID 3
 
@@ -86,7 +86,7 @@ int main(void) {
     printf("Barrier...\n");
     set_collective_mask(gen_collective_mask(ROW));
     set_collective_op(LSBAND);
-    mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + SOURCE_HART_ID*L1_TILE_OFFSET + SYNC_OFFSET) = SYNC_PATTERN;
+    mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + SOURCE_HART_ID*L1_TILE_OFFSET + FLOO_SYNC_OFFSET) = FLOO_SYNC_PATTERN;
 
     if(get_hartid() != SOURCE_HART_ID) {
     

@@ -27,14 +27,14 @@
  * 3) Integer Mul Test
  */
 
-#include "magia_utils.h"
 #include "magia_coll_utils.h"
 
 #define REDUCE_OFFSET (0x1000)
-#define SYNC_OFFSET (0x2000)
+
+#define FLOO_SYNC_OFFSET (0x2000)
+#define FLOO_SYNC_PATTERN 3
 
 #define DESTINATION_HART_ID 0
-#define SYNC_PATTERN 3
 
 
 int main() {
@@ -102,7 +102,7 @@ int main() {
   printf("Barrier...\n");
   set_collective_mask(gen_collective_mask(ALL));
   set_collective_op(LSBAND);
-  mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + SYNC_OFFSET) = SYNC_PATTERN;
+  mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + FLOO_SYNC_OFFSET) = FLOO_SYNC_PATTERN;
 
 
 
