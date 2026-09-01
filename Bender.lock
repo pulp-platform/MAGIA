@@ -166,7 +166,7 @@ packages:
     dependencies:
     - tech_cells_generic
   idma:
-    revision: 2d70db556da8aefa0af9d87a04e5d03b144a8c81
+    revision: 26ac2cd1c535851b14c9c508762203a180961cad
     version: 0.6.4
     source:
       Git: https://github.com/FondazioneChipsIT/iDMA.git
