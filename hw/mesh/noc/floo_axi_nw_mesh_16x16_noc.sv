@@ -607,7 +607,7 @@ typedef struct packed {
 localparam sam_rule_t[SamNumRules-1:0] Sam = '{
 '{    idx: '{x: 0, y: 15, port_id: 0},
     start_addr: 32'hfc000000,
-    end_addr: 32'h100000000},// L215
+    end_addr: 32'hffffffff},// L215
 '{    idx: '{x: 0, y: 14, port_id: 0},
     start_addr: 32'hf8000000,
     end_addr: 32'hfc000000},// L214
@@ -1449,7 +1449,7 @@ localparam collective_sam_rule_t[CollectiveSamNumRules-1:0] CollectiveSam = '{
     mask_x: '{    default: '0},
     mask_y: '{    default: '0}},
     start_addr: 32'hfc000000,
-    end_addr: 32'h100000000},// L215
+    end_addr: 32'hffffffff},// L215
 '{    idx: '{    id: '{x: 0, y: 14, port_id: 0},
     mask_x: '{    default: '0},
     mask_y: '{    default: '0}},

@@ -306,7 +306,7 @@ module magia_tile
   logic[magia_tile_pkg::AUSER_WIDTH-1:0] axi2obi_req_read_auser;
 
   logic[magia_pkg::AXI_NOC_U_W-1:0]  axi2obi_rsp_b_user;
-  logic[magia_pkg::AXI_NOC_U_W]    axi2obi_rsp_r_user;
+  logic[magia_pkg::AXI_NOC_U_W-1:0]    axi2obi_rsp_r_user;
 
   logic idma_clear;         // Can be used to manage iDMA clear at top-level
   logic idma_axi2obi_start;

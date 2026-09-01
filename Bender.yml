@@ -165,7 +165,8 @@ sources:
       - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_tile_icache_wrap.sv
       - hw/tile/magia_redmule_wrap.sv
-      - hw/tile/mcast_gen.sv
+      - hw/tile/collective_gen.sv
+      - hw/tile/obi_slave_ctrl_coll.sv
       - hw/tile/magia_tile.sv
 
   - target: all(magia_dv, not(standalone_tile), verilator)
@@ -245,6 +246,8 @@ sources:
       - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_tile_icache_wrap.sv
       - hw/tile/magia_redmule_wrap.sv
+      - hw/tile/collective_gen.sv
+      - hw/tile/obi_slave_ctrl_coll.sv
       - hw/tile/magia_tile.sv
       # MAGIA
       - hw/mesh/magia.sv
