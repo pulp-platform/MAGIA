@@ -17,6 +17,11 @@ EXCLUDED = {
     # child-block parsing does not lazily skip it and hits an unsupported
     # `##[min:max]` cycle-delay-range assertion (Plan 3, Step 6).
     "snitch_icache_l0_tb.sv",
+    # iDMA's own backend testbenches, one module per backend ID. Nothing in
+    # magia_tb instantiates them, and they are the only files in the flist that
+    # need a tracer macro for an ID outside iDMA's stock set -- the rest use
+    # `IDMA_TRACER_RW_AXI, which the checked-in header always defines.
+    "tb_idma_generated.sv",
 }
 
 
