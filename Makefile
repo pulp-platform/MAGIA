@@ -573,7 +573,7 @@ hw-all: hw-clean hw-lib hw-compile hw-opt
 # Nonfree components
 MAGIA_NONFREE_REMOTE ?= $(GITLAB_UNIBO_SSH_STRING)/magia/nonfree.git
 MAGIA_NONFREE_DIR    ?= nonfree
-MAGIA_NONFREE_COMMIT ?= 44cefe806e5c6ebf25d2d2ad196c28fdb59493c2
+MAGIA_NONFREE_COMMIT ?= 835eadd2ca4e585498c3aef743b21acda59d7414
 MAGIA_NONFREE_DEPS   ?= 1
 
 .PHONY: magia-nonfree-init
