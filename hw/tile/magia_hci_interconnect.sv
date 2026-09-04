@@ -132,12 +132,14 @@ module magia_hci_interconnect
   `HCI_INTF_ARRAY(lic_mem,        clk_i, 0:N_MEM-1);
   `HCI_INTF_ARRAY(core_mem_muxed, clk_i, 0:N_MEM-1);
 
-  // Forces the wide-branch arbiter_tree to a fair 1:2 round-robin, independent of runtime ctrl_i.
-  hci_package::hci_interconnect_ctrl_t ctrl_fair;
+  // Ctrl for WIDE-branch arbiter_tree (RedMulE vs the DMA channels)
+  hci_package::hci_interconnect_ctrl_t ctrl_wide;
   always_comb begin
-    ctrl_fair                           = ctrl_i;
-    ctrl_fair.priority_cnt_numerator    = 8'd1;
-    ctrl_fair.priority_cnt_denominator  = 8'd2;
+    ctrl_wide = ctrl_i;
+    if (ctrl_i.priority_cnt_denominator == 8'd0) begin
+      ctrl_wide.priority_cnt_numerator   = 8'd1;
+      ctrl_wide.priority_cnt_denominator = 8'd2;
+    end
   end
 
   // Final wide-vs-narrow control: uses ctrl_i if programmed (denominator!=0), else falls back to the fair FINAL_QOS_NUM/DEN default.
@@ -236,7 +238,7 @@ module magia_hci_interconnect
       );
     end
 
-    // Single arbiter tree over all wide initiators, forced fair 1:2; collapses to wiring when N_WIDE==1.
+    // Single arbiter tree over all wide initiators
     hci_arbiter_tree #(
       .NB_REQUESTS         ( N_WIDE                          ),
       .NB_CHAN             ( N_MEM                           ),
@@ -247,7 +249,7 @@ module magia_hci_interconnect
       .clk_i   ( clk_i          ),
       .rst_ni  ( rst_ni         ),
       .clear_i ( clear_i        ),
-      .ctrl_i  ( ctrl_fair      ),
+      .ctrl_i  ( ctrl_wide      ),
       .in      ( wide_mem       ),
       .out     ( wide_mem_muxed )
     );

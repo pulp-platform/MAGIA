@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include "magia_tile_utils.h"
+#include "magia_stats.h"
 #include "magia_spatz_utils.h"
 #include "redmule_mm_utils.h"
 #include "event_unit_utils.h"
@@ -107,7 +108,7 @@ int main(void) {
     
     printf("Starting RedMulE computation...\n");
     
-    uint32_t redmule_start = get_cycle();
+    uint32_t redmule_start = perf_csr_cycle();
     
     // Trigger job
     hwpe_trigger_job();
@@ -115,7 +116,7 @@ int main(void) {
     // Wait for HWPE completion using the polling method
     hwpe_wait_for_completion();
     
-    uint32_t redmule_cycles = get_cycle() - redmule_start;
+    uint32_t redmule_cycles = perf_csr_cycle() - redmule_start;
 
     printf("RedMule cycles: %u\n", redmule_cycles);
     printf("RedMule completed.\n\n");
@@ -147,13 +148,13 @@ int main(void) {
     
     printf("Starting Spatz computation...\n");
     
-    uint32_t spatz_start = get_cycle();
+    uint32_t spatz_start = perf_csr_cycle();
     spatz_pass_params(MATMUL_PARAM_BASE);
     spatz_run_task(MATMUL16_TASK);   
 
     eu_wait_spatz_polling(EU_SPATZ_DONE_MASK);
     
-    uint32_t spatz_cycles = get_cycle() - spatz_start;
+    uint32_t spatz_cycles = perf_csr_cycle() - spatz_start;
     
     printf("Spatz cycles: %u\n\n", spatz_cycles);
 

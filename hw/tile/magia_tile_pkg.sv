@@ -73,9 +73,12 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] CTRL_EU_SIZE         = 32'h0000_1000;
   localparam logic [magia_pkg::ADDR_W-1:0] CTRL_EU_ADDR_END     = CTRL_EU_ADDR_START + CTRL_EU_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_START          = CTRL_EU_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_SIZE           = 32'h0000_0100;
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_SIZE           = 32'h0000_00C0;  // Spatz/cluster ctrl regs; top 0x40 of the old 0x100 window is now TILE_HCI_CSR
   localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_END            = TILE_CSR_START + TILE_CSR_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_DIRECT_START  = TILE_CSR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_HCI_CSR_START      = TILE_CSR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_HCI_CSR_SIZE       = 32'h0000_0040;  // HCI interconnect arbiter control register (control core, always present)
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_HCI_CSR_END        = TILE_HCI_CSR_START + TILE_HCI_CSR_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_DIRECT_START  = TILE_HCI_CSR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_DIRECT_SIZE   = 32'h0000_1000;
   localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_DIRECT_END    = CLUSTER_EU_DIRECT_START + CLUSTER_EU_DIRECT_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_ADDR_START   = CLUSTER_EU_DIRECT_END;
@@ -350,6 +353,7 @@ package magia_tile_pkg;
     int unsigned idma;       // iDMA control port
     int unsigned fsync;      // FractalSync control port
     int unsigned eu;         // Event Unit port (control core)
+    int unsigned hci_ctrl;   // HCI interconnect arbiter control register (control core, always present)
     int unsigned cluster_eu; // Cluster-private Event Unit, memory-mapped view (valid iff EnCluster)
     int unsigned csr;        // Shared control-register port (valid iff EnSpatzCC or EnCluster)
   } obi_sbr_map_t;
@@ -365,10 +369,11 @@ package magia_tile_pkg;
     ret.idma  = idx++;
     ret.fsync = idx++;
     ret.eu    = idx++;
+    ret.hci_ctrl = idx++;
     if (cfg.EnCluster) ret.cluster_eu = idx++;
     if (cfg.EnSpatzCC || cfg.EnCluster) ret.csr = idx++;  // hosts only Spatz/cluster control registers
     ret.num_sbr = idx;
-    ret.num_rules = 7 + 32'(cfg.EnRedMule) + 32'(cfg.EnSpatzCC || cfg.EnCluster) + 32'(cfg.EnCluster);
+    ret.num_rules = 8 + 32'(cfg.EnRedMule) + 32'(cfg.EnSpatzCC || cfg.EnCluster) + 32'(cfg.EnCluster);
     return ret;
   endfunction
 

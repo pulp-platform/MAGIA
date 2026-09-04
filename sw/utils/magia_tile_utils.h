@@ -33,41 +33,19 @@
 
 #define REDMULE_BASE    (0x00000100)
 #define REDMULE_END     (0x000001FF)
+
 #define IDMA_BASE       (0x00000200)
 #define IDMA_END        (0x000005FF)
+
 #define FSYNC_BASE      (0x00000600)
 #define FSYNC_END       (0x000006FF)
+
 #define EVENT_UNIT_BASE (0x00000700)
 #define EVENT_UNIT_END  (0x000016FF)
+
 #define SPATZ_CTRL_BASE (0x00001700)
 #define SPATZ_CTRL_END  (0x0000173F)
-/* PULP Cluster Control registers (tile_csr + 0x40), bare-metal dispatch model
- *   +0x00 PULP_CLK_EN           : R/W broadcast enable. CV32 writes 1 to start
- *                                 ALL cores fetching from PULP_BINARY; writes 0
- *                                 to disable. Writes also reset READY counter.
- *   +0x04 PULP_BINARY           : entry point address (boot vector) for all
- *                                 cluster cores
- *   +0x08 PULP_DONE             : W = the dispatcher core signals completion;
- *                                 each write emits EU bit 12 to the CV32
- *   +0x0C PULP_TASKBIN          : R/W per-dispatch task function address, read
- *                                 by core 0 in its dispatcher_loop
- *   +0x10 PULP_DATA             : R/W per-dispatch opaque data ptr passed as
- *                                 first argument to the task
- *   +0x14 PULP_START            : R/W CV32 writes any non-zero value -> 1-cycle
- *                                 doorbell event on core 0's Event Unit slice
- *                                 (EU_OTHER_CLUSTER_START, bit 13), same pattern
- *                                 as SPATZ_START on the Spatz CSR; core 0 writes
- *                                 0 to ACK, which clears the register. Only core
- *                                 0 ever talks to the control core -- no mask.
- *   +0x18 PULP_READY            : R = 1 once N_CLUSTER_CORES cores have booted;
- *                                 W = each core posts 1 when its dispatcher is
- *                                 armed (counter increment)
- *   +0x1C PULP_RETURN           : R/W task exit code; dispatcher writes it right
- *                                 before PULP_DONE, CV32 reads it after PULP_DONE
- *                                 fires. Real for tasks that `return` an int;
- *                                 existing `void` tasks leave it meaningless.
- *                                 Bit 31 = 1 if the task crashed (core 0 trapped instead of returning)
- */
+
 #define PULP_CTRL_BASE        (0x00001740)
 #define PULP_CLK_EN           (PULP_CTRL_BASE + 0x00)
 #define PULP_BINARY           (PULP_CTRL_BASE + 0x04)
@@ -78,42 +56,41 @@
 #define PULP_READY            (PULP_CTRL_BASE + 0x18)
 #define PULP_RETURN           (PULP_CTRL_BASE + 0x1C)
 #define PULP_RETURN_CRASHED_BIT (0x80000000u)
-#define PULP_CTRL_END         (0x000017FF)
+#define PULP_CTRL_END         (0x000017BF)
 #define PULP_CORE_COUNT       (8)
-#define PULP_HARTID_BASE      (32)   /* 2 * NUM_CLUSTERS (16) */
+#define PULP_HARTID_BASE      (32)
+
+#define HCI_ARB_CTRL_BASE     (0x000017C0)
+#define HCI_ARB_CTRL          (HCI_ARB_CTRL_BASE + 0x00)
+#define HCI_ARB_CTRL_END      (0x000017FF)
+#define HCI_ARB_CTRL_FAIR     (0x00000000u)        
+#define HCI_ARB_INVERT_PRIO   (1u << 0)
+#define HCI_ARB_PRIO_NUM(n)   (((n) & 0xFFu) << 8)
+#define HCI_ARB_PRIO_DEN(n)   (((n) & 0xFFu) << 16)
+
 #define CLUSTER_EU_DIRECT_BASE (0x00001800)
 #define CLUSTER_EU_DIRECT_END  (0x000027FF)
 #define CLUSTER_EU_BASE       (0x00002800)
 #define CLUSTER_EU_END        (0x000037FF)
+
 #define RESERVED_START  (0x00003800)
 #define RESERVED_END    (0x0000FFFF)
+
 #define STACK_START     (0x00010000)
 #define STACK_END       (0x0001FFFF)
+
 #define L1_BASE         (0x00020000)
 #define L1_SIZE         (0x000E0000)
 #define L1_TILE_OFFSET  (0x00100000)
+
 #define L2_BASE         (0xCC000000)
+
 #define TEST_END_ADDR   (0xCCFF0000)
 
 #define DEFAULT_EXIT_CODE (0xDEFC)
 #define PASS_EXIT_CODE    (0xAAAA)
 #define FAIL_EXIT_CODE    (0xFFFF)
 
-// Individual IRQ indices unnecessary - Event Unit provides unified interrupt management
-// Use Event Unit API (event_unit_utils.h) for event handling
-#define IRQ_REDMULE_EVT_0 (31)
-#define IRQ_REDMULE_EVT_1 (30)
-#define IRQ_A2O_ERROR     (29)
-#define IRQ_O2A_ERROR     (28)
-#define IRQ_A2O_DONE      (27)
-#define IRQ_O2A_DONE      (26)
-#define IRQ_A2O_START     (25)
-#define IRQ_O2A_START     (24)
-#define IRQ_A2O_BUSY      (23)
-#define IRQ_O2A_BUSY      (22)
-#define IRQ_REDMULE_BUSY  (21)
-#define IRQ_FSYNC_DONE    (20)
-#define IRQ_FSYNC_ERROR   (19)
 
 #define mmio64(x) (*(volatile uint64_t *)(x))
 #define mmio32(x) (*(volatile uint32_t *)(x))
@@ -167,74 +144,6 @@ static inline void sentinel_start(){
 
 static inline void sentinel_end(){
     asm volatile("addi x0, x0, 0x5FF" ::);
-}
-
-static inline void ccount_en(){
-#if defined(CV32E40X) || defined(CV32E40P)
-    asm volatile("csrrci zero, 0x320, 0x1" ::);
-#else
-    asm volatile("csrw 0x7E0, %0" :: "r"(0x1));
-    asm volatile("csrw 0x7E1, %0" :: "r"(0x1));
-#endif
-}
-
-static inline void ccount_dis(){
-#if defined(CV32E40X) || defined(CV32E40P)
-    asm volatile("csrrsi zero, 0x320, 0x1" ::);
-#else
-    asm volatile("csrw 0x7E1, %0" :: "r"(0x0));
-#endif
-}
-
-static inline uint32_t get_cyclel(){
-    uint32_t cyclel;
-#if defined(CV32E40X) || defined(CV32E40P)
-    asm volatile("csrr %0, cycle"
-                 :"=r"(cyclel):);
-#else
-    asm volatile("csrr %0, 0x780" : "=r"(cyclel));
-#endif
-    return cyclel;
-}
-
-static inline uint32_t get_cycleh(){
-    uint32_t cycleh;
-    asm volatile("csrr %0, cycleh"
-                 :"=r"(cycleh):);
-    return cycleh;
-}
-
-uint32_t get_cycle(){
-    uint32_t cyclel = get_cyclel();
-    uint32_t cycleh = get_cycleh();
-    if (cycleh) return 0;
-    return cyclel;
-}
-
-static inline uint32_t get_timel(){
-    uint32_t timel;
-#ifdef CV32E40X
-    asm volatile("csrr %0, time"
-                 :"=r"(timel):);
-#else
-    asm volatile("csrr %0, 0x781"
-                 :"=r"(timel):);
-#endif
-    return timel;
-}
-
-static inline uint32_t get_timeh(){
-    uint32_t timeh;
-    asm volatile("csrr %0, timeh"
-                 :"=r"(timeh):);
-    return timeh;
-}
-
-uint32_t get_time(){
-    uint32_t timel = get_timel();
-    uint32_t timeh = get_timeh();
-    if (timeh) return 0;
-    return timel;
 }
 
 #endif /*MAGIA_TILE_UTILS_H*/

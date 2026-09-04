@@ -178,7 +178,8 @@ module magia_tile
   localparam int unsigned RuleIdma    = 4 + 32'(TileCfg.EnRedMule);
   localparam int unsigned RuleFsync   = RuleIdma  + 1;
   localparam int unsigned RuleEu      = RuleFsync + 1;
-  localparam int unsigned RuleCsr     = RuleEu    + 1;                // valid iff HasCsrPort
+  localparam int unsigned RuleHciCsr  = RuleEu    + 1;                // always valid (HCI arbiter control register)
+  localparam int unsigned RuleCsr     = RuleHciCsr + 1;               // valid iff HasCsrPort
   localparam int unsigned RuleClusterEu = RuleCsr + 1;                // valid iff EnCluster (implies HasCsrPort)
 
 /*******************************************************/
@@ -242,8 +243,8 @@ module magia_tile
   magia_tile_pkg::core_obi_data_req_t core_obi_data_req;
   magia_tile_pkg::core_obi_data_rsp_t core_obi_data_rsp;
 
-  magia_tile_pkg::core_obi_data_req_t[ObiSbr.num_sbr-1:0] obi_xbar_mgr_req; // Subordinate ports: indices from ObiSbr (l2, l1, redmule*, idma, fsync, eu, csr - *if enabled)
-  magia_tile_pkg::core_obi_data_rsp_t[ObiSbr.num_sbr-1:0] obi_xbar_mgr_rsp; // Subordinate ports: indices from ObiSbr (l2, l1, redmule*, idma, fsync, eu, csr - *if enabled)
+  magia_tile_pkg::core_obi_data_req_t[ObiSbr.num_sbr-1:0] obi_xbar_mgr_req; // Subordinate ports: indices from ObiSbr (l2, l1, redmule*, idma, fsync, eu, hci_ctrl, cluster_eu*, csr* - *if enabled)
+  magia_tile_pkg::core_obi_data_rsp_t[ObiSbr.num_sbr-1:0] obi_xbar_mgr_rsp; // Subordinate ports: indices from ObiSbr (l2, l1, redmule*, idma, fsync, eu, hci_ctrl, cluster_eu*, csr* - *if enabled)
 
   magia_tile_pkg::core_obi_data_req_t[ObiSbr.num_sbr-1:0] obi_xbar_mgr_cut_req; // Subordinate ports (before cut): indices from ObiSbr
   magia_tile_pkg::core_obi_data_rsp_t[ObiSbr.num_sbr-1:0] obi_xbar_mgr_cut_rsp; // Subordinate ports (before cut): indices from ObiSbr
@@ -326,7 +327,7 @@ module magia_tile
   logic[AxiXbarCfg.NoSlvPorts-1:0] en_default_mst_port;
   
   logic                                hci_clear; // Can be used to manage HCI clear at top-level
-  hci_package::hci_interconnect_ctrl_t hci_ctrl;  // Can be used to manage HCI control at top-level
+  hci_package::hci_interconnect_ctrl_t hci_ctrl;  // HCI arbiter control, driven by the tile HCI CSR (i_hci_arb_csr)
 
   magia_tile_pkg::obi_xbar_rule_t[ObiSbr.num_rules-1:0] obi_xbar_rule;
 
@@ -499,6 +500,7 @@ module magia_tile
   assign obi_xbar_rule[RuleIdma]  = '{idx: ObiSbr.idma,  start_addr: tile_idma_ctrl_start_addr,        end_addr: tile_idma_ctrl_end_addr         };
   assign obi_xbar_rule[RuleFsync] = '{idx: ObiSbr.fsync, start_addr: tile_fsync_ctrl_start_addr,       end_addr: tile_fsync_ctrl_end_addr        };
   assign obi_xbar_rule[RuleEu]    = '{idx: ObiSbr.eu,    start_addr: tile_event_unit_start_addr,       end_addr: tile_event_unit_end_addr        };
+  assign obi_xbar_rule[RuleHciCsr]= '{idx: ObiSbr.hci_ctrl, start_addr: magia_tile_pkg::TILE_HCI_CSR_START, end_addr: magia_tile_pkg::TILE_HCI_CSR_END };
 
   if (HasCsrPort) begin: gen_csr_rule
     assign obi_xbar_rule[RuleCsr] = '{idx: ObiSbr.csr,   start_addr: magia_tile_pkg::TILE_CSR_START,   end_addr: magia_tile_pkg::TILE_CSR_END    };
@@ -546,7 +548,6 @@ module magia_tile
   assign floo_id = '{x: (x_id_i+1), y: y_id_i, port_id: 0};
 
   assign hci_clear = 1'b0;
-  assign hci_ctrl  = '0; // Unprogrammed for now: magia_hci_interconnect falls back to its fair 1/2 QoS default; wire to a CSR to make it runtime-tunable.
 
   assign idma_clear = 1'b0;
 
@@ -1530,6 +1531,17 @@ end
 /*******************************************************/
 /**         Local Interconnect (HCI) Beginning        **/
 /*******************************************************/
+
+  // HCI arbiter control register
+  obi_slave_ctrl_hci #(
+    .BaseAddr  ( magia_tile_pkg::TILE_HCI_CSR_START )
+  ) i_hci_arb_csr (
+    .clk_i     ( sys_clk                           ),
+    .rst_ni    ( rst_ni                            ),
+    .obi_req_i ( obi_xbar_mgr_req[ObiSbr.hci_ctrl] ),
+    .obi_rsp_o ( obi_xbar_mgr_rsp[ObiSbr.hci_ctrl] ),
+    .ctrl_o    ( hci_ctrl                          )
+  );
 
    magia_hci_interconnect #(
     // Same localparams TileIW is built from - see their definition.
