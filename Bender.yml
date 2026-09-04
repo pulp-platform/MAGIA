@@ -92,6 +92,7 @@ sources:
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
       - hw/tile/obi_slave_ctrl_cluster.sv
+      - hw/tile/obi_slave_ctrl_hci.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux.sv
@@ -156,6 +157,7 @@ sources:
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
       - hw/tile/obi_slave_ctrl_cluster.sv
+      - hw/tile/obi_slave_ctrl_hci.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux.sv
@@ -235,6 +237,7 @@ sources:
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
       - hw/tile/obi_slave_ctrl_cluster.sv
+      - hw/tile/obi_slave_ctrl_hci.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux.sv
