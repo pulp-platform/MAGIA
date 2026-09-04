@@ -32,7 +32,7 @@ dependencies:
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , version: 3.1.0                                }
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , version: 2.6.1                                }
-  cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , version: 0.2.0                                }
+  cluster_icache    : { git: "https://github.com/FondazioneChipsIT/cluster_icache.git", rev: 531a6d1738f1f2f24add0c48fe37e729716ad12a } # ng/cache_cut -- allineato a pulp_cluster-ohw-cv32 per il confronto benchmark
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
   fpu_ss            : { git: "https://github.com/pulp-platform/fpu_ss.git"            , rev: 8e2eff774d9d38a1e17a46bd56a0936dac9522f0 } # branch: vi/bender_manifest
   obi               : { git: "https://github.com/pulp-platform/obi.git"               , rev: 528dc65303d5ffb02fbc254324c6b53eac0dd6e5 } # branch: lb/fix_atop_resolver                       

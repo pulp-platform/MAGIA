@@ -50,12 +50,50 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from types import SimpleNamespace
 
-# Full PLAY kernel roster (PLAY/source/*), in the order the ported tests
-# should run/report in. Not all of these are ported yet -- discover_kernels()
-# filters this down to whichever ones actually have a
-# benchmarks/tests/<name>/pulp_task/<name>_task.c, so the runner just skips
-# (with a warning) the rest rather than failing.
+# Data-placement parity with the pulp_cluster standalone build
+# (regression_tests/play_bench in pulp_cluster-ohw-cv32) is a precondition
+# for every number this runner produces: there, pulp-sdk's linker maps every
+# PI_L1 object into .l1cluster_g at 0x1000_0018 in the cluster TCDM, the
+# cluster stacks come from pi_cl_l1_malloc() (also TCDM), and pmsis_l1_malloc()
+# is pi_cl_l1_malloc(). Anything that ends up elsewhere here is measured
+# against a different memory hierarchy and the comparison is meaningless.
+#
+# What makes that hold on this side (all verified on the built ELFs):
+#   - test buffers        -> the CV32 ctrl core seeds them at L1_BASE+0x0000..
+#                            (each test's main.c X_BASE/Z_BASE/PARAMS_BASE)
+#   - PI_L1 kernel globals-> .l1data @ 0x0003_8000 (sw/kernel_pulp/pulp_program.ld),
+#                            copied there by pulp_crt0.S at boot
+#   - pmsis_l1_malloc()   -> fixed arena @ 0x0003_A000 (sw/utils/pmsis.h)
+#   - cluster core stacks -> 0x0003_C000..0x0004_0000 (pulp_crt0.S STACK_TOP)
+# all four inside tile_l1_start..tile_l1_end, i.e. on the cluster data demux's
+# direct TCDM port into the HCI. The only writable objects left in the blob's
+# .bss (instruction RAM, OBI->AXI) are stdout_putp/stdout_putf and the
+# allocator's bump index: 8-12 bytes, a handful of accesses per run.
+#
+# Quick audit after touching any of those files:
+#   for f in sw/kernel_pulp/bin/*_pulp_task_bin.elf; do \
+#       riscv64-unknown-elf-readelf -SW $f | grep -E '\.l1data|\.bss'; done
+# .bss must stay at 8-12 bytes; anything larger means a kernel object fell
+# back into the instruction RAM (that is what linalg_lu_solve's y[] and
+# linalg_svd's tmp[] used to do: .bss 16396 B, ~79 cycles per access, 48% of
+# linalg_lu_solve's measured cycles).
+
 TEST_DIRS = [
+    'linalg_cholesky_decomp',
+    'linalg_gemv',
+    'linalg_gemv_trans',
+    'linalg_lu_decomp',
+    'linalg_lu_solve',
+    'linalg_svd',
+    'linalg_svd_jacobi',
+    'linalg_svd_lsv',
+    'matrix_memcpy',
+    'matrix_mul',
+    'matrix_mul_trans_A',
+    'matrix_mul_trans_B',
+    'matrix_set_all',
+    'matrix_swap_rows',
+    'matrix_trans',
     'vector_add',
     'vector_axpy',
     'vector_dot',
@@ -76,7 +114,12 @@ STATS_LINE_RE = re.compile(r"\[(\d+)\]\s+([\w\s]+):\s+([\d.]+)")
 RESULT_RE = re.compile(r"\[Main core \d+\]\s+(\w+)\s+(PASS|FAIL)")
 NUM_CORES = 8
 
-DEFAULT_TIMEOUT_S = 300  # per make step (compile, then run), not combined
+DEFAULT_TIMEOUT_S = 600       # compile step wall-clock cap
+DEFAULT_RUN_TIMEOUT_S = 7200  # `vsim run` wall-clock cap; iterative kernels
+                              # (linalg_svd, linalg_svd_jacobi) need far more
+                              # than the compile budget. Raise with --run-timeout
+                              # for linalg_svd_jacobi (200 Jacobi sweeps, all
+                              # taken since EPSILON=1e-12 < float resolution).
 
 
 def parse_args():
@@ -100,7 +143,11 @@ def parse_args():
     )
     parser.add_argument(
         "--timeout", type=int, default=DEFAULT_TIMEOUT_S,
-        help=f"Per-step (compile, then run) wall-clock timeout in seconds (default: {DEFAULT_TIMEOUT_S})."
+        help=f"Compile-step wall-clock timeout in seconds (default: {DEFAULT_TIMEOUT_S})."
+    )
+    parser.add_argument(
+        "--run-timeout", type=int, default=DEFAULT_RUN_TIMEOUT_S,
+        help=f"`vsim run` wall-clock timeout in seconds (default: {DEFAULT_RUN_TIMEOUT_S})."
     )
     parser.add_argument(
         "--questa-module", default="questa/2025.3",
@@ -118,6 +165,17 @@ def parse_args():
         "--results-dir", default=None,
         help="Where to write the per-kernel CSVs and the markdown report "
              "(default: sw/tests/cluster_tests/benchmarks/results)."
+    )
+    parser.add_argument(
+        "--skip-clean", action="store_true",
+        help="Don't run `make clean` before the first build. The PULP task "
+             "ELF/header dir (sw/kernel_pulp/bin, headers_bin) is shared "
+             "across every kernel and make doesn't track the stats= flag "
+             "as a build dependency, so a kernel built earlier with a "
+             "different stats= value (e.g. by hand, without stats=1) is "
+             "silently reused as-is -- no HPM instrumentation, no stats "
+             "CSV, no error. Only skip this if you're sure every kernel's "
+             "PULP artifacts already reflect this run's --stats value."
     )
     return parser.parse_args()
 
@@ -157,7 +215,7 @@ def module_prefix(args):
     return f"module load {args.questa_module} {args.gcc_module} && "
 
 
-def run_make_step(args, paths, kernel_name, make_target):
+def run_make_step(args, paths, kernel_name, make_target, timeout):
     """Runs one `make test=<kernel> stats=<N> <target>` step from the repo
     root; returns (ok, output).
 
@@ -177,7 +235,7 @@ def run_make_step(args, paths, kernel_name, make_target):
         start_new_session=True,
     )
     try:
-        stdout, _ = proc.communicate(timeout=args.timeout)
+        stdout, _ = proc.communicate(timeout=timeout)
         return proc.returncode == 0, stdout
     except subprocess.TimeoutExpired:
         try:
@@ -185,7 +243,7 @@ def run_make_step(args, paths, kernel_name, make_target):
         except ProcessLookupError:
             pass
         stdout, _ = proc.communicate()
-        return False, (stdout or "") + f"\n[TIMEOUT after {args.timeout}s running `{make_target}` -- process group killed]\n"
+        return False, (stdout or "") + f"\n[TIMEOUT after {timeout}s running `{make_target}` -- process group killed]\n"
 
 
 def run_test_case(args, paths, kernel_name):
@@ -194,7 +252,7 @@ def run_test_case(args, paths, kernel_name):
     'TIMEOUT', 'ERROR'."""
     header = f"\n--- Running {kernel_name} ---\n"
 
-    ok, compile_out = run_make_step(args, paths, kernel_name, "all")
+    ok, compile_out = run_make_step(args, paths, kernel_name, "all", args.timeout)
     if not ok:
         with print_lock:
             print(header, end="")
@@ -209,7 +267,7 @@ def run_test_case(args, paths, kernel_name):
     # "vsim-3816 ... incompatible release of vsim"). Compiling in
     # parallel is safe (each test's own build/ dir); simulating is not.
     with vsim_lock:
-        ok, run_out = run_make_step(args, paths, kernel_name, "run")
+        ok, run_out = run_make_step(args, paths, kernel_name, "run", args.run_timeout)
 
     output = compile_out + run_out
 
@@ -314,6 +372,26 @@ def generate_markdown_report(paths, statuses):
     print(f"Markdown report saved to {report_path}")
 
 
+def clean_shared_pulp_build(args, paths):
+    """`make clean` (any test= works -- it just wipes the PULP task build
+    shared by every kernel: sw/kernel_pulp/bin, headers_bin). See
+    --skip-clean's help for why this needs to run once before the first
+    build of a session: make doesn't track stats= as a dependency, so a
+    kernel built earlier (by hand, or a prior run) with a different
+    stats= value would otherwise be silently reused unrebuilt."""
+    print("Cleaning shared PULP task build (sw/kernel_pulp/bin, headers_bin) "
+          "so every kernel gets a fresh stats={} build...".format(args.stats))
+    command = f"{module_prefix(args)}make test=vector_add clean"
+    proc = subprocess.run(
+        ["bash", "-lc", command], cwd=paths.repo_root,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True,
+    )
+    if proc.returncode != 0:
+        print(f"Warning: `make clean` failed (exit {proc.returncode}); "
+              f"continuing anyway, but stale PULP artifacts may get reused:")
+        print(proc.stdout)
+
+
 def main():
     args = parse_args()
     paths = set_paths(args)
@@ -322,6 +400,9 @@ def main():
     if not kernels:
         print("No kernels found to run. Use --tests to specify them explicitly.")
         sys.exit(1)
+
+    if not args.skip_clean:
+        clean_shared_pulp_build(args, paths)
 
     print(f"Kernels to run ({len(kernels)}): {', '.join(kernels)}")
     if args.jobs > 1:

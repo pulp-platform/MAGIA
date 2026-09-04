@@ -183,7 +183,16 @@ SPATZ_SW_DIR   := spatz/sw
 # When PULP tasks are embedded, the actual CV32 source is main.c.
 _SPATZ_SRC_TO_GREP := $(if $(PULP_TASKS),$(TEST_DIR_PATH)/main.c,$(TEST_SRCS))
 _AUTO_TASKS := $(shell grep -oP '\b(?!SPATZ_)[A-Z][A-Z0-9_]*_TASK\b' $(_SPATZ_SRC_TO_GREP) 2>/dev/null | tr '[:upper:]' '[:lower:]' | awk '!seen[$$0]++')
-SPATZ_TASKS := $(filter-out $(PULP_TASKS),$(_AUTO_TASKS))
+# _AUTO_TASKS is unconditionally lowercased (macro names are all-caps by
+# convention); PULP_TASKS comes straight from pulp_task/*.c filenames and
+# keeps whatever case the kernel name itself uses (e.g.
+# matrix_mul_trans_A_task, embedded capital from "trans_A"). Lowercase
+# PULP_TASKS too for this comparison, or a kernel name with an embedded
+# capital letter fails to exclude its own already-PULP task from
+# SPATZ_TASKS (case-sensitive filter-out sees matrix_mul_trans_a_task !=
+# matrix_mul_trans_A_task) and gets wrongly kicked off to the Spatz build.
+_PULP_TASKS_LOWER := $(shell echo '$(PULP_TASKS)' | tr '[:upper:]' '[:lower:]')
+SPATZ_TASKS := $(filter-out $(_PULP_TASKS_LOWER),$(_AUTO_TASKS))
 
 # Setup build object dirs
 TEST_BUILD_DIR = $(TEST_DIR)/$(if $(TEST_SUBDIR),$(TEST_SUBDIR)/)$(test)
@@ -367,8 +376,9 @@ bender_defs += -D ZFINX_CLUSTER=$(cluster_zfinx)
 # cause is found; set event_unit_hang_debug=1 to recompile with it back on.
 event_unit_hang_debug ?= 0
 ifeq ($(event_unit_hang_debug),1)
-  bender_defs += -D EVENT_UNIT_HANG_DEBUG
+  bender_defs += -D EVENT_UNIT_HANG_DEBUG 
 endif
+bender_defs += -D EU_FORCE_PLAIN_LW_DEBUG
 
 bender_targs += -t rtl
 bender_targs += -t test

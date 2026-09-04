@@ -2161,7 +2161,7 @@ if (TileCfg.EnSpatzCC) begin: gen_spatz_cc
     .L0_LINE_COUNT      ( TileCfg.Spatz.ICacheL0LineCount                    ), // L0 cache lines
     .LINE_WIDTH         ( TileCfg.Spatz.ICacheLineWidth                     ), // 256 bits
     .LINE_COUNT         ( TileCfg.Spatz.ICacheLineCount                     ), // 32 sets
-    .WAY_COUNT          ( TileCfg.Spatz.ICacheWays                          ), // 2-way set associative
+    .SET_COUNT          ( TileCfg.Spatz.ICacheWays                          ), // 2-way set associative (SET_COUNT nel fork FondazioneChipsIT)
     .FETCH_AW           ( magia_pkg::ADDR_W                                  ), // Address width
     .FETCH_DW           ( 32                                                 ), // 32-bit instructions
     .FILL_AW            ( magia_pkg::ADDR_W                                  ), // AXI address width

@@ -52,11 +52,34 @@
  * jump to a lower address inside _start and execute garbage.
  *
  * Stack layout (absolute tile addresses, grows downward):
- *   Slot 0 (CV32 main): [0x1B800, 0x1C000)  — reserved by sw/kernel/crt0.S
- *   PULP STACK_TOP = 0x1B800
- *   PULP core 0: [0x1B000, 0x1B800)  (2 KB)
+ *   PULP STACK_TOP = 0x00040000
+ *   PULP core 0: [0x3F800, 0x40000)  (2 KB)
  *   ...
- *   PULP core 7: [0x14000, 0x14800)  (2 KB)
+ *   PULP core 7: [0x3C000, 0x3C800)  (2 KB)
+ *
+ * The stacks live INSIDE the cluster TCDM, not in the tile's STACK region
+ * at 0x00010000-0x00020000 where they used to sit. That region is outside
+ * the cluster data demux's L1 window (magia_cluster_wrap.sv:
+ * demux[TCDM_IDX] covers tile_l1_start..end only), so a stack access there
+ * fell through to the default slave and took the OBI -> obi_xbar ->
+ * obi_atomics -> obi2hci -> HCI path. Measured from the cluster traces,
+ * inside the stats window: 19-31 cycles per stack access, against 1.0-1.5
+ * cycles for the same access through the direct TCDM port. On the short
+ * kernels that was 10-15% of the measured cycles (linalg_gemv 14.9%,
+ * linalg_gemv_trans 14.1%, matrix_swap_rows 11.9%, matrix_trans 10.2%) --
+ * a pure platform artefact, since pulp-sdk puts the cluster stacks in L1
+ * too (pi_cl_l1_malloc() in drivers/cluster/cluster.c:
+ * pos_cluster_task_set_stack), which is what the standalone pulp_cluster
+ * benchmark run compares against.
+ *
+ * The CV32 control core keeps its own stack in the STACK region
+ * (sw/kernel/crt0.S) -- only the 8 cluster harts move.
+ *
+ * L1 budget: the benchmark ports' buffers reach at most L1_BASE+0xE000
+ * (linalg_svd_jacobi's MAT_SRC), .l1data occupies [0x38000, 0x3A000) and
+ * the pmsis_l1_malloc arena [0x3A000, 0x3C000) (sw/utils/pmsis.h), so
+ * [0x3C000, 0x40000) is free. Physical L1 is 16 banks x 8192 words x 4 B
+ * = 512 KB at 0x00020000 (magia_pkg::N_MEM_BANKS/N_WORDS_BANK).
  *
  * NOTE: stack and PULP_* MMIO addresses are loaded with 'li' (not 'la')
  * because the binary is position-independent (ORIGIN=0x0) and 'la' would
@@ -83,7 +106,7 @@
 #define EU_DISPATCH_EVT_MASK        (1 << 13)
 #define EU_MASK_BAR_MUTEX_DISPATCH  ((1 << 16) | (1 << 17) | (1 << 18))
 
-#define STACK_TOP        0x0001B800   /* 2KB below tile top (0x1C000): reserves CV32's slot */
+#define STACK_TOP        0x00040000   /* top of the cluster stacks, inside the TCDM */
 #define LOG2_SLICE       11           /* log2(2 KB) — each hart gets 2 KB */
 
 .section .text.start, "ax"
@@ -164,11 +187,51 @@ _start:
 gotfix_loop:
     bgeu    t4, t5, gotfix_done
     lw      t6, 0(t4)
+    /* Only blob-relative entries get the runtime base added. Entries that
+     * point at a PI_L1 variable hold an ABSOLUTE TCDM address (the .l1data
+     * section has its VMA in L1) and must be left untouched -- adding the
+     * base would corrupt them. Test against the exact [__l1data_start,
+     * __l1data_end) range: a blanket "large value" test would be wrong,
+     * since genuine blob-relative entries can be negative (e.g. 0xffffffff
+     * for _start-1). */
+    lui     t2, %hi(__l1data_start)
+    addi    t2, t2, %lo(__l1data_start)
+    bltu    t6, t2, gotfix_reloc        /* below .l1data -> blob-relative   */
+    lui     t2, %hi(__l1data_end)
+    addi    t2, t2, %lo(__l1data_end)
+    bltu    t6, t2, gotfix_skip         /* inside .l1data -> absolute, keep */
+gotfix_reloc:
     add     t6, t6, t3
     sw      t6, 0(t4)
+gotfix_skip:
     addi    t4, t4, 4
     j       gotfix_loop
 gotfix_done:
+
+    /* Copy the .l1data image (PI_L1 variables) from inside the relocated
+     * blob to its absolute home in the cluster TCDM. Core 0 only, once,
+     * before any dispatch is serviced -- the worker cores can only reach
+     * these variables from inside a forked task, which core 0 itself starts
+     * later. Source is blob-relative (PC-relative 'la'); destination is an
+     * absolute TCDM address (%hi/%lo -- crt0 is built without -fPIC).
+     * Uninitialised PI_L1 arrays are zeros in this image, so this also
+     * zero-initialises them (they are not covered by the .bss clear). */
+    .option push
+    .option norelax
+    la      t0, __l1data_load           /* src: inside the relocated blob   */
+    .option pop
+    lui     t1, %hi(__l1data_start)     /* dst: absolute TCDM address       */
+    addi    t1, t1, %lo(__l1data_start)
+    lui     t2, %hi(__l1data_end)
+    addi    t2, t2, %lo(__l1data_end)
+l1copy_loop:
+    bgeu    t1, t2, l1copy_done
+    lw      t6, 0(t0)
+    sw      t6, 0(t1)
+    addi    t0, t0, 4
+    addi    t1, t1, 4
+    j       l1copy_loop
+l1copy_done:
 
 /*--------------------------------------------------------------------------
  * Dispatcher loop.

@@ -41,10 +41,10 @@ packages:
     dependencies:
     - common_cells
   cluster_icache:
-    revision: 64e21ae455bbdde850c4df13bef86ea55ac42537
-    version: 0.2.0
+    revision: 531a6d1738f1f2f24add0c48fe37e729716ad12a
+    version: null
     source:
-      Git: https://github.com/pulp-platform/cluster_icache.git
+      Git: https://github.com/FondazioneChipsIT/cluster_icache.git
     dependencies:
     - axi
     - common_cells

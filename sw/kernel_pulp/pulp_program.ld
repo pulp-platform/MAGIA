@@ -38,7 +38,17 @@ ENTRY(_start)
 MEMORY
 {
     prog (rwxa) : ORIGIN = 0x00000000, LENGTH = 0x10000  /* 64 KB, relative */
+
+    /* Cluster TCDM (tile L1), ABSOLUTE addresses -- not relocated with the
+     * blob. L1 is 16 banks x 8192 words x 4 B = 128 KB @ 0x0002_0000.
+     * The benchmarks' own buffers (main.c X_BASE/Z_BASE/PARAMS_BASE) reach
+     * at most L1_BASE + 0xC400, so the top of L1 is free. PI_L1-tagged
+     * kernel variables live here so the data demux routes them through the
+     * fast TCDM path instead of the OBI->AXI path to instruction RAM. */
+    l1   (rw)   : ORIGIN = 0x00038000, LENGTH = 0x2000   /* 8 KB @ L1_BASE+0x18000 */
 }
+
+__prog_end = ORIGIN(prog) + LENGTH(prog);
 
 SECTIONS
 {
@@ -76,6 +86,22 @@ SECTIONS
         . = ALIGN(4);
         __got_end__ = .;
     } > prog
+
+    /* PI_L1 variables: VMA in the TCDM (absolute), LMA inside the blob so the
+     * initialised ones (e.g. ONE_f = 1.0f) travel with it; pulp_crt0.S copies
+     * the image to __l1data_start on core 0 at boot. Uninitialised PI_L1
+     * arrays are emitted as zeros in this image, so the same copy zeroes
+     * them -- they are deliberately NOT in .bss (the .bss clear loop only
+     * covers the blob). */
+    .l1data : {
+        . = ALIGN(4);
+        __l1data_start = .;
+        *(.l1data)
+        *(.l1data.*)
+        . = ALIGN(4);
+        __l1data_end = .;
+    } > l1 AT> prog
+    __l1data_load = LOADADDR(.l1data);
 
     .bss : {
         . = ALIGN(4);

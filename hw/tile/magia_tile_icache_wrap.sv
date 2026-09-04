@@ -106,7 +106,7 @@
         .L0_LINE_COUNT          ( L0_LINE_COUNT     ),
         .LINE_WIDTH             ( LINE_WIDTH        ),
         .LINE_COUNT             ( LINE_COUNT        ),
-        .WAY_COUNT              ( WAY_COUNT         ),
+        .SET_COUNT              ( WAY_COUNT         ),  // rinominato SET_COUNT nel fork FondazioneChipsIT (stessa semantica)
         .FETCH_AW               ( FetchAddrWidth    ),
         .FETCH_DW               ( FetchDataWidth    ),
         .FILL_AW                ( AxiAddrWidth      ),

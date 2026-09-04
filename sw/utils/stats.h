@@ -100,8 +100,8 @@
 /* Same constants as PLAY's TARGET_IS_PULP_OPEN path (test/common/stats.h):
  * 2 warm-up iterations (icache/branch-predictor settle) discarded, then 5
  * measured iterations averaged. */
-#define HOTTING (3)
-#define REPEAT  (2)
+#define HOTTING (2)
+#define REPEAT  (5)
 
 /* cv32e40p_cs_registers.sv hpm_events[] bit -> mhpmcounter/mhpmevent index
  * assignment. Bit 1 (minstret) is covered by the standard `instret` CSR
