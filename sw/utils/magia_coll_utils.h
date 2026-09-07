@@ -66,9 +66,9 @@ static inline uint32_t gen_collective_mask(uint32_t geometry) {
     if (geometry == ALL)
         return (mask << (MASK_OFFSET)) | (mask << (MASK_OFFSET + shift));
     else if (geometry == COLUMN)
-        return (mask << (MASK_OFFSET));
-    else if (geometry == ROW)
         return (mask << (MASK_OFFSET + shift));
+    else if (geometry == ROW)
+        return (mask << (MASK_OFFSET));
 }
 
 static inline void magia_fence() {
