@@ -106,6 +106,10 @@ VERILATOR_DPI := \
 VERILATOR_BENDER_TARGS := $(bender_targs) \
 	-t tech_cells_generic_include_deprecated -t verilator -t rtl_sim \
 	-t verilator_dpi -t magia_dv -t simulation -t cv32e40p_include_tracer
+# Ibex is only a redmule dependency (nothing in MAGIA instantiates it),
+# and its prim_assert.sv redefines `ASSERT with 4 arguments; that definition
+# overrides the 5-argument common_cells one that FlooNoC uses.
+VERILATOR_BENDER_EXCL  := -e ibex
 
 VERILATOR_RAW_FLIST     := $(VERILATOR_BUILD_DIR)/magia.raw.f
 VERILATOR_FLIST         := $(VERILATOR_BUILD_DIR)/magia.f
@@ -153,7 +157,7 @@ $(VERILATOR_RAW_FLIST): Bender.yml Bender.lock Makefile bender_common.mk \
 	$(VERILATOR_BENDER_STAMP) | $(VERILATOR_BUILD_DIR)
 	echo +incdir+$(VERILATOR_SRC) > $@.tmp
 	echo +incdir+$(VERILATOR_INC) >> $@.tmp
-	$(BENDER) script verilator $(VERILATOR_BENDER_TARGS) $(bender_defs) -DSYNTHESIS -DVERILATOR >> $@.tmp
+	$(BENDER) script verilator $(VERILATOR_BENDER_TARGS) $(VERILATOR_BENDER_EXCL) $(bender_defs) -DSYNTHESIS -DVERILATOR >> $@.tmp
 	echo +incdir+$(FRACTAL_SYNC_ROOT)/hw >> $@.tmp
 	for f in $(VERILATOR_DPI); do echo $$f >> $@.tmp; done
 	@if ! cmp -s $@.tmp $@ 2>/dev/null; then mv $@.tmp $@; else rm -f $@.tmp; fi
