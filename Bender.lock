@@ -94,7 +94,7 @@ packages:
     dependencies:
     - common_cells
   floo_noc:
-    revision: 2db2e6470d14921a0c32455f3b2647d600b6c681
+    revision: f3db5e76a5461f590e743e2583f1607ecbabc24e
     version: 0.6.1
     source:
       Git: https://github.com/FondazioneChipsIT/FlooNoC.git

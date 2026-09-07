@@ -126,37 +126,37 @@ localparam collective_sam_rule_t[CollectiveSamNumRules-1:0] CollectiveSam = '{
     start_addr: 32'hc0000000,
     end_addr: 32'he0000000},// L20
 '{    idx: '{    id: '{x: 3, y: 1, port_id: 0},
-    mask_x: '{    offset: 21,
-    len: 2,
+    mask_x: '{    offset: 20,
+    len: 1,
     base_id: 2},
-    mask_y: '{    offset: 20,
+    mask_y: '{    offset: 21,
     len: 1,
     base_id: 0}},
     start_addr: 32'h00300000,
     end_addr: 32'h00400000},// MagiaTileX1Y1
 '{    idx: '{    id: '{x: 2, y: 1, port_id: 0},
-    mask_x: '{    offset: 21,
-    len: 2,
+    mask_x: '{    offset: 20,
+    len: 1,
     base_id: 2},
-    mask_y: '{    offset: 20,
+    mask_y: '{    offset: 21,
     len: 1,
     base_id: 0}},
     start_addr: 32'h00200000,
     end_addr: 32'h00300000},// MagiaTileX0Y1
 '{    idx: '{    id: '{x: 3, y: 0, port_id: 0},
-    mask_x: '{    offset: 21,
-    len: 2,
+    mask_x: '{    offset: 20,
+    len: 1,
     base_id: 2},
-    mask_y: '{    offset: 20,
+    mask_y: '{    offset: 21,
     len: 1,
     base_id: 0}},
     start_addr: 32'h00100000,
     end_addr: 32'h00200000},// MagiaTileX1Y0
 '{    idx: '{    id: '{x: 2, y: 0, port_id: 0},
-    mask_x: '{    offset: 21,
-    len: 2,
+    mask_x: '{    offset: 20,
+    len: 1,
     base_id: 2},
-    mask_y: '{    offset: 20,
+    mask_y: '{    offset: 21,
     len: 1,
     base_id: 0}},
     start_addr: 32'h00000000,
@@ -186,16 +186,16 @@ localparam collective_sam_rule_t[CollectiveSamNumRules-1:0] CollectiveSam = '{
     EnIntMinU: 1'b1,
     EnIntMaxS: 1'b1,
     EnIntMaxU: 1'b1},
-    NarrRedCfg: RedDefaultCfg,
-    WideRedCfg: '{    RdPipelineDepth: 0,
-    CutOffloadIntf: 1'b0}}};
+    NarrRedCfg: '{    RdPipelineDepth: 0,
+    CutOffloadIntf: 1'b0},
+    WideRedCfg: RedDefaultCfg}};
 
   
 
     typedef logic[31:0] collective_axi_narrow_data_mst_addr_t;
 typedef logic[31:0] collective_axi_narrow_data_mst_data_t;
 typedef logic[3:0] collective_axi_narrow_data_mst_strb_t;
-typedef logic[1:0] collective_axi_narrow_data_mst_id_t;
+typedef logic[2:0] collective_axi_narrow_data_mst_id_t;
 typedef struct packed {
     logic [31:0] collective_mask;
     logic [3:0] collective_op;
@@ -215,7 +215,7 @@ typedef logic[0:0] axi_narrow_data_mst_user_t;
     typedef logic[31:0] collective_axi_narrow_data_slv_addr_t;
 typedef logic[31:0] collective_axi_narrow_data_slv_data_t;
 typedef logic[3:0] collective_axi_narrow_data_slv_strb_t;
-typedef logic[3:0] collective_axi_narrow_data_slv_id_t;
+typedef logic[5:0] collective_axi_narrow_data_slv_id_t;
 typedef struct packed {
     logic [31:0] collective_mask;
     logic [3:0] collective_op;
@@ -247,7 +247,7 @@ typedef struct packed {
     typedef logic[31:0] axi_wide_data_mst_addr_t;
 typedef logic[255:0] axi_wide_data_mst_data_t;
 typedef logic[31:0] axi_wide_data_mst_strb_t;
-typedef logic[2:0] axi_wide_data_mst_id_t;
+typedef logic[1:0] axi_wide_data_mst_id_t;
 typedef logic[0:0] axi_wide_data_mst_user_t;
 `AXI_TYPEDEF_ALL_CT(axi_wide_data_mst,             axi_wide_data_mst_req_t,             axi_wide_data_mst_rsp_t,             axi_wide_data_mst_addr_t,             axi_wide_data_mst_id_t,             axi_wide_data_mst_data_t,             axi_wide_data_mst_strb_t,             axi_wide_data_mst_user_t)
 
@@ -267,7 +267,7 @@ typedef struct packed {
     typedef logic[31:0] axi_wide_data_slv_addr_t;
 typedef logic[255:0] axi_wide_data_slv_data_t;
 typedef logic[31:0] axi_wide_data_slv_strb_t;
-typedef logic[2:0] axi_wide_data_slv_id_t;
+typedef logic[1:0] axi_wide_data_slv_id_t;
 typedef logic[0:0] axi_wide_data_slv_user_t;
 `AXI_TYPEDEF_ALL_CT(axi_wide_data_slv,             axi_wide_data_slv_req_t,             axi_wide_data_slv_rsp_t,             axi_wide_data_slv_addr_t,             axi_wide_data_slv_id_t,             axi_wide_data_slv_data_t,             axi_wide_data_slv_strb_t,             axi_wide_data_slv_user_t)
 
@@ -281,15 +281,16 @@ typedef logic[0:0] axi_wide_data_slv_user_t;
     UserWidth: 1};
 localparam axi_cfg_t AxiCfgW = '{    AddrWidth: 32,
     DataWidth: 256,
-    InIdWidth: 3,
-    OutIdWidth: 3,
+    InIdWidth: 2,
+    OutIdWidth: 2,
     UserWidth: 1};
 `FLOO_TYPEDEF_NW_CHAN_ALL(axi, req, rsp, wide,             axi_narrow_data_slv, axi_wide_data_slv, AxiCfgN, AxiCfgW, hdr_t)
 
 `FLOO_TYPEDEF_NW_LINK_ALL(req, rsp, wide, req, rsp, wide)
 
-  typedef logic [AxiCfgW.DataWidth-1:0] floo_wide_red_data_t;
-`FLOO_RED_TYPEDEF_REQ_RSP_LINK(wide, floo_wide_red_data_t, wide_req, wide_rsp)
+  typedef logic [AxiCfgN.DataWidth-1:0] floo_narrow_red_data_t;
+`FLOO_RED_TYPEDEF_REQ_RSP_LINK(narrow, floo_narrow_red_data_t, narrow_req, narrow_rsp)
+
 
 
 endpackage
