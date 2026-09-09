@@ -43,6 +43,7 @@ dependencies:
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
   fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: df8e21b7e2b0e2d3198bf44a60b4ca67c334bcc2 } # branch: main
   floo_noc          : { git: "https://github.com/pulp-platform/FlooNoC.git"           , version: 0.6.1                                }
+  timer_unit       : { git: "https://github.com/pulp-platform/timer_unit.git", rev: 3f4ee3e5b3875a473242de5d0c3ebb5a0fe4b8db }
   event_unit_flex   : { git: "https://github.com/pulp-platform/event_unit_flex.git"   , rev: 28e0499374117c7b0ef4c6ad81b60d7526af886f} 
 
 export_include_dirs:
@@ -89,6 +90,7 @@ sources:
       - hw/tile/idma_axi_obi_transfer_ch.sv
       - hw/tile/idma_obi_ctrl_decoder.sv
       - hw/tile/idma_ctrl_mm.sv
+      - hw/tile/obi_slave_timer.sv
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
       - hw/tile/obi_slave_ctrl_cluster.sv
@@ -153,6 +155,7 @@ sources:
       - hw/tile/idma_axi_obi_transfer_ch.sv
       - hw/tile/idma_obi_ctrl_decoder.sv
       - hw/tile/idma_ctrl_mm.sv
+      - hw/tile/obi_slave_timer.sv
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
       - hw/tile/obi_slave_ctrl_cluster.sv
@@ -216,6 +219,7 @@ sources:
       - hw/tile/idma_axi_obi_transfer_ch.sv
       - hw/tile/idma_obi_ctrl_decoder.sv
       - hw/tile/idma_ctrl_mm.sv
+      - hw/tile/obi_slave_timer.sv
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
       - hw/tile/obi_slave_ctrl_cluster.sv

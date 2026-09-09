@@ -175,7 +175,8 @@ module magia_tile
   localparam int unsigned RuleIdma    = 4 + 32'(TileCfg.EnRedMule);
   localparam int unsigned RuleFsync   = RuleIdma  + 1;
   localparam int unsigned RuleEu      = RuleFsync + 1;
-  localparam int unsigned RuleCsr     = RuleEu    + 1;                // valid iff HasCsrPort
+  localparam int unsigned RuleTimer   = RuleEu    + 1;
+  localparam int unsigned RuleCsr     = RuleTimer + 1;                // valid iff HasCsrPort
   localparam int unsigned RuleClusterEu = RuleCsr + 1;                // valid iff EnCluster (implies HasCsrPort)
 
 /*******************************************************/
@@ -461,6 +462,8 @@ module magia_tile
   assign obi_xbar_rule[RuleIdma]  = '{idx: ObiSbr.idma,  start_addr: tile_idma_ctrl_start_addr,        end_addr: tile_idma_ctrl_end_addr         };
   assign obi_xbar_rule[RuleFsync] = '{idx: ObiSbr.fsync, start_addr: tile_fsync_ctrl_start_addr,       end_addr: tile_fsync_ctrl_end_addr        };
   assign obi_xbar_rule[RuleEu]    = '{idx: ObiSbr.eu,    start_addr: tile_event_unit_start_addr,       end_addr: tile_event_unit_end_addr        };
+
+  assign obi_xbar_rule[RuleTimer] = '{idx: ObiSbr.timer, start_addr: magia_tile_pkg::TIMER_ADDR_START, end_addr: magia_tile_pkg::TIMER_ADDR_END};
 
   if (HasCsrPort) begin: gen_csr_rule
     assign obi_xbar_rule[RuleCsr] = '{idx: ObiSbr.csr,   start_addr: magia_tile_pkg::TILE_CSR_START,   end_addr: magia_tile_pkg::TILE_CSR_END    };
@@ -1930,7 +1933,17 @@ end
 /**                Event Unit Beginning               **/
 /*******************************************************/
 
-  assign eu_events.timer = '0;  // MAGIA has no timer event source
+  obi_slave_timer #(
+    .obi_req_t (magia_tile_pkg::core_obi_data_req_t),
+    .obi_rsp_t (magia_tile_pkg::core_obi_data_rsp_t)
+  ) i_tile_timer (
+    .clk_i     (sys_clk),
+    .rst_ni    (rst_ni),
+    .obi_req_i (obi_xbar_mgr_req[ObiSbr.timer]),
+    .obi_rsp_o (obi_xbar_mgr_rsp[ObiSbr.timer]),
+    .irq_lo_o  (eu_events.timer[0]),
+    .irq_hi_o  (eu_events.timer[1])
+  );
 
   assign eu_events.dma[magia_tile_pkg::EU_DMA_A2O_DONE] = idma_axi2obi_done;
   assign eu_events.dma[magia_tile_pkg::EU_DMA_O2A_DONE] = idma_obi2axi_done;
