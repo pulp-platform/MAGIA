@@ -92,6 +92,7 @@ CFLAGS    += -mexplicit-relocs
 endif
 
 LDFLAGS   = $(ARCH_FLAGS) -nostartfiles -nostdlib \
+            -Wl,--no-relax \
             -Wl,--gc-sections -Wl,--allow-multiple-definition \
             -Wl,-T,$(KERNEL_DIR)/pulp_program.ld
 comma := ,
@@ -139,7 +140,7 @@ $(CRT0_OBJ): $(CRT0)
 	@echo "[PULP] Compiling crt0..."
 	$(CC) $(ARCH_FLAGS) -DPULP_CORE_COUNT=$(PULP_CORE_COUNT) -c -o $@ $(CRT0)
 
-$(ELF): $(CRT0_OBJ) $(TASK_SRCS) $(KERNEL_DIR)/pulp_program.ld
+$(ELF): $(CRT0_OBJ) $(TASK_SRCS) $(KERNEL_DIR)/pulp_program.ld $(KERNEL_DIR)/Makefile
 	@if [ -z "$(TASK_SRCS)" ]; then \
 		echo "[PULP] ERROR: No task sources for task=$(task)"; \
 		exit 1; \
