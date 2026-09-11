@@ -17,7 +17,7 @@
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
  *
  * MAGIA Event Unit Utilities
- * Two modes: POLLING (non-blocking) and WFE (blocking with p.elw sleep)
+ * Two modes: POLLING (non-blocking) and WFE (blocking with cv.elw sleep or standard lw)
  */
 
 #ifndef EVENT_UNIT_UTILS_H
@@ -45,7 +45,7 @@
 #define EU_CORE_BUFFER_IRQ_MASKED    (EU_BASE + 0x24)
 #define EU_CORE_BUFFER_CLEAR         (EU_BASE + 0x28)
 
-// Wait registers (blocking with p.elw)
+// Wait registers (blocking event load - cv.elw if pulp extensions are activated)
 #define EU_CORE_EVENT_WAIT           (EU_BASE + 0x38)
 #define EU_CORE_EVENT_WAIT_CLEAR     (EU_BASE + 0x3C)
 
@@ -137,7 +137,7 @@ typedef enum {
 static inline unsigned int evt_read32(unsigned int base, unsigned int offset) {
     unsigned int value;
     unsigned int addr = base + offset;
-#if defined(__cv32e40p__) || defined(CV32E40P)
+#if defined(CV32E40P)
     __asm__ __volatile__ (
         "cv.elw %0, 0(%1)"
         : "=r" (value)
@@ -145,8 +145,9 @@ static inline unsigned int evt_read32(unsigned int base, unsigned int offset) {
         : "memory"
     );
 #else
+    // Standard lw for cores without PULP extensions (CV32E40X, etc.)
     __asm__ __volatile__ (
-        "p.elw %0, 0(%1)"
+        "lw %0, 0(%1)"
         : "=r" (value)
         : "r" (addr)
         : "memory"
@@ -221,7 +222,7 @@ static inline uint32_t eu_wait_events_polling(uint32_t event_mask, uint32_t time
     return 0;
 }
 
-// WFE mode: blocking sleep with p.elw
+// WFE mode: blocking event load (cv.elw or lw depending on if pulp extensions are activated)
 static inline uint32_t eu_wait_events_wfe(uint32_t event_mask) {
     eu_enable_events(event_mask);
     return evt_read32(EU_BASE, EU_CORE_EVENT_WAIT_CLEAR - EU_BASE);
