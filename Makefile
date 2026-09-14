@@ -455,11 +455,6 @@ profile-ips:
 	$(profile_targs)    $(profile_defs)    	\
 	> ${compile_script}
 
-floonoc-patch:
-	cd $(FLOONOC_ROOT) &&                  \
-	git apply ../../../../floonoc.patch && \
-	cd ../../../../
-
 build-hw: hw-all
 
 sdk:
