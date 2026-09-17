@@ -120,8 +120,12 @@ exit:
  add     a1, a1, a0
  add     a1, a1, a0
  sh      s0, 0(a1)
+#ifdef CV32E40P
  li      a1, 0x00000738
  cv.elw	 zero, 0(a1)
+#else
+ wfi
+#endif
 
 .section .vectors, "ax"
 .option norvc;
