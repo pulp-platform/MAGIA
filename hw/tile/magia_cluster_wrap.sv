@@ -87,9 +87,7 @@ module magia_cluster_wrap
   // Per-core 32-bit interrupt vector
   logic [NClusterCores-1:0][31:0]                                  cluster_irq_vec;
 
-  // Event Unit <-> core IRQ
-  logic [NClusterCores-1:0]                                        cluster_eu_irq_req;
-  logic [NClusterCores-1:0][magia_tile_pkg::EVENT_UNIT_IRQ_WIDTH-1:0] cluster_eu_irq_id;
+  // Event Unit per-core clock enables
   logic [NClusterCores-1:0]                                        cluster_eu_clock_en;
 
   // Per-core Event Unit direct link
@@ -106,26 +104,29 @@ module magia_cluster_wrap
   //The cluster Event Unit is private: from outside it sees only the per-core dispatch pulse from the cluster CSR
   logic [NClusterCores-1:0][31:0] cluster_eu_other_events;
 
-  // Per-core IRQ vector. Every Event Unit cause is OR'd onto the single Machine External Interrupt line (bit 11)
-  // Software disambiguates by reading the EU's own status (EU_CORE_BUFFER_IRQ_MASKED) after taking the trap
-  for (genvar k = 0; k < NClusterCores; k++) begin : gen_cluster_irq_vec
-    always_comb begin
-      cluster_irq_vec[k] = '0;
-      if (cluster_eu_irq_req[k]) cluster_irq_vec[k][11] = 1'b1;
-    end
-  end
+  // Events wake cv.elw through the EU; CPU interrupts are disconnected.
+  assign cluster_irq_vec = '0;
 
   // ---------------------------------------------------------------------------
   // Cluster cores (always CV32E40P)
   // ---------------------------------------------------------------------------
   for (genvar i = 0; i < NClusterCores; i++) begin : CORE
+    logic core_clk;
+
+    tc_clk_gating i_core_clock_gate (
+      .clk_i     ( clk_i                  ),
+      .en_i      ( cluster_eu_clock_en[i]  ),
+      .test_en_i ( test_mode_i            ),
+      .clk_o     ( core_clk               )
+    );
+
     `ifndef CORE_TRACES
       cv32e40p_top #(
     `else
       cv32e40p_wrapper #(
     `endif
         .COREV_PULP          ( 1                                   ),
-        .COREV_CLUSTER       ( 0                                   ),
+        .COREV_CLUSTER       ( 1                                   ),
         .FPU                 ( FPU                                 ),
         .ZFINX               ( magia_tile_pkg::ZFINX_CLUSTER       ),
         .FPU_ADDMUL_LAT      ( 1                                   ), // Match C_LAT_FP32=1 in fpnew wrapper
@@ -133,7 +134,7 @@ module magia_cluster_wrap
         .NUM_MHPMCOUNTERS    ( 29                                  )
       ) i_cv32e40p_core (
         // Clock and Reset
-        .clk_i                  ( clk_i                 ),  // Gated cluster clock
+        .clk_i                  ( core_clk              ),  // Per-core EU-controlled clock
         .rst_ni                 ( rst_ni                ),
         .pulp_clock_en_i        ( cluster_eu_clock_en[i]      ),
         .scan_cg_en_i           ( test_mode_i                 ),
@@ -157,16 +158,16 @@ module magia_cluster_wrap
         .data_gnt_i             ( cluster_data_rsp[i].gnt              ),
         .data_rvalid_i          ( cluster_data_rsp[i].rvalid           ),
         .data_rdata_i           ( cluster_data_rsp[i].rdata            ),
-        // Interrupts: Event Unit cause OR'd onto MEI (bit 11), software disambiguates by reading the EU's own status (EU_CORE_BUFFER_IRQ_MASKED) after taking the trap
+        // CPU interrupt inputs are disabled; use EU event waits / polling.
         .irq_i                  ( cluster_irq_vec[i]                  ),
         .irq_ack_o              (                                     ),
         .irq_id_o               (                                     ),
     
-        .debug_req_i            ( debug_req_i[i]                       ),
+        .debug_req_i            ( 1'b0                   ),
         // Debug status outputs unused: no tile-level output exposes per-cluster-core debug status.
-        .debug_havereset_o      (                                     ),
-        .debug_running_o        (                                     ),
-        .debug_halted_o         (                                     ),
+        .debug_havereset_o      (                        ),
+        .debug_running_o        (                        ),
+        .debug_halted_o         (                        ),
         // CPU control
         .fetch_enable_i         ( cluster_fetch_enable_i[i]           ),
         .core_sleep_o           ( cluster_core_sleep[i]               )
@@ -196,6 +197,7 @@ module magia_cluster_wrap
     ) i_cluster_data_demux (
       .clk_i            ( clk_i                     ),
       .rst_ni           ( rst_ni                    ),
+      .core_clock_en_i  ( cluster_eu_clock_en[i]    ),
       .core_data_req_i  ( cluster_data_req[i]       ),
       .core_data_rsp_o  ( cluster_data_rsp[i]       ),
       .slv_start_addr_i ( cluster_data_demux_start_addr ),
@@ -291,7 +293,7 @@ module magia_cluster_wrap
     .EU_ADDR_START   ( magia_tile_pkg::CLUSTER_EU_ADDR_START        ),
     .EU_ADDR_END     ( magia_tile_pkg::CLUSTER_EU_ADDR_END          )
   ) i_cluster_event_unit (
-    // Same gated clock as the cores: the Event Unit is part of the cluster block
+    // Keep the Event Unit on the parent clock so sleeping cores can wake.
     .clk_i                  ( clk_i                    ),
     .rst_ni                 ( rst_ni                   ),
     .test_mode_i            ( test_mode_i              ),
@@ -302,10 +304,9 @@ module magia_cluster_wrap
     .timer_events_i         ( '0                       ),
     .other_events_i         ( cluster_eu_other_events  ),
 
-    // core_irq_ack_i tied to 0, same as the control core: each core's ack
-    // always reports id 11, so honoring it would blindly clear the wrong cause.
-    .core_irq_req_o         ( cluster_eu_irq_req       ),
-    .core_irq_id_o          ( cluster_eu_irq_id        ),
+    // IRQ outputs are disconnected; events are cleared through EU accesses.
+    .core_irq_req_o         (                          ),
+    .core_irq_id_o          (                          ),
     .core_irq_ack_i         ( '0                       ),
     .core_irq_ack_id_i      ( '0                       ),
 

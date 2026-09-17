@@ -51,5 +51,11 @@ pulp_cluster_tests:
   fpu_cluster_test:
     path: .
     command: make clean all run mesh_dv=0 fast_sim=1 test=fpu_cluster_test
+  parallel_groups:
+    path: .
+    command: make clean all run mesh_dv=0 fast_sim=1 test=parallel_groups
+  vector_add:
+    path: .
+    command: make clean all run mesh_dv=0 fast_sim=1 test=vector_add
 
   

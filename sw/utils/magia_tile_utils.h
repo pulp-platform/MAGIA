@@ -42,9 +42,10 @@
 #define SPATZ_CTRL_BASE (0x00001700)
 #define SPATZ_CTRL_END  (0x0000173F)
 /* PULP Cluster Control registers (tile_csr + 0x40), bare-metal dispatch model
- *   +0x00 PULP_CLK_EN           : R/W broadcast enable. CV32 writes 1 to start
- *                                 ALL cores fetching from PULP_BINARY; writes 0
- *                                 to disable. Writes also reset READY counter.
+ *   +0x00 PULP_FETCH_EN         : R/W broadcast boot enable; nonzero starts all cores.
+ *                                 Every write resets READY. Enable is sticky inside
+ *                                 each core until reset; writing 0 does not stop it.
+ *                                 The cluster Event Unit controls per-core clocks.
  *   +0x04 PULP_BINARY           : entry point address (boot vector) for all
  *                                 cluster cores
  *   +0x08 PULP_DONE             : W = the dispatcher core signals completion;
@@ -69,7 +70,7 @@
  *                                 Bit 31 = 1 if the task crashed (core 0 trapped instead of returning)
  */
 #define PULP_CTRL_BASE        (0x00001740)
-#define PULP_CLK_EN           (PULP_CTRL_BASE + 0x00)
+#define PULP_FETCH_EN         (PULP_CTRL_BASE + 0x00)
 #define PULP_BINARY           (PULP_CTRL_BASE + 0x04)
 #define PULP_DONE             (PULP_CTRL_BASE + 0x08)
 #define PULP_TASKBIN          (PULP_CTRL_BASE + 0x0C)

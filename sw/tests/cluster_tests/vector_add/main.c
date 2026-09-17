@@ -13,49 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * Authors: Luca Balboni, Fondazione Chips-IT
  */
 
 /*
- * vector_add — main core (CV32) binary.
+ * vector_add - main core (CV32) binary.
  *
- * Runs PLAY's (https://github.com/FondazioneChipsIT/PLAY) vector_add kernel
- * on the MAGIA PULP cluster, using PLAY's own golden test vectors
- * (PLAY/test/vector_add/test_data/data.h: vec_a, vec_b, expected, all
- * LEN=2048 floats) instead of MAGIA test harness data.
- *
- * PLAY's own test harness (test/vector_add/pulp-open/main.c) isn't reused
- * here: it depends on PMSIS device-open ceremony (pi_cluster_open() etc.)
- * that assumes a pulpOS-hosted fabric controller, which MAGIA's bare-metal
- * ctrl core doesn't run. This orchestrator replaces that ceremony with
- * MAGIA's own cluster_boot/cluster_dispatch_task_with_params/
- * cluster_wait_done_eu flow (same as every other MAGIA cluster test), and
- * hands the cluster side PLAY's algorithm completely unmodified (see
- * pulp_task/vector_add_task.c).
+ * Bare-metal port of PLAY's vector_add (https://github.com/FondazioneChipsIT/PLAY,
+ * source/vector_add) on the MAGIA PULP cluster, with no PLAY/PMSIS
+ * dependency: inputs are generated here instead of PLAY's test_data/data.h.
  *
  * Flow:
- *   1) Copy vec_a/vec_b (PLAY's golden inputs) into tile-local L1.
- *   2) Boot the PULP cluster and dispatch vector_add_task to core 0, along
- *      with a small params struct (src/dst addresses + length).
- *   3) Sleep in WFE until PULP_DONE.
- *   4) Compare the L1 result against PLAY's own `expected[]`, using PLAY's
- *      own tolerance (TOLL = 0.004f, see PLAY/test/common/utils.c
- *      vector_compare()).
+ *   1) Fill src_a/src_b in tile L1.
+ *   2) Boot the cluster and dispatch vector_add_task with a params struct.
+ *   3) Sleep until PULP_DONE, then check dst against the expected sums.
+ *
+ * Inputs are multiples of 0.25 well inside float32's exact integer range, so
+ * every a + b is exact and the check is bit-exact.
  */
 
+#include <stdint.h>
 #include "magia_tile_utils.h"
 #include "cluster_utils.h"
-
-#define TARGET_IS_PULP_OPEN 1
-#include "../../../../PLAY/test/vector_add/test_data/data.h"
-
 #include "vector_add_pulp_task_bin.h"
 
-#define TOLL 0.004f
+#define LEN          (2048)
 
-#define X_BASE      (L1_BASE + 0x00000000)   /* vec_a copy : LEN*4 = 8192 B */
-#define Y_BASE      (L1_BASE + 0x00003000)   /* vec_b copy : LEN*4 = 8192 B */
-#define Z_BASE      (L1_BASE + 0x00006000)   /* result     : LEN*4 = 8192 B */
-#define PARAMS_BASE (L1_BASE + 0x00009000)   /* vector_add_params_t : 16 B  */
+#define SRC_A_BASE   (L1_BASE + 0x00000000)   /* LEN*4 = 8 KB */
+#define SRC_B_BASE   (L1_BASE + 0x00002000)   /* LEN*4 = 8 KB */
+#define DST_BASE     (L1_BASE + 0x00004000)   /* LEN*4 = 8 KB */
+#define PARAMS_BASE  (L1_BASE + 0x00006000)   /* vector_add_params_t */
 
 typedef struct {
     uint32_t src_a;
@@ -70,60 +58,59 @@ static inline uint32_t get_hartid(void) {
     return hartid;
 }
 
-static inline float fabs_f32(float x) {
-    return (x < 0.0f) ? -x : x;
-}
+static inline float src_a_val(int i) { return (float)i * 0.5f; }
+static inline float src_b_val(int i) { return (float)(LEN - i) * 0.25f; }
 
 int main(void) {
     uint32_t hartid = get_hartid();
 
-    printf("[Main core %u] Hello World!\n", (unsigned)hartid);
-
-    /* Copy PLAY's golden inputs into cluster-visible L1. */
-    volatile float *X = (volatile float *)X_BASE;
-    volatile float *Y = (volatile float *)Y_BASE;
+    volatile float *src_a = (volatile float *)SRC_A_BASE;
+    volatile float *src_b = (volatile float *)SRC_B_BASE;
+    volatile float *dst   = (volatile float *)DST_BASE;
     for (int i = 0; i < LEN; i++) {
-        X[i] = vec_a[i];
-        Y[i] = vec_b[i];
+        src_a[i] = src_a_val(i);
+        src_b[i] = src_b_val(i);
+        dst[i]   = -1.0f;
     }
 
-    volatile vector_add_params_t *params =
-        (volatile vector_add_params_t *)PARAMS_BASE;
-    params->src_a = X_BASE;
-    params->src_b = Y_BASE;
-    params->dst   = Z_BASE;
+    volatile vector_add_params_t *params = (volatile vector_add_params_t *)PARAMS_BASE;
+    params->src_a = SRC_A_BASE;
+    params->src_b = SRC_B_BASE;
+    params->dst   = DST_BASE;
     params->len   = LEN;
 
-    /* Boot the PULP cluster cores into their dispatcher loop. */
+    printf("[vector_add] %d elements on %d PULP cores\n", LEN, PULP_CORE_COUNT);
     cluster_boot(PULP_BINARY_START);
 
     /* Arm EU before dispatching the task to avoid missing DONE. */
     cluster_arm_done_event();
 
-    /* Dispatch vector_add_task to core 0; it forks PLAY's vector_add()
-     * across all 8 cores via pi_cl_team_fork(). */
     cluster_dispatch_task_with_params(VECTOR_ADD_TASK, PARAMS_BASE);
 
-    /* Sleep (cv.elw) until core 0 has signalled task completion -- i.e. the
-     * fork, PLAY's vector_add() on every core and its closing
-     * pi_cl_team_barrier() have all completed. */
+    /* Sleep (cv.elw) until core 0 signals the fork has completed. */
     cluster_wait_done_eu();
 
-    /* Compare against PLAY's own golden output, PLAY's own tolerance. */
-    volatile float *Z = (volatile float *)Z_BASE;
-    uint32_t errors = 0;
-    for (int i = 0; i < LEN; i++) {
-        if (fabs_f32(Z[i] - expected[i]) > TOLL)
-            errors++;
+    if (cluster_task_crashed()) {
+        printf("[vector_add] FAIL: cluster task trapped (mcause=0x%08x)\n",
+               cluster_get_mcause());
+        return 1;
     }
 
-    if (errors == 0) {
-        printf("[Main core %u] vector_add PASS (%d elements)\n",
-               (unsigned)hartid, LEN);
-    } else {
+    uint32_t errors = 0;
+    for (int i = 0; i < LEN; i++) {
+        float exp = src_a_val(i) + src_b_val(i);
+        if (dst[i] != exp) {
+            if (errors < 8)
+                printf("[vector_add] dst[%d] mismatch\n", i);
+            errors++;
+        }
+    }
+
+    if (errors == 0)
+        printf("[Main core %u] vector_add PASS (%d elements)\n", (unsigned)hartid, LEN);
+    else
         printf("[Main core %u] vector_add FAIL (%u/%d mismatches)\n",
                (unsigned)hartid, (unsigned)errors, LEN);
-    }
 
     return (int)errors;
 }

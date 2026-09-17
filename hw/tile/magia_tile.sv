@@ -118,7 +118,7 @@ module magia_tile
 
   input  logic[magia_pkg::N_IRQ-1:0]        irq_i,
 
-  input  logic[magia_tile_pkg::N_CLUSTER_CORES:0] debug_req_i,
+  input  logic                              debug_req_i,
   output logic                              debug_havereset_o,
   output logic                              debug_running_o,
   output logic                              debug_halted_o,
@@ -413,10 +413,6 @@ module magia_tile
   fpu_ss_pkg::x_result_t          x_result;
 
   // Event Unit signals
-  logic                                           eu_core_irq_req;
-  logic [magia_tile_pkg::EVENT_UNIT_IRQ_WIDTH-1:0] eu_core_irq_id;
-  logic                                           eu_core_irq_ack;
-  logic [magia_tile_pkg::EVENT_UNIT_IRQ_WIDTH-1:0] eu_core_irq_ack_id;
   logic                                           eu_core_clk_en;
   logic                                           eu_core_dbg_req;
   
@@ -877,6 +873,7 @@ module magia_tile
   ) i_core_data_demux (
     .clk_i            ( sys_clk                     ),
     .rst_ni           ( rst_ni                      ),
+    .core_clock_en_i  ( eu_core_clk_en              ),
     .core_data_req_i  ( core_data_req               ),
     .core_data_rsp_o  ( core_data_rsp               ),
     .slv_start_addr_i ( core_data_demux_start_addr  ),
@@ -1021,16 +1018,6 @@ module magia_tile
     .en_i      ( sys_clk_en  ),
     .test_en_i ( test_mode_i ),
     .clk_o     ( sys_clk     )
-  );
-
-  // Core clock gating controlled by Event Unit
-  assign core_clk_en = eu_core_clk_en;  // Event Unit controls core clock
-  
-  tc_clk_gating core_clock_gating (
-    .clk_i     ( sys_clk     ),
-    .en_i      ( core_clk_en ),
-    .test_en_i ( test_mode_i ),
-    .clk_o     ( core_clk    )
   );
 
 /*******************************************************/
@@ -1213,6 +1200,16 @@ end
 /**                   Core Beginning                  **/
 /*******************************************************/
 
+  // Core clock gating controlled by Event Unit
+  assign core_clk_en = eu_core_clk_en;  // Event Unit controls core clock
+
+  tc_clk_gating core_clock_gating (
+    .clk_i     ( sys_clk     ),
+    .en_i      ( core_clk_en ),
+    .test_en_i ( test_mode_i ),
+    .clk_o     ( core_clk    )
+  );
+
 `ifdef CV32E40X
   // Documentation of cv32e40x_core's design parameters and interface is available at:
   // https://docs.openhwgroup.org/projects/cv32e40x-user-manual/en/latest/integration.html#core-integration
@@ -1310,12 +1307,12 @@ end
     .fencei_flush_ack_i  ( fencei_flush_ack       ),
 
     // Debug interface
-    .debug_req_i            ( debug_req_i[0]        ),
-    .debug_havereset_o                             ,
-    .debug_running_o                               ,
-    .debug_halted_o                                ,
-    .debug_pc_valid_o                              ,
-    .debug_pc_o                                    ,
+    .debug_req_i            ( eu_core_dbg_req         ),
+    .debug_havereset_o      ( debug_havereset_o      ),
+    .debug_running_o        ( debug_running_o        ),
+    .debug_halted_o         ( debug_halted_o         ),
+    .debug_pc_valid_o       ( debug_pc_valid_o       ),
+    .debug_pc_o             ( debug_pc_o             ),
 
     // Special control signals
     .fetch_enable_i                                ,
@@ -1341,7 +1338,7 @@ end
     .rst_ni                 ( rst_ni                ),
     
     // Clock Interface
-    .pulp_clock_en_i        ( core_clk_en           ),
+    .pulp_clock_en_i        ( eu_core_clk_en        ),
     .scan_cg_en_i           ( test_mode_i           ),
     .boot_addr_i            ( boot_addr_i           ),
     .mtvec_addr_i           ( boot_addr_i           ),  // mtvec defaults to boot vector; SW can override via csrw
@@ -1368,13 +1365,13 @@ end
     .irq_ack_o              (                       ),
     .irq_id_o               (                       ),
     // Debug interface
-    .debug_req_i            ( debug_req_i[0]        ),
-    .debug_havereset_o      ( debug_havereset_o     ),
-    .debug_running_o        ( debug_running_o       ),
-    .debug_halted_o         ( debug_halted_o        ),
+    .debug_req_i            ( eu_core_dbg_req        ),
+    .debug_havereset_o      ( debug_havereset_o      ),
+    .debug_running_o        ( debug_running_o        ),
+    .debug_halted_o         ( debug_halted_o         ),
     // CPU control
-    .fetch_enable_i         ( fetch_enable_i        ),
-    .core_sleep_o           ( core_sleep_o          )
+    .fetch_enable_i         ( fetch_enable_i         ),
+    .core_sleep_o           ( core_sleep_o           )
   );
 
 
@@ -1385,7 +1382,7 @@ end
 
   assign mcycle_o          = 64'h0;
   assign debug_pc_valid_o  = 1'b0;
-  assign debug_pc_o        = 32'h0;
+  assign debug_pc_o        = '0;
 `endif
 
 /*******************************************************/
@@ -2019,16 +2016,8 @@ end
   // Core busy for the Event Unit (control core)
   assign eu_core_busy = ~core_sleep_o;
 
-  // Every Event Unit cause now routed into the core_irq_vec. Software must take the trap and
-  // read the EU's own status (EU_CORE_BUFFER_IRQ_MASKED) to find out what and use the EU_CORE_BUFFER_CLEAR to deassert!!!
-  always_comb begin
-    core_irq_vec = '0;
-    if (eu_core_irq_req) core_irq_vec[11] = 1'b1;
-  end
-
-`ifdef CV32E40X
-  assign eu_core_irq_ack = eu_core_irq_req;
-`endif
+  // Event waits and polling remain available; CPU interrupts are disabled for now
+  assign core_irq_vec = '0;
 
  magia_event_unit #(
     .NB_CORES         ( 1                                          ),
@@ -2050,10 +2039,9 @@ end
     .timer_events_i   ( eu_events.timer                            ),
     .other_events_i   ( eu_events.other                            ),
 
-    // core_irq_ack_i tied to 0: the ack always reports id 11, so honoring
-    // it would blindly clear event_buffer_DP[11] regardless of the real cause.
-    .core_irq_req_o   ( eu_core_irq_req                            ),
-    .core_irq_id_o    ( eu_core_irq_id                             ),
+    // IRQ outputs are disconnected; software clears events through EU accesses.
+    .core_irq_req_o   (                                            ),
+    .core_irq_id_o    (                                            ),
     .core_irq_ack_i   ( 1'b0                                       ),
     .core_irq_ack_id_i( '0                                         ),
 
@@ -2061,9 +2049,9 @@ end
     .core_busy_i      ( eu_core_busy                               ),
     .core_clock_en_o  ( eu_core_clk_en                             ),
 
-    // Debug
-    .dbg_req_i        ( '0                                         ),
-    .core_dbg_req_o   (                                            ),
+    // Debug: external request into the EU, EU-generated request out to the core
+    .dbg_req_i        ( debug_req_i                                ),
+    .core_dbg_req_o   ( eu_core_dbg_req                            ),
 
     // EU Direct Link Interface (with cut for timing)
     .eu_direct_req_i      ( eu_direct_req_flat                     ),
@@ -2335,13 +2323,9 @@ if (TileCfg.EnCluster) begin: gen_pulp_cluster
 
   // Cluster control-register signals
   logic [31:0]              cluster_boot_addr [NClusterCores-1:0];
-  logic                     cluster_clk_en;
   logic [NClusterCores-1:0] cluster_fetch_enable;
   logic                     cluster_start_irq;
   logic                     cluster_done;
-
-  // Gated clock of cluster block
-  logic                     cluster_clk;
 
   // Per-core OBI data manager ports (tile OBI crossbar) 
   // per-core HCI data manager ports (HCI interconnect)
@@ -2367,7 +2351,6 @@ if (TileCfg.EnCluster) begin: gen_pulp_cluster
     .rst_ni      ( rst_ni                        ),
     .obi_req_i   ( obi_xbar_mgr_req[ObiSbr.csr] ),
     .obi_rsp_o   ( cluster_csr_rsp               ),
-    .clk_en_o    ( cluster_clk_en                ),
     .boot_addr_o ( cluster_boot_addr             ),
     .fetch_en_o  ( cluster_fetch_enable          ),
     .done_o      ( cluster_done                  ),
@@ -2377,22 +2360,13 @@ if (TileCfg.EnCluster) begin: gen_pulp_cluster
   // Cluster Events
   assign eu_events.other[magia_tile_pkg::EU_OTHER_CLUSTER_DONE] = cluster_done;
 
-  // Clock gating for the cluster block
-  tc_clk_gating i_cluster_clk_gate (
-    .clk_i     ( sys_clk        ),
-    .en_i      ( cluster_clk_en ),
-    .test_en_i ( test_mode_i    ),
-    .clk_o     ( cluster_clk    )
-  );
-
-  // Cluster cores + per-core data demux + OBI/HCI converters.
   magia_cluster_wrap #(
     .TileCfg       ( TileCfg             ),
     .NClusterCores ( NClusterCores       ),
     .hci_req_t     ( tile_hci_data_req_t ),
     .hci_rsp_t     ( tile_hci_data_rsp_t )
   ) i_cluster (
-    .clk_i                  ( cluster_clk                            ),  // Gated clock of the whole block
+    .clk_i                  ( sys_clk                                ),
     .rst_ni                 ( rst_ni                                 ),
     .test_mode_i            ( test_mode_i                            ),
     .mhartid_i              ( mhartid_i                              ),

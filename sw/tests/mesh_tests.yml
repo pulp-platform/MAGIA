@@ -41,3 +41,7 @@ spatz-tests:
   dotp_mesh_spatz_test:
     path: .
     command: make clean all run mesh_dv=1 fast_sim=1 test=dotp_mesh_spatz_test
+pulp_cluster_tests:
+  hello_pulp_barrier:
+    path: .
+    command: make clean all run mesh_dv=1 fast_sim=1 test=hello_pulp_barrier

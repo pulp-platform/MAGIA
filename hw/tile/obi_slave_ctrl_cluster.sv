@@ -33,7 +33,6 @@ module obi_slave_ctrl_cluster
   output core_obi_data_rsp_t                               obi_rsp_o,
 
   // Control outputs to PULP cluster cores
-  output logic                clk_en_o,                  // gates the whole cluster block
   output logic [31:0]         boot_addr_o [NumCores-1:0],
   output logic [NumCores-1:0] fetch_en_o,                // broadcast (replicated)
   output logic                done_o,                    // 1-cycle pulse on a DONE write
@@ -42,8 +41,15 @@ module obi_slave_ctrl_cluster
 
 //-----------------------------------------------------------------------------
 // Register map (offsets from BaseAddr; instantiated inside gen_pulp_cluster at TILE_CSR_START+0x40 = 0x1740)
-//   0x00 CLK_EN          : RW broadcast (1=enable all cores, 0=disable all)
-//                              writing CLK_EN also resets the READY counter
+//   0x00 FETCH_EN        : RW broadcast fetch_enable for all cluster cores.
+//                              Writing it also resets the READY counter.
+//                              NOTE: this releases the cores at boot and nothing
+//                              more - cv32e40p latches fetch_enable_i into a
+//                              STICKY fetch_enable_q, so writing 0 afterwards
+//                              does NOT stop the cluster. Per-core clock gating
+//                              is owned by the cluster Event Unit, which drives
+//                              each core's pulp_clock_en_i; there is deliberately
+//                              no block-level clock gate (see magia_tile.sv).
 //   0x04 BINARY          : RW PULP binary entry point (boot address)
 //   0x08 DONE            : W  the dispatcher core writes 1 after the task returns -> done_o pulses
 //   0x0C TASKBIN         : RW task function address; read by PULP cores
@@ -53,7 +59,7 @@ module obi_slave_ctrl_cluster
 //                          W  each PULP core writes 1 after boot (counter increment)
 //   0x1C RETURN          : RW task exit code; the dispatcher core writes it right before DONE
 //-----------------------------------------------------------------------------
-localparam logic [31:0] CLUSTER_CLK_EN            = 32'h00;
+localparam logic [31:0] CLUSTER_FETCH_EN          = 32'h00;
 localparam logic [31:0] CLUSTER_BINARY            = 32'h04;
 localparam logic [31:0] CLUSTER_DONE              = 32'h08;
 localparam logic [31:0] CLUSTER_TASKBIN           = 32'h0C;
@@ -73,7 +79,7 @@ assign addr_valid  = (obi_req_i.a.addr >= BaseAddr) &&
                      (obi_req_i.a.addr < (BaseAddr + 32));  // 8 registers * 4 bytes
 
 // Registers
-logic                clk_en_q,           clk_en_d;
+logic                fetch_en_q,         fetch_en_d;
 logic [31:0]         entry_point_q,      entry_point_d;
 logic                done_q,             done_d;
 logic [31:0]         taskbin_q,          taskbin_d;
@@ -103,7 +109,7 @@ assign obi_rsp_o.r.r_optional = '0;
 // ============================================
 always_comb begin
   // Defaults: hold
-  clk_en_d             = clk_en_q;
+  fetch_en_d           = fetch_en_q;
   entry_point_d        = entry_point_q;
   done_d               = 1'b0;
   taskbin_d            = taskbin_q;
@@ -115,9 +121,9 @@ always_comb begin
 
   if (obi_req_i.req && addr_valid && obi_req_i.a.we) begin
     case (addr_offset)
-      CLUSTER_CLK_EN: begin
+      CLUSTER_FETCH_EN: begin
         // Broadcast: any non-zero enables all cores; 0 disables all.
-        clk_en_d = |obi_req_i.a.wdata;
+        fetch_en_d = |obi_req_i.a.wdata;
         // Reset READY counter so CV32 can re-poll after each init.
         nb_recv_ready_reqs_d = '0;
       end
@@ -165,7 +171,7 @@ end
 // ============================================
 always_ff @(posedge clk_i or negedge rst_ni) begin
   if (!rst_ni) begin
-    clk_en_q             <= 1'b0;
+    fetch_en_q           <= 1'b0;
     entry_point_q        <= 32'hCC000080;
     done_q               <= 1'b0;
     taskbin_q            <= 32'h0;
@@ -177,7 +183,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
     rvalid_q             <= 1'b0;
     rdata_q              <= 32'h0;
   end else begin
-    clk_en_q             <= clk_en_d;
+    fetch_en_q           <= fetch_en_d;
     entry_point_q        <= entry_point_d;
     done_q               <= done_d;
     taskbin_q            <= taskbin_d;
@@ -203,7 +209,7 @@ always_comb begin
 
   if (obi_req_i.req && addr_valid && !obi_req_i.a.we) begin
     case (addr_offset)
-      CLUSTER_CLK_EN:           rdata_d = {31'h0, clk_en_q};
+      CLUSTER_FETCH_EN:         rdata_d = {31'h0, fetch_en_q};
       CLUSTER_BINARY:           rdata_d = entry_point_q;
       CLUSTER_DONE:             rdata_d = {31'h0, done_q};
       CLUSTER_TASKBIN:          rdata_d = taskbin_q;
@@ -216,9 +222,8 @@ always_comb begin
   end
 end
 
-// Outputs: single clock enable for the cluster block, fetch_en replicated per core
-assign clk_en_o     = clk_en_q;
-assign fetch_en_o   = {NumCores{clk_en_q}};
+// Output: fetch_enable replicated per core.
+assign fetch_en_o   = {NumCores{fetch_en_q}};
 assign done_o       = done_q;
 assign start_irq_o  = start_irq_q;
 
