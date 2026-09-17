@@ -20,9 +20,10 @@
  *
  * Boot sequence:
  *   1.  CV32 writes _pulp_binary_start to PULP_BINARY (0x1744).
- *   2.  CV32 writes 1 to PULP_CLK_EN (0x1740) -> fetch_enable goes high to
- *       all cluster cores, which reset to _pulp_binary_start and execute
- *       _start.
+ *   2.  CV32 writes 1 to PULP_FETCH_EN (0x1740) -> fetch_enable goes high to
+ *       all cluster cores, which start fetching at the programmed boot address.
+ *       Enable stays latched inside each core until reset; writing 0 cannot
+ *       stop it. The Event Unit controls sleep between tasks.
  *   3.  Every hart: compute local ID, set up its 2 KB stack slice, clear
  *       BSS (all-harts race, benign zero-store).
  *   4.  Every hart: install trap_handler in mtvec (direct mode, mtvec[1:0] = 00)

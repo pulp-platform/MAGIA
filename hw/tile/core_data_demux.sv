@@ -15,6 +15,7 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Niccolò Giuliani <niccolo.giuliani44@gmail.com>
+            Luca Balboni     <luca.balboni@chips.it>
  *
  * Core Data Demux
  *
@@ -33,6 +34,8 @@ module core_data_demux
 )(
   input  logic clk_i,
   input  logic rst_ni,
+
+  input  logic core_clock_en_i,
 
   // Core data interface (input from the core)
   input  req_t core_data_req_i,
@@ -88,49 +91,34 @@ module core_data_demux
   // Out-of-order response capture
   // ---------------------------------------------------------------------------
 
-  logic [NumSlv-1:0]                    cap_rvalid_q;
-  logic [magia_pkg::DATA_W-1:0]         cap_rdata_q [NumSlv-1:0];
-  logic [NumSlv-1:0]                    cap_err_q;
-
-  // "Effective" rvalid/rdata/err per slave: direct arrival OR previously captured
-  logic [NumSlv-1:0]                    rvalid_eff;
-  logic [magia_pkg::DATA_W-1:0]         rdata_eff [NumSlv-1:0];
-  logic [NumSlv-1:0]                    err_eff;
-
-  // Direct arrival takes priority so the capture register is consumed first only when nothing arrives directly that cycle.
-  for (genvar s = 0; s < NumSlv; s++) begin : gen_resp_eff
-    assign rvalid_eff[s] = slv_data_rsp_i[s].rvalid | cap_rvalid_q[s];
-    assign rdata_eff[s]  = slv_data_rsp_i[s].rvalid ? slv_data_rsp_i[s].rdata : cap_rdata_q[s];
-    assign err_eff[s]    = slv_data_rsp_i[s].rvalid ? slv_data_rsp_i[s].err   : cap_err_q[s];
-  end
-
-  // Response forwarded to the core this cycle
+  rsp_t [NumSlv-1:0] buffered_rsp;
+  logic [NumSlv-1:0] rsp_empty, rsp_full, rsp_pop;
   logic resp_valid_to_core;
-  always_comb begin : _RESP_VALID_MUX_
-    if (num_outstanding == '0)
-      resp_valid_to_core = 1'b0;
-    else
-      resp_valid_to_core = rvalid_eff[head];
-  end
 
-  // Capture/clear FFs
-  always_ff @(posedge clk_i, negedge rst_ni) begin : _CAPTURE_FFS_
-    if (!rst_ni) begin
-      cap_rvalid_q <= '0;
-      cap_rdata_q  <= '{default: '0};
-      cap_err_q    <= '0;
-    end else begin
-      // Per slave: capture when rvalid arrives and the slave is not at head; clear when the slave's response is forwarded to the core.
-      for (int unsigned s = 0; s < NumSlv; s++) begin
-        if (slv_data_rsp_i[s].rvalid && (num_outstanding > 0) && (head != SelW'(s))) begin
-          cap_rvalid_q[s] <= 1'b1;
-          cap_rdata_q[s]  <= slv_data_rsp_i[s].rdata;
-          cap_err_q[s]    <= slv_data_rsp_i[s].err;
-        end else if ((head == SelW'(s)) && resp_valid_to_core) begin
-          cap_rvalid_q[s] <= 1'b0;
-        end
-      end
-    end
+  assign resp_valid_to_core = (num_outstanding != 0) &&
+                             !rsp_empty[head] && core_clock_en_i;
+
+  for (genvar s = 0; s < NumSlv; s++) begin : gen_response_fifo
+    assign rsp_pop[s] = resp_valid_to_core && (head == SelW'(s));
+
+    fifo_v3 #(
+      .FALL_THROUGH ( 1'b1 ),
+      .DEPTH        ( 2    ),
+      .dtype        ( rsp_t )
+    ) i_response_fifo (
+      .clk_i,
+      .rst_ni,
+      .flush_i    ( 1'b0                     ),
+      .testmode_i ( 1'b0                     ),
+      .full_o     ( rsp_full[s]              ),
+      .empty_o    ( rsp_empty[s]             ),
+      .usage_o    (                          ),
+      .data_i     ( slv_data_rsp_i[s]        ),
+      .push_i     ( slv_data_rsp_i[s].rvalid ),
+      .data_o     ( buffered_rsp[s]          ),
+      .pop_i      ( rsp_pop[s]               )
+    );
+
   end
 
   // ---------------------------------------------------------------------------
@@ -140,7 +128,7 @@ module core_data_demux
   logic request_granted;
   logic fifo_push, fifo_pop;
 
-  assign request_granted = core_data_req_i.req && core_data_rsp_o.gnt;
+  assign request_granted = core_clock_en_i && core_data_req_i.req && core_data_rsp_o.gnt;
   assign fifo_push       = request_granted;
   assign fifo_pop        = resp_valid_to_core && (num_outstanding > 0);
 
@@ -177,17 +165,17 @@ module core_data_demux
   always_comb begin : _REQ_FWD_
     for (int unsigned s = 0; s < NumSlv; s++) begin
       slv_data_req_o[s]     = core_data_req_i;
-      slv_data_req_o[s].req = core_data_req_i.req && (destination == SelW'(s)) && can_issue;
+      slv_data_req_o[s].req = core_clock_en_i && core_data_req_i.req && (destination == SelW'(s)) && can_issue;
     end
   end
 
   always_comb begin : _HANDLE_RESP_
-    core_data_rsp_o        = slv_data_rsp_i[head];
+    core_data_rsp_o        = buffered_rsp[head];
     core_data_rsp_o.rvalid = resp_valid_to_core;
-    core_data_rsp_o.rdata  = rdata_eff[head];
-    core_data_rsp_o.err    = err_eff[head];
-    // GNT: combinatorial from selected slave, gated by can_issue
-    core_data_rsp_o.gnt    = can_issue && slv_data_rsp_i[destination].gnt;
+    // GNT: combinatorial from selected slave, gated by can_issue; forced high
+    // while the core's clock is disabled (cv32e40p_sleep_unit contract).
+    core_data_rsp_o.gnt    = !core_clock_en_i ? 1'b1
+                                              : (can_issue && slv_data_rsp_i[destination].gnt);
   end
 
 endmodule

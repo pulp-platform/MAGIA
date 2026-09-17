@@ -57,7 +57,7 @@ module magia_tile_hier
   output logic [63:0] mcycle_o,
   input  logic [63:0] time_i,
   input  logic [magia_pkg::N_IRQ-1:0] irq_i,
-  input  logic [magia_tile_pkg::N_CLUSTER_CORES:0] debug_req_i,
+  input  logic debug_req_i,
   output logic debug_havereset_o, debug_running_o, debug_halted_o,
   output logic debug_pc_valid_o,
   output logic [31:0] debug_pc_o,

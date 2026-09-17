@@ -27,7 +27,6 @@
  *     cluster_wait_done_polling()  spin on the CV32 EU done event
  *     cluster_done_pending()       non-blocking EU done-event check
  *     cluster_wait_done_eu()       WFE on PULP_DONE (EU bit 12)
- *     cluster_stop()               de-assert PULP CLK_EN
  *     cluster_task_crashed()       true if core 0 trapped instead of returning
  *
  *   PULP cluster core — worker:
@@ -43,6 +42,11 @@
  * Hardware (obi_slave_ctrl_cluster.sv) memory map @ PULP_CTRL_BASE = 0x1740:
  *   see magia_tile_utils.h. EU bit 12 = PULP_DONE (one write by the dispatcher
  *   core).
+ *
+ * Clock/power model: FETCH_EN starts the cores once after reset and stays
+ * latched inside each core. Writing 0 cannot stop them. Between tasks, cores
+ * wait on cv.elw and the Event Unit controls per-core clocks; data may remain
+ * pending. Dispatch later tasks without rewriting FETCH_EN, which clears READY.
  */
 
 #ifndef CLUSTER_UTILS_H
@@ -68,14 +72,6 @@ static inline void cluster_dispatch_task(uint32_t task_addr) {
 static inline void cluster_dispatch_task_with_params(uint32_t task_addr,
                                                      uint32_t params_ptr) {
     pulp_run_task_with_params(task_addr, params_ptr);
-}
-
-static inline void cluster_stop(void) {
-    pulp_clk_dis();
-}
-
-static inline void cluster_resume(void) {
-    pulp_clk_en();
 }
 
 static inline void cluster_wait_done_polling(void) {

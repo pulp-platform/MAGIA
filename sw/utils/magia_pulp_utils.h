@@ -42,8 +42,10 @@
 
 /* ---- Low-level register helpers ---------------------------------------- */
 
-static inline void pulp_clk_en(void)  { mmio32(PULP_CLK_EN) = 1; }
-static inline void pulp_clk_dis(void) { mmio32(PULP_CLK_EN) = 0; }
+/* Start all cores once after reset. Every FETCH_EN write clears READY.
+ * Enable stays latched inside each core; writing 0 cannot stop it.
+ * The Event Unit controls sleep via pulp_clock_en_i; data may remain pending. */
+static inline void pulp_fetch_en(void) { mmio32(PULP_FETCH_EN) = 1; }
 
 static inline void pulp_set_binary(uint32_t addr) {
     mmio32(PULP_BINARY) = addr;
@@ -60,13 +62,13 @@ static inline void pulp_pass_params(uint32_t params_ptr) {
 /* ---- High-level dispatch API ------------------------------------------- */
 
 /**
- * @brief Boot the PULP cluster: write the binary entry point, enable all
- *        cores (CLK_EN broadcast), then wait until every core has armed its
- *        dispatcher (PULP_READY == 1).
+ * @brief Boot once after reset: set the binary entry point, broadcast
+ *        FETCH_EN, then wait for all cores (PULP_READY == 1).
+ *        Do not repeat for later tasks: FETCH_EN clears READY without rebooting.
  */
 static inline void pulp_init(uint32_t binary_start) {
     pulp_set_binary(binary_start);
-    pulp_clk_en();
+    pulp_fetch_en();
     while ((mmio32(PULP_READY) & 1u) == 0u) { }
 }
 

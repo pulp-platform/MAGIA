@@ -27,7 +27,7 @@
  *   1) Print a "hello" banner.
  *   2) Boot the PULP cluster cores into their dispatcher loop
  *      (cluster_boot -> pulp_init: programs PULP_BINARY, broadcasts
- *      CLK_EN, polls PULP_READY).
+ *      FETCH_EN once after reset, polls PULP_READY).
  *   3) Arm the CV32 Event Unit for PULP_DONE (EU bit 12).
  *   4) Dispatch the hello task to all 8 PULP cores by programming
  *      TASKBIN and START.
