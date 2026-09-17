@@ -44,6 +44,7 @@ module magia_tile
   import floo_axi_nw_mesh_1x2_noc_pkg::*;
 `endif
 #(
+  parameter bit EnFractalSync = magia_pkg::MagiaEnFractalSync,
   parameter magia_tile_pkg::magia_tile_cfg_t TileCfg       = magia_tile_pkg::MagiaTileDefaultCfg,
   // Parameters used by hci_interconnect and l1_spm
   parameter int unsigned          N_MEM_BANKS              = magia_pkg::N_MEM_BANKS,         // Number of memory banks
@@ -117,7 +118,7 @@ module magia_tile
 
   input  logic[magia_pkg::N_IRQ-1:0]        irq_i,
 
-  input  logic                              debug_req_i,
+  input  logic[magia_tile_pkg::N_CLUSTER_CORES:0] debug_req_i,
   output logic                              debug_havereset_o,
   output logic                              debug_running_o,
   output logic                              debug_halted_o,
@@ -136,7 +137,7 @@ module magia_tile
 /**     Configuration-Derived Localparams Beginning   **/
 /*******************************************************/
   localparam magia_tile_pkg::obi_mgr_map_t ObiMgr = magia_tile_pkg::gen_obi_mgr_map(TileCfg);
-  localparam magia_tile_pkg::obi_sbr_map_t ObiSbr = magia_tile_pkg::gen_obi_sbr_map(TileCfg);
+  localparam magia_tile_pkg::obi_sbr_map_t ObiSbr = magia_tile_pkg::gen_obi_sbr_map(TileCfg, EnFractalSync);
 
   localparam magia_tile_pkg::axi_xbar_mst_map_t AxiMst    = magia_tile_pkg::gen_axi_xbar_mst_map(TileCfg);
   localparam axi_pkg::xbar_cfg_t                AxiXbarCfg = magia_tile_pkg::gen_axi_xbar_cfg(TileCfg);
@@ -177,7 +178,7 @@ module magia_tile
   localparam int unsigned RuleRedmule = 4;                            // valid iff EnRedMule
   localparam int unsigned RuleIdma    = 4 + 32'(TileCfg.EnRedMule);
   localparam int unsigned RuleFsync   = RuleIdma  + 1;
-  localparam int unsigned RuleEu      = RuleFsync + 1;
+  localparam int unsigned RuleEu      = RuleFsync + 32'(EnFractalSync);
   localparam int unsigned RuleCsr     = RuleEu    + 1;                // valid iff HasCsrPort
 
 /*******************************************************/
@@ -229,8 +230,6 @@ module magia_tile
   logic[magia_pkg::ADDR_W-1:0] tile_redmule_ctrl_end_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_idma_ctrl_start_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_idma_ctrl_end_addr;
-  logic[magia_pkg::ADDR_W-1:0] tile_fsync_ctrl_start_addr;
-  logic[magia_pkg::ADDR_W-1:0] tile_fsync_ctrl_end_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_event_unit_start_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_event_unit_end_addr;
 
@@ -385,9 +384,6 @@ module magia_tile
   logic[magia_tile_pkg::NR_FETCH_PORTS-1:0]                                 flush_valid;
   logic[magia_tile_pkg::NR_FETCH_PORTS-1:0]                                 flush_ready;
 
-  logic fsync_clear;   // Can be used to manage iDMA clear at top-level
-  logic fsync_done;
-  logic fsync_error;
 
   // FlooNoC connections between NI and router
   id_t              floo_id;
@@ -459,8 +455,6 @@ module magia_tile
   assign tile_redmule_ctrl_end_addr   = magia_tile_pkg::REDMULE_CTRL_ADDR_END;
   assign tile_idma_ctrl_start_addr    = magia_tile_pkg::IDMA_CTRL_ADDR_START;
   assign tile_idma_ctrl_end_addr      = magia_tile_pkg::IDMA_CTRL_ADDR_END;
-  assign tile_fsync_ctrl_start_addr   = magia_tile_pkg::FSYNC_CTRL_ADDR_START;
-  assign tile_fsync_ctrl_end_addr     = magia_tile_pkg::FSYNC_CTRL_ADDR_END;
   assign tile_event_unit_start_addr   = magia_tile_pkg::EVENT_UNIT_ADDR_START;
   assign tile_event_unit_end_addr     = magia_tile_pkg::EVENT_UNIT_ADDR_END;
   assign tile_reserved_start_addr     = magia_tile_pkg::RESERVED_ADDR_START + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
@@ -477,7 +471,9 @@ module magia_tile
     assign obi_xbar_rule[RuleRedmule] = '{idx: ObiSbr.redmule, start_addr: tile_redmule_ctrl_start_addr, end_addr: tile_redmule_ctrl_end_addr    };
   end
   assign obi_xbar_rule[RuleIdma]  = '{idx: ObiSbr.idma,  start_addr: tile_idma_ctrl_start_addr,        end_addr: tile_idma_ctrl_end_addr         };
-  assign obi_xbar_rule[RuleFsync] = '{idx: ObiSbr.fsync, start_addr: tile_fsync_ctrl_start_addr,       end_addr: tile_fsync_ctrl_end_addr        };
+  if (EnFractalSync) begin: gen_fsync_rule
+    assign obi_xbar_rule[RuleFsync] = '{idx: ObiSbr.fsync, start_addr: magia_tile_pkg::FSYNC_CTRL_ADDR_START, end_addr: magia_tile_pkg::FSYNC_CTRL_ADDR_END        };
+  end
   assign obi_xbar_rule[RuleEu]    = '{idx: ObiSbr.eu,    start_addr: tile_event_unit_start_addr,       end_addr: tile_event_unit_end_addr        };
 
   if (HasCsrPort) begin: gen_csr_rule
@@ -526,7 +522,6 @@ module magia_tile
 
   assign idma_clear = 1'b0;
 
-  assign fsync_clear = 1'b0;
 
   // Control core uses EU polling / event loads, with no CPU interrupts.
   assign irq = '0;
@@ -1188,7 +1183,7 @@ end
     .fencei_flush_ack_i  ( fencei_flush_ack       ),
 
     // Debug interface
-    .debug_req_i                                   ,
+    .debug_req_i            ( debug_req_i[0]        ),
     .debug_havereset_o                             ,
     .debug_running_o                               ,
     .debug_halted_o                                ,
@@ -1246,7 +1241,7 @@ end
     .irq_ack_o              (                       ),
     .irq_id_o               (                       ),
     // Debug interface
-    .debug_req_i            ( debug_req_i           ),
+    .debug_req_i            ( debug_req_i[0]        ),
     .debug_havereset_o      ( debug_havereset_o     ),
     .debug_running_o        ( debug_running_o       ),
     .debug_halted_o         ( debug_halted_o        ),
@@ -1732,26 +1727,48 @@ end
 /**             Fractal Sync Out Beginning            **/
 /*******************************************************/
   
-  // Fractal Sync OBI Memory-Mapped Slave
-  obi_slave_fsync #(
-    .BASE_ADDR    ( magia_tile_pkg::FSYNC_CTRL_ADDR_START ),
-    .AGGR_W       ( magia_tile_pkg::FSYNC_AGGR_W          ),
-    .ID_W         ( magia_tile_pkg::FSYNC_ID_W            ),
-    .NBR_AGGR_W   ( magia_tile_pkg::FSYNC_NBR_AGGR_W      ),
-    .NBR_ID_W     ( magia_tile_pkg::FSYNC_NBR_ID_W        )
-  ) i_fsync_mm (
-    .clk_i          ( sys_clk                                                    ),
-    .rst_ni         ( rst_ni                                                     ),
-    .clear_i        ( fsync_clear                                                ),
-    .obi_req_i      ( core_mem_data_req[ObiSbr.fsync]                            ),
-    .obi_rsp_o      ( core_mem_data_rsp[ObiSbr.fsync]                            ),
-    .ht_fsync_if_o  ( ht_fsync_if_o                                              ),
-    .hn_fsync_if_o  ( hn_fsync_if_o                                              ),
-    .vt_fsync_if_o  ( vt_fsync_if_o                                              ),
-    .vn_fsync_if_o  ( vn_fsync_if_o                                              ),
-    .done_o         ( fsync_done                                                 ),
-    .error_o        ( fsync_error                                                )
-  );
+  if (EnFractalSync) begin: gen_fsync
+    logic fsync_done;
+    logic fsync_error;
+
+    assign eu_events.other[magia_tile_pkg::EU_OTHER_FSYNC_DONE] = fsync_done;
+    assign eu_events.other[magia_tile_pkg::EU_OTHER_FSYNC_ERROR] = fsync_error;
+    // Fractal Sync OBI Memory-Mapped Slave
+    obi_slave_fsync #(
+      .BASE_ADDR    ( magia_tile_pkg::FSYNC_CTRL_ADDR_START ),
+      .AGGR_W       ( magia_tile_pkg::FSYNC_AGGR_W          ),
+      .ID_W         ( magia_tile_pkg::FSYNC_ID_W            ),
+      .NBR_AGGR_W   ( magia_tile_pkg::FSYNC_NBR_AGGR_W      ),
+      .NBR_ID_W     ( magia_tile_pkg::FSYNC_NBR_ID_W        )
+    ) i_fsync_mm (
+      .clk_i          ( sys_clk                                                    ),
+      .rst_ni         ( rst_ni                                                     ),
+      .clear_i        ( 1'b0                                                       ),
+      .obi_req_i      ( core_mem_data_req[ObiSbr.fsync]                            ),
+      .obi_rsp_o      ( core_mem_data_rsp[ObiSbr.fsync]                            ),
+      .ht_fsync_if_o  ( ht_fsync_if_o                                              ),
+      .hn_fsync_if_o  ( hn_fsync_if_o                                              ),
+      .vt_fsync_if_o  ( vt_fsync_if_o                                              ),
+      .vn_fsync_if_o  ( vn_fsync_if_o                                              ),
+      .done_o         ( fsync_done                                                 ),
+      .error_o        ( fsync_error                                                )
+    );
+  end else begin: gen_no_fsync
+    assign eu_events.other[magia_tile_pkg::EU_OTHER_FSYNC_DONE] = 1'b0;
+    assign eu_events.other[magia_tile_pkg::EU_OTHER_FSYNC_ERROR] = 1'b0;
+    assign ht_fsync_if_o.sync = '0;
+    assign ht_fsync_if_o.aggr = '0;
+    assign ht_fsync_if_o.id_req = '0;
+    assign hn_fsync_if_o.sync = '0;
+    assign hn_fsync_if_o.aggr = '0;
+    assign hn_fsync_if_o.id_req = '0;
+    assign vt_fsync_if_o.sync = '0;
+    assign vt_fsync_if_o.aggr = '0;
+    assign vt_fsync_if_o.id_req = '0;
+    assign vn_fsync_if_o.sync = '0;
+    assign vn_fsync_if_o.aggr = '0;
+    assign vn_fsync_if_o.id_req = '0;
+  end
 
 /*******************************************************/
 /**                Fractal Sync Out End               **/
@@ -1855,8 +1872,6 @@ end
   assign eu_events.other[magia_tile_pkg::EU_OTHER_O2A_START]   = idma_obi2axi_start;
   assign eu_events.other[magia_tile_pkg::EU_OTHER_A2O_BUSY]    = idma_axi2obi_busy;
   assign eu_events.other[magia_tile_pkg::EU_OTHER_O2A_BUSY]    = idma_obi2axi_busy;
-  assign eu_events.other[magia_tile_pkg::EU_OTHER_FSYNC_DONE]  = fsync_done;
-  assign eu_events.other[magia_tile_pkg::EU_OTHER_FSYNC_ERROR] = fsync_error;
 
   assign eu_events.other[magia_tile_pkg::EU_OTHER_CLUSTER_DONE-1 : 0] = '0;
   assign eu_events.other[magia_tile_pkg::EU_OTHER_SPATZ_START-1  :
