@@ -332,12 +332,12 @@ package magia_tile_pkg;
     int unsigned l1;         // L1 SPM (HCI) port
     int unsigned redmule;    // RedMulE control port (valid iff EnRedMule)
     int unsigned idma;       // iDMA control port
-    int unsigned fsync;      // FractalSync control port
+    int unsigned fsync;      // FractalSync control port (valid iff en_fractal_sync)
     int unsigned eu;         // Event Unit port
     int unsigned csr;        // Shared control-register port (valid iff EnSpatzCC or EnCluster)
   } obi_sbr_map_t;
 
-  function automatic obi_sbr_map_t gen_obi_sbr_map(magia_tile_cfg_t cfg);
+  function automatic obi_sbr_map_t gen_obi_sbr_map(magia_tile_cfg_t cfg, bit en_fractal_sync = magia_pkg::MagiaEnFractalSync);
     obi_sbr_map_t ret;
     int unsigned  idx;
     ret = '0;
@@ -346,11 +346,11 @@ package magia_tile_pkg;
     ret.l1 = idx++;
     if (cfg.EnRedMule) ret.redmule = idx++;
     ret.idma  = idx++;
-    ret.fsync = idx++;
+    if (en_fractal_sync) ret.fsync = idx++;
     ret.eu    = idx++;
     if (cfg.EnSpatzCC || cfg.EnCluster) ret.csr = idx++;  // hosts only Spatz/cluster control registers
     ret.num_sbr = idx;
-    ret.num_rules = 7 + 32'(cfg.EnRedMule) + 32'(cfg.EnSpatzCC || cfg.EnCluster);
+    ret.num_rules = 6 + 32'(en_fractal_sync) + 32'(cfg.EnRedMule) + 32'(cfg.EnSpatzCC || cfg.EnCluster);
     return ret;
   endfunction
 

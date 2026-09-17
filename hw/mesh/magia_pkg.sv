@@ -45,6 +45,9 @@ package magia_pkg;
   localparam int unsigned ID_W             = 1;                               // Default ID Width
   localparam int unsigned USR_W            = 1;                               // Default User Width
 
+  // Mesh-wide default: instantiate FractalSync in the mesh and every tile.
+  localparam bit MagiaEnFractalSync = 1'b1;
+
   // Tile accelerator configuration
   typedef struct packed {
     int unsigned Height;       // Systolic array height
@@ -198,30 +201,24 @@ package magia_pkg;
   };
 
 
-  localparam magia_tile_cfg_t [N_TILES-1:0] HETERO_TILE_CFGS = '{
-    // Row 0: full tiles
-    0:  MagiaTileDefaultCfg,
-    1:  MagiaTileDefaultCfg,
-    2:  MagiaTileDefaultCfg,
-    3:  MagiaTileDefaultCfg,
-    // Row 1: RedMulE-only
-    4:  MagiaTileRedMuleCfg,
-    5:  MagiaTileRedMuleCfg,
-    6:  MagiaTileRedMuleCfg,
-    7:  MagiaTileRedMuleCfg,
-    // Row 2: Spatz-only (vector tiles)
-    8:  MagiaTileSpatzCfg,
-    9:  MagiaTileSpatzCfg,
-    10: MagiaTileSpatzCfg,
-    11: MagiaTileSpatzCfg,
-    // Row 3: PULP cluster-only
-    12: MagiaTileClusterCfg,
-    13: MagiaTileClusterCfg,
-    14: MagiaTileClusterCfg,
-    15: MagiaTileClusterCfg,
-    
-    default: MagiaTileDefaultCfg
-  };
+  // Supported square meshes (2x2, 4x4, 8x8, 16x16, 32x32) have equal
+  // numbers of full, RedMulE-only, Spatz-only and cluster-only tiles:
+
+  function automatic magia_tile_cfg_t [N_TILES-1:0] gen_hetero_tile_cfgs();
+    magia_tile_cfg_t [N_TILES-1:0] cfgs;
+    for (int unsigned i = 0; i < N_TILES; i++) begin
+      case ((i * 4) / N_TILES)
+        0: cfgs[i] = MagiaTileDefaultCfg;
+        1: cfgs[i] = MagiaTileRedMuleCfg;
+        2: cfgs[i] = MagiaTileSpatzCfg;
+        3: cfgs[i] = MagiaTileClusterCfg;
+        default: cfgs[i] = MagiaTileDefaultCfg;
+      endcase
+    end
+    return cfgs;
+  endfunction
+
+  localparam magia_tile_cfg_t [N_TILES-1:0] HETERO_TILE_CFGS = gen_hetero_tile_cfgs();
 
   // Parameters used by the NoC
   parameter int unsigned AXI_NOC_ID_W      = 6;                                // AXI NoC ID Width: matches slave side id_width (6 bits)
