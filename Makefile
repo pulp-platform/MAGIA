@@ -46,12 +46,21 @@ cluster_zfinx := 1
 
 PULP_XTEN_BASE := xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw
 
+# TODO: Solve fpu_ss issues with core X
 ifeq ($(core), CV32E40X)
-  #CV32E40X has a problem with zfinx=1, so is not a free parameter and it is forced to 0 (F extension)
   ISA = riscv
-  XTEN = imafc
-  ABI            ?= ilp
-  XABI           ?= f
+  ifeq ($(zfinx),1)
+    # No zhinx: fpu_ss does not work with zhinx, so we disable it for now. 
+    XTEN = imac_zfinx
+    ABI            ?= ilp
+    XABI           ?=
+  else
+    # CV32E40X ties xif_compressed_if to zero, so c.flw/c.fsw/c.flwsp/c.fswsp
+    # trap: F mode breaks on any FP spill. Use zfinx, or drop the c from XTEN.
+    XTEN = imafc
+    ABI            ?= ilp
+    XABI           ?= f
+  endif
 else
   ISA = cv32e40p
   ifeq ($(zfinx),1)
@@ -353,8 +362,12 @@ else
   $(error Detected unsupported core, must choose among CV32E40X or CV32E40P )
 endif
 
-effective_ctrl_zfinx := $(if $(filter CV32E40X,$(core)),0,$(zfinx))
-bender_defs += -D ZFINX_CTRL=$(effective_ctrl_zfinx)
+bender_defs += -D ZFINX_CTRL=$(zfinx)
+# fpu_ss picks its predecoder from this `define, not from its PULP_ZFINX
+# parameter: without it Zfinx runs with the F predecoder (wrong rs/writeback).
+ifeq ($(zfinx),1)
+  bender_defs += -D PULP_ZFINX_DEF
+endif
 bender_defs += -D ZFINX_CLUSTER=$(cluster_zfinx)
 
 bender_targs += -t rtl

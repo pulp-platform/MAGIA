@@ -1838,19 +1838,6 @@ module magia_tile
 /*******************************************************/
 /**                Tile CSR Beginning                 **/
 /*******************************************************/
-  /*
-  obi_slave_ctrl_spatz #(
-    .BaseAddr  ( magia_tile_pkg::TILE_CSR_START                                               )
-  ) i_spatz_ctrl (
-    .clk_i     ( sys_clk                                                                     ),
-    .rst_ni    ( rst_ni                                                                      ),
-    .obi_req_i ( core_mem_data_req[magia_tile_pkg::OBI_XBAR_TILE_CSR_IDX]                    ),
-    .obi_rsp_o ( core_mem_data_rsp[magia_tile_pkg::OBI_XBAR_TILE_CSR_IDX]                    ),
-    .clk_en_o  ( spatz_clk_en                                                                ),  
-    .start_o   ( spatz_start                                                                 ),  
-    .done_o    ( spatz_done                                                                  )  
-  );
-  */
 
   tile_csr #(
     .BaseAddr              ( magia_tile_pkg::TILE_CSR_START                                  )
