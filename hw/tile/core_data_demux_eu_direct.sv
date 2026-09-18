@@ -38,6 +38,7 @@ module core_data_demux_eu_direct
 )(
   input  logic clk_i,
   input  logic rst_ni,
+  input  logic core_clock_en_i,
 
   // Core data interface (input from cv32e40p)
   input  magia_tile_pkg::core_data_req_t core_data_req_i,
@@ -134,9 +135,9 @@ module core_data_demux_eu_direct
     if (num_outstanding == '0)
       resp_valid_to_core = 1'b0;
     else if (head == EU_D)
-      resp_valid_to_core = eu_rvalid_eff;
+      resp_valid_to_core = eu_rvalid_eff && core_clock_en_i;
     else
-      resp_valid_to_core = xbar_rvalid_eff;
+      resp_valid_to_core = xbar_rvalid_eff && core_clock_en_i;
   end
 
   // Capture/clear FFs
@@ -151,7 +152,8 @@ module core_data_demux_eu_direct
     end else begin
       // EU: capture when rvalid arrives and EU is not at head;
       //     clear when EU response is forwarded to core.
-      if (eu_direct_rsp_i.rvalid && (num_outstanding > 0) && (head != EU_D)) begin
+      if (eu_direct_rsp_i.rvalid && (num_outstanding > 0) &&
+          ((head != EU_D) || !core_clock_en_i)) begin
         eu_cap_rvalid_q <= 1'b1;
         eu_cap_rdata_q  <= eu_direct_rsp_i.rdata;
         eu_cap_err_q    <= eu_direct_rsp_i.err;
@@ -160,7 +162,8 @@ module core_data_demux_eu_direct
       end
 
       // XBAR: same logic
-      if (xbar_data_rsp_i.rvalid && (num_outstanding > 0) && (head != XBAR_D)) begin
+      if (xbar_data_rsp_i.rvalid && (num_outstanding > 0) &&
+          ((head != XBAR_D) || !core_clock_en_i)) begin
         xbar_cap_rvalid_q <= 1'b1;
         xbar_cap_rdata_q  <= xbar_data_rsp_i.rdata;
         xbar_cap_err_q    <= xbar_data_rsp_i.err;
@@ -177,7 +180,7 @@ module core_data_demux_eu_direct
   logic request_granted;
   logic fifo_push, fifo_pop;
 
-  assign request_granted = core_data_req_i.req && core_data_rsp_o.gnt;
+  assign request_granted = core_clock_en_i && core_data_req_i.req && core_data_rsp_o.gnt;
   assign fifo_push       = request_granted;
   assign fifo_pop        = resp_valid_to_core && (num_outstanding > 0);
 
@@ -214,7 +217,8 @@ module core_data_demux_eu_direct
   assign can_issue = (num_outstanding < 2) || fifo_pop;
 
   // To regular crossbar
-  assign xbar_data_req_o.req     = core_data_req_i.req && !use_eu_direct && can_issue;
+  assign xbar_data_req_o.req     = core_clock_en_i && core_data_req_i.req &&
+                                   !use_eu_direct && can_issue;
   assign xbar_data_req_o.addr    = core_data_req_i.addr;
   assign xbar_data_req_o.be      = core_data_req_i.be;
   assign xbar_data_req_o.wdata   = core_data_req_i.wdata;
@@ -227,7 +231,8 @@ module core_data_demux_eu_direct
 `endif
 
   // To EU direct link
-  assign eu_direct_req_o.req   = core_data_req_i.req && use_eu_direct && can_issue;
+  assign eu_direct_req_o.req   = core_clock_en_i && core_data_req_i.req &&
+                                 use_eu_direct && can_issue;
   assign eu_direct_req_o.addr  = core_data_req_i.addr - EVENT_UNIT_ADDR_START;
   assign eu_direct_req_o.wen   = ~core_data_req_i.we;
   assign eu_direct_req_o.wdata = core_data_req_i.wdata;
@@ -254,8 +259,9 @@ module core_data_demux_eu_direct
     end
   end
 
-  // GNT: combinatorial from selected path, gated by can_issue
-  assign core_data_rsp_o.gnt = can_issue && (use_eu_direct ? eu_direct_rsp_i.gnt
-                                                            : xbar_data_rsp_i.gnt);
+  assign core_data_rsp_o.gnt = !core_clock_en_i ? 1'b1 :
+                               (can_issue &&
+                                (use_eu_direct ? eu_direct_rsp_i.gnt
+                                               : xbar_data_rsp_i.gnt));
 
 endmodule

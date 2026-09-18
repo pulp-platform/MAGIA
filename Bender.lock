@@ -72,7 +72,7 @@ packages:
       Git: https://github.com/pulp-platform/common_verification.git
     dependencies: []
   cv32e40p:
-    revision: a8206ab02759f110c40dd907369816ea656381bc
+    revision: 193270df33f76f2728a364bd2d9b1865e0b7e4f9
     version: null
     source:
       Git: https://github.com/FondazioneChipsIT/cv32e40p.git
@@ -120,7 +120,7 @@ packages:
     dependencies:
     - common_cells
   fpu_ss:
-    revision: 8e2eff774d9d38a1e17a46bd56a0936dac9522f0
+    revision: f31c77c7517c0a67f2c55a290fc8c6ff6019e362
     version: null
     source:
       Git: https://github.com/pulp-platform/fpu_ss.git
