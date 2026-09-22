@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
+ * Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
  *
  * Licensed under the Solderpad Hardware License, Version 0.51 
  * (the "License"); you may not use this file except in compliance 

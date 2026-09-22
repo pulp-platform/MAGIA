@@ -189,6 +189,8 @@ Replicating the MAGIA tile, we scale up to a homogeneous two-dimensional (2D) me
 
 Rendez-vous among tiles are managed through the FractalSync (FS) mechanism and the dedicated network.
 
+Beyond point-to-point traffic, the routers also implement **collective** operations in hardware: a single transaction can be replicated towards a whole row, column, or the entire mesh (multicast/broadcast), and many transactions can be aggregated on their way to a single destination (reduction, barrier). See [Collective Operations](#collective-operations) for the programming interface.
+
 ### Memory map
 This map reflects the RTL memory-mapped layout defined in `hw/tile/magia_tile_pkg.sv`.
 
@@ -204,6 +206,7 @@ Per-tile local map (offset from `tile_base`, starts at `0x0000_0000`):
 | *Event Unit*      | `0x0000_0700-0x0000_16FF` | `tile_base + 0x0000_0700 ... 0x0000_16FF` |
 | *Spatz CTRL*      | `0x0000_1700-0x0000_173F` | `tile_base + 0x0000_1700 ... 0x0000_173F` |
 | *PULP CTRL*       | `0x0000_1740-0x0000_17FF` | `tile_base + 0x0000_1740 ... 0x0000_17FF` |
+| *Collective CTRL* | `0x0000_1800-0x0000_18FF` | `tile_base + 0x0000_1800 ... 0x0000_18FF` |
 | *Reserved*        | `0x0000_0000-0x0000_FFFF` | `tile_base + 0x0000_0000 ... 0x0000_FFFF` |
 | *Stack*           | `0x0001_0000-0x0001_FFFF` | `tile_base + 0x0001_0000 ... 0x0001_FFFF` |
 | *L1 SPM*          | `0x0002_0000-0x000F_FFFF` | `tile_base + 0x0002_0000 ... 0x000F_FFFF` |
@@ -236,6 +239,102 @@ The flow is memory-mapped (MM): software configures and starts accelerators by w
 
 Software APIs for MM control are under `sw/utils/` (for example `redmule_mm_utils.h`, `idma_mm_utils.h`, `fsync_mm_api.h`, `magia_spatz_utils.h` and `event_unit_utils.h`).
 For Spatz Core Complex programming flow (runtime handshake, task loading, and execution model), see [spatz/README.md](spatz/README.md).
+
+### Collective Operations
+MAGIA supports multicast and reduction by leveraging FlooNoC's built-in collective transactions.
+#### How a transaction is tagged as collective
+Two extra fields on the AXI `user` channel tag a transaction as collective:
+```sv
+typedef struct packed {
+    logic [31:0] collective_mask;  // which tiles take part
+    logic [3:0]  collective_op;    // what the routers do with the flits
+} axi_user_t;
+```
+`collective_op` alone decides whether a transaction is collective. `UNICAST` (`0`) means
+ordinary point-to-point traffic, and the FlooNoC NI (`chimney`) then **forces the mask to zero**
+regardless of what software wrote. So setting a mask without setting an opcode has no effect.
+Other available opcodes are: `MULTICAST` (1), `LSBAND` (2, used as a barrier), `FP_ADD`/`FP_MUL`/`FP_MIN`/
+`FP_MAX` (3-6), `INT_ADD`/`INT_MUL` (7-8), `INT_MINS`/`INT_MINU`/`INT_MAXS`/`INT_MAXU`
+(9-12).
+
+#### Mask layout in the collective SAM
+MAGIA configures FlooNoC so that each address region - associated to a tile in the System Address Map (SAM) - is identified by an `x_id` and `y_id` with the corresponding masks:
+
+```sv
+// One entry of CollectiveSam (2x2 mesh)
+'{
+  idx: '{
+      id:     '{x: 3, y: 1, port_id: 0},
+      mask_x: '{ offset: 20, len: 1, base_id: 2},
+      mask_y: '{ offset: 21, len: 1, base_id: 0}
+      },
+  start_addr: 32'h00300000,
+  end_addr:   32'h00400000}
+}  // MagiaTileX1Y1
+```
+`mask_x`/`mask_y` come with the following structure:
+| Field | Meaning | Value for a MAGIA mesh |
+|---|---|---|
+| `offset` | Position of the field in the address / mask word | `x` at 20; `y` directly above it |
+| `len`    | Width of the field | 1 for 2x2, 2 for 4x4, 4 for 16x16 |
+| `base_id`| Mesh coordinate of tile (0,0) | `base_id` is non-zero for the `x` coordinate because we add an offset to the `x_id` of each MAGIA tile. This offset is required to exclude the memory tiles from the collective operations. More details can be found in  https://doi.org/10.48550/arXiv.2603.26438.|
+
+**NOTE**: the mask offsets always match the address map. The destination rebuilds each tile's local address by splicing its own coordinates as below (`floo_meta_buffer.sv`). 
+
+```sv
+// floo_meta_buffer: receiver coordinates -> local address
+axi_addr = (in_addr & ~(x_addr_mask | y_addr_mask)) | ((out.x << x_mask_sel.offset) | (out.y << y_mask_sel.offset));
+```
+#### How collective flits are routed
+Routing is ordinary XY with one addition: every bit **set** in
+`collective_mask` is a *don't care* on the corresponding destination ID. A
+router forwards a flit to every output whose coordinate matches the destination ID on the
+bits that are not masked:
+
+Example on a 4x4 mesh - two masked `x` bits and one masked `y` bit give 4 x 2 = 8 destinations:
+
+```text
+DEST_ID = (X_ID, Y_ID) = (01, 00)
+MASK    = (MASK_X, MASK_Y) = (11, 10)
+
+DEST_ID[0] = (00, 00)    DEST_ID[4] = (10, 00)
+DEST_ID[1] = (00, 10)    DEST_ID[5] = (10, 10)
+DEST_ID[2] = (01, 00)    DEST_ID[6] = (11, 00)
+DEST_ID[3] = (01, 10)    DEST_ID[7] = (11, 10)
+```
+
+An all-zero mask is plain unicast; masking the `x` field gives a row multicast, the `y` field a
+column, both a broadcast. Reductions use the same mask on the *source* ID instead: the
+router derives the set of contributors it must wait for and merges their flits as they
+converge on the destination.
+
+MAGIA supports collectives on both the narrow and the wide FlooNoC channel, through two
+independent programming paths.
+
+#### Wide channel
+The wide channel is used exclusively by the iDMA. Only multicast and broadcast are
+supported here; the typical use is pushing one tile's L1 buffer into every other tile's L1.
+Mask and opcode live in the iDMA's own registers, not in the tile CSRs, and are set for you
+by `collective(..)` in [idma_mm_utils.h](sw/utils/idma_mm_utils.h):
+
+```c
+printf("Multicast over the row...\n");
+uint32_t transfer_id_1 = collective(dst_addr, broad_addr, len, gen_collective_mask(ROW), MULTICAST);
+dma_wait(transfer_id_1);   // poll for completion
+```
+
+#### Narrow channel
+Before issuing a collective transactions over the narrow channel two tile CRSs must be properly configured:
+
+| Register | Address | Meaning |
+|---|---|---|
+| `COLLECTIVE_MASK` | `tile_base + 0x0000_1800` | *Which* tiles take part |
+| `COLLECTIVE_OP`   | `tile_base + 0x0000_1804` | *What* the routers do with the flits |
+
+A store is then tagged collective if it is written at `COLLECTIVE_ADDR_OFFSET` (`0xB000_0000`). The APIs required to configure and use collective transactions over the narrow channel can be found in 
+[magia_coll_utils.h](sw/utils/magia_coll_utils.h):
+
+
 
 ### PULP Cluster programming flow
 The PULP cluster uses a bare-metal dynamic dispatch model. The cluster binary is compiled as a position-independent ELF (origin `0x0`), converted to a flat binary, and embedded in the CV32 ELF as a byte array in the `.pulp_binary` section (see `sw/kernel_pulp/`).
