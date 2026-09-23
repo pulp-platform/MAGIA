@@ -19,5 +19,6 @@ reset_style      = "async"
 reset_active_low = true
 icg_cells = [
   "tc_clk_gating", "cluster_clock_gating", "pulp_clock_gating",
+  "cv32e40p_clock_gate", "cv32e40x_clock_gate",
   "tc_clk_mux2", "tc_clk_inverter", "tc_clk_buffer", "tc_clk_xor2", "tc_clk_or2", "tc_clk_and2",
 ]

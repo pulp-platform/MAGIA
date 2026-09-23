@@ -209,11 +209,197 @@ line     = 84
 severity = "warning"
 reason   = "must match descending port of event_unit_top; fix on event_unit_flex side"
 
-# Errors in dependencies are downgraded to warnings: they are reported but do
-# not fail the check. Must stay after the waivers above (the first matching
-# waiver applies).
+# Dependencies: individually reviewed errors (one waiver per finding).
+
 [[waiver]]
-rule     = "*"
-file     = "**/{.bender,pd}/**"
+rule     = "synth.no-plain-always"
+file     = "**/.bender/git/checkouts/tech_cells_generic-*/src/deprecated/generic_memory.sv"
+line     = 49
+reason   = "deprecated simulation-only memory model"
+
+[[waiver]]
+rule     = "synth.no-initial"
+file     = "**/.bender/git/checkouts/tech_cells_generic-*/src/deprecated/generic_rom.sv"
+line     = 29
+reason   = "deprecated simulation-only ROM model"
+
+[[waiver]]
+rule     = "seq.nonblocking-only"
+file     = "**/.bender/git/checkouts/common_cells-*/src/clk_int_div.sv"
+line     = 289
+reason   = "clock divider: intentional blocking assignment"
+
+[[waiver]]
+rule     = "seq.nonblocking-only"
+file     = "**/.bender/git/checkouts/common_cells-*/src/clk_int_div.sv"
+line     = 292
+reason   = "clock divider: intentional blocking assignment"
+
+[[waiver]]
+rule     = "seq.nonblocking-only"
+file     = "**/.bender/git/checkouts/common_cells-*/src/clk_int_div.sv"
+line     = 301
+reason   = "clock divider: intentional blocking assignment"
+
+[[waiver]]
+rule     = "seq.nonblocking-only"
+file     = "**/.bender/git/checkouts/common_cells-*/src/clk_int_div.sv"
+line     = 304
+reason   = "clock divider: intentional blocking assignment"
+
+[[waiver]]
+rule     = "synth.no-plain-always"
+file     = "**/.bender/git/checkouts/common_cells-*/src/edge_propagator_tx.sv"
+line     = 28
 severity = "warning"
-reason   = "third-party dependency: errors are reported as warnings"
+reason   = "third-party dependency: reported as warning"
+
+[[waiver]]
+rule     = "synth.no-plain-always"
+file     = "**/.bender/git/checkouts/common_cells-*/src/rstgen_bypass.sv"
+line     = 53
+severity = "warning"
+reason   = "third-party dependency: reported as warning"
+
+[[waiver]]
+rule     = "synth.no-x-z-rhs"
+file     = "**/.bender/git/checkouts/common_cells-*/src/stream_fifo_optimal_wrap.sv"
+line     = 79
+severity = "warning"
+reason   = "third-party dependency: reported as warning"
+
+[[waiver]]
+rule     = "synth.no-initial"
+file     = "**/.bender/git/checkouts/common_cells-*/src/stream_omega_net.sv"
+line     = 148
+reason   = "simulation-only debug print"
+
+[[waiver]]
+rule     = "synth.no-initial"
+file     = "**/.bender/git/checkouts/common_cells-*/src/stream_omega_net.sv"
+line     = 258
+reason   = "simulation-only debug print"
+
+[[waiver]]
+rule     = "synth.no-plain-always"
+file     = "**/.bender/git/checkouts/common_cells-*/src/edge_propagator_ack.sv"
+line     = 33
+severity = "warning"
+reason   = "third-party dependency: reported as warning"
+
+[[waiver]]
+rule     = "synth.no-plain-always"
+file     = "**/.bender/git/checkouts/cluster_interconnect-*/rtl/low_latency_interco/AddressDecoder_Req.sv"
+line     = 87
+severity = "warning"
+reason   = "third-party dependency: reported as warning"
+
+[[waiver]]
+rule     = "arith.shift-overflow"
+file     = "**/.bender/git/checkouts/fpnew-*/src/fpnew_sdotp_multi_wrapper.sv"
+line     = 108
+severity = "warning"
+reason   = "third-party dependency: reported as warning"
+
+[[waiver]]
+rule     = "arith.shift-overflow"
+file     = "**/.bender/git/checkouts/fpnew-*/src/fpnew_sdotp_multi_wrapper.sv"
+line     = 109
+severity = "warning"
+reason   = "third-party dependency: reported as warning"
+
+[[waiver]]
+rule     = "synth.no-plain-always"
+file     = "**/.bender/git/checkouts/l2_tcdm_hybrid_interco-*/RTL/l2_tcdm_demux.sv"
+line     = 97
+reason   = "third-party dependency (l2_tcdm_hybrid_interco)"
+
+[[waiver]]
+rule     = "synth.no-plain-always"
+file     = "**/.bender/git/checkouts/l2_tcdm_hybrid_interco-*/RTL/XBAR_BRIDGE/XBAR_BRIDGE.sv"
+line     = 101
+reason   = "third-party dependency (l2_tcdm_hybrid_interco)"
+
+[[waiver]]
+rule     = "synth.no-plain-always"
+file     = "**/.bender/git/checkouts/scm-*/latch_scm/register_file_1w_64b_multi_port_read_32b_1row.sv"
+line     = 83
+reason   = "latch-based SCM: intentional"
+
+[[waiver]]
+rule     = "synth.no-plain-always"
+file     = "**/.bender/git/checkouts/scm-*/latch_scm/register_file_1w_128b_multi_port_read_32b.sv"
+line     = 83
+reason   = "latch-based SCM: intentional"
+
+[[waiver]]
+rule     = "synth.no-plain-always"
+file     = "**/.bender/git/checkouts/scm-*/latch_scm/register_file_1w_64b_multi_port_read_32b.sv"
+line     = 84
+reason   = "latch-based SCM: intentional"
+
+[[waiver]]
+rule     = "synth.no-plain-always"
+file     = "**/.bender/git/checkouts/scm-*/latch_scm/register_file_1w_multi_port_read_be.sv"
+line     = 86
+reason   = "latch-based SCM: intentional"
+
+[[waiver]]
+rule     = "synth.no-plain-always"
+file     = "**/.bender/git/checkouts/scm-*/latch_scm/register_file_1w_multi_port_read.sv"
+line     = 88
+reason   = "latch-based SCM: intentional"
+
+[[waiver]]
+rule     = "synth.no-plain-always"
+file     = "**/.bender/git/checkouts/scm-*/latch_scm/register_file_3r_2w_be.sv"
+line     = 234
+reason   = "latch-based SCM: intentional"
+
+[[waiver]]
+rule     = "synth.no-plain-always"
+file     = "**/.bender/git/checkouts/scm-*/latch_scm/register_file_multi_way_1w_64b_multi_port_read_32b.sv"
+line     = 85
+reason   = "latch-based SCM: intentional"
+
+[[waiver]]
+rule     = "synth.no-plain-always"
+file     = "**/.bender/git/checkouts/scm-*/latch_scm/register_file_multi_way_1w_multi_port_read.sv"
+line     = 81
+reason   = "latch-based SCM: intentional"
+
+[[waiver]]
+rule     = "seq.no-reset"
+file     = "**/.bender/git/checkouts/scm-*/latch_scm/register_file_1r_1w.sv"
+line     = 91
+reason   = "latch-based SCM: memory, no reset needed"
+
+[[waiver]]
+rule     = "seq.no-reset"
+file     = "**/.bender/git/checkouts/scm-*/latch_scm/register_file_1r_1w.sv"
+line     = 142
+reason   = "latch-based SCM: memory, no reset needed"
+
+[[waiver]]
+rule     = "synth.inferred-latch"
+file     = "**/.bender/git/checkouts/scm-*/latch_scm/register_file_1r_1w.sv"
+line     = 117
+reason   = "latch-based SCM: intentional latch"
+
+[[waiver]]
+rule     = "arith.shift-overflow"
+file     = "**/.bender/git/checkouts/obi-*/src/obi_atop_resolver.sv"
+line     = 94
+reason   = "degenerate parametric word select when DataWidth == RiscvWordWidth (single word, index is 0)"
+
+[[waiver]]
+rule     = "seq.reset-in-logic"
+file     = "**/.bender/git/checkouts/cv32e40p-*/rtl/cv32e40p_register_file_latch.sv"
+line     = 175
+reason   = "latch-based register file: reset clears latches inside always_latch by design"
+
+[[waiver]]
+rule     = "synth.no-decl-init"
+file     = "**/.bender/git/checkouts/spatz-*/hw/system/spatz_cluster/src/generated/bootrom.sv"
+line     = 22
+reason   = "generated bootrom: constant ROM contents, initialized at declaration by design"

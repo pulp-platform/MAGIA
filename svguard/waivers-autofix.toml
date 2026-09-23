@@ -5,7 +5,7 @@
 # reported, so dependencies (everything checked out by Bender under .bender/,
 # and pd/, the nonfree technology repo) are fully waived here: autofix only
 # ever rewrites MAGIA's own RTL. Differently from waivers.toml, dependency
-# errors are suppressed rather than downgraded to warnings.
+# errors are suppressed as well rather than failing the check.
 
 [[waiver]]
 rule   = "*"
