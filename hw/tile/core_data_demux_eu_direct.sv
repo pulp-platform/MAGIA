@@ -196,10 +196,10 @@ module core_data_demux_eu_direct
       end else if (fifo_push) begin
         arriving_order[1] <= arriving_order[0];
         arriving_order[0] <= destination;
-        num_outstanding   <= num_outstanding + 1;
+        num_outstanding   <= num_outstanding + 2'd1;
       end else if (fifo_pop) begin
         arriving_order[1] <= arriving_order[0];
-        num_outstanding   <= num_outstanding - 1;
+        num_outstanding   <= num_outstanding - 2'd1;
       end
     end
   end

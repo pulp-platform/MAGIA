@@ -71,6 +71,7 @@ package magia_noc_pkg;
             32'd1024: begin
                 Sam = floo_axi_nw_mesh_32x32_noc_pkg::Sam;
             end
+            default: Sam = '0;
         endcase
 
         return Sam;
@@ -99,6 +100,7 @@ package magia_noc_pkg;
             32'd1024: begin
                 RouteCfg = floo_axi_nw_mesh_32x32_noc_pkg::RouteCfg;
             end
+            default: RouteCfg = '0;
         endcase
 
         return RouteCfg;

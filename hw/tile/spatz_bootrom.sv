@@ -15,7 +15,7 @@ module spatz_bootrom #(
   input  logic [AddrWidth-1:0]  addr_i,
   output logic [DataWidth-1:0]  rdata_o
 );
-  localparam int RomSize = 4;
+  localparam int unsigned RomSize = 4;
   localparam int AddrBits = RomSize > 1 ? $clog2(RomSize) : 1;
 
   const logic [RomSize-1:0][DataWidth-1:0] mem = {

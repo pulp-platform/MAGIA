@@ -105,6 +105,7 @@ module obi_slave_ctrl_spatz
         DATA_OFFSET:    data_d    = obi_req_i.a.wdata;     // Preserved register
         RETURN_OFFSET:  return_d  = obi_req_i.a.wdata;     // Preserved register
         DONE_OFFSET:    done_d    = obi_req_i.a.wdata[0];  // Spatz writes 1, creates pulse
+        default: ;
       endcase
     end
   end

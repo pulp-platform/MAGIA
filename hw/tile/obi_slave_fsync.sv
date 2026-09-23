@@ -60,7 +60,7 @@ module obi_slave_fsync
   logic done;
   logic addr_match;
 
-  logic[DATA_W-1:0] aggr_reg, id_reg, status_reg, control_reg;
+  logic[DATA_W-1:0] aggr_reg, id_reg, status_reg;
 
   typedef enum logic[1:0] {
     IDLE,
@@ -185,6 +185,7 @@ module obi_slave_fsync
           ID_REG_OFFSET: begin
             id_reg <= obi_req_i.a.wdata;
           end
+          default: ;
         endcase
       end
     end

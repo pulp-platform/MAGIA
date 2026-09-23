@@ -122,10 +122,10 @@ module xif_inst_dispatcher
 /*******************************************************/
 
   always_comb begin: sign_detector
-    for (int i = 0; i < N_COPROC; i++) begin
+    for (int unsigned i = 0; i < N_COPROC; i++) begin
       coproc_sign[i] = 1'b0;
       if (i < N_RULES) begin  // Only check first N_RULES coprocessors, the rest do not have associated rule
-        for (int j = 0; j < N_SIGN; j++) begin
+        for (int unsigned j = 0; j < N_SIGN; j++) begin
           coproc_sign[i] |= (sign == rules_i[i].sign_list[j]) ? 1'b1 : 1'b0;
         end
       end
@@ -134,7 +134,7 @@ module xif_inst_dispatcher
 
   always_comb begin: priority_encoder
     coproc_issue_pr = '0;
-    for (int i = 0; i < N_COPROC; i++) begin
+    for (int unsigned i = 0; i < N_COPROC; i++) begin
       if (coproc_issue[i]) begin
         coproc_issue_pr = 1 << i;
         break;
@@ -157,7 +157,7 @@ module xif_inst_dispatcher
   always_comb begin: issue_in
     xif_issue_if_i.issue_ready = '0;
     xif_issue_if_i.issue_resp  = '0;
-    for (int i = 0; i < N_COPROC; i++) begin
+    for (int unsigned i = 0; i < N_COPROC; i++) begin
       if (coproc_issue_pr[i]) begin
         xif_issue_if_i.issue_ready          = issue_ready[i];
         xif_issue_if_i.issue_resp.accept    = issue_resp[i].accept;
@@ -188,6 +188,7 @@ module xif_inst_dispatcher
         n_result_state = PROP;
       PROP: if (!xif_result_if_o.result_ready)
         n_result_state = default_issue ? IDLE : WAIT;
+      default: ;
     endcase
   end
 

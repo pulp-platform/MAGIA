@@ -132,7 +132,7 @@ always_comb begin
       end
       CLUSTER_DONE: begin
         // Each PULP core writes 1 here on completion (write data ignored)
-        nb_recv_done_reqs_d = nb_recv_done_reqs_q + 1;
+        nb_recv_done_reqs_d = nb_recv_done_reqs_q + 1'b1;
       end
       CLUSTER_TASKBIN: begin
         taskbin_d = obi_req_i.a.wdata;
@@ -149,13 +149,13 @@ always_comb begin
           start_irq_d         = obi_req_i.a.wdata[magia_tile_pkg::N_CLUSTER_CORES-1:0];
         end else begin
           // PULP core ACK (write 0): count; when all done, clear register
-          nb_recv_ack_reqs_d = nb_recv_ack_reqs_q + 1;
+          nb_recv_ack_reqs_d = nb_recv_ack_reqs_q + 1'b1;
         end
       end
       CLUSTER_READY: begin
         // PULP core boot complete: count; saturate at N_CLUSTER_CORES
         if (nb_recv_ready_reqs_q < magia_tile_pkg::N_CLUSTER_CORES) begin
-          nb_recv_ready_reqs_d = nb_recv_ready_reqs_q + 1;
+          nb_recv_ready_reqs_d = nb_recv_ready_reqs_q + 1'b1;
         end
       end
       default: ;
@@ -243,7 +243,7 @@ assign start_irq_o  = start_irq_q;
 
 // All cores share the same boot address (PULP binary entry point)
 always_comb begin
-  for (int i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin
+  for (int unsigned i = 0; i < magia_tile_pkg::N_CLUSTER_CORES; i++) begin
     boot_addr_o[i] = entry_point_q;
   end
 end
