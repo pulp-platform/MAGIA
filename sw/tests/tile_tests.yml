@@ -21,6 +21,9 @@ tile-generic-tests:
   fpu_test:
     path: .
     command: make clean all run mesh_dv=0 fast_sim=1 test=fpu_test
+  eu_tests/timer_test:
+    path: .
+    command: make clean all run mesh_dv=0 fast_sim=1 test=eu_tests/timer_test
 redmule-tests:
   mm_tests/tile_test_mm:
     path: .

@@ -82,6 +82,7 @@ package magia_pkg;
     bit           EnRedMule; // RedMulE HWPE: engine + HCI HWPE port + OBI control port
     bit           EnSpatzCC; // Spatz CC: core complex + bootrom + dedicated I$ + HCI/OBI master ports
     bit           EnCluster; // PULP cluster: cv32e40p cores + shared I$ + OBI master ports
+    bit           EnTimer;   // Tile timer: timer_unit + OBI control port + control-core EU timer events
     redmule_cfg_t RedMule;   // RedMulE parameters (valid iff EnRedMule)
     spatz_cfg_t   Spatz;     // Spatz CC parameters (valid iff EnSpatzCC)
     cluster_cfg_t Cluster;   // PULP cluster parameters (valid iff EnCluster)
@@ -160,6 +161,7 @@ package magia_pkg;
     EnRedMule: 1'b1,
     EnSpatzCC: 1'b1,
     EnCluster: 1'b1,
+    EnTimer:   1'b1,
     RedMule:   MagiaRedMuleDefaultCfg,
     Spatz:     MagiaSpatzDefaultCfg,
     Cluster:   MagiaClusterDefaultCfg
@@ -170,6 +172,7 @@ package magia_pkg;
     EnRedMule: 1'b1,
     EnSpatzCC: 1'b0,
     EnCluster: 1'b0,
+    EnTimer:   1'b1,
     RedMule:   MagiaRedMuleDefaultCfg,
     Spatz:     MagiaSpatzDefaultCfg,
     Cluster:   MagiaClusterDefaultCfg
@@ -180,6 +183,7 @@ package magia_pkg;
     EnRedMule: 1'b0,
     EnSpatzCC: 1'b1,
     EnCluster: 1'b0,
+    EnTimer:   1'b1,
     RedMule:   MagiaRedMuleDefaultCfg,
     Spatz:     MagiaSpatzDefaultCfg,
     Cluster:   MagiaClusterDefaultCfg
@@ -190,6 +194,7 @@ package magia_pkg;
     EnRedMule: 1'b0,
     EnSpatzCC: 1'b0,
     EnCluster: 1'b1,
+    EnTimer:   1'b1,
     RedMule:   MagiaRedMuleDefaultCfg,
     Spatz:     MagiaSpatzDefaultCfg,
     Cluster:   MagiaClusterDefaultCfg

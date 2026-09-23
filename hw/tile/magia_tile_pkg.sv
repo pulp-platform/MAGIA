@@ -84,8 +84,11 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_ADDR_START   = CLUSTER_EU_DIRECT_END;
   localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_SIZE         = 32'h0000_1000;
   localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_ADDR_END     = CLUSTER_EU_ADDR_START + CLUSTER_EU_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = CLUSTER_EU_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE           = 32'h0000_C800;
+  localparam logic [magia_pkg::ADDR_W-1:0] TIMER_ADDR_START        = CLUSTER_EU_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] TIMER_SIZE              = 32'h0000_0100;
+  localparam logic [magia_pkg::ADDR_W-1:0] TIMER_ADDR_END          = TIMER_ADDR_START + TIMER_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = TIMER_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE           = 32'h0000_C700;
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END       = RESERVED_ADDR_START + RESERVED_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START        = RESERVED_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE              = 32'h0001_0000;
@@ -352,6 +355,7 @@ package magia_tile_pkg;
     int unsigned redmule;    // RedMulE control port (valid iff EnRedMule)
     int unsigned idma;       // iDMA control port
     int unsigned fsync;      // FractalSync control port (valid iff en_fractal_sync)
+    int unsigned timer;      // Tile timer port (valid iff EnTimer)
     int unsigned eu;         // Event Unit port (control core)
     int unsigned hci_ctrl;   // HCI interconnect arbiter control register (control core, always present)
     int unsigned cluster_eu; // Cluster-private Event Unit, memory-mapped view (valid iff EnCluster)
@@ -370,10 +374,11 @@ package magia_tile_pkg;
     if (en_fractal_sync) ret.fsync = idx++;
     ret.eu    = idx++;
     ret.hci_ctrl = idx++;
+    if (cfg.EnTimer) ret.timer = idx++;
     if (cfg.EnCluster) ret.cluster_eu = idx++;
     if (cfg.EnSpatzCC || cfg.EnCluster) ret.csr = idx++;  // hosts only Spatz/cluster control registers
     ret.num_sbr = idx;
-    ret.num_rules = 7 + 32'(en_fractal_sync) + 32'(cfg.EnRedMule) + 32'(cfg.EnSpatzCC || cfg.EnCluster) + 32'(cfg.EnCluster);
+    ret.num_rules = 7 + 32'(en_fractal_sync) + 32'(cfg.EnRedMule) + 32'(cfg.EnTimer) + 32'(cfg.EnSpatzCC || cfg.EnCluster) + 32'(cfg.EnCluster);
     return ret;
   endfunction
 
