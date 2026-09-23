@@ -1,0 +1,26 @@
+# Copyright 2026 ETH Zurich and University of Bologna
+# SPDX-License-Identifier: Apache-2.0
+#
+# Waivers for `make svguard-autofix`. svguard only fixes findings that are
+# reported, so dependencies (everything checked out by Bender under .bender/,
+# and pd/, the nonfree technology repo) are fully waived here: autofix only
+# ever rewrites MAGIA's own RTL. Differently from waivers.toml, dependency
+# errors are suppressed rather than downgraded to warnings.
+
+[[waiver]]
+rule   = "*"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: never autofixed"
+
+# MAGIA RTL: specific, reviewed exceptions (keep in sync with waivers.toml).
+[[waiver]]
+rule   = "synth.no-decl-init"
+file   = "**/hw/tile/spatz_bootrom.sv"
+line   = 21
+reason = "bootrom contents are constant (ROM), initialized at declaration by design"
+
+[[waiver]]
+rule   = "seq.no-reset"
+file   = "**/hw/tile/spatz_bootrom.sv"
+line   = 31
+reason = "ROM read port: memory, no reset needed"

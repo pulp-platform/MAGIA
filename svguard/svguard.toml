@@ -1,0 +1,23 @@
+# Copyright 2026 ETH Zurich and University of Bologna
+# SPDX-License-Identifier: Apache-2.0
+#
+# svguard profile for MAGIA. Paths below are globs on the file paths in the
+# Bender flist.
+
+[general]
+fail_on = "error"
+defines = ["SYNTHESIS"]
+waivers = "waivers.toml"
+
+[scope]
+design    = ["**"]
+testbench = ["**/tb/**", "**/test/**", "**/*_tb.sv", "**/tb_*.sv"]
+exclude   = []
+
+[clock_reset]
+reset_style      = "async"
+reset_active_low = true
+icg_cells = [
+  "tc_clk_gating", "cluster_clock_gating", "pulp_clock_gating",
+  "tc_clk_mux2", "tc_clk_inverter", "tc_clk_buffer", "tc_clk_xor2", "tc_clk_or2", "tc_clk_and2",
+]

@@ -98,7 +98,7 @@ module idma_ctrl_mm
   // AXI2OBI Transfer Channel (L2 to L1)
   idma_axi_obi_transfer_ch #(
     .CHANNEL_T         ( magia_tile_pkg::AXI2OBI           ),
-    .ERROR_CAP         ( ERROR_CAP                         ),
+    .ERROR_CAP         ( idma_pkg::error_cap_e'(ERROR_CAP) ),
     .idma_fe_reg_req_t ( magia_tile_pkg::idma_fe_reg_req_t ),
     .idma_fe_reg_rsp_t ( magia_tile_pkg::idma_fe_reg_rsp_t ),
     .axi_req_t         ( magia_tile_pkg::idma_axi_req_t    ),
@@ -128,7 +128,7 @@ module idma_ctrl_mm
   // OBI2AXI Transfer Channel (L1 to L2)
   idma_axi_obi_transfer_ch #(
     .CHANNEL_T         ( magia_tile_pkg::OBI2AXI           ),
-    .ERROR_CAP         ( ERROR_CAP                         ),
+    .ERROR_CAP         ( idma_pkg::error_cap_e'(ERROR_CAP) ),
     .idma_fe_reg_req_t ( magia_tile_pkg::idma_fe_reg_req_t ),
     .idma_fe_reg_rsp_t ( magia_tile_pkg::idma_fe_reg_rsp_t ),
     .axi_req_t         ( magia_tile_pkg::idma_axi_req_t    ),

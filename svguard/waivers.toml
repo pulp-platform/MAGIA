@@ -1,0 +1,208 @@
+# Copyright 2026 ETH Zurich and University of Bologna
+# SPDX-License-Identifier: Apache-2.0
+#
+# Dependencies (everything checked out by Bender) are held to errors only:
+# every WARNING-level rule is waived under .bender/ and pd/ (nonfree
+# technology repo). MAGIA's own RTL gets the full rule set. Regenerate the rule list with
+#   svguard --list-rules | awk '$2 == "warning" {print $1}'
+
+[[waiver]]
+rule   = "arith.precedence"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "arith.sign-conversion"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "arith.signed-select-unsigned"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "arith.unsized-literal"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "arith.width-trunc"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "comb.case-default"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "comb.case-enum"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "comb.default-assign"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "comb.naming"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "comb.nesting-depth"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "comb.unique-with-default"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "seq.golden-pattern"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "seq.logic-in-ff"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "seq.naming"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "struct.define-location"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "struct.filename-match"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "struct.import-scope"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "struct.internal-i-suffix"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "struct.intf-array-range"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "struct.named-generate"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "struct.named-ports"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "struct.one-module-per-file"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "struct.param-type-depth"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "struct.port-suffix"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "struct.unused"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "style.dangling-else"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "style.fsm-datapath-mix"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "style.if-same-line"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "style.line-length"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "style.tabs"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "style.trailing-ws"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "synth.no-always-latch"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "synth.no-casex"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+# slang warnings without an svguard mapping are reported as lang.<option>
+# (WARNING); they cannot be waived as lang.* without also waiving lang errors.
+[[waiver]]
+rule   = "lang.unconnected-output-port"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+# Technology wrappers instantiate SRAM macros and standard cells, which are
+# black boxes to svguard.
+[[waiver]]
+rule   = "lang.UnknownModule"
+file   = "**/pd/sourcecode/tc_*.sv"
+reason = "technology hard macros / standard cells, no RTL model"
+
+# MAGIA RTL: specific, reviewed exceptions.
+[[waiver]]
+rule   = "synth.no-decl-init"
+file   = "**/hw/tile/spatz_bootrom.sv"
+line   = 21
+reason = "bootrom contents are constant (ROM), initialized at declaration by design"
+
+[[waiver]]
+rule   = "seq.no-reset"
+file   = "**/hw/tile/spatz_bootrom.sv"
+line   = 31
+reason = "ROM read port: memory, no reset needed"
+
+# Errors in dependencies are downgraded to warnings: they are reported but do
+# not fail the check. Must stay after the waivers above (the first matching
+# waiver applies).
+[[waiver]]
+rule     = "*"
+file     = "**/{.bender,pd}/**"
+severity = "warning"
+reason   = "third-party dependency: errors are reported as warnings"

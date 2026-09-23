@@ -424,6 +424,7 @@ else
 	@sed -i '/^  cv32e40p:$$/,/^  cv32e40x:/ { s|^    revision: .*|    revision: $(CV32E40P_REV)|; 			s|^      Git: .*|      Git: $(CV32E40P_GIT)|; 		}' Bender.lock
 endif
 	$(BENDER) checkout
+	$(MAKE) svguard-flist
 	$(BENDER) script vsim          \
 	--vlog-arg="$(compile_flag)"   \
 	--vcom-arg="-pedanticerrors"   \
@@ -584,4 +585,5 @@ magia-nonfree-init:
 	if [ "$(MAGIA_NONFREE_DEPS)" -eq "1" ]; then $(MAKE) nonfree-init-dep ; fi 
 
 include verilator/verilator.mk
+include svguard/svguard.mk
 -include $(MAGIA_NONFREE_DIR)/nonfree.mk
