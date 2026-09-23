@@ -47,11 +47,6 @@ file   = "**/{.bender,pd}/**"
 reason = "third-party dependency: errors only"
 
 [[waiver]]
-rule   = "comb.naming"
-file   = "**/{.bender,pd}/**"
-reason = "third-party dependency: errors only"
-
-[[waiver]]
 rule   = "comb.nesting-depth"
 file   = "**/{.bender,pd}/**"
 reason = "third-party dependency: errors only"
@@ -68,11 +63,6 @@ reason = "third-party dependency: errors only"
 
 [[waiver]]
 rule   = "seq.logic-in-ff"
-file   = "**/{.bender,pd}/**"
-reason = "third-party dependency: errors only"
-
-[[waiver]]
-rule   = "seq.naming"
 file   = "**/{.bender,pd}/**"
 reason = "third-party dependency: errors only"
 
@@ -132,6 +122,11 @@ file   = "**/{.bender,pd}/**"
 reason = "third-party dependency: errors only"
 
 [[waiver]]
+rule   = "style.comb-naming"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
 rule   = "style.dangling-else"
 file   = "**/{.bender,pd}/**"
 reason = "third-party dependency: errors only"
@@ -148,6 +143,11 @@ reason = "third-party dependency: errors only"
 
 [[waiver]]
 rule   = "style.line-length"
+file   = "**/{.bender,pd}/**"
+reason = "third-party dependency: errors only"
+
+[[waiver]]
+rule   = "style.seq-naming"
 file   = "**/{.bender,pd}/**"
 reason = "third-party dependency: errors only"
 

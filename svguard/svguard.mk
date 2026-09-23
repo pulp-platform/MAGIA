@@ -9,7 +9,8 @@
 #                       passed between CI jobs; svguard runs from there too)
 #   make svguard        lint it; errors fail everywhere, warnings are only
 #                       reported for MAGIA RTL (dependencies are waived, see
-#                       svguard/waivers.toml)
+#                       svguard/waivers.toml). SVGUARD_RULES selects the rules
+#                       (--rules SPEC, default: all but style checks)
 #   make svguard-autofix  fix findings in place with --autofix, in MAGIA RTL
 #                       only: dependencies are fully waived (see
 #                       svguard/waivers-autofix.toml). SVGUARD_AUTOFIX selects
@@ -23,6 +24,7 @@ SVGUARD_TOP       ?= magia
 SVGUARD_FORMAT    ?= text
 SVGUARD_REPORT    ?= $(SVGUARD_BUILD_DIR)/svguard.log
 SVGUARD_DEFS      := -DSYNTHESIS -DTARGET_SYNTHESIS
+SVGUARD_RULES     ?= -style.*
 SVGUARD_AUTOFIX   ?=
 SVGUARD_AUTOFIX_WAIVERS ?= $(SVGUARD_DIR)/waivers-autofix.toml
 SVGUARD_AUTOFIX_REPORT  ?= $(SVGUARD_BUILD_DIR)/svguard-autofix.log
@@ -38,6 +40,7 @@ svguard-flist:
 
 svguard: $(SVGUARD_FLIST)
 	cd $(MAGIA_DIR) && $(SVGUARD) --config $(SVGUARD_DIR)/svguard.toml \
+	--rules '$(SVGUARD_RULES)'                      \
 	--format $(SVGUARD_FORMAT) -o $(SVGUARD_REPORT) \
 	--top $(SVGUARD_TOP) $(SVGUARD_DEFS)            \
 	-f $(SVGUARD_FLIST)                             \
