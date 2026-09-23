@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,11 +15,11 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
- * 
+ *
  * Core Data - OBI REQ/RSP Converter
  */
 
-module data2obi_req 
+module data2obi_req
   import magia_tile_pkg::*;
 (
   input  magia_tile_pkg::core_data_req_t     data_req_i,
@@ -34,7 +34,7 @@ module data2obi_req
   assign obi_req_o.a.aid                = 'b0;
   assign obi_req_o.a.a_optional.auser   = 'b0;
   assign obi_req_o.a.a_optional.wuser   = 'b0;
-  
+
   assign obi_req_o.a.a_optional.mid     = 'b0;
   assign obi_req_o.a.a_optional.achk    = 'b0;
 `ifdef CV32E40X

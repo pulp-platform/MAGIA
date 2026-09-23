@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -16,7 +16,7 @@
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  *          Luca Balboni <luca.balboni10@studio.unibo.it>
- * 
+ *
  * MAGIA Tile
  */
 
@@ -45,8 +45,8 @@ module magia_tile
 `endif
 #(
   // Parameters used by hci_interconnect and l1_spm
-  parameter int unsigned          N_MEM_BANKS              = magia_pkg::N_MEM_BANKS,         // Number of memory banks 
-  parameter int unsigned          N_WORDS_BANK             = magia_pkg::N_WORDS_BANK,        // Number of words per memory bank      
+  parameter int unsigned          N_MEM_BANKS              = magia_pkg::N_MEM_BANKS,         // Number of memory banks
+  parameter int unsigned          N_WORDS_BANK             = magia_pkg::N_WORDS_BANK,        // Number of words per memory bank
 
   // Parameters used by the core
   parameter cv32e40x_pkg::rv32_e  CORE_ISA                 = cv32e40x_pkg::RV32I,            // RV32I (default) 32 registers in the RF - RV32E 16 registers in the RF
@@ -235,7 +235,7 @@ module magia_tile
 
   magia_tile_pkg::idma_axi_req_t idma_axi_write_req_out;
   magia_tile_pkg::idma_axi_rsp_t idma_axi_write_rsp_out;
-  
+
   magia_tile_pkg::idma_axi_req_t idma_axi_req_out;
   magia_tile_pkg::idma_axi_rsp_t idma_axi_rsp_out;
 
@@ -279,14 +279,14 @@ module magia_tile
   magia_pkg::axi_xbar_mst_rsp_t[magia_tile_pkg::AxiXbarNoMstPorts-1:0] axi_xbar_mst_rsp;  // Index 0 -> ext, Index 1 -> OBI XBAR, Index 2 -> Spatz bootrom
 
   logic[magia_tile_pkg::axi_xbar_cfg.NoSlvPorts-1:0] en_default_mst_port;
-  
+
   logic                                hci_clear; // Can be used to manage HCI clear at top-level
   hci_package::hci_interconnect_ctrl_t hci_ctrl;  // Can be used to manage HCI control at top-level
 
   magia_tile_pkg::obi_xbar_rule_t[magia_tile_pkg::N_ADDR_RULE-1:0] obi_xbar_rule;
 
   axi_pkg::xbar_rule_32_t[magia_tile_pkg::axi_xbar_cfg.NoAddrRules-1:0] axi_xbar_rule;
-  
+
   logic[magia_tile_pkg::N_MGR-1:0]                                obi_xbar_en_default_idx;
   logic[magia_tile_pkg::N_MGR-1:0][magia_tile_pkg::N_BIT_SBR-1:0] obi_xbar_default_idx;
 
@@ -317,7 +317,7 @@ module magia_tile
   logic idma_obi2axi_error;
 
   magia_tile_pkg::xif_inst_rule_t[magia_tile_pkg::N_RULES-1:0] xif_coproc_rules;
-  
+
   logic sys_clk;
   logic sys_clk_en;
 
@@ -365,7 +365,7 @@ module magia_tile
   floo_req_t  [4:0] floo_router_req_out;
   floo_rsp_t  [4:0] floo_router_rsp_out;
   floo_wide_t [4:0] floo_router_wide_out;
-  
+
   logic                           x_compressed_valid;
   logic                           x_compressed_ready;
   fpu_ss_pkg::x_compressed_req_t  x_compressed_req;
@@ -439,22 +439,22 @@ module magia_tile
   magia_tile_pkg::core_hci_data_rsp_t [magia_tile_pkg::SPATZ_HCI_PORTS-1:0] spatz_hci_rsp;
   magia_tile_pkg::core_obi_data_req_t spatz_obi_req;
   magia_tile_pkg::core_obi_data_rsp_t spatz_obi_rsp;
-  logic        spatz_inst_req;         
-  logic [31:0] spatz_inst_addr;        
-  logic        spatz_inst_cacheable;    
-  logic        spatz_flush_i_valid;     
-  logic [31:0] spatz_inst_data;         
-  logic        spatz_inst_ready;        
-  logic        spatz_inst_error;        
-  logic        spatz_flush_i_ready;  
+  logic        spatz_inst_req;
+  logic [31:0] spatz_inst_addr;
+  logic        spatz_inst_cacheable;
+  logic        spatz_flush_i_valid;
+  logic [31:0] spatz_inst_data;
+  logic        spatz_inst_ready;
+  logic        spatz_inst_error;
+  logic        spatz_flush_i_ready;
   logic spatz_enable_prefetching;
-  snitch_pkg::core_events_t spatz_core_events;   
+  snitch_pkg::core_events_t spatz_core_events;
   magia_tile_pkg::core_axi_instr_req_t  spatz_icache_axi_req;
   magia_tile_pkg::core_axi_instr_rsp_t  spatz_icache_axi_rsp;
   logic spatz_start;
   logic spatz_done;
-  logic spatz_clk_en;     
-  logic spatz_clk;  
+  logic spatz_clk_en;
+  logic spatz_clk;
 
 
   // Cluster signals
@@ -558,7 +558,7 @@ module magia_tile
 
 
   generate
-    for (genvar idx_core = 0; idx_core < magia_tile_pkg::N_CLUSTER_CORES; idx_core++) begin
+    for (genvar idx_core = 0; idx_core < magia_tile_pkg::N_CLUSTER_CORES; idx_core++) begin : gen_idx_core
       assign obi_xbar_slv_req[magia_tile_pkg::OBI_SPATZ_IDX + 1 + idx_core] = cluster_obi_data_req[idx_core];
       assign cluster_obi_data_rsp[idx_core] = obi_xbar_slv_rsp[magia_tile_pkg::OBI_SPATZ_IDX + 1 + idx_core];
     end
@@ -596,7 +596,7 @@ module magia_tile
   assign fsync_clear = 1'b0;
 
   assign xif_coproc_rules[magia_tile_pkg::XIF_REDMULE_IDX] = '0; // current version of XIF-RedMulE not (yet) supported
-  assign xif_coproc_rules[magia_tile_pkg::XIF_IDMA_IDX]    = '{sign_list: '{ {{magia_tile_pkg::CONF_OPCODE, magia_tile_pkg::CONF_FUNC3}}, 
+  assign xif_coproc_rules[magia_tile_pkg::XIF_IDMA_IDX]    = '{sign_list: '{ {{magia_tile_pkg::CONF_OPCODE, magia_tile_pkg::CONF_FUNC3}},
                                                                              {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_AL_FUNC3}},
                                                                              {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_SR2_FUNC3}},
                                                                              {{magia_tile_pkg::SET_OPCODE, magia_tile_pkg::SET_SR3_FUNC3}},
@@ -611,18 +611,18 @@ module magia_tile
 `ifdef CV32E40X
   assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_EVT_0] = 1'b0; /* redmule_evt[0][0];  */ // Event Unit manages these interrupts // Only 1 core supported
   assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_EVT_1] = 1'b0; /* redmule_evt[0][1];  */ // Event Unit manages these interrupts // Only 1 core supported
-  assign irq[magia_tile_pkg::IRQ_IDX_A2O_ERROR]     = 1'b0; /* idma_axi2obi_error; */ // Event Unit manages these interrupts 
-  assign irq[magia_tile_pkg::IRQ_IDX_O2A_ERROR]     = 1'b0; /* idma_obi2axi_error; */ // Event Unit manages these interrupts 
-  assign irq[magia_tile_pkg::IRQ_IDX_A2O_DONE]      = 1'b0; /* idma_axi2obi_done;  */ // Event Unit manages these interrupts 
-  assign irq[magia_tile_pkg::IRQ_IDX_O2A_DONE]      = 1'b0; /* idma_obi2axi_done;  */ // Event Unit manages these interrupts 
-  assign irq[magia_tile_pkg::IRQ_IDX_A2O_START]     = 1'b0; /* idma_axi2obi_start; */ // Event Unit manages these interrupts 
-  assign irq[magia_tile_pkg::IRQ_IDX_O2A_START]     = 1'b0; /* idma_obi2axi_start; */ // Event Unit manages these interrupts 
-  assign irq[magia_tile_pkg::IRQ_IDX_A2O_BUSY]      = 1'b0; /* idma_axi2obi_busy;  */ // Event Unit manages these interrupts 
-  assign irq[magia_tile_pkg::IRQ_IDX_O2A_BUSY]      = 1'b0; /* idma_obi2axi_busy;  */ // Event Unit manages these interrupts 
-  assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_BUSY]  = 1'b0; /* redmule_busy;       */ // Event Unit manages these interrupts 
-  assign irq[magia_tile_pkg::IRQ_IDX_FSYNC_DONE]    = 1'b0; /* fsync_done;         */ // Event Unit manages these interrupts 
-  assign irq[magia_tile_pkg::IRQ_IDX_FSYNC_ERROR]   = 1'b0; /* fsync_error;        */ // Event Unit manages these interrupts 
-  assign irq[magia_pkg::N_IRQ-magia_tile_pkg::IRQ_USED-1:16]   
+  assign irq[magia_tile_pkg::IRQ_IDX_A2O_ERROR]     = 1'b0; /* idma_axi2obi_error; */ // Event Unit manages these interrupts
+  assign irq[magia_tile_pkg::IRQ_IDX_O2A_ERROR]     = 1'b0; /* idma_obi2axi_error; */ // Event Unit manages these interrupts
+  assign irq[magia_tile_pkg::IRQ_IDX_A2O_DONE]      = 1'b0; /* idma_axi2obi_done;  */ // Event Unit manages these interrupts
+  assign irq[magia_tile_pkg::IRQ_IDX_O2A_DONE]      = 1'b0; /* idma_obi2axi_done;  */ // Event Unit manages these interrupts
+  assign irq[magia_tile_pkg::IRQ_IDX_A2O_START]     = 1'b0; /* idma_axi2obi_start; */ // Event Unit manages these interrupts
+  assign irq[magia_tile_pkg::IRQ_IDX_O2A_START]     = 1'b0; /* idma_obi2axi_start; */ // Event Unit manages these interrupts
+  assign irq[magia_tile_pkg::IRQ_IDX_A2O_BUSY]      = 1'b0; /* idma_axi2obi_busy;  */ // Event Unit manages these interrupts
+  assign irq[magia_tile_pkg::IRQ_IDX_O2A_BUSY]      = 1'b0; /* idma_obi2axi_busy;  */ // Event Unit manages these interrupts
+  assign irq[magia_tile_pkg::IRQ_IDX_REDMULE_BUSY]  = 1'b0; /* redmule_busy;       */ // Event Unit manages these interrupts
+  assign irq[magia_tile_pkg::IRQ_IDX_FSYNC_DONE]    = 1'b0; /* fsync_done;         */ // Event Unit manages these interrupts
+  assign irq[magia_tile_pkg::IRQ_IDX_FSYNC_ERROR]   = 1'b0; /* fsync_error;        */ // Event Unit manages these interrupts
+  assign irq[magia_pkg::N_IRQ-magia_tile_pkg::IRQ_USED-1:16]
                                                     = irq_i[magia_pkg::N_IRQ-magia_tile_pkg::IRQ_USED-1:16];
   assign irq[15:12]                                 = '0;
   assign irq[11]                                    = eu_core_irq_req[0]; // Event Unit IRQ mapped to external interrupt (bit 11) /* irq_i[11]; */
@@ -680,7 +680,7 @@ module magia_tile
     .obi_rsp_i  ( core_obi_data_rsp         ),
     .data_rsp_o ( core_data_rsp_from_xbar   )
   );
-  
+
   obi2hci_req #(
     .obi_req_t ( magia_tile_pkg::core_obi_data_req_t ),
     .hci_req_t ( magia_tile_pkg::core_hci_data_req_t )
@@ -938,7 +938,7 @@ module magia_tile
 `ifndef CV32E40X
   // RedMule controller OBI-to-HWPE control interface
   obi2hwpe_ctrl obi2hwpe_ctrl_inst (
-    .obi_req_i  ( core_mem_data_req[magia_tile_pkg::OBI_XBAR_REDMULE_CTRL_IDX] ),     
+    .obi_req_i  ( core_mem_data_req[magia_tile_pkg::OBI_XBAR_REDMULE_CTRL_IDX] ),
     .obi_rsp_o  ( core_mem_data_rsp[magia_tile_pkg::OBI_XBAR_REDMULE_CTRL_IDX] ),
     .ctrl_req_o ( redmule_ctrl_req                                             ),
     .ctrl_rsp_i ( redmule_ctrl_rsp                                             )
@@ -974,15 +974,15 @@ module magia_tile
   core_data_demux_eu_direct i_core_data_demux_eu_direct (
     .clk_i              ( sys_clk                 ),
     .rst_ni             ( rst_ni                  ),
-    
+
     // Core interface
     .core_data_req_i    ( core_data_req           ),
     .core_data_rsp_o    ( core_data_rsp           ),
-    
+
     // Regular crossbar interface
     .xbar_data_req_o    ( core_data_req_to_xbar   ),
     .xbar_data_rsp_i    ( core_data_rsp_from_xbar ),
-    
+
     // EU direct link interface
     .eu_direct_req_o    ( eu_direct_req           ),
     .eu_direct_rsp_i    ( eu_direct_rsp           )
@@ -1038,8 +1038,10 @@ module magia_tile
 /*******************************************************/
 
   always_ff @(posedge clk_i, negedge rst_ni) begin: sys_clk_en_ff
-    if (~rst_ni) sys_clk_en <= 1'b0;
-    else         sys_clk_en <= tile_enable_i;
+    if (~rst_ni)
+      sys_clk_en <= 1'b0;
+    else
+      sys_clk_en <= tile_enable_i;
   end
 
   tc_clk_gating sys_clock_gating (
@@ -1051,7 +1053,7 @@ module magia_tile
 
   // Core clock gating controlled by Event Unit
   assign core_clk_en = eu_core_clk_en[0];  // Event Unit controls core clock
-  
+
   tc_clk_gating core_clock_gating (
     .clk_i     ( sys_clk     ),
     .en_i      ( core_clk_en ),
@@ -1082,7 +1084,7 @@ module magia_tile
     EHW: hci_package::DEFAULT_EHW
   };
   `HCI_INTF_ARRAY(hci_tcdm_sram_if, sys_clk, 0:N_MEM_BANKS-1);
-  
+
   localparam hci_package::hci_size_parameter_t `HCI_SIZE_PARAM(hci_core_if) = '{
     DW:  magia_tile_pkg::DW_LIC,
     AW:  magia_tile_pkg::AWC,
@@ -1126,9 +1128,9 @@ module magia_tile
     EHW: hci_package::DEFAULT_EHW
   };
   generate;
-    if (N_EXT > 0) begin
+    if (N_EXT > 0) begin : gen_if
       `HCI_INTF_ARRAY(hci_ext_if, sys_clk, 0:magia_tile_pkg::N_EXT-1);
-    end else if (N_EXT == 0) begin
+    end else if (N_EXT == 0) begin : gen_if_2
       `HCI_INTF_ARRAY(hci_ext_if, sys_clk, 0:0);
     end
   endgenerate
@@ -1144,7 +1146,7 @@ module magia_tile
     .X_MISA      ( magia_tile_pkg::X_MISA   ),
     .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
   ) xif_fpu_if ();
-  
+
   cv32e40x_if_xif #(
     .X_NUM_RS    ( magia_tile_pkg::X_NUM_RS ),
     .X_ID_WIDTH  ( magia_tile_pkg::X_ID_W   ),
@@ -1261,7 +1263,7 @@ module magia_tile
     .A_EXT            ( CORE_A                          ),
     .B_EXT            ( CORE_B                          ),
     .M_EXT            ( CORE_M                          ),
-    .X_EXT            ( magia_tile_pkg::X_EXT_EN        ),    // Support for eXtension Interface (X) 
+    .X_EXT            ( magia_tile_pkg::X_EXT_EN        ),    // Support for eXtension Interface (X)
     .X_NUM_RS         ( magia_tile_pkg::X_NUM_RS        ),    // RF read ports that can be used by the eXtension interface
     .X_ID_WIDTH       ( magia_tile_pkg::X_ID_W          ),    // ID width of eXtension interface
     .X_MEM_WIDTH      ( magia_tile_pkg::X_MEM_W         ),    // MEM width for loads/stores of eXtension interface
@@ -1274,7 +1276,7 @@ module magia_tile
     .DM_REGION_START  ( magia_tile_pkg::DM_REGION_START ),    // Start address of Debug Module region
     .DM_REGION_END    ( magia_tile_pkg::DM_REGION_END   ),    // End address of Debug Module region
     .DBG_NUM_TRIGGERS ( 1                               ),    // 1 debug trigger
-    .PMA_NUM_REGIONS  ( 0                               ),    // No PMA (Physical Memory Attribution) regions 
+    .PMA_NUM_REGIONS  ( 0                               ),    // No PMA (Physical Memory Attribution) regions
     .PMA_CFG          (                                 ),    // No array of PMA configurations
     .CLIC             ( magia_tile_pkg::CLIC_EN         ),    // Support for Smclic, Smclicshv and Smclicconfig
     .CLIC_ID_WIDTH    ( magia_tile_pkg::CLIC_ID_W       )     // Width of clic_irq_id_i and clic_irq_id_o
@@ -1341,7 +1343,7 @@ module magia_tile
     .clic_irq_shv_i      ( clic_irq_shv           ),
 
     // Fence.i flush handshake
-    .fencei_flush_req_o  ( fencei_flush_req       ), 
+    .fencei_flush_req_o  ( fencei_flush_req       ),
     .fencei_flush_ack_i  ( fencei_flush_ack       ),
 
     // Debug interface
@@ -1355,7 +1357,7 @@ module magia_tile
     // Special control signals
     .fetch_enable_i                                ,
     .core_sleep_o                                  ,
-    .wu_wfe_i            
+    .wu_wfe_i
   );
 `elsif RI5CY
   riscv_core #(
@@ -1383,20 +1385,20 @@ module magia_tile
     // Clock and Reset
     .clk_i                  ( core_clk              ),  // Use gated clock for core
     .rst_ni                 ( rst_ni                ),
-    
+
     // Clock enable and test mode
     .clock_en_i             ( sys_clk_en            ),
     .test_en_i              ( test_mode_i           ),
-    
+
     // Floating-point register file disable (for Zfinx)
     .fregfile_disable_i     ( 1'b0                  ), // FPU enabled, use dedicated FP regfile
-    
+
     // Boot configuration
     .boot_addr_i            ( boot_addr_i           ),
 
     // Cluster/Core IDs
-    .cluster_id_i           ( '0                    ), 
-    .core_id_i              ( mhartid_i[3:0]        ), 
+    .cluster_id_i           ( '0                    ),
+    .core_id_i              ( mhartid_i[3:0]        ),
 
     // Instruction memory interface
     .instr_req_o            ( core_instr_req.req    ),
@@ -1404,8 +1406,8 @@ module magia_tile
     .instr_rvalid_i         ( core_instr_rsp.rvalid ),
     .instr_addr_o           ( core_instr_req.addr   ),
     .instr_rdata_i          ( core_instr_rsp.rdata  ),
-    
-    // Data memory interface  
+
+    // Data memory interface
     .data_req_o             ( core_data_req.req     ),
     .data_gnt_i             ( core_data_rsp.gnt     ),
     .data_rvalid_i          ( core_data_rsp.rvalid  ),
@@ -1419,7 +1421,7 @@ module magia_tile
     .apu_master_req_o       (                       ),
     .apu_master_ready_o     (                       ),
     .apu_master_gnt_i       ( '0                    ),
-    
+
     .apu_master_operands_o  (                       ),
     .apu_master_op_o        (                       ),
     .apu_master_type_o      (                       ),
@@ -1428,24 +1430,24 @@ module magia_tile
     .apu_master_valid_i     ( '0                    ),
     .apu_master_result_i    ( '0                    ),
     .apu_master_flags_i     ( '0                    ),
-    
+
     // Interrupts
     .irq_i                  ( eu_core_irq_req[0]    ),
-    .irq_id_i               ( '0                    ), 
+    .irq_id_i               ( '0                    ),
     .irq_ack_o              ( eu_core_irq_ack[0]    ),
     .irq_id_o               ( eu_core_irq_ack_id[0] ),
     .irq_sec_i              ( '0                    ),
 
     // Security level (unused)
     .sec_lvl_o              (                       ),
-    
+
     // Debug interface
     .debug_req_i            ( debug_req_i[0]         ),
-    
+
     // CPU control
     .fetch_enable_i         ( fetch_enable_i        ),
     .core_busy_o            ( core_busy_o           ),
-    
+
 
     // Performance counters
     .ext_perf_counters_i    ( '0                    )
@@ -1468,7 +1470,7 @@ module magia_tile
     // Clock and Reset
     .clk_i                  ( core_clk              ),  // Use gated clock for core
     .rst_ni                 ( rst_ni                ),
-    
+
     // Clock Interface
     .pulp_clock_en_i        ( sys_clk_en            ),
     .scan_cg_en_i           ( test_mode_i           ),
@@ -1539,13 +1541,13 @@ module magia_tile
       .mgr_port_rsp_i ( obi_xbar_slv_cut_rsp[i]        )
     );
   end
-  
+
   assign obi_xbar_slv_cut_req[magia_tile_pkg::OBI_CORE_IDX]  = obi_xbar_slv_req[magia_tile_pkg::OBI_CORE_IDX];
   assign obi_xbar_slv_rsp[magia_tile_pkg::OBI_CORE_IDX]      = obi_xbar_slv_cut_rsp[magia_tile_pkg::OBI_CORE_IDX];
 
 
   generate
-    for (genvar idx_core = 0; idx_core < magia_tile_pkg::N_CLUSTER_CORES; idx_core++) begin
+    for (genvar idx_core = 0; idx_core < magia_tile_pkg::N_CLUSTER_CORES; idx_core++) begin : gen_idx_core_2
       assign obi_xbar_slv_cut_req[magia_tile_pkg::OBI_SPATZ_IDX + 1 + idx_core] = obi_xbar_slv_req[magia_tile_pkg::OBI_SPATZ_IDX + 1 + idx_core];
       assign obi_xbar_slv_rsp[magia_tile_pkg::OBI_SPATZ_IDX + 1 + idx_core] = obi_xbar_slv_cut_rsp[magia_tile_pkg::OBI_SPATZ_IDX + 1 + idx_core];
     end
@@ -1647,7 +1649,7 @@ module magia_tile
 
     .clear_i ( hci_clear        ),
     .ctrl_i  ( hci_ctrl         ),
-    
+
     .hwpe    ( hci_redmule_if   ),
     .dma     ( hci_dma_if       ),
     .core    ( hci_core_if      ),
@@ -1837,7 +1839,7 @@ module magia_tile
 
   .sram_cfg_data_i      ( '0                          ),
   .sram_cfg_tag_i       ( '0                          ),
-  
+
   .axi_req_o            ( core_l2_instr_req           ),
   .axi_rsp_i            ( core_l2_instr_rsp           )
   );
@@ -1884,7 +1886,7 @@ module magia_tile
 /*******************************************************/
 /**             FlooNoC Modules Beginning             **/
 /*******************************************************/
-  
+
   floo_nw_router #(
     .AxiCfgN      ( AxiCfgN     ),
     .AxiCfgW      ( AxiCfgW     ),
@@ -1946,7 +1948,7 @@ module magia_tile
   assign floo_router_req_in[3] = noc_west_req_i;
   assign noc_west_rsp_o = floo_router_rsp_out[3];
   assign floo_router_wide_in[3] = noc_west_wide_i;
-  
+
   floo_nw_chimney #(
     .AxiCfgN              ( AxiCfgN                                  ),
     .AxiCfgW              ( AxiCfgW                                  ),
@@ -2040,7 +2042,7 @@ module magia_tile
     .done_o         ( fsync_done                                                ),
     .error_o        ( fsync_error                                               )
   );
-`else  
+`else
   // Fractal Sync OBI Memory-Mapped Slave (replaces XIF interface)
   obi_slave_fsync #(
     .BASE_ADDR    ( magia_tile_pkg::FSYNC_CTRL_ADDR_START ),
@@ -2145,9 +2147,9 @@ module magia_tile
     .rst_ni    ( rst_ni                                                                      ),
     .obi_req_i ( core_mem_data_req[magia_tile_pkg::OBI_XBAR_TILE_CSR_IDX]                    ),
     .obi_rsp_o ( core_mem_data_rsp[magia_tile_pkg::OBI_XBAR_TILE_CSR_IDX]                    ),
-    .clk_en_o  ( spatz_clk_en                                                                ),  
-    .start_o   ( spatz_start                                                                 ),  
-    .done_o    ( spatz_done                                                                  )  
+    .clk_en_o  ( spatz_clk_en                                                                ),
+    .start_o   ( spatz_start                                                                 ),
+    .done_o    ( spatz_done                                                                  )
   );
   */
 
@@ -2226,7 +2228,7 @@ module magia_tile
 `ifdef CV32E40X
   assign eu_core_irq_ack    = eu_core_irq_req;
   assign eu_core_irq_ack_id = eu_core_irq_id;
-  
+
   assign core_busy_o = !core_sleep_o;
 `else
   // PULP cluster cores are no longer wired to the event unit's IRQ port:
@@ -2242,26 +2244,26 @@ module magia_tile
   assign core_sleep_o = ~core_busy_o;
 `endif
 `endif
-  
+
  magia_event_unit #(
     .NB_CORES         ( 1 + magia_tile_pkg::N_CLUSTER_CORES        ),  // control core + cluster cores
-    .NB_SW_EVT        ( 1                                          ), 
-    .NB_BARR          ( 2                                          ), 
-    .NB_HW_MUT        ( 1                                          ), 
-    .MUTEX_MSG_W      ( 32                                         ), 
-    .DISP_FIFO_DEPTH  ( 1                                          ), 
-    .EVNT_WIDTH       ( 8                                          ), 
-    .SOC_FIFO_DEPTH   ( 8                                          )  
+    .NB_SW_EVT        ( 1                                          ),
+    .NB_BARR          ( 2                                          ),
+    .NB_HW_MUT        ( 1                                          ),
+    .MUTEX_MSG_W      ( 32                                         ),
+    .DISP_FIFO_DEPTH  ( 1                                          ),
+    .EVNT_WIDTH       ( 8                                          ),
+    .SOC_FIFO_DEPTH   ( 8                                          )
   ) i_magia_event_unit (
     .clk_i            ( sys_clk                                    ),
     .rst_ni           ( rst_ni                                     ),
     .test_mode_i      ( test_mode_i                                ),
 
     // Event inputs - single core arrays
-    .acc_events_i     ( acc_events_array                           ),                   
-    .dma_events_i     ( dma_events_array                           ),                      
+    .acc_events_i     ( acc_events_array                           ),
+    .dma_events_i     ( dma_events_array                           ),
     .timer_events_i   ( timer_events_array                         ),
-    .other_events_i   ( other_events_array                         ),                   
+    .other_events_i   ( other_events_array                         ),
 
     // Core IRQ interface
     .core_irq_req_o   ( eu_core_irq_req                            ),
@@ -2287,7 +2289,7 @@ module magia_tile
     .eu_direct_rvalid_o   ( eu_direct_rvalid_flat                  ),
     .eu_direct_rdata_o    ( eu_direct_rdata_flat                   ),
     .eu_direct_err_o      ( eu_direct_err_flat                     ),
-    
+
     // OBI Peripheral Slave Interface
     .obi_req_i        ( core_mem_data_req[magia_tile_pkg::OBI_XBAR_EVENT_UNIT_IDX] ),
     .obi_rsp_o        ( core_mem_data_rsp[magia_tile_pkg::OBI_XBAR_EVENT_UNIT_IDX] )
@@ -2322,22 +2324,22 @@ module magia_tile
     .clk_i             ( spatz_clk                               ),  // Use gated clock
     .rst_ni            ( rst_ni                                  ),
     .test_mode_i       ( test_mode_i                             ),
-    
+
     // Hart ID
     .hart_id_i         ( mhartid_i                               ),  // Same as CV32
     .tcdm_addr_base_i  ( tile_l1_start_addr                      ),  // Dynamic L1 base per tile
-    
+
     // Interrupts
     .irq_i             ( spatz_irq                               ),
-    
+
     // HCI Master Interface - Connect to HCI interconnect
     .hci_master_req_o  ( spatz_hci_req                           ),
     .hci_master_rsp_i  ( spatz_hci_rsp                           ),
-    
+
     // OBI Master Interface - Connect to OBI crossbar
     .obi_master_req_o  ( spatz_obi_req                           ),
     .obi_master_rsp_i  ( spatz_obi_rsp                           ),
-    
+
     // Instruction Cache Interface
     .inst_req_o        ( spatz_inst_req                          ),
     .inst_addr_o       ( spatz_inst_addr                         ),
@@ -2347,7 +2349,7 @@ module magia_tile
     .inst_ready_i      ( spatz_inst_ready                        ),
     .inst_error_i      ( spatz_inst_error                        ),
     .flush_i_ready_i   ( spatz_flush_i_ready                     ),
-    
+
     // Events and status
     .core_events_o     ( spatz_core_events                       )
   );
@@ -2358,7 +2360,7 @@ module magia_tile
 /**              Spatz ICache Beginning               **/
 /*******************************************************/
 
-  assign spatz_enable_prefetching = 1'b0;  
+  assign spatz_enable_prefetching = 1'b0;
 
   snitch_icache #(
     .NR_FETCH_PORTS     ( 1                                                  ), // Single Spatz CC core
@@ -2379,19 +2381,19 @@ module magia_tile
     .axi_req_t          ( magia_tile_pkg::core_axi_instr_req_t               ),
     .axi_rsp_t          ( magia_tile_pkg::core_axi_instr_rsp_t               )
   ) i_spatz_cc_icache (
-    .clk_i                ( spatz_clk                                        ), 
-    .clk_d2_i             ( spatz_clk                                        ),  
+    .clk_i                ( spatz_clk                                        ),
+    .clk_d2_i             ( spatz_clk                                        ),
     .rst_ni               ( rst_ni                                           ),
     .enable_prefetching_i ( spatz_enable_prefetching                         ),
     .icache_l0_events_o   (                                                  ),
-    .icache_l1_events_o   (                                                  ), 
+    .icache_l1_events_o   (                                                  ),
     .flush_valid_i        ( spatz_flush_i_valid                              ),
     .flush_ready_o        ( spatz_flush_i_ready                              ),
     .inst_addr_i          ( spatz_inst_addr                                  ),
     .inst_cacheable_i     ( spatz_inst_cacheable                             ),
     .inst_data_o          ( spatz_inst_data                                  ),
-    .inst_valid_i         ( spatz_inst_req                                   ),  
-    .inst_ready_o         ( spatz_inst_ready                                 ),  
+    .inst_valid_i         ( spatz_inst_req                                   ),
+    .inst_ready_o         ( spatz_inst_ready                                 ),
     .inst_error_o         ( spatz_inst_error                                 ),
     .sram_cfg_tag_i       ( '0                                               ),
     .sram_cfg_data_i      ( '0                                               ),
@@ -2438,7 +2440,7 @@ module magia_tile
     .addr_i  ( bootrom_reg_req.addr    ),
     .rdata_o ( bootrom_reg_rsp.rdata   )
   );
-  
+
   // Regbus response handling instead of macro
   always_ff @(posedge sys_clk or negedge rst_ni) begin
     if (!rst_ni) begin
@@ -2447,7 +2449,7 @@ module magia_tile
       bootrom_reg_rsp.ready <= bootrom_reg_req.valid;
     end
   end
-  
+
   assign bootrom_reg_rsp.error = 1'b0;
 
 /*******************************************************/
@@ -2528,14 +2530,14 @@ generate
         // Clock and Reset
         .clk_i                  ( cluster_clk[i]              ),  // Always-on per-core cluster clock (NOT the EU-gated main-core clock)
         .rst_ni                 ( rst_ni                       ),
-        
+
         // Clock enable and test mode
         .clock_en_i             ( sys_clk_en                  ),
         .test_en_i              ( test_mode_i                 ),
-        
+
         // Floating-point register file disable (for Zfinx)
         .fregfile_disable_i     ( 1'b0                        ), // FPU enabled, use dedicated FP regfile
-        
+
         // Boot configuration
         .boot_addr_i            ( cluster_boot_addr[i]        ),
 
@@ -2549,8 +2551,8 @@ generate
         .instr_gnt_i            ( cluster_instr_rsp[i].gnt    ),
         .instr_rvalid_i         ( cluster_instr_rsp[i].rvalid ),
         .instr_rdata_i          ( cluster_instr_rsp[i].rdata  ),
-        
-        // Data memory interface  
+
+        // Data memory interface
         .data_req_o             ( cluster_data_req[i].req     ),
         .data_addr_o            ( cluster_data_req[i].addr    ),
         .data_be_o              ( cluster_data_req[i].be      ),
@@ -2564,7 +2566,7 @@ generate
         .apu_master_req_o       (                             ),
         .apu_master_ready_o     (                             ),
         .apu_master_gnt_i       ( '0                          ),
-        
+
         .apu_master_operands_o  (                             ),
         .apu_master_op_o        (                             ),
         .apu_master_type_o      (                             ),
@@ -2573,7 +2575,7 @@ generate
         .apu_master_valid_i     ( '0                          ),
         .apu_master_result_i    ( '0                          ),
         .apu_master_flags_i     ( '0                          ),
-        
+
         // Interrupts
         .irq_i                  ( cluster_start_irq_pending[i] ),
         .irq_ack_o              ( cluster_irq_ack[i]          ),
@@ -2583,14 +2585,14 @@ generate
 
         // Security level (unused)
         .sec_lvl_o              (                             ),
-        
+
         // Debug interface
         .debug_req_i            ( debug_req_i[i+1]            ),
-        
+
         // CPU control
         .fetch_enable_i         ( cluster_fetch_enable[i]     ),
         .core_busy_o            ( cluster_core_busy[i]    ),
-        
+
 
         // Performance counters
         .ext_perf_counters_i    ( '0                          )

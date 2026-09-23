@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,11 +15,11 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- * 
+ *
  * EU Direct Link Cut
  */
 
-module eu_direct_cut 
+module eu_direct_cut
   import magia_tile_pkg::*;
 #(
   parameter type eu_direct_req_t = logic,
@@ -36,7 +36,7 @@ module eu_direct_cut
   output eu_direct_rsp_t [NB_CORES -1 :0] sbr_rsp_o,
 
   output eu_direct_req_t [NB_CORES -1 :0] mgr_req_o,
-  input  eu_direct_rsp_t [NB_CORES -1 :0] mgr_rsp_i 
+  input  eu_direct_rsp_t [NB_CORES -1 :0] mgr_rsp_i
 );
 
   // ============================

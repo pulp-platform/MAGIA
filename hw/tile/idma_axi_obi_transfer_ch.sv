@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,11 +15,11 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
- * 
+ *
  * iDMA AXI-OBI Transfer Channel
  */
 
-module idma_axi_obi_transfer_ch 
+module idma_axi_obi_transfer_ch
   import magia_tile_pkg::*;
   import cv32e40x_pkg::*;
   import idma_pkg::*;
@@ -89,7 +89,7 @@ module idma_axi_obi_transfer_ch
 
   assign issue_id  = fe_req_valid_d & fe_req_ready_d;
   assign retire_id = fe_rsp_valid   & fe_rsp_ready;
-  
+
   assign fe_rsp_ready = 1'b1;
 
   assign idma_eh_req  = '0;
@@ -265,7 +265,7 @@ module idma_axi_obi_transfer_ch
 
       .obi_write_req_o ( obi_req_o    ),
       .obi_write_rsp_i ( obi_rsp_i    ),
-      
+
       .busy_o          ( busy         )
     );
   end else if (CHANNEL_T == magia_tile_pkg::OBI2AXI) begin: gen_obi2axi_ch
@@ -319,7 +319,7 @@ module idma_axi_obi_transfer_ch
 
       .axi_write_req_o ( axi_req_o    ),
       .axi_write_rsp_i ( axi_rsp_i    ),
-      
+
       .busy_o          ( busy         )
     );
   end endgenerate

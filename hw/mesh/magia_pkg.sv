@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,7 +15,7 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
- * 
+ *
  * MAGIA Package
  */
 
@@ -54,14 +54,14 @@ package magia_pkg;
   parameter int unsigned L2_U_W            = 1;
 
   // Parameter used for the Fractal Sync network
-  parameter int unsigned FSYNC_LVL         = (N_TILES_X == N_TILES_Y) ? 
-                                              $clog2(N_TILES) : 
+  parameter int unsigned FSYNC_LVL         = (N_TILES_X == N_TILES_Y) ?
+                                              $clog2(N_TILES) :
                                               -1;                              // Number of levels of the Fractal Sync tree
   parameter int unsigned ROOT_FSYNC_AGGR_W = 1;                                // Aggregate width of the Fractal Sync Root tree out interface
   parameter int unsigned TILE_FSYNC_AGGR_W = ROOT_FSYNC_AGGR_W+FSYNC_LVL;      // Aggregate width of the Fractal Sync interface (CU-FSync interface)
   parameter int unsigned TILE_FSYNC_LVL_W  = $clog2(TILE_FSYNC_AGGR_W-1);      // Level width of the Fractal Sync interface (CU-FSync interface)
-  parameter int unsigned TILE_FSYNC_ID_W   = FSYNC_LVL-1 >= 2 ? 
-                                             FSYNC_LVL-1 : 
+  parameter int unsigned TILE_FSYNC_ID_W   = FSYNC_LVL-1 >= 2 ?
+                                             FSYNC_LVL-1 :
                                              2;                                // Id width of the Fractal Sync interface (CU-FSync interface)
   parameter int unsigned ROOT_FSYNC_LVL_W  = TILE_FSYNC_LVL_W;                 // Level width of the Fractal Sync Root tree out interface
   parameter int unsigned ROOT_FSYNC_ID_W   = TILE_FSYNC_ID_W;                  // Id width of the Fractal Sync Root tree out interface

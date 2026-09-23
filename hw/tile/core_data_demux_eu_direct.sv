@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -16,20 +16,20 @@
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
  *          Victor Isachi <victor.isachi@unibo.it>
- * 
+ *
  * Core Data Demux EU Direct Link
- * 
+ *
  * This module implements a demux that splits core data requests between:
  * - Regular crossbar for general memory/peripheral access
  * - EU direct link for low-latency Event Unit access (WFE control)
- * 
+ *
  * The demux decision is based on address range:
  * - EVENT_UNIT_ADDR_START to EVENT_UNIT_ADDR_END -> EU direct link
  * - All other addresses -> Regular crossbar
- * 
+ *
  */
 
-module core_data_demux_eu_direct 
+module core_data_demux_eu_direct
   import magia_tile_pkg::*;
   import magia_pkg::*;
 #(

@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,7 +15,7 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- *          
+ *
  * Wrapper module for MAGIA Event Unit optimized for single-core systems
 */
 
@@ -80,7 +80,7 @@ import magia_tile_pkg::*;
 
   // Internal signals
   logic soc_periph_evt_ready_internal;
-  
+
   // Convert abstract eu_direct interface to XBAR_PERIPH_BUS (one per core)
   // eu_direct_addr_i already contains relative offset (subtracted by demux)
   generate
@@ -103,18 +103,18 @@ import magia_tile_pkg::*;
   localparam logic [magia_pkg::ADDR_W-1:0] EU_BASE_ADDR = magia_tile_pkg::EVENT_UNIT_ADDR_START;
   logic addr_in_range;
   logic [magia_pkg::ADDR_W-1:0] addr_offset;
-  
+
   assign addr_in_range = (obi_req_i.a.addr >= magia_tile_pkg::EVENT_UNIT_ADDR_START) &&
                          (obi_req_i.a.addr <  magia_tile_pkg::EVENT_UNIT_ADDR_END);
   assign addr_offset   = obi_req_i.a.addr - EU_BASE_ADDR;
-  
+
   // OBI to XBAR_PERIPH_BUS conversion - pass RELATIVE address (offset from base)
   assign speriph_slave.req   = obi_req_i.req && addr_in_range;
-  assign speriph_slave.add   = addr_offset;           
-  assign speriph_slave.wen   = ~obi_req_i.a.we;       
+  assign speriph_slave.add   = addr_offset;
+  assign speriph_slave.wen   = ~obi_req_i.a.we;
   assign speriph_slave.wdata = obi_req_i.a.wdata;
   assign speriph_slave.be    = obi_req_i.a.be;
-  assign speriph_slave.id    = '0;                   
+  assign speriph_slave.id    = '0;
 
   // Direct response mapping - no mux needed
   assign obi_rsp_o.gnt         = speriph_slave.gnt;
@@ -123,7 +123,7 @@ import magia_tile_pkg::*;
   assign obi_rsp_o.r.err       = speriph_slave.r_opc;  // r_opc: 0=OK, 1=ERROR
   assign obi_rsp_o.r.rid       = '0;   // No ID tracking for event unit
   assign obi_rsp_o.r.r_optional = '0;  // Optional fields set to zero to prevent X
-  
+
 
   // Event Unit Flex instantiation
   event_unit_top #(
@@ -158,5 +158,5 @@ import magia_tile_pkg::*;
     .speriph_slave            ( speriph_slave                 ),
     .eu_direct_link           ( eu_direct_link                )
   );
- 
+
 endmodule: magia_event_unit

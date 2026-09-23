@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2024 ETH Zurich and University of Bologna
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,9 +15,9 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Francesco Conti <f.conti@unibo.it>
- * 
+ *
  * MAGIA RedMulE Wrapper
- * 
+ *
  * This wrapper wraps redmule_top to expose struct-based HCI and HWPE-ctrl
  * interfaces instead of the interface-based ports used by redmule_top.
  */
@@ -106,9 +106,9 @@ module magia_redmule_wrap
   // Internal interface instances for HCI
   `HCI_INTF(tcdm, clk_i);
   `HCI_INTF(tcdm_filtered, clk_i);
-  
+
   // Internal interface instance for HWPE-ctrl
-  hwpe_ctrl_intf_periph #( 
+  hwpe_ctrl_intf_periph #(
     .ID_WIDTH ( hci_package::DEFAULT_IW )
   ) target (
     .clk ( clk_i )
@@ -154,7 +154,7 @@ module magia_redmule_wrap
 
   // Convert struct-based ports to interface-based ports for HCI
   `HCI_ASSIGN_FROM_INTF(tcdm_filtered, data_req_o, data_rsp_i);
-  
+
   // Convert struct-based ports to interface-based ports for HWPE-ctrl
   assign target.req        = ctrl_req_i.req;
   assign target.add        = ctrl_req_i.add;
@@ -235,7 +235,7 @@ module magia_redmule_wrap
   localparam int unsigned EXPECTED_DATAW = Height * (NumPipeRegs + 1) * fpnew_pkg::fp_width(FpFormat);
     initial begin
       if (DataW != EXPECTED_DATAW) begin
-        $error("[REDMULE_WRAP] DataW parameter mismatch! Expected %0d (Height=%0d x (NumPipeRegs=%0d + 1) x fp_width(%s)=%0d), got %0d", 
+        $error("[REDMULE_WRAP] DataW parameter mismatch! Expected %0d (Height=%0d x (NumPipeRegs=%0d + 1) x fp_width(%s)=%0d), got %0d",
                EXPECTED_DATAW, Height, NumPipeRegs, FpFormat.name(), fpnew_pkg::fp_width(FpFormat), DataW);
       end
     end

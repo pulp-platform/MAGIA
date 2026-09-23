@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,11 +15,11 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
- * 
+ *
  * Xif Instruction Dispatcher
  */
 
-module xif_inst_dispatcher 
+module xif_inst_dispatcher
   import magia_tile_pkg::*;
   import cv32e40x_pkg::*;
 #(
@@ -36,7 +36,7 @@ module xif_inst_dispatcher
 )(
   input  logic                                       clk_i,
   input  logic                                       rst_ni,
-  
+
   cv32e40x_if_xif.coproc_issue                       xif_issue_if_i,
   cv32e40x_if_xif.cpu_issue                          xif_issue_if_o[N_COPROC],
 
@@ -52,13 +52,13 @@ module xif_inst_dispatcher
 
   // IMPORTANT NOTE: must mirror what is found in cv32e40x_if_xif.sv
   typedef struct packed {
-    logic      accept;   
+    logic      accept;
     logic      writeback;
     logic      dualwrite;
-    logic[2:0] dualread; 
+    logic[2:0] dualread;
     logic      loadstore;
     logic      ecswrite ;
-    logic      exc;      
+    logic      exc;
   } x_issue_resp_t;
 
   typedef enum logic[1:0] {
@@ -72,7 +72,7 @@ module xif_inst_dispatcher
 /*******************************************************/
 /**             Internal Signals Beginning            **/
 /*******************************************************/
-  
+
   logic[OPCODE_W-1:0] opcode;
   logic[ FUNC3_W-1:0] func3;
   logic[  SIGN_W-1:0] sign;
@@ -91,7 +91,7 @@ module xif_inst_dispatcher
 /*******************************************************/
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
-  
+
   assign opcode        = xif_issue_if_i.issue_req.instr[OPCODE_OFF+OPCODE_W-1:OPCODE_OFF];
   assign func3         = xif_issue_if_i.issue_req.instr[  FUNC3_OFF+FUNC3_W-1:FUNC3_OFF];
   assign sign          = {opcode, func3};
@@ -173,19 +173,24 @@ module xif_inst_dispatcher
   end
 
   always_ff @(posedge clk_i, negedge rst_ni) begin: result_state_register
-    if (!rst_ni) c_result_state <= IDLE;
-    else         c_result_state <= n_result_state;
+    if (!rst_ni)
+      c_result_state <= IDLE;
+    else
+      c_result_state <= n_result_state;
   end
 
   always_comb begin: result_state_logic
     n_result_state = c_result_state;
     case (c_result_state)
-      IDLE: if (!default_issue)                n_result_state = WAIT;
-      WAIT: if (xif_result_if_o.result_ready)  n_result_state = PROP;
-      PROP: if (!xif_result_if_o.result_ready) n_result_state = default_issue ? IDLE : WAIT;
+      IDLE: if (!default_issue)
+        n_result_state = WAIT;
+      WAIT: if (xif_result_if_o.result_ready)
+        n_result_state = PROP;
+      PROP: if (!xif_result_if_o.result_ready)
+        n_result_state = default_issue ? IDLE : WAIT;
     endcase
   end
-  
+
   always_comb begin: result_handler
     xif_result_if_o.result_valid = xif_result_if_i.result_valid;
     xif_result_if_i.result_ready = xif_result_if_o.result_ready;

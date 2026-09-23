@@ -17,9 +17,9 @@
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
  *
  * TCDM to HCI Converter with Atomic Operation Support
- * 
+ *
  * Conversion chain: TCDM (with AMO) → OBI (with atop) → OBI (resolved) → HCI
- * 
+ *
  */
 
 module tcdm2hci_atomic
@@ -32,29 +32,29 @@ module tcdm2hci_atomic
   parameter type obi_rsp_t  = logic,
   parameter type hci_req_t  = logic,
   parameter type hci_rsp_t  = logic,
-  
+
   // OBI channel types
   parameter type obi_a_chan_t = logic,
   parameter type obi_r_chan_t = logic,
-  
+
   // OBI optional types for atomic resolver
   parameter type obi_a_optional_t = logic,
   parameter type obi_r_optional_t = logic,
-  
+
   // OBI configuration for atomic resolver
   parameter obi_pkg::obi_cfg_t SbrPortObiCfg = obi_pkg::ObiDefaultConfig,
   parameter obi_pkg::obi_cfg_t MgrPortObiCfg = obi_pkg::ObiDefaultConfig,
-  
+
   // Pipeline cut control
   parameter bit BypassCut = 1'b0
 )(
   input  logic      clk_i,
   input  logic      rst_ni,
-  
+
   // TCDM slave port (with atomic operations)
   input  tcdm_req_t tcdm_req_i,
   output tcdm_rsp_t tcdm_rsp_o,
-  
+
   // HCI master port (atomic-free)
   output hci_req_t  hci_req_o,
   input  hci_rsp_t  hci_rsp_i
@@ -63,19 +63,19 @@ module tcdm2hci_atomic
   // Internal OBI signals between converters
   obi_req_t obi_req;
   obi_rsp_t obi_rsp;
-  
+
   // OBI signals after atomic resolution
   obi_req_t obi_resolved_req;
   obi_rsp_t obi_resolved_rsp;
-  
+
   // OBI signals after post-atomic cut (pipeline stage)
   obi_req_t obi_cut_req;
   obi_rsp_t obi_cut_rsp;
-  
+
   /*******************************************************************/
   /*  Stage 1: TCDM → OBI (with atomic operations preserved)        */
   /*******************************************************************/
-  
+
   tcdm2obi #(
     .tcdm_req_t ( tcdm_req_t ),
     .tcdm_rsp_t ( tcdm_rsp_t ),
@@ -89,11 +89,11 @@ module tcdm2hci_atomic
     .obi_req_o  ( obi_req    ),
     .obi_rsp_i  ( obi_rsp    )
   );
-  
+
   /*******************************************************************/
   /*  Stage 2: OBI Atomic Resolution (atop → RMW sequences)         */
   /*******************************************************************/
-  
+
   obi_atop_resolver #(
     .SbrPortObiCfg             ( SbrPortObiCfg              ),
     .MgrPortObiCfg             ( MgrPortObiCfg              ),
@@ -114,11 +114,11 @@ module tcdm2hci_atomic
     .mgr_port_req_o ( obi_resolved_req ),
     .mgr_port_rsp_i ( obi_resolved_rsp )
   );
-  
+
   /*******************************************************************/
   /*  Stage 3: OBI Cut (optional - controlled by BypassCut param)   */
   /*******************************************************************/
-  
+
   generate
     if (BypassCut) begin : gen_bypass_cut
       assign obi_cut_req = obi_resolved_req;
@@ -140,11 +140,11 @@ module tcdm2hci_atomic
       );
     end
   endgenerate
-  
+
   /*******************************************************************/
   /*  Stage 4: OBI → HCI conversion (request and response)          */
   /******************************************************************/
-  
+
   // Convert OBI request to HCI request
   obi2hci_req #(
     .obi_req_t ( obi_req_t ),
@@ -153,7 +153,7 @@ module tcdm2hci_atomic
     .obi_req_i ( obi_cut_req ),
     .hci_req_o ( hci_req_o   )
   );
-  
+
   // Convert HCI response to OBI response
   hci2obi_rsp #(
     .hci_rsp_t ( hci_rsp_t ),

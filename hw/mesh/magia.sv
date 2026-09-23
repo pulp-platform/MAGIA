@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,7 +15,7 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
- * 
+ *
  * MAGIA
  */
 
@@ -23,7 +23,7 @@
 `include "fractal_sync/assign.svh"
 `endif
 
-module magia 
+module magia
   import magia_pkg::*;
   import magia_tile_pkg::*;
   import magia_noc_pkg::*;
@@ -122,10 +122,10 @@ module magia
 /**           Interface Definitions Beginning         **/
 /*******************************************************/
 
-  fractal_sync_if #(.AGGR_WIDTH(TILE_FSYNC_AGGR_W),                .LVL_WIDTH(TILE_FSYNC_LVL_W),                .ID_WIDTH(TILE_FSYNC_ID_W))                ht_fsync_if[N_TILES]();
-  fractal_sync_if #(.AGGR_WIDTH(magia_tile_pkg::FSYNC_NBR_AGGR_W), .LVL_WIDTH(magia_tile_pkg::FSYNC_NBR_LVL_W), .ID_WIDTH(magia_tile_pkg::FSYNC_NBR_ID_W)) hn_fsync_if[N_TILES]();
-  fractal_sync_if #(.AGGR_WIDTH(TILE_FSYNC_AGGR_W),                .LVL_WIDTH(TILE_FSYNC_LVL_W),                .ID_WIDTH(TILE_FSYNC_ID_W))                vt_fsync_if[N_TILES]();
-  fractal_sync_if #(.AGGR_WIDTH(magia_tile_pkg::FSYNC_NBR_AGGR_W), .LVL_WIDTH(magia_tile_pkg::FSYNC_NBR_LVL_W), .ID_WIDTH(magia_tile_pkg::FSYNC_NBR_ID_W)) vn_fsync_if[N_TILES]();
+  fractal_sync_if #(.AGGR_WIDTH(TILE_FSYNC_AGGR_W),                .LVL_WIDTH(TILE_FSYNC_LVL_W),                .ID_WIDTH(TILE_FSYNC_ID_W))                ht_fsync_if[0:N_TILES-1]();
+  fractal_sync_if #(.AGGR_WIDTH(magia_tile_pkg::FSYNC_NBR_AGGR_W), .LVL_WIDTH(magia_tile_pkg::FSYNC_NBR_LVL_W), .ID_WIDTH(magia_tile_pkg::FSYNC_NBR_ID_W)) hn_fsync_if[0:N_TILES-1]();
+  fractal_sync_if #(.AGGR_WIDTH(TILE_FSYNC_AGGR_W),                .LVL_WIDTH(TILE_FSYNC_LVL_W),                .ID_WIDTH(TILE_FSYNC_ID_W))                vt_fsync_if[0:N_TILES-1]();
+  fractal_sync_if #(.AGGR_WIDTH(magia_tile_pkg::FSYNC_NBR_AGGR_W), .LVL_WIDTH(magia_tile_pkg::FSYNC_NBR_LVL_W), .ID_WIDTH(magia_tile_pkg::FSYNC_NBR_ID_W)) vn_fsync_if[0:N_TILES-1]();
 
 /*******************************************************/
 /**             Interface Definitions End             **/
@@ -222,7 +222,7 @@ module magia
 
         .x_id_i              ( j                                  ),
         .y_id_i              ( i                                  ),
-  
+
 `ifdef VERILATOR
         .ht_fsync_req_o      ( ht_tile_fsync_req[i*N_TILES_X+j][0] ),
         .ht_fsync_rsp_i      ( ht_tile_fsync_rsp[i*N_TILES_X+j][0] ),
@@ -238,21 +238,21 @@ module magia
         .vt_fsync_if_o       ( vt_fsync_if[i*N_TILES_X+j]         ),
         .vn_fsync_if_o       ( vn_fsync_if[i*N_TILES_X+j]         ),
 `endif
-        
+
         .scan_cg_en_i                                              ,
-  
+
         .boot_addr_i                                               ,
         .mtvec_addr_i                                              ,
         .dm_halt_addr_i                                            ,
         .dm_exception_addr_i                                       ,
         .mhartid_i           ( mhartid[i*N_TILES_X+j]             ),
         .mimpid_patch_i                                            ,
-  
+
         .mcycle_o            ( mcycle_o[i*N_TILES_X+j]            ),
         .time_i                                                    ,
-  
+
         .irq_i               ( irq_i[i*N_TILES_X+j]               ),
-  
+
         // Tile expects [N_CLUSTER_CORES:0] (1 main + 8 cluster cores).
         // Replicate the single top-level debug_req_i bit across all cores;
         // implicit name-based connection would leave bits [N:1] unconnected (X)
@@ -264,7 +264,7 @@ module magia
         .debug_halted_o      ( debug_halted_o[i*N_TILES_X+j]    ),
         .debug_pc_valid_o    ( debug_pc_valid_o[i*N_TILES_X+j]  ),
         .debug_pc_o          ( debug_pc_o[i*N_TILES_X+j]        ),
-  
+
         .fetch_enable_i                                            ,
         .core_sleep_o        ( core_sleep_o[i*N_TILES_X+j]        ),
         .wu_wfe_i
@@ -282,8 +282,8 @@ module magia
   // Note: cv32e40p tracer generates its own filename: trace_core_{cluster_id}_{core_id}.log
   `endif
 
-      if (i == 0) begin
-        if (j == 0) begin // T-L corner
+      if (i == 0) begin : gen_if
+        if (j == 0) begin : gen_if_2 // T-L corner
           assign tile_north_req_in[i*N_TILES_X+j]  = '0;
           assign tile_north_rsp_in[i*N_TILES_X+j]  = '0;
           assign tile_north_wide_in[i*N_TILES_X+j] = '0;
@@ -299,7 +299,7 @@ module magia
           assign tile_east_req_in[i*N_TILES_X+j]   = tile_west_req_out[i*N_TILES_X+j+1];
           assign tile_east_rsp_in[i*N_TILES_X+j]   = tile_west_rsp_out[i*N_TILES_X+j+1];
           assign tile_east_wide_in[i*N_TILES_X+j]  = tile_west_wide_out[i*N_TILES_X+j+1];
-        end else if (j == N_TILES_X-1) begin // T-R corner
+        end else if (j == N_TILES_X-1) begin : gen_if_3 // T-R corner
           assign tile_north_req_in[i*N_TILES_X+j]  = '0;
           assign tile_north_rsp_in[i*N_TILES_X+j]  = '0;
           assign tile_north_wide_in[i*N_TILES_X+j] = '0;
@@ -312,7 +312,7 @@ module magia
           assign tile_east_req_in[i*N_TILES_X+j]   = '0;
           assign tile_east_rsp_in[i*N_TILES_X+j]   = '0;
           assign tile_east_wide_in[i*N_TILES_X+j]  = '0;
-        end else if ((j > 0) && (j < (N_TILES_X-1))) begin // First row without corners
+        end else if ((j > 0) && (j < (N_TILES_X-1))) begin : gen_if_4 // First row without corners
           assign tile_north_req_in[i*N_TILES_X+j]  = '0;
           assign tile_north_rsp_in[i*N_TILES_X+j]  = '0;
           assign tile_north_wide_in[i*N_TILES_X+j] = '0;
@@ -326,8 +326,8 @@ module magia
           assign tile_east_rsp_in[i*N_TILES_X+j]   = tile_west_rsp_out[i*N_TILES_X+j+1];
           assign tile_east_wide_in[i*N_TILES_X+j]  = tile_west_wide_out[i*N_TILES_X+j+1];
         end
-      end else if (i == N_TILES_Y-1) begin
-        if (j == 0) begin // B-L corner
+      end else if (i == N_TILES_Y-1) begin : gen_if_5
+        if (j == 0) begin : gen_if_6 // B-L corner
           assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
           assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
           assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];
@@ -343,7 +343,7 @@ module magia
           assign tile_east_req_in[i*N_TILES_X+j]   = tile_west_req_out[i*N_TILES_X+j+1];
           assign tile_east_rsp_in[i*N_TILES_X+j]   = tile_west_rsp_out[i*N_TILES_X+j+1];
           assign tile_east_wide_in[i*N_TILES_X+j]  = tile_west_wide_out[i*N_TILES_X+j+1];
-        end else if (j == N_TILES_X-1) begin // B-R corner
+        end else if (j == N_TILES_X-1) begin : gen_if_7 // B-R corner
           assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
           assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
           assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];
@@ -356,7 +356,7 @@ module magia
           assign tile_east_req_in[i*N_TILES_X+j]   = '0;
           assign tile_east_rsp_in[i*N_TILES_X+j]   = '0;
           assign tile_east_wide_in[i*N_TILES_X+j]  = '0;
-        end else if ((j > 0) && (j < (N_TILES_X-1))) begin // Last row without corners
+        end else if ((j > 0) && (j < (N_TILES_X-1))) begin : gen_if_8 // Last row without corners
           assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
           assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
           assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];
@@ -370,7 +370,7 @@ module magia
           assign tile_east_rsp_in[i*N_TILES_X+j]   = tile_west_rsp_out[i*N_TILES_X+j+1];
           assign tile_east_wide_in[i*N_TILES_X+j]  = tile_west_wide_out[i*N_TILES_X+j+1];
         end
-      end else if (j == 0 && i != 0 && i != N_TILES_Y-1) begin // First column
+      end else if (j == 0 && i != 0 && i != N_TILES_Y-1) begin : gen_if_9 // First column
         assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
         assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
         assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];
@@ -386,7 +386,7 @@ module magia
         assign tile_east_req_in[i*N_TILES_X+j]   = tile_west_req_out[i*N_TILES_X+j+1];
         assign tile_east_rsp_in[i*N_TILES_X+j]   = tile_west_rsp_out[i*N_TILES_X+j+1];
         assign tile_east_wide_in[i*N_TILES_X+j]  = tile_west_wide_out[i*N_TILES_X+j+1];
-      end else if (j == N_TILES_X-1 && i != 0 && i != N_TILES_Y-1) begin // Last column
+      end else if (j == N_TILES_X-1 && i != 0 && i != N_TILES_Y-1) begin : gen_if_10 // Last column
         assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
         assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
         assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];
@@ -399,7 +399,7 @@ module magia
         assign tile_east_req_in[i*N_TILES_X+j]   = '0;
         assign tile_east_rsp_in[i*N_TILES_X+j]   = '0;
         assign tile_east_wide_in[i*N_TILES_X+j]  = '0;
-      end else begin // Central tiles
+      end else begin : gen_if_11 // Central tiles
         assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
         assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
         assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];

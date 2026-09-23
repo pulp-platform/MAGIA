@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,22 +15,22 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
- * 
+ *
  * OBI Single Master XBAR
  */
 
 module obi_demux_addr #(
   parameter obi_pkg::obi_cfg_t SbrPortObiCfg      = obi_pkg::ObiDefaultConfig,  // The OBI configuration for the subordinate ports (input ports)
   parameter obi_pkg::obi_cfg_t MgrPortObiCfg      = SbrPortObiCfg,              // The OBI configuration for the manager ports (ouput ports)
-  
+
   parameter type               sbr_port_obi_req_t = logic,                      // The request struct for the subordinate ports (input ports)
   parameter type               sbr_port_obi_rsp_t = logic,                      // The response struct for the subordinate ports (input ports)
   parameter type               mgr_port_obi_req_t = sbr_port_obi_req_t,         // The request struct for the manager ports (output ports)
   parameter type               mgr_port_obi_rsp_t = sbr_port_obi_rsp_t,         // The response struct for the manager ports (output ports)
- 
+
   parameter int unsigned       NumMgrPorts        = 32'd0,                      // The number of manager ports (output ports)
   parameter int unsigned       NumMaxTrans        = 32'd0,                      // The maximum number of outstanding transactions
-  
+
   parameter int unsigned       NumAddrRules       = 32'd0,                      // The number of address rules
   parameter type               addr_map_rule_t    = logic                       // The address map rule type
 )(
@@ -49,7 +49,7 @@ module obi_demux_addr #(
 );
 
   logic[$clog2(NumMgrPorts)-1:0] sbr_port_select;
-  
+
   addr_decode #(
     .NoIndices ( NumMgrPorts                        ),
     .NoRules   ( NumAddrRules                       ),
@@ -80,5 +80,5 @@ module obi_demux_addr #(
     .mgr_ports_req_o   ( mgr_ports_req_o ),
     .mgr_ports_rsp_i   ( mgr_ports_rsp_i )
   );
-  
+
 endmodule: obi_demux_addr

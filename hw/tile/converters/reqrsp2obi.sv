@@ -69,7 +69,7 @@ module reqrsp2obi
   assign obi_req_o.a.wdata              = reqrsp_req_i.q.data;
   assign obi_req_o.a.be                 = reqrsp_req_i.q.strb;
   assign obi_req_o.a.aid                = '0;
-  
+
   // Optional request fields
   assign obi_req_o.a.a_optional.auser   = '0;
   assign obi_req_o.a.a_optional.wuser   = '0;

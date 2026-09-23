@@ -33,7 +33,7 @@ module spatz_bootrom #(
       addr_q <= addr_i[AddrBits-1+2:2];
     end
   end
-  
+
   // Return data based on registered address
   assign rdata_o = (addr_q < RomSize) ? mem[addr_q] : '0;
 endmodule

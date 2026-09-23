@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,7 +15,7 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- * 
+ *
  * TCDM to OBI Protocol Converter - Combinatorial conversion
  *
  */
@@ -30,10 +30,10 @@ module tcdm2obi
 )(
   input  logic       clk_i,
   input  logic       rst_ni,
-  
+
   input  tcdm_req_t  tcdm_req_i,
   output tcdm_rsp_t  tcdm_rsp_o,
-  
+
   output obi_req_t   obi_req_o,
   input  obi_rsp_t   obi_rsp_i
 );
@@ -75,7 +75,7 @@ module tcdm2obi
   assign obi_req_o.a.a_optional.prot    = 3'b000;
   assign obi_req_o.a.a_optional.dbg     = 1'b0;
   assign obi_req_o.a.a_optional.achk    = '0;
-  
+
   // OBI → TCDM Response
   assign tcdm_rsp_o.q_ready = obi_rsp_i.gnt;
   assign tcdm_rsp_o.p_valid = obi_rsp_i.rvalid;

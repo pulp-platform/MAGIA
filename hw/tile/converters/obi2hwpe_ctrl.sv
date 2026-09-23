@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,8 +15,8 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- *          
- * 
+ *
+ *
  * OBI to iDMA Bridge - Memory-mapped control interface for iDMA
  *
  */
@@ -46,14 +46,14 @@ module obi2hwpe_ctrl
   assign ctrl_req_o.id     = '0; // OBI doesn't have ID in this config
 
   // ------------------------
-  // Response channel mapping  
+  // Response channel mapping
   // ------------------------
   assign obi_rsp_o.rvalid   = ctrl_rsp_i.r_valid;
 
   assign obi_rsp_o.r.rdata  = ctrl_rsp_i.r_data;
   assign obi_rsp_o.r.err    = 1'b0; // RedMulE ctrl no errors
   assign obi_rsp_o.r.rid    = '0;   // No ID tracking for this converter
-  
+
   // Optional response fields set to zero to prevent X propagation (not used by RedMulE ctrl)
   assign obi_rsp_o.r.r_optional.ruser  = '0;
   assign obi_rsp_o.r.r_optional.exokay = 1'b0;

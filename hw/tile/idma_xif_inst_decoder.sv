@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,11 +15,11 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
- * 
+ *
  * iDMA Xif Instruction Decoder
  */
 
-module idma_xif_inst_decoder 
+module idma_xif_inst_decoder
   import magia_tile_pkg::*;
   import cv32e40x_pkg::*;
   import idma_pkg::*;
@@ -65,7 +65,7 @@ module idma_xif_inst_decoder
 
   output idma_fe_req_t         cfg_req_o,
   input  idma_fe_rsp_t         cfg_rsp_i,
-  
+
   output logic                 start_o,     // Started iDMA transfer
   output logic                 busy_o,      // Performing iDMA transfer
   output logic                 done_o,      // Finished iDMA transfer
@@ -80,7 +80,7 @@ module idma_xif_inst_decoder
   logic cfg_clk_req;
   logic clk_dc_en, clk_tfr_en;
   logic clk_dc_g,  clk_tfr_g;
-  
+
   logic[         OPCODE_W-1:0] opcode;
   logic[          FUNC3_W-1:0] func3;
   logic[          ND_EN_W-1:0] nd_en;
@@ -116,7 +116,7 @@ module idma_xif_inst_decoder
 
   logic[DATA_W-1:0] next_id_d, next_id_q;
   logic[DATA_W-1:0] done_id;
-  
+
   typedef enum logic[1:0] {
     IDLE,
     START,
@@ -143,8 +143,8 @@ module idma_xif_inst_decoder
    * RETURN:
    * 1'b1 if the write was acknowledged, 1'b0 otherwise
    */
-  function automatic logic write_idma_reg(output idma_fe_req_t req, input idma_fe_rsp_t rsp, 
-                                          input logic[ADDR_W-1:0] addr, input logic[DATA_W-1:0] data, 
+  function automatic logic write_idma_reg(output idma_fe_req_t req, input idma_fe_rsp_t rsp,
+                                          input logic[ADDR_W-1:0] addr, input logic[DATA_W-1:0] data,
                                           output logic reg_error);
     req.addr       = addr;
     req.write      = 1'b1;
@@ -168,8 +168,8 @@ module idma_xif_inst_decoder
    * RETURN:
    * 1'b1 if the read data is valid, 1'b0 otherwise
    */
-  function automatic logic read_idma_reg(output idma_fe_req_t req, input idma_fe_rsp_t rsp, 
-                                         input logic[ADDR_W-1:0] addr, output logic[DATA_W-1:0] data, 
+  function automatic logic read_idma_reg(output idma_fe_req_t req, input idma_fe_rsp_t rsp,
+                                         input logic[ADDR_W-1:0] addr, output logic[DATA_W-1:0] data,
                                          output logic reg_error);
     req.addr      = addr;
     req.write     = 1'b0;
@@ -178,7 +178,7 @@ module idma_xif_inst_decoder
     req.valid     = 1'b1;
 
     data          = cfg_rsp_i.rdata;
-    
+
     reg_error     = rsp.error       ? 1'b1 : 1'b0;
     read_idma_reg = cfg_rsp_i.ready ? 1'b1 : 1'b0;
   endfunction: read_idma_reg
@@ -190,7 +190,7 @@ module idma_xif_inst_decoder
 /*******************************************************/
 
   assign clk_dc_en = dec_clk_req | cfg_clk_req;
-  
+
   assign opcode          = xif_issue_if_i.issue_req.instr[         OPCODE_OFF+:         OPCODE_W];
   assign func3           = xif_issue_if_i.issue_req.instr[          FUNC3_OFF+:          FUNC3_W];
   assign nd_en           = xif_issue_if_i.issue_req.instr[          ND_EN_OFF+:          ND_EN_W];
@@ -264,24 +264,24 @@ module idma_xif_inst_decoder
           xif_issue_if_i.issue_resp.accept = 1'b1;
           dec_clk_req                      = 1'b1;
           case (func3)
-            SET_AL_FUNC3: if (xif_issue_if_i.issue_req.rs_valid) begin 
-              cfg_reg_d       [magia_tile_pkg::DMA_LENGTH_IDX]       = xif_issue_if_i.issue_req.rs[0]; 
+            SET_AL_FUNC3: if (xif_issue_if_i.issue_req.rs_valid) begin
+              cfg_reg_d       [magia_tile_pkg::DMA_LENGTH_IDX]       = xif_issue_if_i.issue_req.rs[0];
               cfg_reg_d       [magia_tile_pkg::DMA_SRC_ADDR_IDX]     = xif_issue_if_i.issue_req.rs[1];
               cfg_reg_d       [magia_tile_pkg::DMA_DST_ADDR_IDX]     = xif_issue_if_i.issue_req.rs[2];
               cfg_reg_update_d[magia_tile_pkg::DMA_LENGTH_IDX]       = 1'b1;
               cfg_reg_update_d[magia_tile_pkg::DMA_SRC_ADDR_IDX]     = 1'b1;
               cfg_reg_update_d[magia_tile_pkg::DMA_DST_ADDR_IDX]     = 1'b1;
             end
-            SET_SR2_FUNC3: if (xif_issue_if_i.issue_req.rs_valid) begin 
-              cfg_reg_d       [magia_tile_pkg::DMA_REPS_2_IDX]       = xif_issue_if_i.issue_req.rs[0]; 
+            SET_SR2_FUNC3: if (xif_issue_if_i.issue_req.rs_valid) begin
+              cfg_reg_d       [magia_tile_pkg::DMA_REPS_2_IDX]       = xif_issue_if_i.issue_req.rs[0];
               cfg_reg_d       [magia_tile_pkg::DMA_SRC_STRIDE_2_IDX] = xif_issue_if_i.issue_req.rs[1];
               cfg_reg_d       [magia_tile_pkg::DMA_DST_STRIDE_2_IDX] = xif_issue_if_i.issue_req.rs[2];
               cfg_reg_update_d[magia_tile_pkg::DMA_REPS_2_IDX]       = 1'b1;
               cfg_reg_update_d[magia_tile_pkg::DMA_SRC_STRIDE_2_IDX] = 1'b1;
               cfg_reg_update_d[magia_tile_pkg::DMA_DST_STRIDE_2_IDX] = 1'b1;
             end
-            SET_SR3_FUNC3:  if (xif_issue_if_i.issue_req.rs_valid) begin 
-              cfg_reg_d       [magia_tile_pkg::DMA_REPS_3_IDX]       = xif_issue_if_i.issue_req.rs[0]; 
+            SET_SR3_FUNC3:  if (xif_issue_if_i.issue_req.rs_valid) begin
+              cfg_reg_d       [magia_tile_pkg::DMA_REPS_3_IDX]       = xif_issue_if_i.issue_req.rs[0];
               cfg_reg_d       [magia_tile_pkg::DMA_SRC_STRIDE_3_IDX] = xif_issue_if_i.issue_req.rs[1];
               cfg_reg_d       [magia_tile_pkg::DMA_DST_STRIDE_3_IDX] = xif_issue_if_i.issue_req.rs[2];
               cfg_reg_update_d[magia_tile_pkg::DMA_REPS_3_IDX]       = 1'b1;
@@ -296,10 +296,13 @@ module idma_xif_inst_decoder
   end
 
   always_ff @(posedge clk_dc_g, negedge rst_ni) begin: configuration_register
-    if (~rst_ni)   cfg_reg_q <= '0;
+    if (~rst_ni)
+      cfg_reg_q <= '0;
     else begin
-      if (clear_i) cfg_reg_q <= '0;
-      else         cfg_reg_q <= cfg_reg_d;
+      if (clear_i)
+        cfg_reg_q <= '0;
+      else
+        cfg_reg_q <= cfg_reg_d;
     end
   end
 
@@ -371,10 +374,13 @@ module idma_xif_inst_decoder
 
   for (genvar i = 0; i < N_CFG_REG; i++) begin: gen_configuration_update_register
     always_ff @(posedge clk_dc_g, negedge rst_ni) begin: configuration_update_register
-      if (~rst_ni)                           cfg_reg_update_q[i] <= 1'b0;
+      if (~rst_ni)
+        cfg_reg_update_q[i] <= 1'b0;
       else begin
-        if (clear_i | cfg_reg_update_clr[i]) cfg_reg_update_q[i] <= 1'b0;
-        else                                 cfg_reg_update_q[i] <= cfg_reg_update_d[i];
+        if (clear_i | cfg_reg_update_clr[i])
+          cfg_reg_update_q[i] <= 1'b0;
+        else
+          cfg_reg_update_q[i] <= cfg_reg_update_d[i];
       end
     end
   end
@@ -403,7 +409,9 @@ module idma_xif_inst_decoder
     cfg_transferer_req.valid  = 1'b0;
 
     case (c_idma_state)
-      IDLE: if (start_transfer) n_idma_state = START; else clk_tfr_en = 1'b0;
+      IDLE: if (start_transfer)
+        n_idma_state = START; else
+        clk_tfr_en = 1'b0;
       START: begin
         start_dma                 = 1'b1;
         rw_valid_tfr              = read_idma_reg(.req(cfg_transferer_req), .rsp(cfg_transferer_rsp), .addr(idma_reg32_3d_reg_pkg::IDMA_REG32_3D_NEXT_ID_0_OFFSET), .data(next_id_d), .reg_error(reg_error_tfr));
@@ -423,18 +431,24 @@ module idma_xif_inst_decoder
   end
 
   always_ff @(posedge clk_tfr_g, negedge rst_ni) begin: idma_state_register
-    if (~rst_ni)   c_idma_state <= IDLE;
+    if (~rst_ni)
+      c_idma_state <= IDLE;
     else begin
-      if (clear_i) c_idma_state <= IDLE;
-      else         c_idma_state <= n_idma_state;
+      if (clear_i)
+        c_idma_state <= IDLE;
+      else
+        c_idma_state <= n_idma_state;
     end
   end
 
   always_ff @(posedge clk_tfr_g, negedge rst_ni) begin: next_id_register
-    if (~rst_ni)   next_id_q <= 1;
+    if (~rst_ni)
+      next_id_q <= 1;
     else begin
-      if (clear_i) next_id_q <= 1;
-      else         next_id_q <= next_id_d;
+      if (clear_i)
+        next_id_q <= 1;
+      else
+        next_id_q <= next_id_d;
     end
   end
 

@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -16,9 +16,9 @@
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
   *          Based on idma_ctrl by Victor Isachi
- * 
+ *
  * iDMA Memory-Mapped Controller
- * 
+ *
  * This module provides memory-mapped control interface for iDMA transfers
  * with interrupt support. It wraps both AXI2OBI and OBI2AXI transfer channels
  * along with the memory-mapped bridge, providing equivalent functionality
@@ -78,7 +78,7 @@ module idma_ctrl_mm
   // Internal signals for transfer channel connections
   idma_fe_reg_req_t idma_fe_reg_axi2obi_req;
   idma_fe_reg_rsp_t idma_fe_reg_axi2obi_rsp;
-  idma_fe_reg_req_t idma_fe_reg_obi2axi_req; 
+  idma_fe_reg_req_t idma_fe_reg_obi2axi_req;
   idma_fe_reg_rsp_t idma_fe_reg_obi2axi_rsp;
 
   // Direct transfer channel IRQ signals (used for IRQ logic)
@@ -198,7 +198,7 @@ module idma_ctrl_mm
   assign irq_a2o_busy_o  = a2o_transfer_busy;
   assign irq_a2o_done_o  = a2o_transfer_done;
   assign irq_a2o_error_o = a2o_transfer_error;
-  
+
   assign irq_o2a_start_o = o2a_transfer_start;
   assign irq_o2a_busy_o  = o2a_transfer_busy;
   assign irq_o2a_done_o  = o2a_transfer_done;

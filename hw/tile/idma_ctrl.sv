@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,11 +15,11 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
- * 
+ *
  * iDMA Controller
  */
 
-module idma_ctrl 
+module idma_ctrl
   import magia_tile_pkg::*;
   import cv32e40x_pkg::*;
   import idma_pkg::*;
@@ -69,7 +69,7 @@ module idma_ctrl
 /*******************************************************/
 
   logic direction;  // Direction of the iDMA transfer: 0 -> AXI2OBI; 1 -> OBI2AXI
-  
+
   idma_fe_reg_req_t idma_fe_reg_axi2obi_req;
   idma_fe_reg_rsp_t idma_fe_reg_axi2obi_rsp;
   idma_fe_reg_req_t idma_fe_reg_obi2axi_req;

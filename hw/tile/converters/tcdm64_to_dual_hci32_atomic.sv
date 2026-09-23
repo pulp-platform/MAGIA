@@ -15,7 +15,7 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- * 
+ *
  * TCDM 64-bit to Dual HCI 32-bit Protocol Converter with Atomic Support
  *
  */
@@ -33,11 +33,11 @@ module tcdm64_to_dual_hci32_atomic
   parameter type obi32_r_chan_t = logic, // 32-bit OBI response channel type
   parameter type hci_req_t    = logic,  // 32-bit HCI request type
   parameter type hci_rsp_t    = logic,  // 32-bit HCI response type
-  
+
   // OBI optional types for atomic resolvers
   parameter type obi32_a_optional_t = logic,
   parameter type obi32_r_optional_t = logic,
-  
+
   // OBI configuration for atomic resolvers
   parameter obi_pkg::obi_cfg_t SbrPortObiCfg = obi_pkg::ObiDefaultConfig,
   parameter obi_pkg::obi_cfg_t MgrPortObiCfg = obi_pkg::ObiDefaultConfig,
@@ -45,11 +45,11 @@ module tcdm64_to_dual_hci32_atomic
 )(
   input  logic       clk_i,
   input  logic       rst_ni,
-  
+
   // TCDM side (Snitch RV64 port with AMO)
   input  tcdm64_req_t  tcdm_req_i,
   output tcdm64_rsp_t  tcdm_rsp_o,
-  
+
   // HCI side (Two 32-bit L1 SPM interconnect ports)
   output hci_req_t   hci_req_lo_o,  // Lower 32-bit word (bits [31:0])
   input  hci_rsp_t   hci_rsp_lo_i,
@@ -60,11 +60,11 @@ module tcdm64_to_dual_hci32_atomic
   // Internal TCDM32 signals after tcdm64_to_dual_tcdm32
   tcdm32_req_t tcdm32_req_lo, tcdm32_req_hi;
   tcdm32_rsp_t tcdm32_rsp_lo, tcdm32_rsp_hi;
-  
+
   /*******************************************************************/
   /*    Step 1: TCDM64 → 2× TCDM32 split (tcdm64_to_dual_tcdm32)    */
   /*******************************************************************/
-  
+
   tcdm64_to_dual_tcdm32 #(
     .FIFO_DEPTH   ( 4             ),  // Match Snitch's NUM_INT_OUTSTANDING_MEM
     .tcdm64_req_t ( tcdm64_req_t  ),
@@ -81,11 +81,11 @@ module tcdm64_to_dual_hci32_atomic
     .tcdm_req_hi_o  ( tcdm32_req_hi  ),
     .tcdm_rsp_hi_i  ( tcdm32_rsp_hi  )
   );
-  
+
   /*******************************************************************/
   /*      Step 2: TCDM32 → HCI32 with atomics (2× tcdm2hci_atomic)  */
   /*******************************************************************/
-  
+
   // Lower bank: TCDM32 → HCI32 with atomic support
   tcdm2hci_atomic #(
     .tcdm_req_t       ( tcdm32_req_t        ),
@@ -109,7 +109,7 @@ module tcdm64_to_dual_hci32_atomic
     .hci_req_o   ( hci_req_lo_o    ),
     .hci_rsp_i   ( hci_rsp_lo_i    )
   );
-  
+
   // Upper bank: TCDM32 → HCI32 with atomic support
   tcdm2hci_atomic #(
     .tcdm_req_t       ( tcdm32_req_t        ),

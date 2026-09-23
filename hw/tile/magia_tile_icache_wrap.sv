@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2026 ETH Zurich, University of Bologna and Chips-IT
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,7 +15,7 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Alessandro Nadalini <alessandro.nadalini3@unibo.it>
- * 
+ *
  * MAGIA Tile Instruction cache wrapper (inspired by the previous pulp_icache_wrap)
  */
 
@@ -45,7 +45,7 @@
     parameter type sram_cfg_tag_t   = logic,
     /// AXI request and response structures
     parameter type axi_req_t = logic,
-    parameter type axi_rsp_t = logic   
+    parameter type axi_rsp_t = logic
  ) (
     input   logic                                                       clk_i,
     input   logic                                                       rst_ni,
@@ -126,25 +126,25 @@
         .clk_i                  ( clk_i                 ),
         .clk_d2_i               ( clk_i                 ),
         .rst_ni                 ( rst_ni                ),
-        
+
         .enable_prefetching_i   ( enable_prefetching_i  ),
         .icache_l0_events_o     ( icache_l0_events_o    ),
         .icache_l1_events_o     ( icache_l1_events_o    ),
         .flush_valid_i          ( flush_valid_i         ),
         .flush_ready_o          ( flush_ready_o         ),
-        
+
         .inst_addr_i            ( fetch_addr            ),
         .inst_data_o            ( fetch_rdata           ),
         .inst_cacheable_i       ( {NumFetchPorts{1'b1}} ),
         .inst_valid_i           ( fetch_valid           ),
         .inst_ready_o           ( fetch_ready           ),
         .inst_error_o           ( fetch_rerror          ),
-        
+
         .sram_cfg_data_i        ( sram_cfg_data_i       ),
         .sram_cfg_tag_i         ( sram_cfg_tag_i        ),
 
         .axi_req_o              ( axi_req_o             ),
         .axi_rsp_i              ( axi_rsp_i             )
     );
-    
+
  endmodule

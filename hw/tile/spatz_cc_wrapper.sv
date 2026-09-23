@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,9 +15,9 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- * 
+ *
  * Spatz Core Complex Wrapper for MAGIA Tile
- * 
+ *
  */
 
 `include "snitch_vm/typedef.svh"
@@ -47,9 +47,9 @@ module spatz_cc_wrapper
   parameter bit          RegisterCoreReq          = magia_tile_pkg::SPATZ_REGISTER_CORE_REQ,
   parameter bit          RegisterCoreRsp          = magia_tile_pkg::SPATZ_REGISTER_CORE_RSP,
   parameter logic [31:0] BootAddr                 = magia_tile_pkg::SPATZ_BOOT_ADDR,
-  
+
   parameter fpnew_pkg::fpu_implementation_t FPUImplementation = magia_tile_pkg::SPATZ_FPUImplementation,
-  
+
   // Derived parameters - calcolo dinamico basato su N_IPU e N_FPU configurabili
   localparam int unsigned NumSpatzFUs         = (NumSpatzFPUs > NumSpatzIPUs) ? NumSpatzFPUs : NumSpatzIPUs,
   localparam int unsigned NumMemPortsPerSpatz = NumSpatzFUs,
@@ -59,22 +59,22 @@ module spatz_cc_wrapper
   input  logic                                    clk_i,
   input  logic                                    rst_ni,
   input  logic                                    test_mode_i,
-  
+
   // Core configuration
   input  logic [31:0]                             hart_id_i,
   input  logic [AddrWidth-1:0]                    tcdm_addr_base_i,  // TCDM base address for this tile
-  
+
   // Interrupts
   input  snitch_pkg::interrupts_t                 irq_i,
-  
+
   // HCI Master Interface(s) - Connect to MAGIA HCI Interconnect for L1 SPM access
   output magia_tile_pkg::core_hci_data_req_t [HCIMasterPorts-1:0] hci_master_req_o,
   input  magia_tile_pkg::core_hci_data_rsp_t [HCIMasterPorts-1:0] hci_master_rsp_i,
-  
+
   // OBI Master Interface - Single port for Snitch core
   output magia_tile_pkg::core_obi_data_req_t      obi_master_req_o,
   input  magia_tile_pkg::core_obi_data_rsp_t      obi_master_rsp_i,
-  
+
   // Core -> ICache signals (from hive_req)
   output logic                                    inst_req_o,        // Core wants instruction (inst_valid)
   output logic [AddrWidth-1:0]                    inst_addr_o,       // Instruction address
@@ -85,7 +85,7 @@ module spatz_cc_wrapper
   input  logic                                    inst_ready_i,      // ICache has data ready
   input  logic                                    inst_error_i,      // Fetch error
   input  logic                                    flush_i_ready_i,   // Flush complete
-  
+
   // Events and status
   output snitch_pkg::core_events_t                core_events_o
 );
@@ -93,11 +93,11 @@ module spatz_cc_wrapper
   /*******************************************************************/
   /*                     Internal Type Definitions                   */
   /*******************************************************************/
-  
+
   // Local type aliases
   typedef logic [AddrWidth-1:0] addr_t;
   typedef logic [DataWidth-1:0] data_t;
-  
+
   // Accelerator types
   typedef struct packed {
     logic [31:0] addr;
@@ -107,7 +107,7 @@ module spatz_cc_wrapper
     data_t       data_argb;
     addr_t       data_argc;
   } acc_issue_req_t;
-  
+
   typedef struct packed {
     logic accept;
     logic writeback;
@@ -115,16 +115,16 @@ module spatz_cc_wrapper
     logic exception;
     logic isfloat;
   } acc_issue_rsp_t;
-  
+
   typedef struct packed {
     logic [5:0] id;
     logic       error;
     data_t      data;
   } acc_rsp_t;
-  
+
   // Virtual memory types - use macro from snitch_vm/typedef.svh
   `SNITCH_VM_TYPEDEF(AddrWidth)
-  
+
   // Hive types (instruction fetch) - matching spatz_cluster.sv
   typedef struct packed {
     logic flush_i_valid;
@@ -134,11 +134,11 @@ module spatz_cc_wrapper
     acc_issue_req_t acc_req;
     logic acc_qvalid;
     logic acc_pready;
-    logic [1:0] ptw_valid;   
-    va_t [1:0] ptw_va;        
-    pa_t [1:0] ptw_ppn;        
+    logic [1:0] ptw_valid;
+    va_t [1:0] ptw_va;
+    pa_t [1:0] ptw_ppn;
   } hive_req_t;
-  
+
   typedef struct packed {
     logic flush_i_ready;
     logic [31:0] inst_data;
@@ -147,26 +147,26 @@ module spatz_cc_wrapper
     logic acc_qready;
     acc_rsp_t acc_resp;
     logic acc_pvalid;
-    logic [1:0] ptw_ready;     
-    l0_pte_t [1:0] ptw_pte;     
-    logic [1:0] ptw_is_4mega;    
+    logic [1:0] ptw_ready;
+    l0_pte_t [1:0] ptw_pte;
+    logic [1:0] ptw_is_4mega;
   } hive_rsp_t;
-  
+
   // DMA types - simplified for MAGIA (DMA disabled)
   typedef struct packed {
     logic start;
     logic complete;
     logic error;
   } dma_events_t;
-  
+
   /*******************************************************************/
   /*                     Internal Signal Declarations                */
   /*******************************************************************/
-  
+
   // Spatz_cc internal signals
   hive_req_t                                  hive_req;
   hive_rsp_t                                  hive_rsp;
-  
+
   // Conditional signal declarations based on RVD parameter
   generate
     if (RVD) begin : gen_signals
@@ -183,11 +183,11 @@ module spatz_cc_wrapper
       magia_tile_pkg::spatz_tcdm_rsp_t [TCDMPorts-1:0] tcdm_rsp;
     end
   endgenerate
-  
+
   /*******************************************************************/
   /*                     Spatz Core Complex Instance                 */
   /*******************************************************************/
-  
+
   generate
     if (RVD) begin : gen_spatz_cc_rvd
       // RVD=1: 64-bit configuration
@@ -211,8 +211,8 @@ module spatz_cc_wrapper
         .acc_issue_rsp_t          ( acc_issue_rsp_t           ),
         .acc_rsp_t                ( acc_rsp_t                 ),
         .dma_events_t             ( dma_events_t                          ),
-        .dma_perf_t               ( logic                                 ),        
-        .SnitchPMACfg             ( magia_tile_pkg::SPATZ_SNITCH_PMA_CFG  ),        
+        .dma_perf_t               ( logic                                 ),
+        .SnitchPMACfg             ( magia_tile_pkg::SPATZ_SNITCH_PMA_CFG  ),
         .FPUImplementation        ( FPUImplementation         ),
         .BootAddr                 ( BootAddr                  ),
         .RVE                      ( 1'b0                      ),
@@ -323,17 +323,17 @@ module spatz_cc_wrapper
       );
     end
   endgenerate
-  
+
   /*******************************************************************/
   /*          Instruction Cache Interface (Hive) Connection         */
   /*******************************************************************/
-  
+
   // Map hive request to external icache ports (Core → ICache)
   assign inst_req_o        = hive_req.inst_valid;
   assign inst_addr_o       = hive_req.inst_addr;
   assign inst_cacheable_o  = hive_req.inst_cacheable;
   assign flush_i_valid_o   = hive_req.flush_i_valid;
-  
+
   // Map external icache response to hive response (ICache → Core)
   assign hive_rsp = '{
     inst_data    : inst_data_i,
@@ -342,11 +342,11 @@ module spatz_cc_wrapper
     flush_i_ready: flush_i_ready_i,
     default      : '0
   };
-  
+
   /*******************************************************************/
   /*         Protocol Conversion: reqrsp (Snitch) → OBI32           */
   /*******************************************************************/
-  
+
   generate
     if (RVD) begin : gen_reqrsp64_to_obi32
       // RVD=1: Snitch data port 64-bit reqrsp → 32-bit OBI (for L2/peripherals)
@@ -382,15 +382,15 @@ module spatz_cc_wrapper
       );
     end
   endgenerate
-  
+
   /*******************************************************************/
   /*        Protocol Conversion: TCDM (Spatz) → HCI32               */
   /*******************************************************************/
-  
+
   generate
     if (RVD) begin : gen_tcdm64_to_hci
       // RVD=1: Each 64-bit TCDM port splits into 2×32-bit HCI ports
-      
+
       // Ports 0-3: Spatz vector memory ports (64-bit TCDM → 2×32-bit HCI)
       for (genvar i = 0; i < NumMemPortsPerSpatz; i++) begin : gen_tcdm64_to_dual_hci32_spatz
         tcdm64_to_dual_hci32 #(
@@ -411,7 +411,7 @@ module spatz_cc_wrapper
           .hci_rsp_hi_i  ( hci_master_rsp_i[i*2+1]            )
         );
       end
-      
+
       // Port 4: Snitch RV64 TCDM (with AMO) → Dual HCI32 (ports 8-9)
       tcdm64_to_dual_hci32_atomic #(
         .tcdm64_req_t         ( magia_tile_pkg::spatz_tcdm64_req_t         ),
@@ -439,10 +439,10 @@ module spatz_cc_wrapper
         .hci_req_hi_o  ( hci_master_req_o[NumMemPortsPerSpatz*2+1]      ),
         .hci_rsp_hi_i  ( hci_master_rsp_i[NumMemPortsPerSpatz*2+1]      )
       );
-      
+
     end else begin : gen_tcdm32_to_hci
       // RVD=0: Each 32-bit TCDM port maps directly to 1×32-bit HCI port
-      
+
       // Ports 0-3: Spatz vector memory ports (32-bit TCDM → 32-bit HCI)
       for (genvar i = 0; i < NumMemPortsPerSpatz; i++) begin : gen_tcdm32_to_hci32_spatz
         tcdm2hci #(
@@ -459,7 +459,7 @@ module spatz_cc_wrapper
           .hci_rsp_i   ( hci_master_rsp_i[i]              )
         );
       end
-      
+
       // Port 4: Snitch RV32 TCDM (with AMO) → HCI32
       tcdm2hci_atomic #(
         .tcdm_req_t         ( magia_tile_pkg::spatz_tcdm_req_t         ),

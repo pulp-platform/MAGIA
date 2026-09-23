@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -21,7 +21,7 @@
  * Replaces XIF interface with memory-mapped register access
  */
 
-module obi_slave_fsync 
+module obi_slave_fsync
   import magia_tile_pkg::*;
   import magia_pkg::*;
 #(
@@ -55,13 +55,13 @@ module obi_slave_fsync
 
   logic clk_sync_en, clk_reg_en;
   logic clk_sync_g, clk_reg_g;
-  
+
   logic sync_trigger;
   logic done;
   logic addr_match;
 
   logic[DATA_W-1:0] aggr_reg, id_reg, status_reg, control_reg;
-  
+
   typedef enum logic[1:0] {
     IDLE,
     SYNC,
@@ -73,7 +73,7 @@ module obi_slave_fsync
 
   // Memory Map:
   // BASE_ADDR + 0x00: AGGR_REG (write-only)
-  // BASE_ADDR + 0x04: ID_REG (write-only)  
+  // BASE_ADDR + 0x04: ID_REG (write-only)
   // BASE_ADDR + 0x08: CONTROL_REG (write-only, writing triggers sync)
   // BASE_ADDR + 0x0C: STATUS_REG (read-only)
   localparam logic [ADDR_W-1:0] AGGR_REG_OFFSET    = 4'h0;
@@ -87,14 +87,14 @@ module obi_slave_fsync
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
 
-  assign addr_match = (obi_req_i.a.addr >= BASE_ADDR) && 
+  assign addr_match = (obi_req_i.a.addr >= BASE_ADDR) &&
                       (obi_req_i.a.addr < BASE_ADDR + 32'h100);
 
   assign done_o  = done;
-  assign error_o = ht_fsync_if_o.error | hn_fsync_if_o.error | 
+  assign error_o = ht_fsync_if_o.error | hn_fsync_if_o.error |
                    vt_fsync_if_o.error | vn_fsync_if_o.error;
 
-  // Status register: bit 0 = done, bit 1 = error, bit 2 = busy  
+  // Status register: bit 0 = done, bit 1 = error, bit 2 = busy
   // For polling: when busy=0, operation is complete
   assign status_reg = {29'b0, (c_sync_state == SYNC || c_sync_state == WAIT), error_o, done};
 
@@ -133,12 +133,12 @@ module obi_slave_fsync
       obi_rsp_o.gnt = 1'b1;
       obi_rsp_o.rvalid = 1'b1;
       clk_reg_en = 1'b1;  // Enable clock for OBI register access
-      
+
       // OBI protocol: assign response ID and optional fields
       obi_rsp_o.r.rid = obi_req_i.a.aid;
       obi_rsp_o.r.r_optional = '0;
       obi_rsp_o.r.err = 1'b0;
-      
+
       if (obi_req_i.a.we) begin
         // Write operation
         case (obi_req_i.a.addr - BASE_ADDR)
@@ -221,18 +221,18 @@ module obi_slave_fsync
           clk_sync_en = 1'b0;
         end
       end
-      
+
       SYNC: begin
         n_sync_state = WAIT;
         if (aggr_reg != 1) begin // Tree (level > 1) request
           case (id_reg[0])
             1'b0: begin                                           // Horizontal tree node request
-              ht_fsync_if_o.sync   = 1'b1; 
+              ht_fsync_if_o.sync   = 1'b1;
               ht_fsync_if_o.aggr   = aggr_reg[AGGR_W-1:0];
               ht_fsync_if_o.id_req = id_reg[ID_W-1:0];
-            end  
+            end
             1'b1: begin                                           // Vertical tree node request
-              vt_fsync_if_o.sync   = 1'b1; 
+              vt_fsync_if_o.sync   = 1'b1;
               vt_fsync_if_o.aggr   = aggr_reg[AGGR_W-1:0];
               vt_fsync_if_o.id_req = id_reg[ID_W-1:0];
             end
@@ -240,29 +240,29 @@ module obi_slave_fsync
         end else begin                                            // Neighbor (level = 1) request
           case (id_reg[1:0])
             2'b00: begin                                          // Horizontal tree node request
-              ht_fsync_if_o.sync   = 1'b1; 
+              ht_fsync_if_o.sync   = 1'b1;
               ht_fsync_if_o.aggr   = aggr_reg[AGGR_W-1:0];
               ht_fsync_if_o.id_req = id_reg[ID_W-1:0];
-            end  
+            end
             2'b01: begin                                          // Vertical tree node request
-              vt_fsync_if_o.sync   = 1'b1; 
+              vt_fsync_if_o.sync   = 1'b1;
               vt_fsync_if_o.aggr   = aggr_reg[AGGR_W-1:0];
               vt_fsync_if_o.id_req = id_reg[ID_W-1:0];
             end
             2'b10: begin                                          // Horizontal neighbor node request
-              hn_fsync_if_o.sync   = 1'b1; 
+              hn_fsync_if_o.sync   = 1'b1;
               hn_fsync_if_o.aggr   = aggr_reg[NBR_AGGR_W-1:0];
               hn_fsync_if_o.id_req = id_reg[NBR_ID_W-1:0];
-            end  
+            end
             2'b11: begin                                          // Vertical neighbor node request
-              vn_fsync_if_o.sync   = 1'b1; 
+              vn_fsync_if_o.sync   = 1'b1;
               vn_fsync_if_o.aggr   = aggr_reg[NBR_AGGR_W-1:0];
               vn_fsync_if_o.id_req = id_reg[NBR_ID_W-1:0];
             end
           endcase
         end
       end
-      
+
       WAIT: begin
         if (ht_fsync_if_o.wake | hn_fsync_if_o.wake | vt_fsync_if_o.wake | vn_fsync_if_o.wake) begin
           n_sync_state = DONE;
@@ -270,7 +270,7 @@ module obi_slave_fsync
           n_sync_state = WAIT;
         end
       end
-      
+
       DONE: begin
         n_sync_state = IDLE;
         done         = 1'b1;
@@ -279,10 +279,13 @@ module obi_slave_fsync
   end
 
   always_ff @(posedge clk_sync_g, negedge rst_ni) begin: sync_state
-    if (~rst_ni)   c_sync_state <= IDLE;
+    if (~rst_ni)
+      c_sync_state <= IDLE;
     else begin
-      if (clear_i) c_sync_state <= IDLE;
-      else         c_sync_state <= n_sync_state;
+      if (clear_i)
+        c_sync_state <= IDLE;
+      else
+        c_sync_state <= n_sync_state;
     end
   end
 

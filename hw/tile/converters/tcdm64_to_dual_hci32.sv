@@ -15,7 +15,7 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- * 
+ *
  * TCDM 64-bit to Dual HCI 32-bit Protocol Converter
  *
  */
@@ -30,11 +30,11 @@ module tcdm64_to_dual_hci32 #(
 )(
   input  logic         clk_i,
   input  logic         rst_ni,
-  
+
   // TCDM side (Spatz 64-bit vector port)
   input  tcdm64_req_t  tcdm_req_i,
   output tcdm64_rsp_t  tcdm_rsp_o,
-  
+
   // HCI side (Two 32-bit L1 SPM interconnect ports)
   output hci_req_t   hci_req_lo_o,  // Lower 32-bit word (bits [31:0])
   input  hci_rsp_t   hci_rsp_lo_i,
@@ -49,7 +49,7 @@ module tcdm64_to_dual_hci32 #(
   /*******************************************************************/
   /*    Step 1: TCDM64 → 2× TCDM32 split (tcdm64_to_dual_tcdm32)    */
   /*******************************************************************/
-  
+
   tcdm64_to_dual_tcdm32 #(
     .FIFO_DEPTH   ( 4             ),  // Match Snitch's NUM_INT_OUTSTANDING_MEM
     .tcdm64_req_t ( tcdm64_req_t  ),
@@ -70,7 +70,7 @@ module tcdm64_to_dual_hci32 #(
   /*******************************************************************/
   /*           Step 2: TCDM32 → HCI32 (2× tcdm2hci)                 */
   /*******************************************************************/
-  
+
   // Lower bank: TCDM32 → HCI32
   tcdm2hci #(
     .tcdm_req_t ( tcdm32_req_t ),

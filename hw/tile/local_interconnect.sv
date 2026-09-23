@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,7 +15,7 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
- * 
+ *
  * MAGIA Tile Local Interconnect
  */
 
@@ -49,7 +49,7 @@ module local_interconnect
 
   input logic                                clear_i,
   input hci_package::hci_interconnect_ctrl_t ctrl_i,
-  
+
   hci_core_intf.target                       hwpe[N_HWPE],
   hci_core_intf.target                       dma [N_DMA],
   hci_core_intf.target                       core[N_CORE],

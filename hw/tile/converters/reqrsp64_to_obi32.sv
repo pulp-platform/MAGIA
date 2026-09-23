@@ -15,9 +15,9 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- * 
+ *
  * REQRSP 64-bit to OBI 32-bit Protocol Converter
- * 
+ *
  */
 
 module reqrsp64_to_obi32
@@ -31,11 +31,11 @@ module reqrsp64_to_obi32
 )(
   input  logic         clk_i,
   input  logic         rst_ni,
-  
+
   // REQRSP side (64-bit from Snitch RV64)
   input  reqrsp_req_t  reqrsp_req_i,
   output reqrsp_rsp_t  reqrsp_rsp_o,
-  
+
   // OBI side (32-bit to peripherals/L2)
   output obi_req_t     obi_req_o,
   input  obi_rsp_t     obi_rsp_i
@@ -47,14 +47,14 @@ module reqrsp64_to_obi32
   // Determine if accessing upper or lower word based on strb
   logic upper_word_req;
   assign upper_word_req = |reqrsp_req_i.q.strb[7:4];
-  
+
   // Select based on which half is being accessed
   logic [31:0] wdata_32bit;
   assign wdata_32bit = upper_word_req ? reqrsp_req_i.q.data[63:32] : reqrsp_req_i.q.data[31:0];
-  
+
   logic [3:0] be_32bit;
   assign be_32bit = upper_word_req ? reqrsp_req_i.q.strb[7:4] : reqrsp_req_i.q.strb[3:0];
-  
+
   // OBI Request signals
   assign obi_req_o.req                  = reqrsp_req_i.q_valid;
   assign obi_req_o.a.addr               = reqrsp_req_i.q.addr;
@@ -70,18 +70,18 @@ module reqrsp64_to_obi32
   assign obi_req_o.a.a_optional.prot    = 3'b000;
   assign obi_req_o.a.a_optional.dbg     = 1'b0;
   assign obi_req_o.a.a_optional.achk    = '0;
-  
+
   /*******************************************************************/
   /*            OBI32 → REQRSP64 Response Conversion                 */
   /*******************************************************************/
-  
+
   // Response handshaking
   assign reqrsp_rsp_o.q_ready = obi_rsp_i.gnt;
   assign reqrsp_rsp_o.p_valid = obi_rsp_i.rvalid;
-  
+
   // Track which word half was requested (for correct response data placement)
   logic [7:0] req_strb_q;
-  
+
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
       req_strb_q <= 8'h0;
@@ -89,15 +89,15 @@ module reqrsp64_to_obi32
       req_strb_q <= reqrsp_req_i.q.strb;
     end
   end
-  
+
   // Data placement based on which half was requested:
   logic upper_word_access;
   assign upper_word_access = |req_strb_q[7:4];
-  
-  assign reqrsp_rsp_o.p.data = upper_word_access ? 
+
+  assign reqrsp_rsp_o.p.data = upper_word_access ?
                                 {obi_rsp_i.r.rdata, 32'h0000_0000} :  // Upper word → [63:32]
                                 {32'h0000_0000, obi_rsp_i.r.rdata};   // Lower word → [31:0]
-  
+
   // Error propagation
   assign reqrsp_rsp_o.p.error = obi_rsp_i.r.err;
 

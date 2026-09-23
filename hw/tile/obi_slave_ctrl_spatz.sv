@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -27,11 +27,11 @@ module obi_slave_ctrl_spatz
 ) (
   input  logic              clk_i,
   input  logic              rst_ni,
-  
+
   // OBI slave interface
   input  core_obi_data_req_t    obi_req_i,
   output core_obi_data_rsp_t    obi_rsp_o,
-  
+
   // Control outputs
   output logic              clk_en_o,
   output logic              start_o,
@@ -55,25 +55,25 @@ module obi_slave_ctrl_spatz
   logic [31:0] data_q;
   logic [31:0] return_q;
   logic        done_q;
-  
+
   // Response pipeline
   logic        rvalid_q, rvalid_d;
   logic [31:0] rdata_q, rdata_d;
-  
+
   // Address decode (offset from base)
   logic [4:0]  addr_offset;
   logic        addr_valid;
-  
+
   assign addr_offset = obi_req_i.a.addr[4:0];
-  
+
   // Check if address is in valid range
-  assign addr_valid = (obi_req_i.a.addr >= BaseAddr) && 
+  assign addr_valid = (obi_req_i.a.addr >= BaseAddr) &&
                       (obi_req_i.a.addr < (BaseAddr + 28));  // 7 registers * 4 bytes
-  
+
   // Grant only if address is valid
   assign obi_rsp_o.gnt = obi_req_i.req && addr_valid;
   assign obi_rsp_o.r.err = 1'b0;
-  
+
   // ============================================
   // Register write logic (combinational)
   // ============================================
@@ -84,7 +84,7 @@ module obi_slave_ctrl_spatz
   logic [31:0] data_d;
   logic [31:0] return_d;
   logic        done_d;
-  
+
   always_comb begin
     // Default: keep current values
     clk_en_d  = clk_en_q;
@@ -94,7 +94,7 @@ module obi_slave_ctrl_spatz
     data_d    = data_q;
     return_d  = return_q;
     done_d    = 1'b0;  // Done is a pulse, auto-clears
-    
+
     // Update registers on write only if address is valid
     if (obi_req_i.req && obi_req_i.a.we && addr_valid) begin
       case (addr_offset)
@@ -108,7 +108,7 @@ module obi_slave_ctrl_spatz
       endcase
     end
   end
-  
+
   // ============================================
   // Register sequential logic
   // ============================================
@@ -131,14 +131,14 @@ module obi_slave_ctrl_spatz
       done_q    <= done_d;
     end
   end
-  
+
   // ============================================
   // OBI read response logic (combinational)
   // ============================================
   always_comb begin
     rdata_d  = 32'h0;
     rvalid_d = obi_req_i.req && addr_valid;
-    
+
     if (obi_req_i.req && !obi_req_i.a.we && addr_valid) begin
       case (addr_offset)
         CLK_EN_OFFSET:  rdata_d = {31'h0, clk_en_q};
@@ -152,7 +152,7 @@ module obi_slave_ctrl_spatz
       endcase
     end
   end
-  
+
   // ============================================
   // OBI response sequential logic
   // ============================================
@@ -165,7 +165,7 @@ module obi_slave_ctrl_spatz
       rdata_q  <= rdata_d;
     end
   end
-  
+
   // Output assignments
   assign obi_rsp_o.rvalid = rvalid_q;
   assign obi_rsp_o.r.rdata  = rdata_q;
@@ -174,6 +174,6 @@ module obi_slave_ctrl_spatz
   assign clk_en_o = clk_en_q;
   assign start_o  = start_q;
   assign done_o   = done_q;
-  
+
 
 endmodule
