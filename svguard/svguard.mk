@@ -39,22 +39,24 @@ svguard-flist:
 	> $(SVGUARD_FLIST)
 
 svguard: $(SVGUARD_FLIST)
+	rm -f $(SVGUARD_REPORT)
 	cd $(MAGIA_DIR) && $(SVGUARD) --config $(SVGUARD_DIR)/svguard.toml \
 	--rules '$(SVGUARD_RULES)'                      \
 	--format $(SVGUARD_FORMAT) -o $(SVGUARD_REPORT) \
 	--top $(SVGUARD_TOP) $(SVGUARD_DEFS)            \
 	-f $(SVGUARD_FLIST)                             \
-	|| { cat $(SVGUARD_REPORT); exit 1; }
+	|| { [ ! -f $(SVGUARD_REPORT) ] || cat $(SVGUARD_REPORT); exit 1; }
 	cat $(SVGUARD_REPORT)
 
 svguard-autofix: $(SVGUARD_FLIST)
+	rm -f $(SVGUARD_AUTOFIX_REPORT)
 	cd $(MAGIA_DIR) && $(SVGUARD) --config $(SVGUARD_DIR)/svguard.toml \
 	--waivers $(SVGUARD_AUTOFIX_WAIVERS)                         \
 	--autofix$(if $(SVGUARD_AUTOFIX),=$(SVGUARD_AUTOFIX))        \
 	--format $(SVGUARD_FORMAT) -o $(SVGUARD_AUTOFIX_REPORT)      \
 	--top $(SVGUARD_TOP) $(SVGUARD_DEFS)                         \
 	-f $(SVGUARD_FLIST)                                          \
-	|| { cat $(SVGUARD_AUTOFIX_REPORT); exit 1; }
+	|| { [ ! -f $(SVGUARD_AUTOFIX_REPORT) ] || cat $(SVGUARD_AUTOFIX_REPORT); exit 1; }
 	cat $(SVGUARD_AUTOFIX_REPORT)
 
 $(SVGUARD_FLIST):
