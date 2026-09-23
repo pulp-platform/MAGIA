@@ -75,6 +75,12 @@ import magia_tile_pkg::*;
 );
 
   // Create internal interface instances
+  // Descending range violates the guideline to always use increasing ranges for
+  // interface arrays, but it must match event_unit_top's eu_direct_link port
+  // ([NB_CORES-1:0]): array ports bind by position, so changing only this side
+  // would reverse the core mapping. Needs fixing on the event_unit_flex side.
+  // An svguard waiver for this line has been inserted in svguard/waivers.toml
+  // to degrade to a warning an error related to this interface array.
   XBAR_PERIPH_BUS #(.ID_WIDTH(NB_CORES+1)) eu_direct_link[NB_CORES-1:0]();
   XBAR_PERIPH_BUS #(.ID_WIDTH(NB_CORES+1)) speriph_slave();
 

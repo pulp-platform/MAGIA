@@ -198,6 +198,17 @@ file   = "**/hw/tile/spatz_bootrom.sv"
 line   = 31
 reason = "ROM read port: memory, no reset needed"
 
+# Not a real waiver: the error is kept visible as a warning. eu_direct_link is
+# connected whole to event_unit_top, whose port is [NB_CORES-1:0]; array ports
+# bind by position, so flipping only the MAGIA side would silently reverse the
+# core <-> event unit mapping. Needs fixing in event_unit_flex first.
+[[waiver]]
+rule     = "struct.intf-array-range"
+file     = "**/hw/tile/magia_event_unit.sv"
+line     = 84
+severity = "warning"
+reason   = "must match descending port of event_unit_top; fix on event_unit_flex side"
+
 # Errors in dependencies are downgraded to warnings: they are reported but do
 # not fail the check. Must stay after the waivers above (the first matching
 # waiver applies).
