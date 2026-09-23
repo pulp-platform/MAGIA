@@ -229,9 +229,10 @@ package magia_pkg;
   parameter int unsigned L2_U_W            = 1;
 
   // Parameter used for the Fractal Sync network
+  parameter int unsigned FSYNC_LVL_MIN     = 2;                                // Smallest FSYNC_LVL keeping the widths below legal
   parameter int unsigned FSYNC_LVL         = (N_TILES_X == N_TILES_Y) ? 
                                               $clog2(N_TILES) : 
-                                              -1;                              // Number of levels of the Fractal Sync tree
+                                              FSYNC_LVL_MIN;                   // Number of levels of the Fractal Sync tree
   parameter int unsigned ROOT_FSYNC_AGGR_W = 1;                                // Aggregate width of the Fractal Sync Root tree out interface
   parameter int unsigned TILE_FSYNC_AGGR_W = ROOT_FSYNC_AGGR_W+FSYNC_LVL;      // Aggregate width of the Fractal Sync interface (CU-FSync interface)
   parameter int unsigned TILE_FSYNC_LVL_W  = $clog2(TILE_FSYNC_AGGR_W-1);      // Level width of the Fractal Sync interface (CU-FSync interface)

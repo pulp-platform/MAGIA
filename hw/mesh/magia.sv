@@ -85,6 +85,14 @@ module magia
 );
 
 /*******************************************************/
+/**            Configuration Checks Beginning         **/
+/*******************************************************/
+  if (N_TILES_X != N_TILES_Y)
+    $fatal(1,"magia: only square meshes are supported, got %0dx%0d tiles", N_TILES_X, N_TILES_Y);
+
+/*******************************************************/
+/**              Configuration Checks End             **/
+/*******************************************************/
 /**       Internal Signal Definitions Beginning       **/
 /*******************************************************/
 
@@ -526,7 +534,8 @@ module magia
         .v_2d_fsync_req_o  ( v_root_fsync_req  ),
         .v_2d_fsync_rsp_i  ( v_root_fsync_rsp  )
       );
-    end else $fatal(1,"Unsupported Mesh configuration");
+    end else $fatal(1,"FractalSync: unsupported mesh size %0dx%0d (supported: 2, 4, 8, 16, 32)",
+                    N_TILES_X, N_TILES_Y);
   end else begin: gen_no_fsync
 `ifdef VERILATOR
     assign ht_tile_fsync_rsp = '{default: '0};

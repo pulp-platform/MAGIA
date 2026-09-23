@@ -1365,6 +1365,14 @@ end
       else $error("magia_tile: OBI access to RedMulE ctrl range (0x%08x) but RedMulE is disabled",
                   core_mem_data_req[ObiSbr.l2].a.addr);
   end
+  if (!EnFractalSync) begin: gen_assert_no_fsync_access
+    assert property (@(posedge sys_clk) disable iff (!rst_ni)
+      !(core_mem_data_req[ObiSbr.l2].req &&
+        core_mem_data_req[ObiSbr.l2].a.addr >= magia_tile_pkg::FSYNC_CTRL_ADDR_START &&
+        core_mem_data_req[ObiSbr.l2].a.addr <  magia_tile_pkg::FSYNC_CTRL_ADDR_END))
+      else $error("magia_tile: OBI access to FractalSync ctrl range (0x%08x) but FractalSync is disabled",
+                  core_mem_data_req[ObiSbr.l2].a.addr);
+  end
   if (!HasCsrPort) begin: gen_assert_no_csr_access
     assert property (@(posedge sys_clk) disable iff (!rst_ni)
       !(core_mem_data_req[ObiSbr.l2].req &&
