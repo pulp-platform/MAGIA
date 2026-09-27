@@ -59,7 +59,6 @@ static inline void set_collective_op(uint32_t collective_op) {
     mmio32(COLLECTIVE_OP_OFFSET) = collective_op;
 }
 
-// The collective mask is composed of an Y_FIELD starting from MASK_OFFSET, followed by an X_FIELD
 static inline uint32_t gen_collective_mask(uint32_t geometry) {
     uint8_t shift = log2(NUM_HARTS)/2;
     uint8_t mask = sqrt(NUM_HARTS)-1;
@@ -71,8 +70,12 @@ static inline uint32_t gen_collective_mask(uint32_t geometry) {
         return (mask << (MASK_OFFSET));
 }
 
-static inline void magia_fence() {
-    asm volatile("fence" ::: "memory");
+static inline void compiler_barrier() {
+    asm volatile("" :::"memory");
+}
+
+static inline void memory_fence() {
+    asm volatile("fence" :::"memory");
 }
 
 #endif
