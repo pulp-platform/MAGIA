@@ -28,6 +28,8 @@
 #define DESTINATION_HART_ID 0
 #define CACHE_HEAT_CYCLES (5)
 
+//#define PROFILING
+
 int main() {
 
   /*
@@ -47,11 +49,17 @@ int main() {
     * Execute synchronization multiple times to pre-heat the cache
     */
     for (int i = 0; i < CACHE_HEAT_CYCLES; i++) {
-        // Data to be reduced (LsbAND)
+#ifdef PROFILING
         sentinel_start();
+#endif
+        // Data to be reduced (LsbAND)
         mmio32(COLLECTIVE_ADDR_OFFSET + L1_BASE + DESTINATION_HART_ID*L1_TILE_OFFSET + FLOO_SYNC_OFFSET) = FLOO_SYNC_PATTERN;
-        magia_fence();
+#ifdef PROFILING
+        memory_fence();
         sentinel_end();
+#else
+        compiler_barrier();
+#endif
     }
   }
   /*
