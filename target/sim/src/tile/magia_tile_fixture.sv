@@ -63,10 +63,16 @@ module magia_tile_fixture;
   floo_rsp_t                         noc_west_rsp_i;
   floo_wide_t                        noc_west_wide_o;
 
-  fractal_sync_if                    ht_fsync_if_o[1]();
-  fractal_sync_if                    hn_fsync_if_o[1]();
-  fractal_sync_if                    vt_fsync_if_o[1]();
-  fractal_sync_if                    vn_fsync_if_o[1]();
+`ifdef MAGIA_FSYNC
+  ht_tile_fsync_req_t                ht_fsync_req_o;
+  ht_tile_fsync_rsp_t                ht_fsync_rsp_i;
+  hn_tile_fsync_req_t                hn_fsync_req_o;
+  hn_tile_fsync_rsp_t                hn_fsync_rsp_i;
+  vt_tile_fsync_req_t                vt_fsync_req_o;
+  vt_tile_fsync_rsp_t                vt_fsync_rsp_i;
+  vn_tile_fsync_req_t                vn_fsync_req_o;
+  vn_tile_fsync_rsp_t                vn_fsync_rsp_i;
+`endif
   
   logic                              scan_cg_en;
 
@@ -82,7 +88,7 @@ module magia_tile_fixture;
 
   logic[magia_pkg::N_IRQ-1:0]        irq;
 
-  logic[magia_tile_pkg::N_CLUSTER_CORES:0] debug_req;
+  logic debug_req;  // control-core only for the moment
   logic                              debug_havereset;
   logic                              debug_running;
   logic                              debug_halted;
@@ -91,7 +97,6 @@ module magia_tile_fixture;
 
   logic                              fetch_enable;
   logic                              core_sleep;
-  logic                              wu_wfe;
 
 /*******************************************************/
 /**           Internal Signal Definitions End         **/
@@ -100,14 +105,7 @@ module magia_tile_fixture;
 /*******************************************************/
 
   magia_tile #(
-    .N_MEM_BANKS  ( magia_tile_tb_pkg::N_MEM_BANKS  ),
-    .N_WORDS_BANK ( magia_tile_tb_pkg::N_WORDS_BANK ),
-
-    .CORE_ISA     (                                 ),
-    .CORE_A       (                                 ),
-    .CORE_B       (                                 ),
-    .CORE_M       (                                 ),
-    .ERROR_CAP    (                                 )
+    .TileCfg ( magia_tile_pkg::MagiaTileDefaultCfg )
   ) i_magia_tile (
     .clk_i               ( clk               ),
     .rst_ni              ( rst_n             ),
@@ -145,10 +143,16 @@ module magia_tile_fixture;
     .x_id_i              ( 1                 ),
     .y_id_i              ( 0                 ),
 
-    .ht_fsync_if_o       ( ht_fsync_if_o[0]  ),
-    .hn_fsync_if_o       ( hn_fsync_if_o[0]  ),
-    .vt_fsync_if_o       ( vt_fsync_if_o[0]  ),
-    .vn_fsync_if_o       ( vn_fsync_if_o[0]  ),
+`ifdef MAGIA_FSYNC
+    .ht_fsync_req_o      ( ht_fsync_req_o    ),
+    .ht_fsync_rsp_i      ( ht_fsync_rsp_i    ),
+    .hn_fsync_req_o      ( hn_fsync_req_o    ),
+    .hn_fsync_rsp_i      ( hn_fsync_rsp_i    ),
+    .vt_fsync_req_o      ( vt_fsync_req_o    ),
+    .vt_fsync_rsp_i      ( vt_fsync_rsp_i    ),
+    .vn_fsync_req_o      ( vn_fsync_req_o    ),
+    .vn_fsync_rsp_i      ( vn_fsync_rsp_i    ),
+`endif
     
     .scan_cg_en_i        ( scan_cg_en        ),
 
@@ -178,7 +182,7 @@ module magia_tile_fixture;
 `ifdef CORE_TRACES
 `ifdef CV32E40X
   localparam string core_trace_file_name = "log_file_0";
-  defparam i_magia_tile.i_cv32e40x_ctrl_core.rvfi_i.tracer_i.LOGFILE_PATH_PLUSARG = core_trace_file_name;
+  defparam i_magia_tile.i_magia_isle.i_cv32e40x_ctrl_core.rvfi_i.tracer_i.LOGFILE_PATH_PLUSARG = core_trace_file_name;
 `endif
   // Note: cv32e40p tracer generates its own filename: trace_core_{cluster_id}_{core_id}.log
 `endif

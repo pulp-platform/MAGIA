@@ -43,6 +43,8 @@ XLEN           ?= 32
 
 zfinx         := 1
 cluster_zfinx := 1
+# FractalSync network in the mesh and in every tile
+fsync         ?= 1
 
 PULP_XTEN_BASE := xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw
 
@@ -369,6 +371,11 @@ ifeq ($(zfinx),1)
   bender_defs += -D PULP_ZFINX_DEF
 endif
 bender_defs += -D ZFINX_CLUSTER=$(cluster_zfinx)
+
+ifeq ($(fsync),1)
+  bender_defs += -D MAGIA_FSYNC
+  common_defs += -D MAGIA_FSYNC
+endif
 
 bender_targs += -t rtl
 bender_targs += -t test
