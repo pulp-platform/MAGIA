@@ -64,10 +64,16 @@ module magia_tile_vip
   output floo_rsp_t                         noc_west_rsp_i,
   input  floo_wide_t                        noc_west_wide_o,
 
-  fractal_sync_if.slv_port                  ht_fsync_if_o[1],
-  fractal_sync_if.slv_port                  hn_fsync_if_o[1],
-  fractal_sync_if.slv_port                  vt_fsync_if_o[1],
-  fractal_sync_if.slv_port                  vn_fsync_if_o[1],
+`ifdef MAGIA_FSYNC
+  input  ht_tile_fsync_req_t                ht_fsync_req_o,
+  output ht_tile_fsync_rsp_t                ht_fsync_rsp_i,
+  input  hn_tile_fsync_req_t                hn_fsync_req_o,
+  output hn_tile_fsync_rsp_t                hn_fsync_rsp_i,
+  input  vt_tile_fsync_req_t                vt_fsync_req_o,
+  output vt_tile_fsync_rsp_t                vt_fsync_rsp_i,
+  input  vn_tile_fsync_req_t                vn_fsync_req_o,
+  output vn_tile_fsync_rsp_t                vn_fsync_rsp_i,
+`endif
   
   output logic                              scan_cg_en,
 
@@ -83,7 +89,7 @@ module magia_tile_vip
 
   output logic[magia_pkg::N_IRQ-1:0]        irq,
 
-  output logic[magia_tile_pkg::N_CLUSTER_CORES:0] debug_req,
+  output logic debug_req,  // control-core only
   input  logic                              debug_havereset,
   input  logic                              debug_running,
   input  logic                              debug_halted,
@@ -110,24 +116,13 @@ module magia_tile_vip
   assign dm_exception_addr       = '0;
   assign mhartid                 = '0;
   assign mimpid_patch            = '0;
-  assign debug_req               = '0;
-  assign wu_wfe                  = 1'b0;
-  assign ht_fsync_if_o[0].wake   = 1'b0;
-  assign ht_fsync_if_o[0].lvl    = '0;
-  assign ht_fsync_if_o[0].id_rsp = '0;
-  assign ht_fsync_if_o[0].error  = 1'b0;
-  assign hn_fsync_if_o[0].wake   = 1'b0;
-  assign hn_fsync_if_o[0].lvl    = '0;
-  assign hn_fsync_if_o[0].id_rsp = '0;
-  assign hn_fsync_if_o[0].error  = 1'b0;
-  assign vt_fsync_if_o[0].wake   = 1'b0;
-  assign vt_fsync_if_o[0].lvl    = '0;
-  assign vt_fsync_if_o[0].id_rsp = '0;
-  assign vt_fsync_if_o[0].error  = 1'b0;
-  assign vn_fsync_if_o[0].wake   = 1'b0;
-  assign vn_fsync_if_o[0].lvl    = '0;
-  assign vn_fsync_if_o[0].id_rsp = '0;
-  assign vn_fsync_if_o[0].error  = 1'b0;
+  assign debug_req               = 1'b0;
+`ifdef MAGIA_FSYNC
+  assign ht_fsync_rsp_i          = '0;
+  assign hn_fsync_rsp_i          = '0;
+  assign vt_fsync_rsp_i          = '0;
+  assign vn_fsync_rsp_i          = '0;
+`endif
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -218,21 +213,21 @@ int errors = -1;
 bit stdio_ready  = 0;
 bit stderr_ready = 0;
 always @(posedge clk) begin: print_monitor
-  if ((i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0000) && (i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw_valid)) stderr_ready = 1'b1;
-  if ((i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0004) && (i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw_valid)) stdio_ready  = 1'b1;
-  if ((i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w_valid) && stderr_ready) begin
+  if ((i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0000) && (i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].aw_valid)) stderr_ready = 1'b1;
+  if ((i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0004) && (i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].aw_valid)) stdio_ready  = 1'b1;
+  if ((i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].w_valid) && stderr_ready) begin
     // NOTE: This is stupid! But unless we keep track of the outstanding AXI writes (which would require some logic) this should work,
     //       unless other modules (not related to the print function) transfer bytes (instead of words) to the L2
-    if (i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data < 256 && i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data > 0) begin
-      errors       = i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data;
+    if (i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].w.data < 256 && i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].w.data > 0) begin
+      errors       = i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].w.data;
       stderr_ready = 1'b0;
     end
   end
-  if ((i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w_valid) && stdio_ready) begin
+  if ((i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].w_valid) && stdio_ready) begin
     // NOTE: This is stupid! But unless we keep track of the outstanding AXI writes (which would require some logic) this should work,
     //       unless other modules (not related to the print function) transfer bytes (instead of words) to the L2
-    if (i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data < 256 && i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data > 0) begin
-      $write("%c", i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data);
+    if (i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].w.data < 256 && i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].w.data > 0) begin
+      $write("%c", i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].w.data);
       stdio_ready = 1'b0;
     end
   end
@@ -259,9 +254,9 @@ end
 `ifdef PROFILE_DETAILED
   bit[31:0] curr_instr;
 `ifdef CV32E40X
-  assign curr_instr = i_magia_tile.i_cv32e40x_ctrl_core.core_i.if_stage_i.if_id_pipe_o.instr.bus_resp.rdata;
+  assign curr_instr = i_magia_tile.i_magia_isle.i_cv32e40x_ctrl_core.core_i.if_stage_i.if_id_pipe_o.instr.bus_resp.rdata;
 `else
-  assign curr_instr = i_magia_tile.i_cv32e40p_ctrl_core.id_stage_i.instr_rdata_i;
+  assign curr_instr = i_magia_tile.i_magia_isle.i_cv32e40p_ctrl_core.id_stage_i.instr_rdata_i;
 `endif
   always @(curr_instr) begin: instr_reporter
     if (curr_instr == 32'h50500013) $display("[TB] detected sentinel instruction at time %0dns", time_var);
@@ -275,11 +270,11 @@ end
   time end_sentinel[$];
   time sentinel_latency;
 `ifdef CV32E40X
-  assign curr_instr_wb = i_magia_tile.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr_valid ?
-  i_magia_tile.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
+  assign curr_instr_wb = i_magia_tile.i_magia_isle.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr_valid ?
+  i_magia_tile.i_magia_isle.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
 `else
-  assign curr_instr_wb = i_magia_tile.i_cv32e40p_ctrl_core.wb_valid ?
-  i_magia_tile.i_cv32e40p_ctrl_core.instr_rdata_id : '0;
+  assign curr_instr_wb = i_magia_tile.i_magia_isle.i_cv32e40p_ctrl_core.wb_valid ?
+  i_magia_tile.i_magia_isle.i_cv32e40p_ctrl_core.instr_rdata_id : '0;
 `endif
   always @(curr_instr_wb) begin: instr_wb_reporter
     if (curr_instr_wb == 32'h5AA00013) begin

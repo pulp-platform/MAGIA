@@ -213,8 +213,17 @@ module core_data_demux_eu_direct
   // Back-to-back allowed when a response is simultaneously being consumed.
   // ---------------------------------------------------------------------------
 
+  // EU accesses are serializing, like cv.elw: a core that pipelines loads (CV32E40X) would
+  // otherwise read a peripheral before a blocking EU wait returns, and act on stale data.
+  logic [1:0] eu_outstanding;
+  logic       eu_pending;
   logic can_issue;
-  assign can_issue = (num_outstanding < 2) || fifo_pop;
+
+  assign eu_outstanding = 2'((num_outstanding >= 1) && (arriving_order[0] == EU_D)) +
+                          2'((num_outstanding == 2) && (arriving_order[1] == EU_D));
+  assign eu_pending     = eu_outstanding > 2'(fifo_pop && (head == EU_D));
+
+  assign can_issue = ((num_outstanding < 2) || fifo_pop) && !eu_pending;
 
   // To regular crossbar
   assign xbar_data_req_o.req     = core_clock_en_i && core_data_req_i.req &&
