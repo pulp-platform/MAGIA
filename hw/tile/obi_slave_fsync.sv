@@ -60,6 +60,10 @@ module obi_slave_fsync
   logic done;
   logic addr_match;
 
+  obi_rsp_t obi_rsp_d;  // Response computed in the address phase
+  logic     rvalid_q;
+  obi_rsp_t obi_rsp_q;
+
   logic[DATA_W-1:0] aggr_reg, id_reg, status_reg, control_reg;
   
   typedef enum logic[1:0] {
@@ -125,19 +129,18 @@ module obi_slave_fsync
 /*******************************************************/
 
   always_comb begin: obi_interface
-    obi_rsp_o = '0;
+    obi_rsp_d = '0;
     sync_trigger = 1'b0;
     clk_reg_en = 1'b0;
 
     if (obi_req_i.req && addr_match) begin
-      obi_rsp_o.gnt = 1'b1;
-      obi_rsp_o.rvalid = 1'b1;
+      obi_rsp_d.gnt = 1'b1;
       clk_reg_en = 1'b1;  // Enable clock for OBI register access
       
       // OBI protocol: assign response ID and optional fields
-      obi_rsp_o.r.rid = obi_req_i.a.aid;
-      obi_rsp_o.r.r_optional = '0;
-      obi_rsp_o.r.err = 1'b0;
+      obi_rsp_d.r.rid = obi_req_i.a.aid;
+      obi_rsp_d.r.r_optional = '0;
+      obi_rsp_d.r.err = 1'b0;
       
       if (obi_req_i.a.we) begin
         // Write operation
@@ -153,14 +156,30 @@ module obi_slave_fsync
         // Read operation
         case (obi_req_i.a.addr - BASE_ADDR)
           STATUS_REG_OFFSET: begin
-            obi_rsp_o.r.rdata = status_reg;
+            obi_rsp_d.r.rdata = status_reg;
           end
           default: begin
-            obi_rsp_o.r.rdata = 32'h0;  // Return 0 for write-only registers
+            obi_rsp_d.r.rdata = 32'h0;  // Return 0 for write-only registers
           end
         endcase
       end
     end
+  end
+
+  always_ff @(posedge clk_i, negedge rst_ni) begin: obi_response
+    if (~rst_ni) begin
+      rvalid_q  <= 1'b0;
+      obi_rsp_q <= '0;
+    end else begin
+      rvalid_q <= obi_rsp_d.gnt;
+      if (obi_rsp_d.gnt) obi_rsp_q <= obi_rsp_d;
+    end
+  end
+
+  always_comb begin: obi_response_out
+    obi_rsp_o        = obi_rsp_q;
+    obi_rsp_o.gnt    = obi_rsp_d.gnt;
+    obi_rsp_o.rvalid = rvalid_q;
   end
 
 /*******************************************************/

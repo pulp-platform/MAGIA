@@ -24,7 +24,7 @@
 module obi_slave_ctrl_coll
   import magia_tile_pkg::*;
 #(
-  parameter logic [31:0] BaseAddr  = 32'h00001800  // Base address for control registers
+  parameter logic [31:0] BaseAddr  = magia_tile_pkg::COLL_CTRL_ADDR_START  // Base address for control registers
 ) (
   input  logic              clk_i,
   input  logic              rst_ni,

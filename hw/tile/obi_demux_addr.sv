@@ -32,7 +32,8 @@ module obi_demux_addr #(
   parameter int unsigned       NumMaxTrans        = 32'd0,                      // The maximum number of outstanding transactions
   
   parameter int unsigned       NumAddrRules       = 32'd0,                      // The number of address rules
-  parameter type               addr_map_rule_t    = logic                       // The address map rule type
+  parameter type               addr_map_rule_t    = logic,                      // The address map rule type
+  localparam int unsigned      SelW               = magia_tile_pkg::gen_idx_width(NumMgrPorts)  // Selector width, 1 bit with a single port
 )(
   input  logic                               clk_i,
   input  logic                               rst_ni,
@@ -45,10 +46,10 @@ module obi_demux_addr #(
 
   input  addr_map_rule_t[NumAddrRules-1:0]   addr_map_i,
   input  logic                               en_default_idx_i,
-  input  logic[$clog2(NumMgrPorts)-1:0]      default_idx_i
+  input  logic[SelW-1:0]                     default_idx_i
 );
 
-  logic[$clog2(NumMgrPorts)-1:0] sbr_port_select;
+  logic[SelW-1:0] sbr_port_select;
   
   addr_decode #(
     .NoIndices ( NumMgrPorts                        ),

@@ -43,6 +43,8 @@ XLEN           ?= 32
 
 zfinx         := 1
 cluster_zfinx := 1
+# FractalSync network in the mesh and in every tile
+fsync         ?= 1
 
 PULP_XTEN_BASE := xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw
 
@@ -370,6 +372,11 @@ ifeq ($(zfinx),1)
 endif
 bender_defs += -D ZFINX_CLUSTER=$(cluster_zfinx)
 
+ifeq ($(fsync),1)
+  bender_defs += -D MAGIA_FSYNC
+  common_defs += -D MAGIA_FSYNC
+endif
+
 bender_targs += -t rtl
 bender_targs += -t test
 bender_targs += -t cv32e40p_include_tracer
@@ -426,7 +433,7 @@ update-ips:
 	--vlog-arg="$(compile_flag)"   \
 	--vcom-arg="-pedanticerrors"   \
 	$(bender_targs) $(bender_defs) \
-	$(sim_targs)    $(sim_deps)    \
+	$(sim_targs)    $(sim_defs)    \
 	> ${compile_script}
 
 vsim-scripts:
@@ -436,7 +443,7 @@ vsim-scripts:
 	--vlog-arg="$(compile_flag)"   \
 	--vcom-arg="-pedanticerrors"   \
 	$(bender_targs) $(bender_defs) \
-	$(sim_targs)    $(sim_deps)    \
+	$(sim_targs)    $(sim_defs)    \
 	> ${compile_script}
 
 synth-ips:

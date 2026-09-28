@@ -31,7 +31,9 @@ The following *optional* parameters can be specified:
 
 `gui`: **0**|**1** (**Default**: 0). 0 simulation without GUI; 1 simulation with GUI.
 
-`core`: **CV32E40P**|**CV32E40X** (**Default**: CV32E40P). Control and cluster cores type.
+`core`: **CV32E40P**|**CV32E40X** (**Default**: CV32E40P). Control core type.
+
+`fsync`: **0**|**1** (**Default**: 1). 1 builds the FractalSync network in the mesh and in every tile (`MAGIA_FSYNC`).
 
 
 **Instructions to build HW/SW and run simulations**:
@@ -177,15 +179,17 @@ To change the thread count, re-run `make verilate` with the new value.
 ![](doc/MAGIA.png)
 
 ### Tile
-The central piece of the architecture is the MAGIA tile containing a GeMM accelerator, a Vector Processor, a DMA engine, a PULP cluster of 8 RISC-V cores, a multi-banked L1 SPM, an Event Unit, and a lightweight control core. The L1 features interleaved memory banks that compose the Tightly-Coupled Data Memory (TCDM). Each tile has access to the global L2 and to a subset of other tiles' L1, accessing the latter via on-chip remote direct memory access (RDMA). Inter-tile and global communication is carried out through AXI-based narrow (32-bit) and wide (256-bit) NoC channels in [FlooNoC](https://github.com/pulp-platform/FlooNoC). External tiles and the core access the L1 through an OpenBus Interface ([OBI](https://github.com/pulp-platform/obi)) XBAR.
+The central piece of the architecture is the MAGIA tile containing a GeMM accelerator, a Vector Processor, a DMA engine, a PULP cluster of RISC-V cores, a multi-banked L1 SPM, an Event Unit, and a lightweight control core. The L1 features interleaved memory banks that compose the Tightly-Coupled Data Memory (TCDM). Each tile has access to the global L2 and to a subset of other tiles' L1, accessing the latter via on-chip remote direct memory access (RDMA). Inter-tile and global communication is carried out through AXI-based narrow (32-bit) and wide (256-bit) NoC channels in [FlooNoC](https://github.com/pulp-platform/FlooNoC). External tiles and the core access the L1 through an OpenBus Interface ([OBI](https://github.com/pulp-platform/obi)) XBAR.
 
-Each tile is controlled by a [CV32E40P](https://github.com/pulp-platform/cv32e40p) main core. Control of iDMA, RedMulE, FractalSync, Spatz CC, and the PULP cluster follows a memory-mapped model, with the Event Unit handling event aggregation for system control.
+Each tile is controlled by a [CV32E40P](https://github.com/pulp-platform/cv32e40p) or [CV32E40X](https://github.com/openhwgroup/cv32e40x) main core (`core=`). Control of iDMA, RedMulE, FractalSync, Spatz CC, and the PULP cluster follows a memory-mapped model, with the Event Unit handling event aggregation for system control.
+
+`magia_tile` wraps `magia_isle` (cores, accelerators, L1, crossbars and Event Unit) with the FlooNoC network interface and router. What a tile contains is set by its `TileCfg` (`magia_tile_cfg_t` in `hw/mesh/magia_pkg.sv`): which of RedMulE, Spatz CC and the PULP cluster are instantiated and their parameters, the L1 geometry, the control core ISA extensions and the iDMA options. A disabled unit has no hardware, and accesses to its control range raise a simulation assertion.
 
 #### PULP Cluster
-Each tile embeds a cluster of 8 [CV32E40P](https://github.com/pulp-platform/cv32e40p) cores. Cluster cores share a Snitch instruction cache with an AXI refill path to L2, and each core has its own OBI master port into the tile crossbar for data accesses (L1, accelerator registers, PULP_CTRL). Cluster cores receive interrupts exclusively from the tile CSR (`PULP_CTRL`) — they are not connected to the Event Unit. The main core dispatches tasks to the cluster via the `PULP_CTRL` register block (`0x1740`), which provides: binary entry point (`PULP_BINARY`), per-core MEI dispatch (`PULP_START`), task function pointer (`PULP_TASKBIN`), data pointer (`PULP_DATA`), completion quorum (`PULP_NB_CORES_TO_WAIT`), and readiness/done handshake registers (`PULP_READY`, `PULP_DONE`). When the done quorum is reached, the tile CSR raises EU bit 12 on the main core's Event Unit, allowing the main core to sleep in WFE until the cluster finishes.
+Each tile embeds a cluster of `TileCfg.Cluster.NumCores` [CV32E40P](https://github.com/pulp-platform/cv32e40p) cores (8 by default). Cluster cores share a Snitch instruction cache with an AXI refill path to L2; each core reaches the tile's L1 through its own HCI port and everything else (accelerator registers, PULP_CTRL, remote memory) through its own OBI master port into the tile crossbar. Cluster cores receive interrupts exclusively from the `PULP_CTRL` block — they are not connected to the Event Unit. The main core dispatches tasks to the cluster via the `PULP_CTRL` register block (`0x1740`), which provides: binary entry point (`PULP_BINARY`), per-core MEI dispatch (`PULP_START`), task function pointer (`PULP_TASKBIN`), data pointer (`PULP_DATA`), completion quorum (`PULP_NB_CORES_TO_WAIT`), and readiness/done handshake registers (`PULP_READY`, `PULP_DONE`). When the done quorum is reached, `PULP_CTRL` raises EU bit 12 on the main core's Event Unit, allowing the main core to sleep in WFE until the cluster finishes.
 
 ### Mesh
-Replicating the MAGIA tile, we scale up to a homogeneous two-dimensional (2D) mesh of compute tiles. The NoC allows access to the global west-side L2 through row-side interfaces, while tiles exchange traffic through FlooNoC router. The mesh uses XY routing and carries both AXI narrow channels (32-bit) and AXI wide channels (256-bit), with protocol conversion handled by per-tile Network Interfaces (NIs).
+Replicating the MAGIA tile, we scale up to a two-dimensional (2D) mesh of compute tiles. Each tile takes its own `TileCfg` from the `TILE_CFGS` parameter of `magia`: `HOMO_TILE_CFGS` (default) gives every tile all units, `HETERO_TILE_CFGS` splits the tiles into four equal groups of full, RedMulE-only, Spatz-only and cluster-only tiles. The NoC allows access to the global west-side L2 through row-side interfaces, while tiles exchange traffic through FlooNoC router. The mesh uses XY routing and carries both AXI narrow channels (32-bit) and AXI wide channels (256-bit), with protocol conversion handled by per-tile Network Interfaces (NIs).
 
 Rendez-vous among tiles are managed through the FractalSync (FS) mechanism and the dedicated network.
 
@@ -266,8 +270,8 @@ Per-tile local map (offset from `tile_base`, starts at `0x0000_0000`):
 | *Spatz CTRL*      | `0x0000_1700-0x0000_173F` | `tile_base + 0x0000_1700 ... 0x0000_173F` |
 | *PULP CTRL*       | `0x0000_1740-0x0000_17FF` | `tile_base + 0x0000_1740 ... 0x0000_17FF` |
 | *Collective CTRL* | `0x0000_1800-0x0000_18FF` | `tile_base + 0x0000_1800 ... 0x0000_18FF` |
-| *Reserved*        | `0x0000_0000-0x0000_FFFF` | `tile_base + 0x0000_0000 ... 0x0000_FFFF` |
-| *Stack*           | `0x0001_0000-0x0001_FFFF` | `tile_base + 0x0001_0000 ... 0x0001_FFFF` |
+| *Reserved*        | `0x0000_1900-0x0000_FFFF` | `tile_base + 0x0000_1900 ... 0x0000_FFFF` |
+| *Stack*           | `0x0001_0000-0x0001_FFFF` | Local only: every tile sees its own stack here |
 | *L1 SPM*          | `0x0002_0000-0x000F_FFFF` | `tile_base + 0x0002_0000 ... 0x000F_FFFF` |
 
 Shared/global map:
@@ -275,7 +279,7 @@ Shared/global map:
 | Region            | Range                   | Notes |
 |-------------------|-------------------------|-------|
 | *Spatz BootROM*   | `0x1000_0000-0x1000_00FF` | Tile AXI xbar bootrom target |
-| *L2*              | `0xC000_0000-0xFFFF_FFFF` | Global L2 window |
+| *L2*              | `0xB000_0000-0xFFFF_FFFF` | Global L2 window |
 | *Instructions*    | `0xCC00_0000-0xCC00_7FFF` | Instruction sub-region inside L2 |
 
 Software/test utility addresses (used by SW runtime and testbench VIP):
@@ -283,10 +287,10 @@ Software/test utility addresses (used by SW runtime and testbench VIP):
 | Region            | Address                                    | Notes |
 |-------------------|--------------------------------------------|-------|
 | *Test End*        | `0xCCFF_0000`                              | Exit code location used by SW runtime/tests |
-| *String (utoa)*   | `tile_base + 0x0000_1800`                  | String scratch location (`RESERVED_START + STR_OFFSET`) |
+| *String (utoa)*   | `tile_base + 0x0000_1900`                  | String scratch location (`RESERVED_START + STR_OFFSET`) |
 | *Print (stderr)*  | `0xFFFF_0000`                              | Memory-mapped stderr sink in simulation VIP |
 | *Print (stdio)*   | `0xFFFF_0004`                              | Memory-mapped stdio sink in simulation VIP |
-| *Synch.*          | `tile_base + 0x0000_F000`                  | Derived from `RESERVED_START + SYNC_OFFSET` |
+| *Synch.*          | `tile_base + 0x0000_F100`                  | Derived from `RESERVED_START + SYNC_OFFSET` |
 
 ## 🖥️ Programming model
 The flow is memory-mapped (MM): software configures and starts accelerators by writing control registers in each tile address space.
