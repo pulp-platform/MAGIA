@@ -1,12 +1,15 @@
 # Copyright 2026 ETH Zurich and University of Bologna
 # SPDX-License-Identifier: Apache-2.0
 #
-# Verilator flow for the MAGIA mesh. Hierarchical only: the tile is Verilated
-# once into a library and instantiated 16 times, so mesh_dv=1 is required.
+# Verilator flow for MAGIA, one model per testbench:
+#   mesh_dv=1  magia_tb, hierarchical: the tile is Verilated once into a
+#              library and instantiated 16 times. Built in verilator/build.
+#   mesh_dv=0  magia_tile_tb, flat: one tile, optimized across its whole
+#              hierarchy. Built in verilator/build-tile.
 #
 #   make verilate       build the model
 #   make verilate-run   compile + run test=<name> against the built model
-#   make clean-verilate remove verilator/build
+#   make clean-verilate remove the model's build directory
 
 MAGIA_ROOT  ?= $(shell git rev-parse --show-toplevel)
 VERILATOR   ?= verilator
@@ -21,9 +24,20 @@ VERILATOR_SRC        := $(MAGIA_ROOT)/target/verilator/src
 # putting it on any other flow's include path would shadow the real UVM.
 VERILATOR_INC        := $(MAGIA_ROOT)/target/verilator/include
 VERILATOR_SCRIPTS    := $(MAGIA_ROOT)/verilator/scripts
-VERILATOR_BUILD_DIR  ?= $(MAGIA_ROOT)/verilator/build
+
+# Separate build dirs per testbench and core, so building one model never invalidates another
+VERILATOR_CORE_SUFFIX := $(if $(filter CV32E40X,$(core)),-cv32e40x)
+ifeq ($(mesh_dv),0)
+VERILATOR_HIER              := 0
+VERILATOR_TOP               := magia_tile_tb
+VERILATOR_DEFAULT_BUILD_DIR := $(MAGIA_ROOT)/verilator/build-tile$(VERILATOR_CORE_SUFFIX)
+else
+VERILATOR_HIER              := 1
+VERILATOR_TOP               := magia_tb
+VERILATOR_DEFAULT_BUILD_DIR := $(MAGIA_ROOT)/verilator/build$(VERILATOR_CORE_SUFFIX)
+endif
+VERILATOR_BUILD_DIR  ?= $(VERILATOR_DEFAULT_BUILD_DIR)
 VERILATOR_OBJ_DIR    := $(VERILATOR_BUILD_DIR)/obj_dir
-VERILATOR_TOP        := magia_tb
 
 # hier_block metacomment marking the tile as a separately Verilated block.
 VERILATOR_CONTROL     := $(VERILATOR_SRC)/magia_hier.vlt
@@ -36,9 +50,12 @@ VERILATOR_MAIN        := $(VERILATOR_SRC)/magia_main.cpp
 
 # Build parallelism (not simulation speed).
 VERILATOR_JOBS          ?= 16
-# Simulation threads (4 looks like the best trade-off).
-# Leave at 1.
+# Simulation threads: 4 for the mesh, 1 for the tile, where more threads only add sync cost
+ifeq ($(VERILATOR_HIER),0)
+VERILATOR_THREADS       ?= 1
+else
 VERILATOR_THREADS       ?= 4
+endif
 # Extra trace detail. Tracing itself is always on: a non-tracing model diverges
 # on tests that do real memory traffic, for reasons not yet understood.
 VERILATOR_TRACE_STRUCTS ?= 0
@@ -47,7 +64,14 @@ VERILATOR_CFLAGS        ?= -march=native
 # Parent and child must agree on where simulated time lives, or they segfault
 # at time 0. Nothing sets VL_TIME_CONTEXT implicitly here, so force it on both.
 # MAGIA_THREADS must match --threads: magia_main.cpp sizes the pool with it.
-VERILATOR_ABI_CFLAGS    := -DVL_TIME_CONTEXT -DMAGIA_THREADS=$(VERILATOR_THREADS)
+# MAGIA_TOP names the model class magia_main.cpp instantiates
+VERILATOR_ABI_CFLAGS    := -DVL_TIME_CONTEXT -DMAGIA_THREADS=$(VERILATOR_THREADS) \
+	-DMAGIA_TOP=V$(VERILATOR_TOP)
+# SVA, immediate assertions and unique/priority case checks, as in the Questa flow; 0 drops them for speed
+VERILATOR_ASSERT        ?= 1
+VERILATOR_ASSERT_ARGS   := $(if $(filter 1,$(VERILATOR_ASSERT)),--assert,--no-assert)
+# Assertions sit under `ifndef SYNTHESIS, so SYNTHESIS is defined only when they are off
+VERILATOR_SYNTH_DEF     := $(if $(filter 1,$(VERILATOR_ASSERT)),,-DSYNTHESIS)
 # Waveform for verilate-run. Empty means no dump and no cost.
 VERILATOR_FST           ?=
 # One tile library is expected; more means a parameter leaked into the boundary.
@@ -79,14 +103,18 @@ $(error VERILATOR_EXPECTED_TILE_SPECIALIZATIONS must be a positive integer)
 endif
 
 # Warnings waived to get this RTL through; --timing is needed by the testbench.
-VERILATOR_ARGS = -j $(VERILATOR_JOBS) -Wno-fatal \
+VERILATOR_ARGS = -Wno-fatal \
 	-Wno-style -Wno-timescalemod -Wno-redefmacro -Wno-implicit \
 	-Wno-ascrange -Wno-widthexpand -Wno-widthconcat -Wno-misindent \
 	-Wno-pinmissing -Wno-widthtrunc -Wno-unsigned -Wno-cmpconst \
 	-Wno-userfatal -Wno-caseincomplete -Wno-combdly -Wno-latch \
 	-Wno-blkandnblk -Wno-ENUMVALUE \
-	-O3 --x-assign fast --x-initial fast --no-assert \
+	-O3 --x-assign fast --x-initial fast $(VERILATOR_ASSERT_ARGS) \
 	--timing --autoflush --threads $(VERILATOR_THREADS)
+
+# Extra Verilator options from the command line
+VERILATOR_USER_ARGS ?=
+VERILATOR_ARGS += $(VERILATOR_USER_ARGS)
 
 VERILATOR_ARGS += --trace-fst
 ifeq ($(VERILATOR_TRACE_STRUCTS),1)
@@ -106,6 +134,9 @@ VERILATOR_DPI := \
 VERILATOR_BENDER_TARGS := $(bender_targs) \
 	-t tech_cells_generic_include_deprecated -t verilator -t rtl_sim \
 	-t verilator_dpi -t magia_dv -t simulation -t cv32e40p_include_tracer
+ifeq ($(VERILATOR_HIER),0)
+VERILATOR_BENDER_TARGS += -t standalone_tile
+endif
 # Ibex is only a redmule dependency (nothing in MAGIA instantiates it),
 # and its prim_assert.sv redefines `ASSERT with 4 arguments; that definition
 # overrides the 5-argument common_cells one that FlooNoC uses.
@@ -138,7 +169,7 @@ $(VERILATOR_BUILD_DIR)/.bender-check: | $(VERILATOR_BUILD_DIR)
 	  echo "path=$$(command -v $(BENDER))"; \
 	  echo "version=$$($(BENDER) --version)"; \
 	  echo "targets=$(VERILATOR_BENDER_TARGS)"; \
-	  echo "defines=$(bender_defs)"; \
+	  echo "defines=$(bender_defs) $(VERILATOR_SYNTH_DEF)"; \
 	} > $(VERILATOR_BENDER_STAMP).tmp
 	@if ! cmp -s $(VERILATOR_BENDER_STAMP).tmp $(VERILATOR_BENDER_STAMP) 2>/dev/null; then \
 	  mv $(VERILATOR_BENDER_STAMP).tmp $(VERILATOR_BENDER_STAMP); \
@@ -157,7 +188,7 @@ $(VERILATOR_RAW_FLIST): Bender.yml Bender.lock Makefile bender_common.mk \
 	$(VERILATOR_BENDER_STAMP) | $(VERILATOR_BUILD_DIR)
 	echo +incdir+$(VERILATOR_SRC) > $@.tmp
 	echo +incdir+$(VERILATOR_INC) >> $@.tmp
-	$(BENDER) script verilator $(VERILATOR_BENDER_TARGS) $(VERILATOR_BENDER_EXCL) $(bender_defs) -DSYNTHESIS -DVERILATOR -DCORE_TRACES >> $@.tmp
+	$(BENDER) script verilator $(VERILATOR_BENDER_TARGS) $(VERILATOR_BENDER_EXCL) $(bender_defs) $(VERILATOR_SYNTH_DEF) -DVERILATOR -DCORE_TRACES >> $@.tmp
 	echo +incdir+$(FRACTAL_SYNC_ROOT)/hw >> $@.tmp
 	for f in $(VERILATOR_DPI); do echo $$f >> $@.tmp; done
 	@if ! cmp -s $@.tmp $@ 2>/dev/null; then mv $@.tmp $@; else rm -f $@.tmp; fi
@@ -167,7 +198,8 @@ $(VERILATOR_RAW_FLIST): Bender.yml Bender.lock Makefile bender_common.mk \
 $(VERILATOR_FLIST): $(VERILATOR_RAW_FLIST) \
 	$(VERILATOR_SCRIPTS)/filter_filelist.py \
 	$(VERILATOR_SCRIPTS)/check_filelist.py | $(VERILATOR_BUILD_DIR)
-	$(BASE_PYTHON) $(VERILATOR_SCRIPTS)/filter_filelist.py --output $@.tmp < $(VERILATOR_RAW_FLIST)
+	$(BASE_PYTHON) $(VERILATOR_SCRIPTS)/filter_filelist.py --output $@.tmp \
+		--vendor-dir $(VERILATOR_SRC) < $(VERILATOR_RAW_FLIST)
 	$(BASE_PYTHON) $(VERILATOR_SCRIPTS)/check_filelist.py $@.tmp \
 		--top $(VERILATOR_TOP) \
 		--dpi $(RISCV_DBG_ROOT)/tb/remote_bitbang/sim_jtag.c \
@@ -187,7 +219,7 @@ $(VERILATOR_BUILD_DIR)/.config-check: | $(VERILATOR_BUILD_DIR)
 	@version="$$($(VERILATOR) --version)"; \
 	numeric="$$(printf '%s\n' "$$version" | grep -oE '[0-9]+\.[0-9]+' | head -1)"; \
 	awk -v got="$$numeric" 'BEGIN { split(got,a,"."); exit !((a[1]*1000+a[2]) >= 5046) }' || \
-	  { echo "error: hierarchical Verilation requires Verilator >= 5.046; got $$version" >&2; exit 1; }; \
+	  { echo "error: the Verilator flow requires Verilator >= 5.046; got $$version" >&2; exit 1; }; \
 	printf '%s\n' "$$version" > $(VERILATOR_VERSION_LOG).tmp
 	@if ! cmp -s $(VERILATOR_VERSION_LOG).tmp $(VERILATOR_VERSION_LOG) 2>/dev/null; then \
 	  mv $(VERILATOR_VERSION_LOG).tmp $(VERILATOR_VERSION_LOG); \
@@ -212,7 +244,7 @@ $(VERILATOR_BUILD_DIR)/.config-check: | $(VERILATOR_BUILD_DIR)
 	  echo "cxx_version=$$($(CXX) --version 2>/dev/null | head -1)"; \
 	  echo "objcache=$$(if [ -n "$$OBJCACHE" ]; then printf '%s' "$$OBJCACHE"; else command -v ccache 2>/dev/null || echo none; fi)"; \
 	  echo "dpi=$(VERILATOR_DPI)"; \
-	  echo "verilator_args=$(VERILATOR_ARGS) --hierarchical"; \
+	  echo "verilator_args=$(VERILATOR_ARGS)$(if $(filter 1,$(VERILATOR_HIER)), --hierarchical)"; \
 	  echo "control_sha256=$$(sha256sum $(VERILATOR_CONTROL) | cut -d' ' -f1)"; \
 	  echo "hier_params_sha256=$$(sha256sum $(VERILATOR_HIER_PARAMS) | cut -d' ' -f1)"; \
 	  echo "main=$(VERILATOR_MAIN)"; \
@@ -224,34 +256,46 @@ $(VERILATOR_BUILD_DIR)/.config-check: | $(VERILATOR_BUILD_DIR)
 $(VERILATOR_CONFIG_STAMP): $(VERILATOR_BUILD_DIR)/.config-check
 	@test -f $@
 
-# 5.046 does not forward +define/+incdir from -f to the child run; mirror them.
-VERILATOR_HIER_FLIST_FLAGS = $(shell grep -E '^\+(define|incdir)' $(VERILATOR_FLIST))
+# 5.046 does not forward +define/+incdir from -f to the child run; mirror them, deduplicated in order to stay under the 128 KiB argument limit
+VERILATOR_HIER_FLIST_FLAGS = $(shell grep -E '^\+(define|incdir)' $(VERILATOR_FLIST) | awk '!seen[$$0]++')
 
-# Verilator's own dependency file, rewritten as a rule for the target we own.
-VERILATOR_HIER_DEP    := $(VERILATOR_OBJ_DIR)/V$(VERILATOR_TOP)__hierVer.d
-VERILATOR_HIER_DEP_MK := $(VERILATOR_BUILD_DIR)/hierVer.mk
+# Hierarchical: V<top>.mk is a stage-2 product, never touch or depend on it in stage 1; flat: codegen writes it
+ifeq ($(VERILATOR_HIER),1)
+VERILATOR_GEN_MK    := $(VERILATOR_HIER_MK)
+VERILATOR_GEN_DEP   := $(VERILATOR_OBJ_DIR)/V$(VERILATOR_TOP)__hierVer.d
+VERILATOR_GEN_INPUT := $(VERILATOR_CONTROL) $(VERILATOR_HIER_PARAMS)
+VERILATOR_GEN_ARGS   = $(VERILATOR_CONTROL) --hierarchical \
+	--hierarchical-params-file $(VERILATOR_HIER_PARAMS) \
+	$(VERILATOR_ARGS) $(VERILATOR_HIER_FLIST_FLAGS)
+else
+VERILATOR_GEN_MK    := $(VERILATOR_PARENT_MK)
+VERILATOR_GEN_DEP   := $(VERILATOR_OBJ_DIR)/V$(VERILATOR_TOP)__ver.d
+VERILATOR_GEN_INPUT :=
+VERILATOR_GEN_ARGS   = $(VERILATOR_ARGS)
+endif
 
--include $(VERILATOR_HIER_DEP_MK)
+# Verilator's dependency file, rewritten as a rule for the target we own
+VERILATOR_GEN_DEP_MK := $(VERILATOR_BUILD_DIR)/genVer.mk
 
+-include $(VERILATOR_GEN_DEP_MK)
+
+# An empty rule per source, as gcc -MP, so a deleted file re-runs codegen instead of failing make
 # Keep source prerequisites only; entries under obj_dir are products of the very
 # rule they would trigger. mv unconditionally: make restarts after remaking an
 # included makefile, so this must end up newer or the restart loops.
-$(VERILATOR_HIER_DEP_MK): $(VERILATOR_HIER_DEP) | $(VERILATOR_BUILD_DIR)
-	@{ printf '%s:' '$(VERILATOR_HIER_MK)'; \
-	   sed -e 's|^[^:]*:||' -e 's|[^ ]*$(VERILATOR_OBJ_DIR)[^ ]*||g' $<; } > $@.tmp \
+$(VERILATOR_GEN_DEP_MK): $(VERILATOR_GEN_DEP) | $(VERILATOR_BUILD_DIR)
+	@deps="$$(sed -e 's|^[^:]*:||' -e 's|[^ ]*$(VERILATOR_OBJ_DIR)[^ ]*||g' $<)"; \
+	{ printf '%s:%s\n' '$(VERILATOR_GEN_MK)' "$$deps"; \
+	  for d in $$deps; do printf '%s:\n' "$$d"; done; } > $@.tmp \
 	  && mv -f $@.tmp $@
 
-# Stage 1: plan the hierarchy. Writes V<top>_hier.mk and the per-block argument
-# files. V<top>.mk is a stage-2 product -- never create, touch or depend on it
-# here, or stage 2 is skipped and a flat parent is built instead.
-$(VERILATOR_HIER_MK): $(VERILATOR_FLIST) $(VERILATOR_CONFIG_STAMP) \
-	$(VERILATOR_CONTROL) $(VERILATOR_HIER_PARAMS) $(VERILATOR_VERSION_LOG) \
+# Stage 1: codegen
+$(VERILATOR_GEN_MK): $(VERILATOR_FLIST) $(VERILATOR_CONFIG_STAMP) \
+	$(VERILATOR_GEN_INPUT) $(VERILATOR_VERSION_LOG) \
 	| $(VERILATOR_BUILD_DIR)
 	cd $(VERILATOR_BUILD_DIR) && \
 		{ $(if $(VERILATOR_TIME),$(VERILATOR_TIME) -v -o $(VERILATOR_BUILD_DIR)/codegen.time.log,) \
-		$(VERILATOR) $(VERILATOR_CONTROL) --hierarchical \
-		--hierarchical-params-file $(VERILATOR_HIER_PARAMS) \
-		$(VERILATOR_ARGS) $(VERILATOR_HIER_FLIST_FLAGS) \
+		$(VERILATOR) -j $(VERILATOR_JOBS) $(VERILATOR_GEN_ARGS) \
 		--cc --exe $(VERILATOR_MAIN) -Mdir $(VERILATOR_OBJ_DIR) \
 		-CFLAGS "$(VERILATOR_CFLAGS) $(VERILATOR_ABI_CFLAGS)" \
 		--top-module $(VERILATOR_TOP) \
@@ -259,12 +303,12 @@ $(VERILATOR_HIER_MK): $(VERILATOR_FLIST) $(VERILATOR_CONFIG_STAMP) \
 		echo $$? > $(VERILATOR_BUILD_DIR)/.codegen.status; } 2>&1 \
 		| tee $(VERILATOR_CODEGEN_LOG); \
 		exit $$(cat $(VERILATOR_BUILD_DIR)/.codegen.status)
-	@test -f $(VERILATOR_HIER_MK)
+	@test -f $(VERILATOR_GEN_MK)
 	# The planner leaves this file alone when the plan is unchanged, so a merely
 	# newer prerequisite would re-run Verilator on every make. Touch to converge.
-	@touch $(VERILATOR_HIER_MK)
+	@touch $(VERILATOR_GEN_MK)
 
-$(VERILATOR_CODEGEN_STAMP): $(VERILATOR_HIER_MK)
+$(VERILATOR_CODEGEN_STAMP): $(VERILATOR_GEN_MK)
 	@touch $@
 
 # Stage 2: native build, driven by Verilator's generated makefile.
@@ -274,32 +318,23 @@ $(VERILATOR_CODEGEN_STAMP): $(VERILATOR_HIER_MK)
 # the tree alone, keeping a no-change rebuild a no-op.
 $(VERILATOR_BIN): $(VERILATOR_CODEGEN_STAMP) $(VERILATOR_MAIN)
 	@mode="structs=$(VERILATOR_TRACE_STRUCTS) params=$(VERILATOR_TRACE_PARAMS)"; \
-	if [ -d $(VERILATOR_OBJ_DIR) ] && [ "$$mode" != "$$(cat $(VERILATOR_TRACE_MODE) 2>/dev/null)" ]; then \
+	if [ -f $(VERILATOR_TRACE_MODE) ] && [ "$$mode" != "$$(cat $(VERILATOR_TRACE_MODE))" ]; then \
 	  echo "trace configuration changed to [$$mode]; dropping stale objects"; \
-	  find $(VERILATOR_OBJ_DIR) \( -name '*.o' -o -name '*.a' -o -name '*.d' \) -delete; \
+	  find $(VERILATOR_OBJ_DIR) \( -name '*.o' -o -name '*.a' -o -name '*.d' \) \
+	    ! -name '*__ver.d' ! -name '*__hierVer.d' -delete; \
 	fi; \
 	printf '%s\n' "$$mode" > $(VERILATOR_TRACE_MODE)
 	{ $(if $(VERILATOR_TIME),$(VERILATOR_TIME) -v -o $(VERILATOR_BUILD_DIR)/build.time.log,) \
-		$(MAKE) -C $(VERILATOR_OBJ_DIR) -f V$(VERILATOR_TOP)_hier.mk -j $(VERILATOR_JOBS); \
+		$(MAKE) -C $(VERILATOR_OBJ_DIR) -f $(notdir $(VERILATOR_GEN_MK)) -j $(VERILATOR_JOBS); \
 		echo $$? > $(VERILATOR_BUILD_DIR)/.build.status; } 2>&1 \
 		| tee $(VERILATOR_BUILD_LOG); \
 		exit $$(cat $(VERILATOR_BUILD_DIR)/.build.status)
 	@test -x $@
 
-# The flow only exists for the mesh, and CV32E40X would need per-tile trace
-# filenames resolved at run time.
-ifeq ($(mesh_dv),0)
-.PHONY: verilate-gen verilate-build verilate verilate-check-hierarchy verilate-run
-verilate-gen verilate-build verilate verilate-check-hierarchy verilate-run:
-	$(error $@ requires mesh_dv=1)
-else ifeq ($(core),CV32E40X)
-.PHONY: verilate-gen verilate-build verilate verilate-check-hierarchy verilate-run
-verilate-gen verilate-build verilate verilate-check-hierarchy verilate-run:
-	$(error CV32E40X hierarchical CORE_TRACES needs runtime per-tile filenames)
-else
 .PHONY: verilate-gen verilate-build verilate
 verilate-gen: $(VERILATOR_CODEGEN_STAMP)
 verilate-build: $(VERILATOR_BIN)
+ifeq ($(VERILATOR_HIER),1)
 verilate: $(VERILATOR_BIN) verilate-check-hierarchy
 
 # Inspects the built parent, not just the plan: inlining the tile instead of
@@ -310,29 +345,39 @@ verilate-check-hierarchy: $(VERILATOR_BIN)
 		$(VERILATOR_HIER_MK) --module magia_tile_hier \
 		--expected-count $(VERILATOR_EXPECTED_TILE_SPECIALIZATIONS) \
 		--classes-mk $(VERILATOR_CLASSES_MK) --obj-dir $(VERILATOR_OBJ_DIR)
+else
+verilate: $(VERILATOR_BIN)
+
+.PHONY: verilate-check-hierarchy
+verilate-check-hierarchy:
+	$(error $@ checks the hierarchical mesh model: it requires mesh_dv=1)
+endif
 
 # Uses whatever model is already in obj_dir: it deliberately does not depend on
 # $(VERILATOR_BIN), so an edit anywhere in the RTL cannot turn a run into a
 # multi-minute rebuild. Build the model yourself with `make verilate`.
-# Runs in the test's build dir, so a relative VERILATOR_FST lands there.
-# Output goes straight to the terminal; nothing bounds a hung run.
+# Like the Questa run: runs in the test's build dir, logs to its transcript and sorts the core traces
+# Nothing bounds a hung run
 .PHONY: verilate-run
 verilate-run: all
 	@test -x $(VERILATOR_BIN) || { \
 	  echo "error: no Verilator model at $(VERILATOR_BIN)" >&2; \
 	  echo "       build it first: make verilate core=$(core) mesh_dv=$(mesh_dv)" >&2; \
 	  exit 1; }
-	@cd $(TEST_BUILD_DIR) && \
+	$(sim-traces-setup)
+	@cd $(TEST_BUILD_DIR) && set -o pipefail && \
 	  $(VERILATOR_BIN) \
 	    +INST_HEX=$(inst_hex_name) +DATA_HEX=$(data_hex_name) \
 	    +INST_ENTRY=$(inst_entry) +DATA_ENTRY=$(data_entry) \
 	    +BOOT_ADDR=$(boot_addr) +itb_file=$(itb_file) \
-	    $(if $(VERILATOR_FST),+FST=$(VERILATOR_FST),)
-endif
+	    $(foreach i,$(shell seq 0 $$(($(num_cores)-1))),+log_file_$(i)=$(log_path_$(i))) \
+	    $(if $(VERILATOR_FST),+FST=$(VERILATOR_FST),) \
+	    2>&1 | tee -i transcript
+	$(sim-traces-sort)
 
 # Guarded: this is an rm -rf of a variable path.
 .PHONY: clean-verilate
 clean-verilate:
 	@test -n "$(VERILATOR_BUILD_DIR)"
-	@test "$(VERILATOR_BUILD_DIR)" = "$(MAGIA_ROOT)/verilator/build"
+	@test "$(VERILATOR_BUILD_DIR)" = "$(VERILATOR_DEFAULT_BUILD_DIR)"
 	rm -rf $(VERILATOR_BUILD_DIR)

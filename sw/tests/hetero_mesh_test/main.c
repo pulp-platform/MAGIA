@@ -14,7 +14,7 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  * 
- * Authors: Luca Balboni <luc.balboni@chips.it>
+ * Authors: Luca Balboni <luca.balboni@chips.it>
  * 
  *  Test for the heterogeneous mesh
  */

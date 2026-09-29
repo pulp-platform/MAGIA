@@ -130,13 +130,42 @@ module magia_tile_vip
 /**             Clock and Reset Beginning             **/
 /*******************************************************/
 
-  clk_rst_gen #(
-    .ClkPeriod    ( CLK_PERIOD ),
-    .RstClkCycles ( RST_CYCLES )
-  ) i_clk_rst_sys (
-    .clk_o  ( clk   ),
-    .rst_no ( rst_n )
-  );
+  // A real 1 -> 0 reset edge with the clock stopped, so 2-state simulators reset every async flop
+  localparam time RST_ASSERT_TIME = CLK_PERIOD;
+  localparam time CLK_START_TIME  = 2 * CLK_PERIOD;
+
+  initial begin: p_clk_gen
+    clk = 1'b0;
+    #(CLK_START_TIME);
+    forever begin
+      clk = 1'b1;
+      #(CLK_PERIOD / 2);
+      clk = 1'b0;
+      #((CLK_PERIOD + 1) / 2);
+    end
+  end
+
+  initial begin: p_rst_gen
+    rst_n = 1'b1;
+    #(RST_ASSERT_TIME);
+    rst_n = 1'b0;
+    repeat (RST_CYCLES) @(negedge clk);
+    rst_n = 1'b1;
+  end
+
+`ifndef VERILATOR
+  // $assertcontrol arguments (IEEE 1800-2012 20.12): control On/Off, unique|unique0|priority checks
+  localparam int unsigned ASSERT_ON          = 3;
+  localparam int unsigned ASSERT_OFF         = 4;
+  localparam int unsigned ASSERT_UNIQUE_PRIO = 32 + 64 + 128;
+
+  // FSM states are X until the reset edge
+  initial begin: p_unique_check_gate
+    $assertcontrol(ASSERT_OFF, ASSERT_UNIQUE_PRIO);
+    #(RST_ASSERT_TIME + 1);
+    $assertcontrol(ASSERT_ON, ASSERT_UNIQUE_PRIO);
+  end
+`endif
 
 /*******************************************************/
 /**                Clock and Reset End                **/
@@ -154,7 +183,9 @@ module magia_tile_vip
     $readmemh(image, i_l2_mem.i_l2_mem.mem);
   endtask: data_preload
 
+  // rst_n is high at power-up, so wait for the falling edge first
   task wait_for_reset;
+    @(negedge rst_n);
     @(posedge rst_n);
     @(posedge clk);
   endtask: wait_for_reset
