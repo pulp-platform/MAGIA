@@ -103,7 +103,10 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_ADDR_START   = CLUSTER_EU_DIRECT_END;
   localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_SIZE         = 32'h0000_1000;
   localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_ADDR_END     = CLUSTER_EU_ADDR_START + CLUSTER_EU_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = TILE_WINDOW_BASE + (CLUSTER_EU_ADDR_END - TILE_PERIPH_BASE);
+  localparam logic [magia_pkg::ADDR_W-1:0] TIMER_ADDR_START        = CLUSTER_EU_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] TIMER_SIZE              = 32'h0000_0100;
+  localparam logic [magia_pkg::ADDR_W-1:0] TIMER_ADDR_END          = TIMER_ADDR_START + TIMER_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = TILE_WINDOW_BASE + (TIMER_ADDR_END - TILE_PERIPH_BASE);
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END       = TILE_WINDOW_BASE + 32'h0000_FFFF;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START        = RESERVED_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE              = 32'h0001_0000;
@@ -372,7 +375,7 @@ package magia_tile_pkg;
   // Control registers: every control-register unit sits behind one OBI crossbar port and is
   // demuxed by ctrl_demux. The Event Unit keeps its own port: its responses can be held
   // back, and the crossbar returns responses in order.
-  localparam int unsigned CTRL_MAX_UNITS = 7;
+  localparam int unsigned CTRL_MAX_UNITS = 8;
 
   typedef struct packed {
     int unsigned num_units;  // Number of units behind the control port (one address rule each)
@@ -382,6 +385,7 @@ package magia_tile_pkg;
     int unsigned spatz;      // Spatz CC control (valid iff EnSpatzCC)
     int unsigned cluster;    // PULP cluster control (valid iff EnCluster)
     int unsigned hci;        // HCI arbiter control
+    int unsigned timer;      // Tile timer (valid iff EnTimer)
     int unsigned coll;       // Collective control (valid iff EnCollective)
   } ctrl_map_t;
 
@@ -410,6 +414,10 @@ package magia_tile_pkg;
     end
     ret.hci = idx;
     idx = idx + 1;
+    if (cfg.EnTimer) begin
+      ret.timer = idx;
+      idx = idx + 1;
+    end
     if (cfg.EnCollective) begin
       ret.coll = idx;
       idx = idx + 1;
@@ -611,6 +619,8 @@ package magia_tile_pkg;
     if (cfg.EnCluster)
       ret[map.cluster] = '{idx: map.cluster, start_addr: CLUSTER_CTRL_ADDR_START, end_addr: CLUSTER_CTRL_ADDR_END};
     ret[map.hci] = '{idx: map.hci, start_addr: HCI_CTRL_ADDR_START, end_addr: HCI_CTRL_ADDR_END};
+    if (cfg.EnTimer)
+      ret[map.timer] = '{idx: map.timer, start_addr: TIMER_ADDR_START, end_addr: TIMER_ADDR_END};
     if (cfg.EnCollective)
       ret[map.coll] = '{idx: map.coll, start_addr: COLL_CTRL_ADDR_START, end_addr: COLL_CTRL_ADDR_END};
     return ret;

@@ -144,6 +144,11 @@ eu_tests:
     cores: [CV32E40P, CV32E40X]
     sims: [questa]
     requires: []
+  eu_tests/timer_test:
+    testbench: tile
+    cores: [CV32E40P, CV32E40X]
+    sims: [questa]
+    requires: []
 
 # NoC collectives: broadcast, multicast, reduce and sync
 collective_tests:
