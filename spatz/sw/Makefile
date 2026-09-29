@@ -106,7 +106,8 @@ TASK_SRCS    = $(addprefix $(TESTS_DIR)/,$(addsuffix .c,$(task)))
 
 # Source and output files
 CRT0         = $(KERNEL_DIR)/spatz_crt0.S
-CRT0_OBJ     = $(BIN_DIR)/spatz_crt0.o
+# Per test, so tests can build in parallel
+CRT0_OBJ     = $(BIN_DIR)/$(TEST_NAME)_spatz_crt0.o
 ELF          = $(BIN_DIR)/$(BINARY_NAME).elf
 BIN          = $(BIN_DIR)/$(BINARY_NAME).bin
 DUMP         = $(BIN_DIR)/$(BINARY_NAME).dump
@@ -115,7 +116,7 @@ HEADER       = $(HEADER_DIR)/$(HEADER_NAME).h
 # Python script for bin2header conversion
 BIN2HEADER   = ../../scripts/bin2header.py
 
-.PHONY: all clean bin header dirs
+.PHONY: all clean clean-test bin header dirs
 
 # Complete build: compile binary and generate header
 # Force header regeneration when TASKS changes (always delete and rebuild)

@@ -358,15 +358,19 @@ Cluster task sources live under `sw/tests/<test>/pulp_task/`. A test directory c
 
 **RTL/TB** : The `N_TILES_X` and `N_TILES_Y` parameters in `hw/mesh/magia_pkg.sv` specifie the number of tiles and allows the derivation of the appropriate data and syncrhonization networks.
 
-## 🧪Local testing (semi-automatic)
-To facilitate the functional verification, the [`bwruntests.py`](scripts/bwruntests.py) Python script can be used to locally run the same tests executed by the CI in an automated fashion. The two available sets of tests are defined in [`tile_tests.yml`](sw/tests/tile_tests.yml) and [`mesh_tests`](sw/tests/mesh_tests.yml).
+## 🧪Local testing
+The [`run_regression.py`](scripts/run_regression.py) Python script runs the tests listed in [`tests.yml`](sw/tests/tests.yml), which gives for each test its testbench (`mesh` or `tile`), the control cores it runs on (`cores`) and the defines it needs (`requires`). The configurations to run are always given explicitly, run one after the other, and each one is built in its own git worktree under `.regression/`; the HW is rebuilt only when its sources change.
 
-The Python script is supposed to be invoked from the main directory of this repository as follows:
+The script is invoked from the main directory of this repository. The RISC-V GCC and `bender` must be on `PATH` (or set `BENDER`), `SPATZ_LLVM_PATH` points to the Spatz LLVM, and `MAGIA_QUESTA_SETUP` / `MAGIA_VERILATOR_SETUP` can hold the commands that load the simulators (e.g. `module load ...`):
 ```sh
-python3 scripts/bwruntests.py -y [test_file.yml]
+scripts/run_regression.py --sim questa --core CV32E40P --fsync on --test general/hello_mesh   # one test
+scripts/run_regression.py --sim verilator --core CV32E40P --fsync on --test collective_tests  # one folder
+scripts/run_regression.py --sim questa --core all --fsync on --test tile                      # every tile test
+scripts/run_regression.py --sim all --core all --fsync all --test all                         # everything
+scripts/run_regression.py --sim all --core all --fsync all --test all --list                  # plan only
 ```
 
-Differently from the CI flow, **the RTL must be MANUALLY compiled** with the correct `mesh_dv` flag depending on the target to be tested, i.e. single tile or full mesh. For a faster execution `fast_sim=1` is suggested.
+`--test` takes `all`, a testbench (`mesh`, `tile`), a folder of `sw/tests/` (`general` is `sw/tests/` itself) or one test as `folder/test`. The run shows a dashboard of every build; the results, `summary.md` and one log per HW build and per test end up in `.regression/results/<date_time>/`. See the header of the script for every option.
 
 ## 🔏 License
 MAGIA is an open-source project with a permissive license. All `software` sources are licensed under the Apache License 2.0 ([`LICENSE.APACHE`](LICENSE.APACHE)). All `hardware` sources are licensed under the Solderpad Hardware License 0.51 ([`LICENSE.SHL`](LICENSE.SHL)).
