@@ -303,7 +303,8 @@ Private map: the same range in every tile, each tile maps it to its own copy, ot
 | *Collective CTRL* | `0x0000_1800-0x0000_18FF` |
 | *Cluster Event Unit (direct)*   | `0x0000_1900-0x0000_28FF` |
 | *Cluster Event Unit (SoC-side)* | `0x0000_2900-0x0000_38FF` |
-| *Reserved*        | `0x0000_3900-0x0000_FFFF` |
+| *Timer*           | `0x0000_3900-0x0000_39FF` |
+| *Reserved*        | `0x0000_3A00-0x0000_FFFF` |
 | *Stack*           | `0x0001_0000-0x0001_FFFF` |
 | *Spatz BootROM*   | `0x1000_0000-0x1000_00FF` |
 
@@ -328,7 +329,7 @@ Software/test utility addresses (used by SW runtime and testbench VIP):
 | Region            | Address                                    | Notes |
 |-------------------|--------------------------------------------|-------|
 | *Test End*        | `0xCCFF_0000`                              | Exit code location used by SW runtime/tests |
-| *String (utoa)*   | `0x0000_3900`                              | Private string scratch location (`RESERVED_START + STR_OFFSET`) |
+| *String (utoa)*   | `0x0000_3A00`                              | Private string scratch location (`RESERVED_START + STR_OFFSET`) |
 | *Print (stderr)*  | `0xFFFF_0000`                              | Memory-mapped stderr sink in simulation VIP |
 | *Print (stdio)*   | `0xFFFF_0004`                              | Memory-mapped stdio sink in simulation VIP |
 | *Synch.*          | `tile_base + 0x000F_F000`                  | Top 4 KiB of L1 (`L1_BASE + SYNC_OFFSET`), reachable by every tile |

@@ -263,3 +263,9 @@ packages:
       Git: https://github.com/pulp-platform/tech_cells_generic.git
     dependencies:
     - common_verification
+  timer_unit:
+    revision: 3f4ee3e5b3875a473242de5d0c3ebb5a0fe4b8db
+    version: null
+    source:
+      Git: https://github.com/pulp-platform/timer_unit.git
+    dependencies: []

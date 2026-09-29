@@ -800,6 +800,7 @@ module magia_isle
   localparam int unsigned RuleEu        = 5;
   localparam int unsigned RuleCtrlHi    = 6;
   localparam int unsigned RuleClusterEu = 7;
+  localparam int unsigned RuleCtrlTop   = 8;
 
   localparam logic [magia_pkg::ADDR_W-1:0] CtrlHiEnd = TileCfg.EnCluster ?
       magia_tile_pkg::CLUSTER_EU_ADDR_START : magia_tile_pkg::TILE_PERIPH_ADDR_END;
@@ -819,10 +820,7 @@ module magia_isle
 
   if (TileCfg.EnCluster) begin: gen_cluster_eu_rule
     assign obi_xbar_rule[RuleClusterEu] = '{idx: ObiSbr.cluster_eu, start_addr: magia_tile_pkg::CLUSTER_EU_ADDR_START, end_addr: magia_tile_pkg::CLUSTER_EU_ADDR_END};
-    if (magia_tile_pkg::CLUSTER_EU_ADDR_END != magia_tile_pkg::TILE_PERIPH_ADDR_END)
-    begin: gen_err_cluster_eu_not_last
-      $fatal(1, "magia_isle: peripherals after the cluster EU need a control rule above it");
-    end
+    assign obi_xbar_rule[RuleCtrlTop]   = '{idx: ObiSbr.ctrl, start_addr: magia_tile_pkg::CLUSTER_EU_ADDR_END, end_addr: magia_tile_pkg::TILE_PERIPH_ADDR_END};
   end
 
   // Anything outside L1 and the peripheral window goes to the AXI crossbar
@@ -929,7 +927,6 @@ module magia_isle
   logic                       eu_core_busy;
 
   // Event slots with no source
-  assign eu_events.timer        = '0;
   assign eu_events.acc[1]       = 1'b0;
   assign eu_events.other[11:0]  = '0;
   assign eu_events.other[22:13] = '0;
@@ -1025,6 +1022,23 @@ module magia_isle
   end else begin: gen_no_collective_ctrl
     assign collective_mask = '0;
     assign collective_op   = '0;
+  end
+
+  // Tile timer: its two comparators are the timer events of the Event Unit
+  if (TileCfg.EnTimer) begin: gen_timer
+    obi_slave_timer #(
+      .obi_req_t ( magia_tile_pkg::core_obi_data_req_t ),
+      .obi_rsp_t ( magia_tile_pkg::core_obi_data_rsp_t )
+    ) i_tile_timer (
+      .clk_i     ( sys_clk                  ),
+      .rst_ni    ( rst_ni                   ),
+      .obi_req_i ( ctrl_req[CtrlMap.timer]  ),
+      .obi_rsp_o ( ctrl_rsp[CtrlMap.timer]  ),
+      .irq_lo_o  ( eu_events.timer[0]       ),
+      .irq_hi_o  ( eu_events.timer[1]       )
+    );
+  end else begin: gen_no_timer
+    assign eu_events.timer = '0;
   end
 
 /*******************************************************/
