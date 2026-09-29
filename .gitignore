@@ -43,5 +43,11 @@ sw/kernel_pulp/bin/
 sw/kernel_pulp/headers_bin/
 
 *.wlf
+*.fst
+*.vcd
+*.out
 *.dbg
 verilator/build*/
+
+# scripts/run_regression.py worktrees and results
+.regression/
