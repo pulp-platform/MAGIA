@@ -275,7 +275,8 @@ Per-tile local map (offset from `tile_base`, starts at `0x0000_0000`):
 | *Collective CTRL* | `0x0000_1800-0x0000_18FF` | `tile_base + 0x0000_1800 ... 0x0000_18FF` |
 | *Cluster Event Unit (direct)*  | `0x0000_1900-0x0000_28FF` | `tile_base + 0x0000_1900 ... 0x0000_28FF` |
 | *Cluster Event Unit (SoC-side)* | `0x0000_2900-0x0000_38FF` | `tile_base + 0x0000_2900 ... 0x0000_38FF` |
-| *Reserved*        | `0x0000_3900-0x0000_FFFF` | `tile_base + 0x0000_3900 ... 0x0000_FFFF` |
+| *Timer*           | `0x0000_3900-0x0000_39FF` | `tile_base + 0x0000_3900 ... 0x0000_39FF` |
+| *Reserved*        | `0x0000_3A00-0x0000_FFFF` | `tile_base + 0x0000_3A00 ... 0x0000_FFFF` |
 | *Stack*           | `0x0001_0000-0x0001_FFFF` | Local only: every tile sees its own stack here |
 | *L1 SPM*          | `0x0002_0000-0x000F_FFFF` | `tile_base + 0x0002_0000 ... 0x000F_FFFF` |
 
@@ -292,10 +293,10 @@ Software/test utility addresses (used by SW runtime and testbench VIP):
 | Region            | Address                                    | Notes |
 |-------------------|--------------------------------------------|-------|
 | *Test End*        | `0xCCFF_0000`                              | Exit code location used by SW runtime/tests |
-| *String (utoa)*   | `tile_base + 0x0000_3900`                  | String scratch location (`RESERVED_START + STR_OFFSET`) |
+| *String (utoa)*   | `tile_base + 0x0000_3A00`                  | String scratch location (`RESERVED_START + STR_OFFSET`) |
 | *Print (stderr)*  | `0xFFFF_0000`                              | Memory-mapped stderr sink in simulation VIP |
 | *Print (stdio)*   | `0xFFFF_0004`                              | Memory-mapped stdio sink in simulation VIP |
-| *Synch.*          | `tile_base + 0x0000_F100`                  | Derived from `RESERVED_START + SYNC_OFFSET` |
+| *Synch.*          | `tile_base + 0x0000_F200`                  | Derived from `RESERVED_START + SYNC_OFFSET` |
 
 ## 🖥️ Programming model
 The flow is memory-mapped (MM): software configures and starts accelerators by writing control registers in each tile address space.

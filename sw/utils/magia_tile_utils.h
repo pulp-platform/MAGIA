@@ -77,7 +77,10 @@
 #define CLUSTER_EU_BASE       (0x00002900)
 #define CLUSTER_EU_END        (0x000038FF)
 
-#define RESERVED_START  (0x00003900)
+#define TIMER_BASE      (0x00003900)
+#define TIMER_END       (0x000039FF)
+
+#define RESERVED_START  (0x00003A00)
 #define RESERVED_END    (0x0000FFFF)
 
 #define STACK_START     (0x00010000)

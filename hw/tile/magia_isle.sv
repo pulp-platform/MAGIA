@@ -910,6 +910,14 @@ module magia_isle
     else $error("magia_isle: OBI access to FractalSync ctrl range (0x%08x) but FractalSync is disabled",
                 core_mem_data_req[ObiSbr.l2].a.addr);
 `endif
+  if (!TileCfg.EnTimer) begin: gen_assert_no_timer_access
+    assert property (@(posedge sys_clk) disable iff (!rst_ni)
+      !(core_mem_data_req[ObiSbr.l2].req &&
+        core_mem_data_req[ObiSbr.l2].a.addr >= magia_tile_pkg::TIMER_ADDR_START &&
+        core_mem_data_req[ObiSbr.l2].a.addr <  magia_tile_pkg::TIMER_ADDR_END))
+      else $error("magia_isle: OBI access to timer range (0x%08x) but the timer is disabled",
+                  core_mem_data_req[ObiSbr.l2].a.addr);
+  end
   if (!TileCfg.EnSpatzCC) begin: gen_assert_no_spatz_access
     assert property (@(posedge sys_clk) disable iff (!rst_ni)
       !(core_mem_data_req[ObiSbr.l2].req &&
@@ -944,7 +952,6 @@ module magia_isle
   magia_tile_pkg::eu_events_t eu_events;
   logic                       eu_core_busy;
 
-  assign eu_events.timer = '0;  // No timer event source
   assign eu_events.other[magia_tile_pkg::EU_OTHER_CLUSTER_DONE-1 : 0] = '0;
   assign eu_events.other[magia_tile_pkg::EU_OTHER_SPATZ_START-1  :
                          magia_tile_pkg::EU_OTHER_CLUSTER_DONE+1] = '0;
@@ -1034,6 +1041,23 @@ module magia_isle
     .collective_mask_o ( collective_mask        ),
     .collective_op_o   ( collective_op          )
   );
+
+  // Tile timer: its two comparators are the timer events of the Event Unit
+  if (TileCfg.EnTimer) begin: gen_timer
+    obi_slave_timer #(
+      .obi_req_t ( magia_tile_pkg::core_obi_data_req_t ),
+      .obi_rsp_t ( magia_tile_pkg::core_obi_data_rsp_t )
+    ) i_tile_timer (
+      .clk_i     ( sys_clk                  ),
+      .rst_ni    ( rst_ni                   ),
+      .obi_req_i ( ctrl_req[CtrlMap.timer]  ),
+      .obi_rsp_o ( ctrl_rsp[CtrlMap.timer]  ),
+      .irq_lo_o  ( eu_events.timer[0]       ),
+      .irq_hi_o  ( eu_events.timer[1]       )
+    );
+  end else begin: gen_no_timer
+    assign eu_events.timer = '0;
+  end
 
 /*******************************************************/
 /**               Control Registers End               **/
