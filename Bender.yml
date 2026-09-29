@@ -31,7 +31,7 @@ dependencies:
   idma              : { git: "https://github.com/FondazioneChipsIT/iDMA.git"          , rev: 26ac2cd1c535851b14c9c508762203a180961cad } # branch: cc/mcast_magia
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , version: 3.1.1                                }
-  hci               : { git: "https://github.com/pulp-platform/hci.git"               , version: 2.3.0                                }
+  hci               : { git: "https://github.com/pulp-platform/hci.git"               , version: 2.6.1                                }
   cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , version: 0.2.0                                }
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
   fpu_ss            : { git: "https://github.com/pulp-platform/fpu_ss.git"            , rev: f31c77c7517c0a67f2c55a290fc8c6ff6019e362 } # branch: lb/cv32e40x_fpu
@@ -85,13 +85,14 @@ sources:
       - hw/tile/magia_event_unit.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
-      - hw/tile/local_interconnect.sv
+      - hw/tile/magia_hci_interconnect.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
       - hw/tile/idma_obi_ctrl_decoder.sv
       - hw/tile/idma_ctrl_mm.sv
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
       - hw/tile/obi_slave_ctrl_cluster.sv
+      - hw/tile/obi_slave_ctrl_hci.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux.sv
@@ -153,13 +154,14 @@ sources:
       - hw/tile/magia_event_unit.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
-      - hw/tile/local_interconnect.sv
+      - hw/tile/magia_hci_interconnect.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
       - hw/tile/idma_obi_ctrl_decoder.sv
       - hw/tile/idma_ctrl_mm.sv
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
       - hw/tile/obi_slave_ctrl_cluster.sv
+      - hw/tile/obi_slave_ctrl_hci.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux.sv
@@ -236,13 +238,14 @@ sources:
       - hw/tile/magia_event_unit.sv
       - hw/tile/obi_demux_addr.sv
       - hw/tile/l1_spm.sv
-      - hw/tile/local_interconnect.sv
+      - hw/tile/magia_hci_interconnect.sv
       - hw/tile/idma_axi_obi_transfer_ch.sv
       - hw/tile/idma_obi_ctrl_decoder.sv
       - hw/tile/idma_ctrl_mm.sv
       - hw/tile/obi_slave_fsync.sv
       - hw/tile/obi_slave_ctrl_spatz.sv
       - hw/tile/obi_slave_ctrl_cluster.sv
+      - hw/tile/obi_slave_ctrl_hci.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux.sv

@@ -359,3 +359,8 @@ cluster_tests:
     cores: [CV32E40P, CV32E40X]
     sims: [questa]
     requires: []
+  hci_arb_redmule_bench:
+    testbench: tile
+    cores: [CV32E40P, CV32E40X]
+    sims: [questa]
+    requires: []

@@ -116,7 +116,7 @@ module magia_isle
   localparam int unsigned NumWordsBank = TileCfg.L1.NumWordsBank;
   localparam int unsigned L1BankAddrW  = $clog2(NumWordsBank * magia_tile_pkg::DW_LIC / magia_tile_pkg::BW_LIC);  // Byte address within a bank
 
-  localparam int unsigned NumHwpe = magia_tile_pkg::N_HWPE;  // Stays 1 without RedMulE: local_interconnect is not 0-safe
+  localparam int unsigned NumHwpe = TileCfg.EnRedMule ? 1 : 0;  // 0 drops the RedMulE leaf of the HCI interconnect
   localparam int unsigned NumDma  = magia_tile_pkg::N_DMA;
   localparam int unsigned NumExt  = magia_tile_pkg::N_EXT;
   localparam int unsigned TileIW  = NumHwpe + NumHciCore + NumDma + NumExt;
@@ -1247,7 +1247,8 @@ module magia_isle
     EW:  hci_package::DEFAULT_EW,
     EHW: hci_package::DEFAULT_EHW
   };
-  `HCI_INTF_ARRAY(hci_redmule_if, sys_clk, 0:NumHwpe-1);
+  // One element even without RedMulE: the tie-off drives it by name
+  `HCI_INTF_ARRAY(hci_redmule_if, sys_clk, 0:0);
 
   localparam hci_package::hci_size_parameter_t `HCI_SIZE_PARAM(hci_dma_if) = '{
     DW:  magia_tile_pkg::iDMA_DataWidth,
@@ -1323,9 +1324,19 @@ module magia_isle
   hci_package::hci_interconnect_ctrl_t hci_ctrl;
 
   assign hci_clear = 1'b0;
-  assign hci_ctrl  = '0;
 
-  local_interconnect #(
+  // Arbitration policy between accelerators and cores, set by software
+  obi_slave_ctrl_hci #(
+    .BaseAddr ( magia_tile_pkg::HCI_CTRL_ADDR_START )
+  ) i_hci_ctrl (
+    .clk_i     ( sys_clk               ),
+    .rst_ni    ( rst_ni                ),
+    .obi_req_i ( ctrl_req[CtrlMap.hci] ),
+    .obi_rsp_o ( ctrl_rsp[CtrlMap.hci] ),
+    .ctrl_o    ( hci_ctrl              )
+  );
+
+  magia_hci_interconnect #(
     .N_HWPE        ( NumHwpe                          ),
     .N_DMA         ( NumDma                           ),
     .N_CORE        ( NumHciCore                       ),
@@ -1340,7 +1351,7 @@ module magia_isle
     .HCI_SIZE_dma  ( `HCI_SIZE_PARAM(hci_dma_if)      ),
     .HCI_SIZE_core ( `HCI_SIZE_PARAM(hci_core_if)     ),
     .HCI_SIZE_mem  ( `HCI_SIZE_PARAM(hci_tcdm_sram_if))
-  ) i_local_interconnect (
+  ) i_magia_hci_interconnect (
     .clk_i   ( sys_clk          ),
     .rst_ni  ( rst_ni           ),
     .clear_i ( hci_clear        ),
@@ -1728,7 +1739,7 @@ module magia_isle
     tile_redmule_data_req_t redmule_data_req_quiet;
     tile_redmule_data_rsp_t redmule_data_rsp_unused;
 
-    // The HWPE port stays: local_interconnect needs at least one
+    // The HCI interconnect keeps one HWPE port even when it has no RedMulE leaf
     assign redmule_data_req_quiet = '0;
     `HCI_ASSIGN_TO_INTF(hci_redmule_if[0], redmule_data_req_quiet, redmule_data_rsp_unused)
 

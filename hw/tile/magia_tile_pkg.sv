@@ -77,9 +77,12 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_SIZE         = 32'h0000_0040;
   localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_ADDR_END     = SPATZ_CTRL_ADDR_START + SPATZ_CTRL_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_CTRL_ADDR_START = SPATZ_CTRL_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_CTRL_SIZE       = 32'h0000_00C0;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_CTRL_SIZE       = 32'h0000_0080;
   localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_CTRL_ADDR_END   = CLUSTER_CTRL_ADDR_START + CLUSTER_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_ADDR_START    = CLUSTER_CTRL_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] HCI_CTRL_ADDR_START     = CLUSTER_CTRL_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] HCI_CTRL_SIZE           = 32'h0000_0040;
+  localparam logic [magia_pkg::ADDR_W-1:0] HCI_CTRL_ADDR_END       = HCI_CTRL_ADDR_START + HCI_CTRL_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_ADDR_START    = HCI_CTRL_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_SIZE          = 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_ADDR_END      = COLL_CTRL_ADDR_START + COLL_CTRL_SIZE;
   // Cluster-private Event Unit: direct link of the cluster cores, and memory-mapped view on the OBI crossbar
@@ -239,6 +242,8 @@ package magia_tile_pkg;
   parameter int unsigned UW_LIC  = magia_pkg::USR_W;                                    // User Width for Log Interconnect
   localparam int unsigned SW_LIC = DW_LIC/BW_LIC;                                       // Strobe Width for Log Interconnect
   parameter int unsigned TS_BIT  = 21;                                                  // TEST_SET_BIT (for Log Interconnect)
+  parameter int unsigned HCI_QOS_NUM = 1;                                               // QoS numerator for wide<narrow arbiter
+  parameter int unsigned HCI_QOS_DEN = 2;                                               // QoS denominator for wide<narrow arbiter
   parameter int unsigned IW      = N_HWPE+N_CORE+N_DMA+N_EXT;                           // ID Width HCI
   parameter int unsigned EXPFIFO = 0;                                                   // FIFO Depth for HWPE Interconnect
   parameter int unsigned DWH     = magia_pkg::MagiaRedMuleDefaultCfg.Height *
@@ -352,7 +357,7 @@ package magia_tile_pkg;
   // Control registers: every control-register unit sits behind one OBI crossbar port and is
   // demuxed by ctrl_demux. The Event Unit keeps its own port: its responses can be held
   // back, and the crossbar returns responses in order.
-  localparam int unsigned CTRL_MAX_UNITS = 6;
+  localparam int unsigned CTRL_MAX_UNITS = 7;
 
   typedef struct packed {
     int unsigned num_units;  // Number of units behind the control port (one address rule each)
@@ -361,6 +366,7 @@ package magia_tile_pkg;
     int unsigned fsync;      // FractalSync control (valid iff MAGIA_FSYNC)
     int unsigned spatz;      // Spatz CC control (valid iff EnSpatzCC)
     int unsigned cluster;    // PULP cluster control (valid iff EnCluster)
+    int unsigned hci;        // HCI arbiter control
     int unsigned coll;       // Collective control
   } ctrl_map_t;
 
@@ -387,6 +393,8 @@ package magia_tile_pkg;
       ret.cluster = idx;
       idx = idx + 1;
     end
+    ret.hci = idx;
+    idx = idx + 1;
     ret.coll = idx;
     idx = idx + 1;
     ret.num_units = idx;
@@ -585,6 +593,7 @@ package magia_tile_pkg;
       ret[map.spatz] = '{idx: map.spatz, start_addr: SPATZ_CTRL_ADDR_START, end_addr: SPATZ_CTRL_ADDR_END};
     if (cfg.EnCluster)
       ret[map.cluster] = '{idx: map.cluster, start_addr: CLUSTER_CTRL_ADDR_START, end_addr: CLUSTER_CTRL_ADDR_END};
+    ret[map.hci] = '{idx: map.hci, start_addr: HCI_CTRL_ADDR_START, end_addr: HCI_CTRL_ADDR_END};
     ret[map.coll] = '{idx: map.coll, start_addr: COLL_CTRL_ADDR_START, end_addr: COLL_CTRL_ADDR_END};
     return ret;
   endfunction
