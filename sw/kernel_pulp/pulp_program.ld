@@ -66,6 +66,16 @@ SECTIONS
         . = ALIGN(4);
     } > prog
 
+    /* GOT linked at ORIGIN=0, relocated at boot by core 0 in pulp_crt0.S */
+    .got : {
+        . = ALIGN(4);
+        __got_start__ = .;
+        *(.got)
+        *(.got.plt)
+        . = ALIGN(4);
+        __got_end__ = .;
+    } > prog
+
     .bss : {
         . = ALIGN(4);
         __bss_start = .;

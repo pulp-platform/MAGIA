@@ -90,7 +90,7 @@ module magia_isle
   input  logic                                    eu_irq_ack_i,     // Clears event eu_irq_ack_id_i
   input  logic[4:0]                               eu_irq_ack_id_i,
 
-  input  logic[magia_tile_pkg::N_CLUSTER_CORES:0] debug_req_i,  // [0] control core, [N:1] cluster cores
+  input  logic                                    debug_req_i,  // Control core, through its Event Unit
   output logic                                    debug_havereset_o,
   output logic                                    debug_running_o,
   output logic                                    debug_halted_o,
@@ -227,8 +227,8 @@ module magia_isle
   assign tile_l1_end_addr           = magia_tile_pkg::L1_ADDR_END         + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
   assign tile_reserved_start_addr   = magia_tile_pkg::RESERVED_ADDR_START + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
   assign tile_reserved_end_addr     = magia_tile_pkg::RESERVED_ADDR_END   + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
-  assign tile_event_unit_start_addr = magia_tile_pkg::EVENT_UNIT_ADDR_START;
-  assign tile_event_unit_end_addr   = magia_tile_pkg::EVENT_UNIT_ADDR_END;
+  assign tile_event_unit_start_addr = magia_tile_pkg::CTRL_EU_ADDR_START;
+  assign tile_event_unit_end_addr   = magia_tile_pkg::CTRL_EU_ADDR_END;
 
 /*******************************************************/
 /**                Tile Address Map End               **/
@@ -245,11 +245,12 @@ module magia_isle
   logic fencei_flush_ack;
 
   // No CPU interrupts: the control core waits on the Event Unit
-  logic[magia_pkg::N_IRQ-1:0] irq;
-  logic[31:0]                 core_irq_vec;
+  logic[31:0] core_irq_vec;
 
-  assign irq          = '0;
   assign core_irq_vec = '0;
+
+  // Debug request, forwarded by the Event Unit
+  logic eu_core_dbg_req;
 
 `ifdef CV32E40X
   logic                                clic_irq;
@@ -348,7 +349,7 @@ module magia_isle
     .xif_mem_result_if   ( xif_if.cpu_mem_result  ),
     .xif_result_if       ( xif_if.cpu_result      ),
 
-    .irq_i               ( irq                    ),
+    .irq_i               ( core_irq_vec           ),
 
     .clic_irq_i          ( clic_irq               ),
     .clic_irq_id_i       ( clic_irq_id            ),
@@ -359,7 +360,7 @@ module magia_isle
     .fencei_flush_req_o  ( fencei_flush_req       ),
     .fencei_flush_ack_i  ( fencei_flush_ack       ),
 
-    .debug_req_i         ( debug_req_i[0]         ),
+    .debug_req_i         ( eu_core_dbg_req        ),
     .debug_havereset_o                             ,
     .debug_running_o                               ,
     .debug_halted_o                                ,
@@ -414,7 +415,7 @@ module magia_isle
     .irq_ack_o              (                       ),
     .irq_id_o               (                       ),
 
-    .debug_req_i            ( debug_req_i[0]        ),
+    .debug_req_i            ( eu_core_dbg_req       ),
     .debug_havereset_o      ( debug_havereset_o     ),
     .debug_running_o        ( debug_running_o       ),
     .debug_halted_o         ( debug_halted_o        ),
@@ -602,28 +603,57 @@ module magia_isle
 /**          Control Core Data Path Beginning         **/
 /*******************************************************/
 
-  // Event Unit accesses take the direct link, everything else the OBI crossbar
-  magia_tile_pkg::core_data_req_t core_data_req_to_xbar;
-  magia_tile_pkg::core_data_rsp_t core_data_rsp_from_xbar;
+  // L1 takes a dedicated HCI port, Event Unit accesses the direct link, everything else the OBI crossbar
+  magia_tile_pkg::core_data_req_t [magia_tile_pkg::CORE_DATA_DEMUX_N_SLV-1:0] core_data_demux_req;
+  magia_tile_pkg::core_data_rsp_t [magia_tile_pkg::CORE_DATA_DEMUX_N_SLV-1:0] core_data_demux_rsp;
+  logic[magia_pkg::ADDR_W-1:0] core_data_demux_start_addr [magia_tile_pkg::CORE_DATA_DEMUX_N_SLV-1:0];
+  logic[magia_pkg::ADDR_W-1:0] core_data_demux_end_addr   [magia_tile_pkg::CORE_DATA_DEMUX_N_SLV-1:0];
+
+  assign core_data_demux_start_addr[magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX] = tile_l1_start_addr;
+  assign core_data_demux_end_addr  [magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX] = tile_l1_end_addr;
+  assign core_data_demux_start_addr[magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX]  = '0;  // Default port
+  assign core_data_demux_end_addr  [magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX]  = '0;
+  assign core_data_demux_start_addr[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX]   = tile_event_unit_start_addr;
+  assign core_data_demux_end_addr  [magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX]   = tile_event_unit_end_addr - 1;
+
+  core_data_demux #(
+    .NumSlv      ( magia_tile_pkg::CORE_DATA_DEMUX_N_SLV   ),
+    .DefaultSlv  ( magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX ),
+    .EnSerialSlv ( 1'b1                                    ),  // EU waits block like cv.elw
+    .SerialSlv   ( magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX  ),
+    .req_t       ( magia_tile_pkg::core_data_req_t         ),
+    .rsp_t       ( magia_tile_pkg::core_data_rsp_t         )
+  ) i_core_data_demux (
+    .clk_i            ( sys_clk                    ),
+    .rst_ni           ( rst_ni                     ),
+    .core_clock_en_i  ( core_clk_en                ),
+    .core_data_req_i  ( core_data_req              ),
+    .core_data_rsp_o  ( core_data_rsp              ),
+    .slv_start_addr_i ( core_data_demux_start_addr ),
+    .slv_end_addr_i   ( core_data_demux_end_addr   ),
+    .slv_data_req_o   ( core_data_demux_req        ),
+    .slv_data_rsp_i   ( core_data_demux_rsp        )
+  );
+
+  // Event Unit direct link, addressed relative to the EU window
   magia_tile_pkg::eu_direct_req_t eu_direct_req;
   magia_tile_pkg::eu_direct_rsp_t eu_direct_rsp;
   magia_tile_pkg::eu_direct_req_t eu_direct_req_cut;
   magia_tile_pkg::eu_direct_rsp_t eu_direct_rsp_cut;
 
-  core_data_demux_eu_direct i_core_data_demux_eu_direct (
-    .clk_i           ( sys_clk                 ),
-    .rst_ni          ( rst_ni                  ),
-    .core_clock_en_i ( core_clk_en             ),
+  assign eu_direct_req.req   = core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].req;
+  assign eu_direct_req.addr  = core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].addr - tile_event_unit_start_addr;
+  assign eu_direct_req.wen   = ~core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].we;
+  assign eu_direct_req.wdata = core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].wdata;
+  assign eu_direct_req.be    = core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].be;
 
-    .core_data_req_i ( core_data_req           ),
-    .core_data_rsp_o ( core_data_rsp           ),
-
-    .xbar_data_req_o ( core_data_req_to_xbar   ),
-    .xbar_data_rsp_i ( core_data_rsp_from_xbar ),
-
-    .eu_direct_req_o ( eu_direct_req           ),
-    .eu_direct_rsp_i ( eu_direct_rsp           )
-  );
+  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].gnt    = eu_direct_rsp.gnt;
+  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].rvalid = eu_direct_rsp.rvalid;
+  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].rdata  = eu_direct_rsp.rdata;
+  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].err    = eu_direct_rsp.err;
+`ifdef CV32E40X
+  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].exokay = 1'b0;
+`endif
 
   eu_direct_cut #(
     .eu_direct_req_t ( magia_tile_pkg::eu_direct_req_t ),
@@ -664,27 +694,97 @@ module magia_isle
   magia_tile_pkg::core_obi_data_req_t core_obi_data_req;
   magia_tile_pkg::core_obi_data_rsp_t core_obi_data_rsp;
 
+  // Control core L1 port, connected to HCI in the L1 section
+  magia_tile_pkg::core_obi_data_req_t core_l1_direct_obi_req;
+  magia_tile_pkg::core_obi_data_rsp_t core_l1_direct_obi_rsp;
+  magia_tile_pkg::core_obi_data_req_t core_l1_direct_amo_req;
+  magia_tile_pkg::core_obi_data_rsp_t core_l1_direct_amo_rsp;
+  tile_hci_data_req_t                 core_l1_direct_req;
+  tile_hci_data_rsp_t                 core_l1_direct_rsp;
+
 `ifdef CV32E40X
   cv32e40x_data2obi_req i_core_data2obi_req (
-    .data_req_i ( core_data_req_to_xbar   ),
-    .obi_req_o  ( core_obi_data_req       )
+    .data_req_i ( core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX] ),
+    .obi_req_o  ( core_obi_data_req                                            )
   );
 
   cv32e40x_obi2data_rsp i_core_obi2data_rsp (
-    .obi_rsp_i  ( core_obi_data_rsp       ),
-    .data_rsp_o ( core_data_rsp_from_xbar )
+    .obi_rsp_i  ( core_obi_data_rsp                                            ),
+    .data_rsp_o ( core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX] )
+  );
+
+  cv32e40x_data2obi_req i_core_l1_direct_data2obi_req (
+    .data_req_i ( core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX] ),
+    .obi_req_o  ( core_l1_direct_obi_req                                        )
+  );
+
+  cv32e40x_obi2data_rsp i_core_l1_direct_obi2data_rsp (
+    .obi_rsp_i  ( core_l1_direct_obi_rsp                                        ),
+    .data_rsp_o ( core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX] )
+  );
+
+  // Atomics to the local L1 are resolved before HCI
+  obi_atop_resolver #(
+    .SbrPortObiCfg             ( magia_tile_pkg::obi_amo_cfg                ),
+    .MgrPortObiCfg             ( obi_pkg::ObiDefaultConfig                  ),
+    .sbr_port_obi_req_t        ( magia_tile_pkg::core_obi_data_req_t        ),
+    .sbr_port_obi_rsp_t        ( magia_tile_pkg::core_obi_data_rsp_t        ),
+    .mgr_port_obi_req_t        (                                            ),
+    .mgr_port_obi_rsp_t        (                                            ),
+    .mgr_port_obi_a_optional_t ( magia_tile_pkg::core_data_obi_a_optional_t ),
+    .mgr_port_obi_r_optional_t ( magia_tile_pkg::core_data_obi_r_optional_t ),
+    .LrScEnable                (                                            ),
+    .RegisterAmo               ( magia_tile_pkg::RegisterAmo                )
+  ) i_core_l1_direct_atomics (
+    .clk_i          ( sys_clk                ),
+    .rst_ni         ( rst_ni                 ),
+    .testmode_i     ( test_mode_i            ),
+    .sbr_port_req_i ( core_l1_direct_obi_req ),
+    .sbr_port_rsp_o ( core_l1_direct_obi_rsp ),
+    .mgr_port_req_o ( core_l1_direct_amo_req ),
+    .mgr_port_rsp_i ( core_l1_direct_amo_rsp )
   );
 `else
   cv32e40p_data2obi_req i_core_data2obi_req (
-    .data_req_i ( core_data_req_to_xbar   ),
-    .obi_req_o  ( core_obi_data_req       )
+    .data_req_i ( core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX] ),
+    .obi_req_o  ( core_obi_data_req                                            )
   );
 
   cv32e40p_obi2data_rsp i_core_obi2data_rsp (
-    .obi_rsp_i  ( core_obi_data_rsp       ),
-    .data_rsp_o ( core_data_rsp_from_xbar )
+    .obi_rsp_i  ( core_obi_data_rsp                                            ),
+    .data_rsp_o ( core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX] )
   );
+
+  cv32e40p_data2obi_req i_core_l1_direct_data2obi_req (
+    .data_req_i ( core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX] ),
+    .obi_req_o  ( core_l1_direct_obi_req                                        )
+  );
+
+  cv32e40p_obi2data_rsp i_core_l1_direct_obi2data_rsp (
+    .obi_rsp_i  ( core_l1_direct_obi_rsp                                        ),
+    .data_rsp_o ( core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX] )
+  );
+
+  // No atomics on the CV32E40P
+  assign core_l1_direct_amo_req = core_l1_direct_obi_req;
+  assign core_l1_direct_obi_rsp = core_l1_direct_amo_rsp;
 `endif
+
+  obi2hci_req #(
+    .obi_req_t ( magia_tile_pkg::core_obi_data_req_t ),
+    .hci_req_t ( tile_hci_data_req_t                 )
+  ) i_core_l1_direct_obi2hci_req (
+    .obi_req_i ( core_l1_direct_amo_req ),
+    .hci_req_o ( core_l1_direct_req     )
+  );
+
+  hci2obi_rsp #(
+    .hci_rsp_t ( tile_hci_data_rsp_t                 ),
+    .obi_rsp_t ( magia_tile_pkg::core_obi_data_rsp_t )
+  ) i_core_l1_direct_hci2obi_rsp (
+    .hci_rsp_i ( core_l1_direct_rsp     ),
+    .obi_rsp_o ( core_l1_direct_amo_rsp )
+  );
 
 /*******************************************************/
 /**            Control Core Data Path End             **/
@@ -698,7 +798,7 @@ module magia_isle
   magia_tile_pkg::core_obi_data_req_t[ObiMgr.num_mgr-1:0] obi_xbar_slv_cut_req;
   magia_tile_pkg::core_obi_data_rsp_t[ObiMgr.num_mgr-1:0] obi_xbar_slv_cut_rsp;
 
-  // Subordinates, indexed by ObiSbr: l2, l1, eu, ctrl
+  // Subordinates, indexed by ObiSbr: l2, l1, eu, ctrl, cluster_eu
   magia_tile_pkg::core_obi_data_req_t[ObiSbr.num_sbr-1:0] core_mem_data_cut_req;
   magia_tile_pkg::core_obi_data_rsp_t[ObiSbr.num_sbr-1:0] core_mem_data_cut_rsp;
   magia_tile_pkg::core_obi_data_req_t[ObiSbr.num_sbr-1:0] core_mem_data_req;
@@ -719,6 +819,7 @@ module magia_isle
   localparam int unsigned RuleStack = 3;
   localparam int unsigned RuleEu    = 4;
   localparam int unsigned RuleCtrl  = 5;  // First of CtrlMap.num_units rules
+  localparam int unsigned RuleClusterEu = RuleCtrl + CtrlMap.num_units;
 
   magia_tile_pkg::obi_xbar_rule_t[ObiSbr.num_rules-1:0]                        obi_xbar_rule;
   logic[ObiMgr.num_mgr-1:0]                                                    obi_xbar_en_default_idx;
@@ -733,6 +834,10 @@ module magia_isle
   // Disabled control units have no rule: their range falls to L2, where the assertions catch it
   for (genvar i = 0; i < CtrlMap.num_units; i++) begin: gen_ctrl_rule
     assign obi_xbar_rule[RuleCtrl+i] = '{idx: ObiSbr.ctrl, start_addr: CtrlRules[i].start_addr, end_addr: CtrlRules[i].end_addr};
+  end
+
+  if (TileCfg.EnCluster) begin: gen_cluster_eu_rule
+    assign obi_xbar_rule[RuleClusterEu] = '{idx: ObiSbr.cluster_eu, start_addr: magia_tile_pkg::CLUSTER_EU_ADDR_START, end_addr: magia_tile_pkg::CLUSTER_EU_ADDR_END};
   end
 
   // Anything outside L1 and the control registers goes to the AXI crossbar
@@ -860,6 +965,12 @@ module magia_isle
         core_mem_data_req[ObiSbr.l2].a.addr <  magia_tile_pkg::CLUSTER_CTRL_ADDR_END))
       else $error("magia_isle: OBI access to cluster ctrl range (0x%08x) but the PULP cluster is disabled",
                   core_mem_data_req[ObiSbr.l2].a.addr);
+    assert property (@(posedge sys_clk) disable iff (!rst_ni)
+      !(core_mem_data_req[ObiSbr.l2].req &&
+        core_mem_data_req[ObiSbr.l2].a.addr >= magia_tile_pkg::CLUSTER_EU_ADDR_START &&
+        core_mem_data_req[ObiSbr.l2].a.addr <  magia_tile_pkg::CLUSTER_EU_ADDR_END))
+      else $error("magia_isle: OBI access to cluster Event Unit range (0x%08x) but the PULP cluster is disabled",
+                  core_mem_data_req[ObiSbr.l2].a.addr);
   end
   if (!TileCfg.EnCollective) begin: gen_assert_no_coll_access
     assert property (@(posedge sys_clk) disable iff (!rst_ni)
@@ -916,8 +1027,8 @@ module magia_isle
     .core_busy_i        ( eu_core_busy                 ),
     .core_clock_en_o    ( eu_core_clk_en               ),
 
-    .dbg_req_i          ( '0                           ),
-    .core_dbg_req_o     (                              ),
+    .dbg_req_i          ( debug_req_i                  ),
+    .core_dbg_req_o     ( eu_core_dbg_req              ),
 
     .eu_direct_req_i    ( eu_direct_req_flat           ),
     .eu_direct_addr_i   ( eu_direct_addr_flat          ),
@@ -928,6 +1039,10 @@ module magia_isle
     .eu_direct_rvalid_o ( eu_direct_rvalid_flat        ),
     .eu_direct_rdata_o  ( eu_direct_rdata_flat         ),
     .eu_direct_err_o    ( eu_direct_err_flat           ),
+
+    .soc_periph_evt_valid_i ( 1'b0                     ),
+    .soc_periph_evt_ready_o (                          ),
+    .soc_periph_evt_data_i  ( '0                       ),
 
     .obi_req_i          ( core_mem_data_req[ObiSbr.eu] ),
     .obi_rsp_o          ( core_mem_data_rsp[ObiSbr.eu] )
@@ -1168,7 +1283,7 @@ module magia_isle
   };
   `HCI_INTF_ARRAY(hci_tcdm_sram_if, sys_clk, 0:NumMemBanks-1);
 
-  // Core ports: [0] control core, then Spatz, then cluster cores
+  // Core ports: [0] remote accesses from the OBI crossbar, then Spatz, cluster cores and the control core
   localparam hci_package::hci_size_parameter_t `HCI_SIZE_PARAM(hci_core_if) = '{
     DW:  magia_tile_pkg::DW_LIC,
     AW:  magia_tile_pkg::AWC,
@@ -1215,11 +1330,11 @@ module magia_isle
     `HCI_INTF_ARRAY(hci_ext_if, sys_clk, 0:NumExt-1);
   end
 
-  // Control core L1 port: atomics are resolved before HCI
-  magia_tile_pkg::core_obi_data_req_t core_l1_data_amo_req;
-  magia_tile_pkg::core_obi_data_rsp_t core_l1_data_amo_rsp;
-  tile_hci_data_req_t                 core_l1_data_req;
-  tile_hci_data_rsp_t                 core_l1_data_rsp;
+  // Remote L1 accesses from the OBI crossbar: atomics are resolved before HCI
+  magia_tile_pkg::core_obi_data_req_t ext_l1_data_amo_req;
+  magia_tile_pkg::core_obi_data_rsp_t ext_l1_data_amo_rsp;
+  tile_hci_data_req_t                 ext_l1_data_req;
+  tile_hci_data_rsp_t                 ext_l1_data_rsp;
 
   obi_atop_resolver #(
     .SbrPortObiCfg             ( magia_tile_pkg::obi_amo_cfg                ),
@@ -1238,27 +1353,28 @@ module magia_isle
     .testmode_i     ( test_mode_i                  ),
     .sbr_port_req_i ( core_mem_data_req[ObiSbr.l1] ),
     .sbr_port_rsp_o ( core_mem_data_rsp[ObiSbr.l1] ),
-    .mgr_port_req_o ( core_l1_data_amo_req         ),
-    .mgr_port_rsp_i ( core_l1_data_amo_rsp         )
+    .mgr_port_req_o ( ext_l1_data_amo_req          ),
+    .mgr_port_rsp_i ( ext_l1_data_amo_rsp          )
   );
 
   obi2hci_req #(
     .obi_req_t ( magia_tile_pkg::core_obi_data_req_t ),
     .hci_req_t ( tile_hci_data_req_t                 )
-  ) i_core_data_obi2hci_req (
-    .obi_req_i ( core_l1_data_amo_req ),
-    .hci_req_o ( core_l1_data_req     )
+  ) i_ext_l1_data_obi2hci_req (
+    .obi_req_i ( ext_l1_data_amo_req ),
+    .hci_req_o ( ext_l1_data_req     )
   );
 
   hci2obi_rsp #(
     .hci_rsp_t ( tile_hci_data_rsp_t                 ),
     .obi_rsp_t ( magia_tile_pkg::core_obi_data_rsp_t )
-  ) i_core_data_hci2obi_rsp (
-    .hci_rsp_i ( core_l1_data_rsp     ),
-    .obi_rsp_o ( core_l1_data_amo_rsp )
+  ) i_ext_l1_data_hci2obi_rsp (
+    .hci_rsp_i ( ext_l1_data_rsp     ),
+    .obi_rsp_o ( ext_l1_data_amo_rsp )
   );
 
-  `HCI_ASSIGN_TO_INTF(hci_core_if[0], core_l1_data_req, core_l1_data_rsp)
+  `HCI_ASSIGN_TO_INTF(hci_core_if[0],            ext_l1_data_req,    ext_l1_data_rsp)
+  `HCI_ASSIGN_TO_INTF(hci_core_if[NumHciCore-1], core_l1_direct_req, core_l1_direct_rsp)
 
   logic                                hci_clear;
   hci_package::hci_interconnect_ctrl_t hci_ctrl;
@@ -1931,11 +2047,9 @@ module magia_isle
     localparam int unsigned ClusterIcacheLineCount   = TileCfg.Cluster.IcacheSharedSize  / (TileCfg.Cluster.IcacheLineWidth/8) / TileCfg.Cluster.IcacheNumWays;
 
     logic [31:0]              cluster_boot_addr [NClusterCores-1:0];
-    logic [NClusterCores-1:0] cluster_clk_en;
     logic [NClusterCores-1:0] cluster_fetch_enable;
-    logic [NClusterCores-1:0] cluster_start_irq;
+    logic                     cluster_start_irq;
     logic                     cluster_done;
-    logic [NClusterCores-1:0] cluster_clk;
 
     obi_slave_ctrl_cluster #(
       .TileCfg  ( TileCfg                                 ),
@@ -1945,7 +2059,6 @@ module magia_isle
       .rst_ni      ( rst_ni                    ),
       .obi_req_i   ( ctrl_req[CtrlMap.cluster] ),
       .obi_rsp_o   ( ctrl_rsp[CtrlMap.cluster] ),
-      .clk_en_o    ( cluster_clk_en            ),
       .boot_addr_o ( cluster_boot_addr         ),
       .fetch_en_o  ( cluster_fetch_enable      ),
       .done_o      ( cluster_done              ),
@@ -1953,15 +2066,6 @@ module magia_isle
     );
 
     assign eu_events.other[magia_tile_pkg::EU_OTHER_CLUSTER_DONE] = cluster_done;
-
-    for (genvar j = 0; j < NClusterCores; j++) begin: gen_cluster_clk_gate
-      tc_clk_gating i_cluster_clk_gate (
-        .clk_i     ( sys_clk           ),
-        .en_i      ( cluster_clk_en[j] ),
-        .test_en_i ( test_mode_i       ),
-        .clk_o     ( cluster_clk[j]    )
-      );
-    end
 
     // Each core reaches L1 through HCI and everything else through the OBI crossbar
     magia_tile_pkg::core_obi_data_req_t [NClusterCores-1:0] cluster_obi_data_req;
@@ -1978,23 +2082,23 @@ module magia_isle
       .hci_req_t     ( tile_hci_data_req_t ),
       .hci_rsp_t     ( tile_hci_data_rsp_t )
     ) i_cluster (
-      .sys_clk_i              ( sys_clk                      ),
-      .rst_ni                 ( rst_ni                       ),
-      .test_mode_i            ( test_mode_i                  ),
-      .cluster_clk_i          ( cluster_clk                  ),
-      .debug_req_i            ( debug_req_i[NClusterCores:1] ),
-      .mhartid_i              ( mhartid_i                    ),
-      .tile_l1_start_addr_i   ( tile_l1_start_addr           ),
-      .tile_l1_end_addr_i     ( tile_l1_end_addr             ),
-      .cluster_boot_addr_i    ( cluster_boot_addr            ),
-      .cluster_fetch_enable_i ( cluster_fetch_enable         ),
-      .cluster_start_irq_i    ( cluster_start_irq            ),
-      .cluster_obi_data_req_o ( cluster_obi_data_req         ),
-      .cluster_obi_data_rsp_i ( cluster_obi_data_rsp         ),
-      .cluster_hci_data_req_o ( cluster_hci_data_req         ),
-      .cluster_hci_data_rsp_i ( cluster_hci_data_rsp         ),
-      .cluster_instr_req_o    ( cluster_instr_req            ),
-      .cluster_instr_rsp_i    ( cluster_instr_rsp            )
+      .clk_i                  ( sys_clk                              ),  // The cluster Event Unit gates each core
+      .rst_ni                 ( rst_ni                               ),
+      .test_mode_i            ( test_mode_i                          ),
+      .mhartid_i              ( mhartid_i                            ),
+      .tile_l1_start_addr_i   ( tile_l1_start_addr                   ),
+      .tile_l1_end_addr_i     ( tile_l1_end_addr                     ),
+      .cluster_boot_addr_i    ( cluster_boot_addr                    ),
+      .cluster_fetch_enable_i ( cluster_fetch_enable                 ),
+      .cluster_start_irq_i    ( cluster_start_irq                    ),
+      .cluster_eu_obi_req_i   ( core_mem_data_req[ObiSbr.cluster_eu] ),
+      .cluster_eu_obi_rsp_o   ( core_mem_data_rsp[ObiSbr.cluster_eu] ),
+      .cluster_obi_data_req_o ( cluster_obi_data_req                 ),
+      .cluster_obi_data_rsp_i ( cluster_obi_data_rsp                 ),
+      .cluster_hci_data_req_o ( cluster_hci_data_req                 ),
+      .cluster_hci_data_rsp_i ( cluster_hci_data_rsp                 ),
+      .cluster_instr_req_o    ( cluster_instr_req                    ),
+      .cluster_instr_rsp_i    ( cluster_instr_rsp                    )
     );
 
     for (genvar idx_core = 0; idx_core < NClusterCores; idx_core++) begin: gen_cluster_obi_port

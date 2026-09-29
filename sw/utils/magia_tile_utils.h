@@ -41,41 +41,27 @@
 #define EVENT_UNIT_END  (0x000016FF)
 #define SPATZ_CTRL_BASE (0x00001700)
 #define SPATZ_CTRL_END  (0x0000173F)
-/* PULP Cluster Control registers (tile_csr + 0x40), bare-metal dispatch model
- *   +0x00 PULP_CLK_EN           : R/W broadcast enable. CV32 writes 1 to start
- *                                 ALL cores fetching from PULP_BINARY; writes 0
- *                                 to disable. Writes also reset READY counter.
- *   +0x04 PULP_BINARY           : entry point address (boot vector) for all
- *                                 cluster cores
- *   +0x08 PULP_NB_CORES_TO_WAIT : popcount of dispatch mask (ACK + DONE quorum)
- *   +0x0C PULP_DONE             : W = each PULP hart signals completion;
- *                                 after the quorum the CSR emits EU bit 12
- *   +0x10 PULP_TASKBIN          : R/W per-dispatch task function address read
- *                                 by each PULP core in its trap handler
- *   +0x14 PULP_DATA             : R/W per-dispatch opaque data ptr passed as
- *                                 first argument to the task
- *   +0x18 PULP_START            : R/W CV32 writes one-hot mask -> per-core
- *                                 1-cycle MEI pulse; cores write 0 to ACK; the
- *                                 register self-clears when all N ACKs arrive
- *   +0x1C PULP_READY            : R = 1 once N_CLUSTER_CORES cores have booted;
- *                                 W = each core posts 1 when its dispatcher is
- *                                 armed (counter increment)
- */
+/* PULP Cluster Control registers (tile_csr + 0x40), bare-metal dispatch model */
 #define PULP_CTRL_BASE        (0x00001740)
-#define PULP_CLK_EN           (PULP_CTRL_BASE + 0x00)
-#define PULP_BINARY           (PULP_CTRL_BASE + 0x04)
-#define PULP_NB_CORES_TO_WAIT (PULP_CTRL_BASE + 0x08)
-#define PULP_DONE             (PULP_CTRL_BASE + 0x0C)
-#define PULP_TASKBIN          (PULP_CTRL_BASE + 0x10)
-#define PULP_DATA             (PULP_CTRL_BASE + 0x14)
-#define PULP_START            (PULP_CTRL_BASE + 0x18)
-#define PULP_READY            (PULP_CTRL_BASE + 0x1C)
+#define PULP_FETCH_EN         (PULP_CTRL_BASE + 0x00)  /* R/W boot enable, sticky in the cores; every write resets READY */
+#define PULP_BINARY           (PULP_CTRL_BASE + 0x04)  /* R/W boot address of all cluster cores */
+#define PULP_DONE             (PULP_CTRL_BASE + 0x08)  /* W   core 0 signals completion, pulsing EU bit 12 on the CV32 */
+#define PULP_TASKBIN          (PULP_CTRL_BASE + 0x0C)  /* R/W task function address, read by core 0 */
+#define PULP_DATA             (PULP_CTRL_BASE + 0x10)  /* R/W task argument (a0) */
+#define PULP_START            (PULP_CTRL_BASE + 0x14)  /* R/W CV32 rings core 0 (EU bit 13), core 0 writes 0 to ACK */
+#define PULP_READY            (PULP_CTRL_BASE + 0x18)  /* R 1 once all cores booted, W each core posts 1 once armed */
+#define PULP_RETURN           (PULP_CTRL_BASE + 0x1C)  /* R/W task exit code, written by core 0 before PULP_DONE */
+#define PULP_RETURN_CRASHED_BIT (0x80000000u)  /* Set when core 0 trapped instead of returning */
 #define PULP_CTRL_END         (0x000017FF)
 #define PULP_CORE_COUNT       (8)
 #define PULP_HARTID_BASE      (32)   /* 2 * NUM_CLUSTERS (16) */
 #define COLL_CTRL_BASE  (0x00001800)
 #define COLL_CTRL_END   (0x000018FF)
-#define RESERVED_START  (0x00001900)
+#define CLUSTER_EU_DIRECT_BASE (0x00001900)
+#define CLUSTER_EU_DIRECT_END  (0x000028FF)
+#define CLUSTER_EU_BASE       (0x00002900)
+#define CLUSTER_EU_END        (0x000038FF)
+#define RESERVED_START  (0x00003900)
 #define RESERVED_END    (0x0000FFFF)
 #define STACK_START     (0x00010000)
 #define STACK_END       (0x0001FFFF)
