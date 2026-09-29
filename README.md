@@ -176,7 +176,7 @@ To change the thread count, re-run `make verilate` with the new value.
 
 ## ⚙️ Architecture
 
-![](doc/MAGIA.png)
+![](doc/MAGIA_v4.png)
 
 ### Tile
 The central piece of the architecture is the MAGIA tile containing a GeMM accelerator, a Vector Processor, a DMA engine, a PULP cluster of RISC-V cores, a multi-banked L1 SPM, an Event Unit, and a lightweight control core. The L1 features interleaved memory banks that compose the Tightly-Coupled Data Memory (TCDM). Each tile has access to the global L2 and to a subset of other tiles' L1, accessing the latter via on-chip remote direct memory access (RDMA). Inter-tile and global communication is carried out through AXI-based narrow (32-bit) and wide (256-bit) NoC channels in [FlooNoC](https://github.com/pulp-platform/FlooNoC). External tiles and the core access the L1 through an OpenBus Interface ([OBI](https://github.com/pulp-platform/obi)) XBAR.
@@ -186,7 +186,9 @@ Each tile is controlled by a [CV32E40P](https://github.com/pulp-platform/cv32e40
 `magia_tile` wraps `magia_isle` (cores, accelerators, L1, crossbars and Event Unit) with the FlooNoC network interface and router. What a tile contains is set by its `TileCfg` (`magia_tile_cfg_t` in `hw/mesh/magia_pkg.sv`): which of RedMulE, Spatz CC and the PULP cluster are instantiated and their parameters, the L1 geometry, the control core ISA extensions and the iDMA options. A disabled unit has no hardware, and accesses to its control range raise a simulation assertion.
 
 #### PULP Cluster
-Each tile embeds a cluster of `TileCfg.Cluster.NumCores` [CV32E40P](https://github.com/pulp-platform/cv32e40p) cores (8 by default). Cluster cores share a Snitch instruction cache with an AXI refill path to L2; each core reaches the tile's L1 through its own HCI port and everything else (accelerator registers, PULP_CTRL, remote memory) through its own OBI master port into the tile crossbar. Cluster cores receive interrupts exclusively from the `PULP_CTRL` block — they are not connected to the Event Unit. The main core dispatches tasks to the cluster via the `PULP_CTRL` register block (`0x1740`), which provides: binary entry point (`PULP_BINARY`), per-core MEI dispatch (`PULP_START`), task function pointer (`PULP_TASKBIN`), data pointer (`PULP_DATA`), completion quorum (`PULP_NB_CORES_TO_WAIT`), and readiness/done handshake registers (`PULP_READY`, `PULP_DONE`). When the done quorum is reached, `PULP_CTRL` raises EU bit 12 on the main core's Event Unit, allowing the main core to sleep in WFE until the cluster finishes.
+Each tile embeds a cluster of `TileCfg.Cluster.NumCores` [CV32E40P](https://github.com/pulp-platform/cv32e40p) cores (8 by default), sharing a Snitch instruction cache with an AXI refill path to L2; each core reaches the tile's L1 through its own HCI port and everything else (accelerator registers, `PULP_CTRL`, remote memory) through its own OBI master port into the tile crossbar. The cluster has its own private [Event Unit](https://github.com/pulp-platform/event_unit_flex) instance, separate from the main core's, providing an intra-cluster dispatch FIFO, a hardware barrier for team rendez-vous, and a hardware mutex — the basis of the `pi_cl_team_fork()`/`pi_cl_team_barrier()` bare-metal, pulp-sdk-API-compatible API (`sw/utils/cluster_utils.h`).
+
+The main core dispatches one task at a time to cluster core 0 only, via a mailbox in the `PULP_CTRL` register block (`0x1740`): binary entry point (`PULP_BINARY`), task function pointer (`PULP_TASKBIN`), argument (`PULP_DATA`), start doorbell (`PULP_START`) and completion flag (`PULP_DONE`). Core 0 — the cluster's sole dispatcher — may then fan work out to the other cores itself, from inside the task, via the cluster's own Event Unit. Every core's Event Unit, main core and cluster cores alike, ORs any cause onto the standard RISC-V MEI (`mip[11]`), so interrupt handling follows the same convention everywhere. On completion (or on a trap), `PULP_CTRL` pulses EU bit 12 on the main core's Event Unit, letting it sleep in `cv.elw` until the cluster is done.
 
 ### Mesh
 Replicating the MAGIA tile, we scale up to a two-dimensional (2D) mesh of compute tiles. Each tile takes its own `TileCfg` from the `TILE_CFGS` parameter of `magia`: `HOMO_TILE_CFGS` (default) gives every tile all units, `HETERO_TILE_CFGS` splits the tiles into four equal groups of full, RedMulE-only, Spatz-only and cluster-only tiles. The NoC allows access to the global west-side L2 through row-side interfaces, while tiles exchange traffic through FlooNoC router. The mesh uses XY routing and carries both AXI narrow channels (32-bit) and AXI wide channels (256-bit), with protocol conversion handled by per-tile Network Interfaces (NIs).
@@ -266,11 +268,13 @@ Per-tile local map (offset from `tile_base`, starts at `0x0000_0000`):
 | *RedMulE CTRL*    | `0x0000_0100-0x0000_01FF` | `tile_base + 0x0000_0100 ... 0x0000_01FF` |
 | *iDMA CTRL*       | `0x0000_0200-0x0000_05FF` | `tile_base + 0x0000_0200 ... 0x0000_05FF` |
 | *FractalSync CTRL*| `0x0000_0600-0x0000_06FF` | `tile_base + 0x0000_0600 ... 0x0000_06FF` |
-| *Event Unit*      | `0x0000_0700-0x0000_16FF` | `tile_base + 0x0000_0700 ... 0x0000_16FF` |
+| *Ctrl-core Event Unit* | `0x0000_0700-0x0000_16FF` | `tile_base + 0x0000_0700 ... 0x0000_16FF` |
 | *Spatz CTRL*      | `0x0000_1700-0x0000_173F` | `tile_base + 0x0000_1700 ... 0x0000_173F` |
 | *PULP CTRL*       | `0x0000_1740-0x0000_17FF` | `tile_base + 0x0000_1740 ... 0x0000_17FF` |
 | *Collective CTRL* | `0x0000_1800-0x0000_18FF` | `tile_base + 0x0000_1800 ... 0x0000_18FF` |
-| *Reserved*        | `0x0000_1900-0x0000_FFFF` | `tile_base + 0x0000_1900 ... 0x0000_FFFF` |
+| *Cluster Event Unit (direct)*  | `0x0000_1900-0x0000_28FF` | `tile_base + 0x0000_1900 ... 0x0000_28FF` |
+| *Cluster Event Unit (SoC-side)* | `0x0000_2900-0x0000_38FF` | `tile_base + 0x0000_2900 ... 0x0000_38FF` |
+| *Reserved*        | `0x0000_3900-0x0000_FFFF` | `tile_base + 0x0000_3900 ... 0x0000_FFFF` |
 | *Stack*           | `0x0001_0000-0x0001_FFFF` | Local only: every tile sees its own stack here |
 | *L1 SPM*          | `0x0002_0000-0x000F_FFFF` | `tile_base + 0x0002_0000 ... 0x000F_FFFF` |
 
@@ -287,7 +291,7 @@ Software/test utility addresses (used by SW runtime and testbench VIP):
 | Region            | Address                                    | Notes |
 |-------------------|--------------------------------------------|-------|
 | *Test End*        | `0xCCFF_0000`                              | Exit code location used by SW runtime/tests |
-| *String (utoa)*   | `tile_base + 0x0000_1900`                  | String scratch location (`RESERVED_START + STR_OFFSET`) |
+| *String (utoa)*   | `tile_base + 0x0000_3900`                  | String scratch location (`RESERVED_START + STR_OFFSET`) |
 | *Print (stderr)*  | `0xFFFF_0000`                              | Memory-mapped stderr sink in simulation VIP |
 | *Print (stdio)*   | `0xFFFF_0004`                              | Memory-mapped stdio sink in simulation VIP |
 | *Synch.*          | `tile_base + 0x0000_F100`                  | Derived from `RESERVED_START + SYNC_OFFSET` |
@@ -336,17 +340,17 @@ A store is then tagged collective if it is written at `COLLECTIVE_ADDR_OFFSET` (
 3. A store at address `0xB000_0000` is then interpreted as a collective transaction
 
 ### PULP Cluster programming flow
-The PULP cluster uses a bare-metal dynamic dispatch model. The cluster binary is compiled as a position-independent ELF (origin `0x0`), converted to a flat binary, and embedded in the CV32 ELF as a byte array in the `.pulp_binary` section (see `sw/kernel_pulp/`).
+The PULP cluster uses a bare-metal, two-level dispatch model. The cluster binary is compiled as a position-independent ELF (origin `0x0`, `-fPIC`, `-mno-relax`), converted to a flat binary and embedded in the CV32 ELF as a byte array in the `.pulp_binary` section (see `sw/kernel_pulp/`).
 
-**Dispatch flow** (`sw/utils/cluster_utils.h`, `sw/utils/magia_pulp_utils.h`):
+**Level 0 — CV32 → cluster core 0** (`sw/utils/cluster_utils.h`, `sw/utils/magia_pulp_utils.h`, `sw/kernel_pulp/pulp_crt0.S`):
 
-1. `cluster_boot(binary_start)` — writes `PULP_BINARY`, asserts `CLK_EN`, polls `PULP_READY` until all 8 cores have armed their dispatcher loop.
-2. `cluster_arm_done_event()` — clears the CV32 Event Unit buffer and enables only EU bit 12 (cluster-done), avoiding spurious wakeups from stale RedMulE/iDMA events.
-3. `cluster_dispatch_task(task_addr, core_mask)` — writes `NB_CORES_TO_WAIT`, `TASKBIN`, then `PULP_START = core_mask`, which fires a per-core MEI to each selected core. Returns once all selected cores have ACK'd (i.e., `PULP_START` self-clears).
-4. `cluster_wait_done_eu()` — CV32 sleeps in `cv.elw` until EU bit 12 fires (PULP_DONE quorum reached).
+1. `cluster_boot(binary_start)` — writes `PULP_BINARY`, asserts `CLK_EN`, polls `PULP_READY` until all 8 cores have armed (every core, not just core 0, posts to this counter).
+2. `cluster_arm_done_event()` — clears the CV32 Event Unit buffer and enables only EU bit 12 (cluster-done), avoiding spurious wakeups from stale RedMulE/iDMA/etc. events.
+3. `cluster_dispatch_task(task_addr)` — writes `PULP_TASKBIN`/`PULP_DATA`, rings `PULP_START` as a doorbell; core 0 (the cluster's sole dispatcher) is the only core that ever reads this mailbox. Returns once core 0 has ACK'd (`PULP_START` self-clears).
+4. `cluster_wait_done_eu()` — CV32 sleeps in `cv.elw` until EU bit 12 fires.
 5. `cluster_stop()` — de-asserts `CLK_EN` to gate the cluster clock.
 
-Each cluster core runs a dispatcher loop that waits in `WFI` for the MEI, reads `PULP_TASKBIN`/`PULP_DATA` from the trap handler, calls the task function, writes `PULP_DONE`, and re-enters `WFI`.
+**Level 1 — core 0 → the rest of the team** (`sw/utils/cluster_utils.h`, cluster's own Event Unit): core 0 may fan work out to cores 1-7 with `pi_cl_team_fork(n, entry, arg)` — a bare-metal, pulp-sdk-API-compatible reimplementation: it configures the team on the cluster's dispatch FIFO, pushes `{entry, arg}`, runs `entry(arg)` itself, then rendez-vous with the rest of the team on a hardware barrier. Workers otherwise park in `worker_wait` (`pulp_crt0.S`), asleep on the dispatch FIFO. `pi_cl_team_critical_enter()/exit()` (hardware mutex) and `pi_cl_team_push_other()`/`pi_cl_team_barrier_id()` (disjoint concurrent sub-teams) are also available — see `sw/tests/cluster_tests/parallel_groups/` for a worked example of two teams running concurrently on disjoint core subsets.
 
 Cluster task sources live under `sw/tests/<test>/pulp_task/`. A test directory containing a `pulp_task/` subdirectory automatically triggers the dual-binary build flow in the Makefile.
 ## 🧰 Changing number of tiles
