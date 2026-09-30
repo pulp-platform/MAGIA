@@ -81,7 +81,7 @@ packages:
     - fpnew
     - tech_cells_generic
   cv32e40x:
-    revision: a90101211048ba1a16cedbe4db963ab6e12569d7
+    revision: 8834f135214f8f25f710ebd77f48d9f03d9548e6
     version: null
     source:
       Git: https://github.com/pulp-platform/cv32e40x.git
