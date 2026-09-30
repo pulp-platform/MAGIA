@@ -421,6 +421,7 @@ bender_defs    += -D SPATZ_RVV=$(SPATZ_RVV)
 
 update-ips:
 	$(BENDER) update
+	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_ADD_IDS=$(IDMA_ADD_IDS)
 	$(BENDER) script vsim          \
 	--vlog-arg="$(compile_flag)"   \
 	--vcom-arg="-pedanticerrors"   \
@@ -429,6 +430,8 @@ update-ips:
 	> ${compile_script}
 
 vsim-scripts:
+	$(BENDER) checkout
+	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_ADD_IDS=$(IDMA_ADD_IDS)
 	$(BENDER) script vsim          \
 	--vlog-arg="$(compile_flag)"   \
 	--vcom-arg="-pedanticerrors"   \
@@ -451,11 +454,6 @@ profile-ips:
 	$(bender_targs) $(bender_defs) 			\
 	$(profile_targs)    $(profile_defs)    	\
 	> ${compile_script}
-
-floonoc-patch:
-	cd $(FLOONOC_ROOT) &&                  \
-	git apply ../../../../floonoc.patch && \
-	cd ../../../../
 
 build-hw: hw-all
 
@@ -560,7 +558,7 @@ hw-all: hw-clean hw-lib hw-compile hw-opt
 # Nonfree components
 MAGIA_NONFREE_REMOTE ?= $(GITLAB_UNIBO_SSH_STRING)/magia/nonfree.git
 MAGIA_NONFREE_DIR    ?= nonfree
-MAGIA_NONFREE_COMMIT ?= 731eaef8ba9a259d3573f94bd39e243c5ef65305
+MAGIA_NONFREE_COMMIT ?= a5259b2c2415a6f48f7570911f1dab07c858b91c
 MAGIA_NONFREE_DEPS   ?= 1
 
 .PHONY: magia-nonfree-init

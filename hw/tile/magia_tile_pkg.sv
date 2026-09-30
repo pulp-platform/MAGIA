@@ -31,6 +31,7 @@ package magia_tile_pkg;
   `include "fractal_sync/typedef.svh"
   `include "reqrsp_interface/typedef.svh"
   `include "tcdm_interface/typedef.svh"
+  `include "floo_noc/typedef.svh"
 
   `include "../include/alias.svh"
 
@@ -64,11 +65,10 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_SIZE         = 32'h0000_1000;
   localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_END     = EVENT_UNIT_ADDR_START + EVENT_UNIT_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_START          = EVENT_UNIT_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_SIZE           = 32'h0000_0100;
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_SIZE           = 32'h0000_0200;
   localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_END            = TILE_CSR_START + TILE_CSR_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = TILE_CSR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_SIZE           = 32'h0000_E800;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END       = RESERVED_ADDR_START + RESERVED_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END       = 32'h0000_FFFF;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START        = RESERVED_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE              = 32'h0001_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_END          = STACK_ADDR_START + STACK_SIZE;
@@ -76,8 +76,8 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_SIZE                 = 32'h000E_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_END             = L1_ADDR_START + L1_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_TILE_OFFSET          = 32'h0010_0000;
-  localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_START           = 32'hC000_0000;
-  localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                 = 32'h4000_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_START           = 32'hB000_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                 = 32'h5000_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_END             = L2_ADDR_START + L2_SIZE;
 
   // Instruction region for Spatz code (cacheable region)
@@ -338,7 +338,7 @@ package magia_tile_pkg;
   localparam int unsigned NumDim                  = iDMA_NumDims;                       // Needed by the iDMA typedef (wtf?)
   parameter int unsigned iDMA_DataWidth           = magia_pkg::WIDE_DATA_W;             // iDMA Data Width
   parameter int unsigned iDMA_AddrWidth           = magia_pkg::ADDR_W;                  // iDMA Address Width
-  parameter int unsigned iDMA_UserWidth           = AXI_DATA_U_W;                       // iDMA AXI User Width
+  parameter int unsigned iDMA_UserWidth           = magia_pkg::USR_W;                   // iDMA AXI User Width
   parameter int unsigned iDMA_StrbWidth           = magia_pkg::WIDE_STRB_W;             // iDMA AXI Strobe Width
   parameter int unsigned iDMA_AxiIdWidth          = AXI_DATA_ID_W;                      // iDMA AXI ID Width
   parameter int unsigned iDMA_NumAxInFlight       = 16;                                 // iDMA Number of transaction that can be in-flight concurrently
@@ -621,7 +621,7 @@ package magia_tile_pkg;
   `REG_BUS_TYPEDEF_ALL(reg_dma, logic[magia_pkg::ADDR_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0])
   `REG_BUS_TYPEDEF_ALL(idma_fe_reg, logic[magia_pkg::ADDR_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0])
 
-  `IDMA_TYPEDEF_FULL_REQ_T(idma_be_req_t, logic[iDMA_AxiIdWidth-1:0], idma_addr_t, logic[iDMA_TFLenWidth-1:0])
+  `IDMA_TYPEDEF_FULL_REQ_T(idma_be_req_t, logic[iDMA_AxiIdWidth-1:0], idma_addr_t, logic[iDMA_TFLenWidth-1:0], logic[35:0])
   `IDMA_TYPEDEF_FULL_RSP_T(idma_be_rsp_t, idma_addr_t)
   `IDMA_TYPEDEF_FULL_ND_REQ_T(idma_nd_req_t, idma_be_req_t, logic[iDMA_RepWidth-1:0], logic[iDMA_StrideWidth-1:0])
 
@@ -741,6 +741,12 @@ package magia_tile_pkg;
   `OBI_TYPEDEF_DEFAULT_REQ_T(spatz_obi32_req_t, spatz_obi32_a_chan_t)
   `OBI_TYPEDEF_RSP_T(spatz_obi32_rsp_t, spatz_obi32_r_chan_t)
 
+
+  typedef logic [255:0] wide_data_t;
+  `FLOO_RED_TYPEDEF_REQ_RSP_LINK(wide, wide_data_t, wide_req, wide_rsp)
+
+  typedef logic [31:0] narrow_data_t;
+  `FLOO_RED_TYPEDEF_REQ_RSP_LINK(narrow, narrow_data_t, narrow_req, narrow_rsp)
 
 
 

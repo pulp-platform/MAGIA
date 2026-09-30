@@ -73,8 +73,10 @@
 #define PULP_CTRL_END         (0x000017FF)
 #define PULP_CORE_COUNT       (8)
 #define PULP_HARTID_BASE      (32)   /* 2 * NUM_CLUSTERS (16) */
-#define RESERVED_START  (0x00001800)   
-#define RESERVED_END    (0x0000FFFF)   
+#define COLL_CTRL_BASE  (0x00001800)
+#define COLL_CTRL_END   (0x000018FF)
+#define RESERVED_START  (0x00001900)
+#define RESERVED_END    (0x0000FFFF)
 #define STACK_START     (0x00010000)
 #define STACK_END       (0x0001FFFF)
 #define L1_BASE         (0x00020000)
