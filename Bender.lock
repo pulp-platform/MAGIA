@@ -87,7 +87,7 @@ packages:
       Git: https://github.com/pulp-platform/cv32e40x.git
     dependencies: []
   event_unit_flex:
-    revision: 763c3b9977970f656326c70a96debfb2ac0f85b2
+    revision: d0d2b0e664dbd8dab6960f1e0cd77adb884fa0eb
     version: null
     source:
       Git: https://github.com/pulp-platform/event_unit_flex.git
@@ -242,7 +242,7 @@ packages:
     dependencies:
     - tech_cells_generic
   spatz:
-    revision: 70b3d9af224fda15ff17b60bc8ea01eafa631328
+    revision: 3228a9077cb33b4ee235029e8fcace52ed327334
     version: null
     source:
       Git: https://github.com/pulp-platform/spatz.git
