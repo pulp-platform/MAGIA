@@ -127,6 +127,18 @@ module magia_vip
     rst_n = 1'b1;
   end
 
+  // $assertcontrol arguments (IEEE 1800-2012 20.12): control On/Off, unique|unique0|priority checks
+  localparam int unsigned ASSERT_ON          = 3;
+  localparam int unsigned ASSERT_OFF         = 4;
+  localparam int unsigned ASSERT_UNIQUE_PRIO = 32 + 64 + 128;
+
+  // Before the reset edge every FSM state is X, so unique/priority checks start once it is applied
+  initial begin: p_unique_check_gate
+    $assertcontrol(ASSERT_OFF, ASSERT_UNIQUE_PRIO);
+    #(RST_ASSERT_TIME + 1);
+    $assertcontrol(ASSERT_ON, ASSERT_UNIQUE_PRIO);
+  end
+
 /*******************************************************/
 /**                Clock and Reset End                **/
 /*******************************************************/
@@ -232,31 +244,30 @@ module magia_vip
       string_char_t chars[$];
       bit[magia_tb_pkg::L2_ID_W-1:0] write_id;
       always @(posedge clk) begin: print_monitor
-        if ((i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0000) && (i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw_valid))
+        if ((i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0000) && (i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].aw_valid))
           stderr_ready = 1'b1;
         // NOTE: all print peripherals are assumed to be aliased
-        if ((i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0004/*+((i*magia_tb_pkg::N_TILES_X+j)*4)*/) && (i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw_valid)) begin
+        if ((i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].aw.addr == 32'hFFFF0004/*+((i*magia_tb_pkg::N_TILES_X+j)*4)*/) && (i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].aw_valid)) begin
           stdio_ready  = 1'b1;
-          write_id = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].aw.id;
+          write_id = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].aw.id;
         end
-        if ((i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w_valid) && stderr_ready) begin
-          errors       = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data[7:0];
+        if ((i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].w_valid) && stderr_ready) begin
+          errors       = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].w.data[7:0];
           stderr_ready = 1'b0;
         end
-        if ((i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w_valid) && stdio_ready) begin
-          if (i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data[7:0] == 10)  // ASCII code for new line (\n) is 10
+        if ((i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].w_valid) && stdio_ready) begin
+          if (i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].w.data[7:0] == 10)  // ASCII code for new line (\n) is 10
             print_line[write_id] = 1'b1;
-          chars.push_back('{i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_axi_xbar.mst_ports_req_o[0].w.data[7:0], write_id});
+          chars.push_back('{i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_axi_xbar.mst_ports_req_o[0].w.data[7:0], write_id});
           stdio_ready = 1'b0;
         end
         for (int k = 0; k < 2**magia_tb_pkg::L2_ID_W; k++) begin
           if (print_line[k] == 1'b1) begin
             $write("[mhartid %0d] ", i*magia_tb_pkg::N_TILES_X+j);
-            for (int ch_idx = 0; ch_idx < chars.size(); ch_idx++) begin
-              if (chars[ch_idx].id == k) begin
-                $write("%c", chars[ch_idx].data);
-                chars.delete(ch_idx);
-                ch_idx--;
+            for (int j = 0; j < chars.size(); j++) begin
+              if (chars[j].id == k) begin
+                $write("%c", chars[j].data);
+                chars.delete(j--);
               end
             end
             print_line[k] = 1'b0;
@@ -298,9 +309,9 @@ module magia_vip
   for (genvar i = 0; i < magia_tb_pkg::N_TILES_Y; i++) begin: gen_tile_instr_monitor_y
     for (genvar j = 0; j < magia_tb_pkg::N_TILES_X; j++) begin: gen_tile_instr_monitor_x
 `ifdef CV32E40X
-      assign curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_ctrl_core.core_i.id_stage_i.id_ex_pipe_o.instr.bus_resp.rdata;
+      assign curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_cv32e40x_ctrl_core.core_i.id_stage_i.id_ex_pipe_o.instr.bus_resp.rdata;
 `else
-      assign curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_ctrl_core.ex_valid ? i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_ctrl_core.id_stage_i.instr_rdata_i : '0;
+      assign curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_cv32e40p_ctrl_core.ex_valid ? i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_cv32e40p_ctrl_core.id_stage_i.instr_rdata_i : '0;
 `endif
       always @(curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j]) begin: instr_ex_reporter
         if (curr_instr_ex[i*magia_tb_pkg::N_TILES_X+j] == 32'h50500013) 
@@ -318,9 +329,9 @@ module magia_vip
         end
       end
 `ifdef CV32E40X
-      assign curr_instr_id[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_ctrl_core.core_i.id_stage_i.if_id_pipe_i.instr.bus_resp.rdata;
+      assign curr_instr_id[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_cv32e40x_ctrl_core.core_i.id_stage_i.if_id_pipe_i.instr.bus_resp.rdata;
 `else
-      assign curr_instr_id[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_ctrl_core.id_stage_i.instr_rdata_i;
+      assign curr_instr_id[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_cv32e40p_ctrl_core.id_stage_i.instr_rdata_i;
 `endif
       always @(curr_instr_id[i*magia_tb_pkg::N_TILES_X+j]) begin: instr_id_reporter
         if (curr_instr_id[i*magia_tb_pkg::N_TILES_X+j] == 32'h40400013) 
@@ -368,11 +379,11 @@ module magia_vip
   for (genvar i = 0; i < magia_tb_pkg::N_TILES_Y; i++) begin: gen_tile_instr_monitor_y
     for (genvar j = 0; j < magia_tb_pkg::N_TILES_X; j++) begin: gen_tile_instr_monitor_x 
 `ifdef CV32E40X
-      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr_valid ?
-      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
+      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr_valid ?
+      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
 `else
-      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_ctrl_core.wb_valid ?
-      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_ctrl_core.regfile_wdata : '0;
+      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_cv32e40p_ctrl_core.wb_valid ?
+      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_cv32e40p_ctrl_core.regfile_wdata : '0;
 `endif
       always @(curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j]) begin: instr_wb_reporter
         if (curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] == 32'h5AA00013) begin
@@ -528,11 +539,11 @@ module magia_vip
   for (genvar i = 0; i < magia_tb_pkg::N_TILES_Y; i++) begin: gen_tile_instr_monitor_y
     for (genvar j = 0; j < magia_tb_pkg::N_TILES_X; j++) begin: gen_tile_instr_monitor_x 
 `ifdef CV32E40X
-      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr_valid ?
-      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
+      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr_valid ?
+      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
 `else
-      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_ctrl_core.wb_valid ?
-      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_cv32e40p_ctrl_core.instr_rdata_id : '0;
+      assign curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] = i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_cv32e40p_ctrl_core.wb_valid ?
+      i_magia.gen_y_tile[i].gen_x_tile[j].i_magia_tile.i_magia_isle.i_cv32e40p_ctrl_core.instr_rdata_id : '0;
 `endif
       always @(curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j]) begin: instr_wb_reporter
         if (curr_instr_wb[i*magia_tb_pkg::N_TILES_X+j] == 32'h5AA00013) begin

@@ -43,6 +43,8 @@ XLEN           ?= 32
 
 zfinx         := 1
 cluster_zfinx := 1
+# FractalSync network in the mesh and in every tile
+fsync         ?= 1
 
 PULP_XTEN_BASE := xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw
 
@@ -191,6 +193,8 @@ _AUTO_TASKS := $(shell grep -oP '\b(?!SPATZ_)[A-Z][A-Z0-9_]*_TASK\b' $(_SPATZ_SR
 SPATZ_TASKS := $(filter-out $(PULP_TASKS),$(_AUTO_TASKS))
 
 # Setup build object dirs
+# Spatz/PULP artifacts and generated headers are named after the bare test name
+TEST_NAME      = $(notdir $(test))
 TEST_BUILD_DIR = $(TEST_DIR)/$(if $(TEST_SUBDIR),$(TEST_SUBDIR)/)$(test)
 CRT=$(TEST_BUILD_DIR)/build/crt0.o
 OBJ=$(TEST_BUILD_DIR)/build/verif.o
@@ -198,8 +202,8 @@ BIN=$(TEST_BUILD_DIR)/build/verif
 DUMP=$(TEST_BUILD_DIR)/build/verif.dump
 ODUMP=$(TEST_BUILD_DIR)/build/verif.objdump
 # PULP cluster disassembly with global (runtime) addresses (only when PULP_TASKS set)
-PULP_ELF=$(PULP_SW_DIR)/bin/$(test)_pulp_task_bin.elf
-PULP_DUMP_GLOBAL=$(TEST_BUILD_DIR)/build/$(test)_pulp_task_global.dump
+PULP_ELF=$(PULP_SW_DIR)/bin/$(TEST_NAME)_pulp_task_bin.elf
+PULP_DUMP_GLOBAL=$(TEST_BUILD_DIR)/build/$(TEST_NAME)_pulp_task_global.dump
 ITB=$(TEST_BUILD_DIR)/build/verif.itb
 STIM_INSTR=$(TEST_BUILD_DIR)/build/stim_instr.txt
 STIM_DATA=$(TEST_BUILD_DIR)/build/stim_data.txt
@@ -221,7 +225,7 @@ $(STIM_INSTR) $(STIM_DATA): $(BIN)
 spatz-header:
 	@if [ -n "$(SPATZ_TASKS)" ]; then \
 		echo "[SPATZ] Auto-detected tasks: $(SPATZ_TASKS)"; \
-		$(MAKE) -C $(SPATZ_SW_DIR) task="$(SPATZ_TASKS)" TEST_NAME=$(test) SPATZ_RVD=$(SPATZ_RVD) SPATZ_VLEN=$(SPATZ_VLEN) SPATZ_N_IPU=$(SPATZ_N_IPU) SPATZ_N_FPU=$(SPATZ_N_FPU) SPATZ_XDIVSQRT=$(SPATZ_XDIVSQRT) SPATZ_XDMA=$(SPATZ_XDMA) SPATZ_RVF=$(SPATZ_RVF) SPATZ_RVV=$(SPATZ_RVV) all; \
+		$(MAKE) -C $(SPATZ_SW_DIR) task="$(SPATZ_TASKS)" TEST_NAME=$(TEST_NAME) SPATZ_RVD=$(SPATZ_RVD) SPATZ_VLEN=$(SPATZ_VLEN) SPATZ_N_IPU=$(SPATZ_N_IPU) SPATZ_N_FPU=$(SPATZ_N_FPU) SPATZ_XDIVSQRT=$(SPATZ_XDIVSQRT) SPATZ_XDMA=$(SPATZ_XDMA) SPATZ_RVF=$(SPATZ_RVF) SPATZ_RVV=$(SPATZ_RVV) all; \
 	else \
 		echo "[SPATZ] No Spatz tasks detected - skipping Spatz compilation"; \
 	fi
@@ -234,7 +238,7 @@ spatz-header:
 pulp-header:
 	@if [ -n "$(PULP_TASKS)" ]; then \
 		echo "[PULP] Auto-detected tasks: $(PULP_TASKS)"; \
-		$(MAKE) -C $(PULP_SW_DIR) TEST_NAME=$(test) task="$(PULP_TASKS)" PULP_TASK_DIR=$(ROOT_DIR)/$(PULP_TASK_DIR_PATH) core=CV32E40P zfinx=$(cluster_zfinx) all; \
+		$(MAKE) -C $(PULP_SW_DIR) TEST_NAME=$(TEST_NAME) task="$(PULP_TASKS)" PULP_TASK_DIR=$(ROOT_DIR)/$(PULP_TASK_DIR_PATH) core=CV32E40P zfinx=$(cluster_zfinx) all; \
 	else \
 		echo "[PULP] No pulp_task/ directory — skipping PULP cluster compilation"; \
 	fi
@@ -370,6 +374,11 @@ ifeq ($(zfinx),1)
 endif
 bender_defs += -D ZFINX_CLUSTER=$(cluster_zfinx)
 
+ifeq ($(fsync),1)
+  bender_defs += -D MAGIA_FSYNC
+  common_defs += -D MAGIA_FSYNC
+endif
+
 bender_targs += -t rtl
 bender_targs += -t test
 bender_targs += -t cv32e40p_include_tracer
@@ -421,6 +430,7 @@ bender_defs    += -D SPATZ_RVV=$(SPATZ_RVV)
 
 update-ips:
 	$(BENDER) update
+	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_ADD_IDS=$(IDMA_ADD_IDS)
 	$(BENDER) script vsim          \
 	--vlog-arg="$(compile_flag)"   \
 	--vcom-arg="-pedanticerrors"   \
@@ -429,6 +439,8 @@ update-ips:
 	> ${compile_script}
 
 vsim-scripts:
+	$(BENDER) checkout
+	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_ADD_IDS=$(IDMA_ADD_IDS)
 	$(BENDER) script vsim          \
 	--vlog-arg="$(compile_flag)"   \
 	--vcom-arg="-pedanticerrors"   \
@@ -452,11 +464,6 @@ profile-ips:
 	$(profile_targs)    $(profile_defs)    	\
 	> ${compile_script}
 
-floonoc-patch:
-	cd $(FLOONOC_ROOT) &&                  \
-	git apply ../../../../floonoc.patch && \
-	cd ../../../../
-
 build-hw: hw-all
 
 sdk:
@@ -467,16 +474,16 @@ sdk:
 clean-sdk:
 	rm -rf $(SW)/pulp-sdk
 
+# Only this test: other tests can build in parallel
 clean:
 	rm -rf $(TEST_BUILD_DIR)/build
-	@if [ -d "$(SPATZ_SW_DIR)" ]; then \
-		echo "[CLEAN] Cleaning Spatz..."; \
-		$(MAKE) -C $(SPATZ_SW_DIR) clean; \
-	fi
-	@if [ -d "$(PULP_SW_DIR)" ]; then \
-		echo "[CLEAN] Cleaning PULP cluster..."; \
-		$(MAKE) -C $(PULP_SW_DIR) clean; \
-	fi
+	$(MAKE) -C $(SPATZ_SW_DIR) clean-test TEST_NAME=$(TEST_NAME)
+	$(MAKE) -C $(PULP_SW_DIR) clean-test TEST_NAME=$(TEST_NAME)
+
+# Spatz and PULP artifacts of every test
+clean-sw-all:
+	$(MAKE) -C $(SPATZ_SW_DIR) clean
+	$(MAKE) -C $(PULP_SW_DIR) clean
 
 dis:
 	$(OBJDUMP) -d -S $(BIN) > $(DUMP)

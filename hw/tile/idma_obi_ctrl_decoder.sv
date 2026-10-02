@@ -30,6 +30,9 @@ module idma_obi_ctrl_decoder
   parameter type idma_fe_reg_req_t = magia_tile_pkg::idma_fe_reg_req_t,
   parameter type idma_fe_reg_rsp_t = magia_tile_pkg::idma_fe_reg_rsp_t
 )(
+  input  logic         clk_i,
+  input  logic         rst_ni,
+
   // OBI Slave Interface (CPU access)
   input  obi_req_t     obi_req_i,
   output obi_rsp_t     obi_rsp_o,
@@ -67,6 +70,9 @@ module idma_obi_ctrl_decoder
   
   localparam logic [11:0] IDMA_DONE_ID_0_OFFSET = 12'h84;
  
+  localparam logic [11:0] IDMA_MULTICAST_MASK_OFFSET = 12'hc4;
+  localparam logic [11:0] IDMA_COLLECTIVE_SEL_OFFSET = 12'hc8;
+
   localparam logic [11:0] IDMA_DST_ADDR_LOW_OFFSET = 12'hd0;
   localparam logic [11:0] IDMA_SRC_ADDR_LOW_OFFSET = 12'hd8;
   localparam logic [11:0] IDMA_LENGTH_LOW_OFFSET = 12'he0;
@@ -84,6 +90,11 @@ module idma_obi_ctrl_decoder
   
   idma_fe_reg_req_t selected_idma_req;
   idma_fe_reg_rsp_t selected_idma_rsp;
+
+  logic              obi_gnt;
+  logic              rvalid_q;
+  logic [DATA_W-1:0] rdata_q;
+  logic              err_q;
 
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
@@ -119,7 +130,9 @@ module idma_obi_ctrl_decoder
                           (reg_offset == IDMA_REPS_2_LOW_OFFSET) ||
                           (reg_offset == IDMA_DST_STRIDE_3_LOW_OFFSET) ||
                           (reg_offset == IDMA_SRC_STRIDE_3_LOW_OFFSET) ||
-                          (reg_offset == IDMA_REPS_3_LOW_OFFSET)
+                          (reg_offset == IDMA_REPS_3_LOW_OFFSET) || 
+                          (reg_offset == IDMA_MULTICAST_MASK_OFFSET)  ||
+                          (reg_offset == IDMA_COLLECTIVE_SEL_OFFSET)
                           );
 
 /*******************************************************/
@@ -161,19 +174,29 @@ module idma_obi_ctrl_decoder
     selected_idma_req.valid = obi_req_i.req && is_valid_access;
   end
 
-  // OBI response - purely combinatorial like XIF interface
+  assign obi_gnt = obi_req_i.req && is_valid_access && selected_idma_rsp.ready;
+
+  always_ff @(posedge clk_i, negedge rst_ni) begin: obi_response
+    if (~rst_ni) begin
+      rvalid_q <= 1'b0;
+      rdata_q  <= '0;
+      err_q    <= 1'b0;
+    end else begin
+      rvalid_q <= obi_gnt;
+      if (obi_gnt) begin
+        rdata_q <= selected_idma_rsp.rdata;
+        err_q   <= selected_idma_rsp.error;
+      end
+    end
+  end
+
   always_comb begin: idma_reg_to_obi
-    // Grant immediately for valid requests (OBI protocol requirement)
-    obi_rsp_o.gnt = obi_req_i.req && is_valid_access;
-    
-    // Response valid when iDMA is ready to respond (both read and write)
-    obi_rsp_o.rvalid = selected_idma_rsp.ready && is_valid_access;
-    
-    // Read data directly from iDMA response (writes return 0)
-    obi_rsp_o.r.rdata = selected_idma_rsp.rdata;
+    obi_rsp_o.gnt          = obi_gnt;
+    obi_rsp_o.rvalid       = rvalid_q;
+    obi_rsp_o.r.rdata      = rdata_q;
     obi_rsp_o.r.r_optional = '0;
-    obi_rsp_o.r.err = selected_idma_rsp.error || !is_valid_access;
-    obi_rsp_o.r.rid = '0;
+    obi_rsp_o.r.err        = err_q;
+    obi_rsp_o.r.rid        = '0;
   end
 
 /*******************************************************/
