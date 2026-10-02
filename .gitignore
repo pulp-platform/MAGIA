@@ -45,3 +45,6 @@ sw/kernel_pulp/headers_bin/
 *.wlf
 *.dbg
 verilator/build*/
+
+# scripts/run_regression.py worktrees and results
+.regression/
