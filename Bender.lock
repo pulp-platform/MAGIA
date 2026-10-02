@@ -87,17 +87,17 @@ packages:
       Git: https://github.com/pulp-platform/cv32e40x.git
     dependencies: []
   event_unit_flex:
-    revision: 763c3b9977970f656326c70a96debfb2ac0f85b2
+    revision: 087bc5566164ab0e48a3c0acf6c201d6613985ae
     version: null
     source:
       Git: https://github.com/pulp-platform/event_unit_flex.git
     dependencies:
     - common_cells
   floo_noc:
-    revision: 6ac187326b222a491180cc3f77e0e4e5a69f5167
+    revision: f3db5e76a5461f590e743e2583f1607ecbabc24e
     version: 0.6.1
     source:
-      Git: https://github.com/pulp-platform/FlooNoC.git
+      Git: https://github.com/FondazioneChipsIT/FlooNoC.git
     dependencies:
     - axi
     - axi_riscv_atomics
@@ -166,10 +166,10 @@ packages:
     dependencies:
     - tech_cells_generic
   idma:
-    revision: ff5d56fffb3767814db88d6bf8f381974ea33aa5
+    revision: 26ac2cd1c535851b14c9c508762203a180961cad
     version: 0.6.4
     source:
-      Git: https://github.com/pulp-platform/iDMA.git
+      Git: https://github.com/FondazioneChipsIT/iDMA.git
     dependencies:
     - axi
     - axi_stream
@@ -242,7 +242,7 @@ packages:
     dependencies:
     - tech_cells_generic
   spatz:
-    revision: 9380883fd36a4794d7f31e2c22e3fed3202aeb81
+    revision: 70b3d9af224fda15ff17b60bc8ea01eafa631328
     version: null
     source:
       Git: https://github.com/pulp-platform/spatz.git
