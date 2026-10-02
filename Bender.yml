@@ -43,7 +43,7 @@ dependencies:
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
   fractal_sync      : { git: "https://github.com/VictorIsachi/fractal_sync"           , rev: df8e21b7e2b0e2d3198bf44a60b4ca67c334bcc2 } # branch: main
   floo_noc          : { git: "https://github.com/FondazioneChipsIT/FlooNoC.git"       , rev: f3db5e76a5461f590e743e2583f1607ecbabc24e } # branch: cc/row-major
-  event_unit_flex   : { git: "https://github.com/pulp-platform/event_unit_flex.git"   , rev: 763c3b9977970f656326c70a96debfb2ac0f85b2 } 
+  event_unit_flex   : { git: "https://github.com/pulp-platform/event_unit_flex.git"   , rev: 087bc5566164ab0e48a3c0acf6c201d6613985ae } # branch: lb/fix-wait-clear-event-loss
 
 export_include_dirs:
   - hw/include
