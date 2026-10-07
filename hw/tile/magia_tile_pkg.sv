@@ -61,7 +61,18 @@ package magia_tile_pkg;
   localparam int unsigned IRQ_USED              = 13;
 
   // Address map
-  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START = 32'h0000_0100;
+  // Bases of the tile peripherals and of the tile window (reserved, stack, L1), default 0
+`ifdef MAGIA_TILE_PERIPH_BASE
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_PERIPH_BASE        = `MAGIA_TILE_PERIPH_BASE;
+`else
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_PERIPH_BASE        = 32'h0000_0000;
+`endif
+`ifdef MAGIA_TILE_WINDOW_BASE
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_WINDOW_BASE        = `MAGIA_TILE_WINDOW_BASE;
+`else
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_WINDOW_BASE        = 32'h0000_0000;
+`endif
+  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START = TILE_PERIPH_BASE + 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_SIZE       = 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_END   = REDMULE_CTRL_ADDR_START + REDMULE_CTRL_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_START    = REDMULE_CTRL_ADDR_END;
@@ -82,8 +93,8 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_ADDR_START    = CLUSTER_CTRL_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_SIZE          = 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_ADDR_END      = COLL_CTRL_ADDR_START + COLL_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = COLL_CTRL_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END       = 32'h0000_FFFF;
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = TILE_WINDOW_BASE + (COLL_CTRL_ADDR_END - TILE_PERIPH_BASE);
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END       = TILE_WINDOW_BASE + 32'h0000_FFFF;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START        = RESERVED_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE              = 32'h0001_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_END          = STACK_ADDR_START + STACK_SIZE;
@@ -205,7 +216,11 @@ package magia_tile_pkg;
   };
 
   // Spatz bootrom parameters
+`ifdef MAGIA_SPATZ_BOOT_ADDR
+  parameter logic [31:0] SPATZ_BOOT_ADDR          = `MAGIA_SPATZ_BOOT_ADDR;  // Spatz bootrom base address
+`else
   parameter logic [31:0] SPATZ_BOOT_ADDR          = 32'h1000_0000;  // Spatz bootrom base address
+`endif
   parameter logic [31:0] SPATZ_BOOTROM_SIZE       = 32'h0000_00FF;
   
   // Spatz TCDM parameters
@@ -346,7 +361,7 @@ package magia_tile_pkg;
     int unsigned fsync;      // FractalSync control (valid iff MAGIA_FSYNC)
     int unsigned spatz;      // Spatz CC control (valid iff EnSpatzCC)
     int unsigned cluster;    // PULP cluster control (valid iff EnCluster)
-    int unsigned coll;       // Collective control
+    int unsigned coll;       // Collective control (valid iff EnCollective)
   } ctrl_map_t;
 
   function automatic ctrl_map_t gen_ctrl_map(magia_tile_cfg_t cfg);
@@ -372,8 +387,10 @@ package magia_tile_pkg;
       ret.cluster = idx;
       idx = idx + 1;
     end
-    ret.coll = idx;
-    idx = idx + 1;
+    if (cfg.EnCollective) begin
+      ret.coll = idx;
+      idx = idx + 1;
+    end
     ret.num_units = idx;
     return ret;
   endfunction
@@ -567,7 +584,8 @@ package magia_tile_pkg;
       ret[map.spatz] = '{idx: map.spatz, start_addr: SPATZ_CTRL_ADDR_START, end_addr: SPATZ_CTRL_ADDR_END};
     if (cfg.EnCluster)
       ret[map.cluster] = '{idx: map.cluster, start_addr: CLUSTER_CTRL_ADDR_START, end_addr: CLUSTER_CTRL_ADDR_END};
-    ret[map.coll] = '{idx: map.coll, start_addr: COLL_CTRL_ADDR_START, end_addr: COLL_CTRL_ADDR_END};
+    if (cfg.EnCollective)
+      ret[map.coll] = '{idx: map.coll, start_addr: COLL_CTRL_ADDR_START, end_addr: COLL_CTRL_ADDR_END};
     return ret;
   endfunction
 
@@ -772,7 +790,8 @@ package magia_tile_pkg;
     UniqueIds           : 1'b0,
     AxiAddrWidth        : magia_pkg::ADDR_W,
     AxiDataWidth        : magia_pkg::DATA_W,
-    NoAddrRules         : 0   // placeholder: gen_axi_xbar_cfg() fills it from gen_axi_xbar_num_rules()
+    NoAddrRules         : 0,  // placeholder: gen_axi_xbar_cfg() fills it from gen_axi_xbar_num_rules()
+    default             : '0  // Fields of newer axi revisions
   };
 
   typedef struct packed {
@@ -884,11 +903,14 @@ package magia_tile_pkg;
   `OBI_TYPEDEF_RSP_T(spatz_obi32_rsp_t, spatz_obi32_r_chan_t)
 
 
+  // Router reduction types for magia_tile, dropped by MAGIA_NO_NOC_TYPES
+`ifndef MAGIA_NO_NOC_TYPES
   typedef logic [255:0] wide_data_t;
   `FLOO_RED_TYPEDEF_REQ_RSP_LINK(wide, wide_data_t, wide_req, wide_rsp)
 
   typedef logic [31:0] narrow_data_t;
   `FLOO_RED_TYPEDEF_REQ_RSP_LINK(narrow, narrow_data_t, narrow_req, narrow_rsp)
+`endif
 
 
 

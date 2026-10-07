@@ -25,3 +25,6 @@ endif
 sim_targs += -t magia_tile_test
 
 sim_targs += -t magia_dv
+
+# Core traces in DV builds
+sim_defs  += -D CORE_TRACES

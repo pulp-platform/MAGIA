@@ -435,7 +435,7 @@ update-ips:
 	--vlog-arg="$(compile_flag)"   \
 	--vcom-arg="-pedanticerrors"   \
 	$(bender_targs) $(bender_defs) \
-	$(sim_targs)    $(sim_deps)    \
+	$(sim_targs)    $(sim_defs)    \
 	> ${compile_script}
 
 vsim-scripts:
@@ -445,7 +445,7 @@ vsim-scripts:
 	--vlog-arg="$(compile_flag)"   \
 	--vcom-arg="-pedanticerrors"   \
 	$(bender_targs) $(bender_defs) \
-	$(sim_targs)    $(sim_deps)    \
+	$(sim_targs)    $(sim_defs)    \
 	> ${compile_script}
 
 synth-ips:

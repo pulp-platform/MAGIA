@@ -23,6 +23,13 @@
 `include "hci_helpers.svh"
 `include "hwpe_ctrl_helpers.svh"
 
+// Observation port of the Verilator testbench, dropped by MAGIA_NO_OBSERVE
+`ifdef VERILATOR
+`ifndef MAGIA_NO_OBSERVE
+`define MAGIA_ISLE_OBSERVE
+`endif
+`endif
+
 module magia_isle
   import magia_tile_pkg::*;
   import magia_pkg::*;
@@ -37,7 +44,15 @@ module magia_isle
   import obi_pkg::*;
   import axi_pkg::*;
 #(
-  parameter magia_tile_pkg::magia_tile_cfg_t TileCfg = magia_tile_pkg::MagiaTileDefaultCfg
+  parameter magia_tile_pkg::magia_tile_cfg_t TileCfg = magia_tile_pkg::MagiaTileDefaultCfg,
+
+  // Hart ids: control core and Spatz at HartIdBase + mhartid_i, cluster cores after all tiles
+  parameter int unsigned                     HartIdBase      = 0,
+  parameter int unsigned                     InstanceCount   = magia_pkg::N_TILES,
+
+  // Cacheable code region for the i-caches and Spatz's PMA; size 0 caches every fetch
+  parameter longint unsigned                 CodeRegionBase  = 64'h0,
+  parameter longint unsigned                 CodeRegionSize  = 64'h0
 )(
   input  logic                                    clk_i,
   input  logic                                    rst_ni,
@@ -81,18 +96,19 @@ module magia_isle
   output logic                                    debug_halted_o,
   output logic                                    debug_pc_valid_o,
   output logic[31:0]                              debug_pc_o,
-  output logic[63:0]                              mcycle_o
+  output logic[63:0]                              mcycle_o,
+  // Debug halt and exception entry points of the control core
+  input  logic[31:0]                              dm_halt_addr_i,
+  input  logic[31:0]                              dm_exception_addr_i
 `ifdef CV32E40X
   // Read only by the CV32E40X
   , input  logic                                  scan_cg_en_i,
   input  logic[31:0]                              mtvec_addr_i,
-  input  logic[31:0]                              dm_halt_addr_i,
-  input  logic[31:0]                              dm_exception_addr_i,
   input  logic[ 3:0]                              mimpid_patch_i,
   input  logic[63:0]                              time_i,
   input  logic                                    wu_wfe_i
 `endif
-`ifdef VERILATOR
+`ifdef MAGIA_ISLE_OBSERVE
   , output magia_tile_observe_t                   observe_o
 `endif
 );
@@ -135,6 +151,28 @@ module magia_isle
   `HCI_TYPEDEF_RSP_T(tile_hci_data_rsp_t, logic[magia_tile_pkg::DW_LIC-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
   `HCI_TYPEDEF_REQ_T(tile_idma_hci_req_t, logic[magia_tile_pkg::iDMA_AddrWidth-1:0], logic[magia_tile_pkg::iDMA_DataWidth-1:0], logic[magia_tile_pkg::iDMA_StrbWidth-1:0], logic[magia_tile_pkg::iDMA_UserWidth-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
   `HCI_TYPEDEF_RSP_T(tile_idma_hci_rsp_t, logic[magia_tile_pkg::iDMA_DataWidth-1:0], logic[magia_tile_pkg::iDMA_UserWidth-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
+
+  localparam logic[31:0] CodeRegionMask = (CodeRegionSize == 0) ? 32'h0
+                                        : ~(32'(CodeRegionSize) - 32'd1);
+
+  if (CodeRegionSize != 0 &&
+      (((CodeRegionSize & (CodeRegionSize - 1)) != 0) || ((CodeRegionBase & (CodeRegionSize - 1)) != 0)))
+    $fatal(1, "magia_isle: the code region 0x%0h+0x%0h is not a power of two aligned to its size",
+           CodeRegionBase, CodeRegionSize);
+
+  // Built through a function: a nested `default:` pattern does not elaborate in every tool
+  function automatic snitch_pma_pkg::rule_t [snitch_pma_pkg::NrMaxRules-1:0] spatz_code_regions();
+    automatic snitch_pma_pkg::rule_t [snitch_pma_pkg::NrMaxRules-1:0] rules = '{default: '0};
+    rules[0] = '{base: 48'(CodeRegionBase), mask: 48'(CodeRegionMask)};
+    return rules;
+  endfunction
+  localparam snitch_pma_pkg::snitch_pma_t SpatzCodePmaCfg = '{
+    NrCachedRegionRules: 1,
+    CachedRegion: spatz_code_regions(),
+    default: 0
+  };
+  localparam snitch_pma_pkg::snitch_pma_t SpatzPmaCfg =
+    (CodeRegionSize == 0) ? magia_tile_pkg::SPATZ_SNITCH_PMA_CFG : SpatzCodePmaCfg;
 
 /*******************************************************/
 /**                 Configuration End                 **/
@@ -272,7 +310,7 @@ module magia_isle
     .mtvec_addr_i                                  ,
     .dm_halt_addr_i                                ,
     .dm_exception_addr_i                           ,
-    .mhartid_i                                     ,
+    .mhartid_i           ( 32'(HartIdBase) + mhartid_i ),
     .mimpid_patch_i                                ,
 
     .instr_req_o         ( core_instr_req.req     ),
@@ -353,9 +391,9 @@ module magia_isle
     .scan_cg_en_i           ( test_mode_i           ),
     .boot_addr_i            ( boot_addr_i           ),
     .mtvec_addr_i           ( boot_addr_i           ),  // SW can move mtvec with csrw
-    .dm_halt_addr_i         ( magia_tile_pkg::DM_HALT_ADDR),
-    .hart_id_i              ( mhartid_i             ),
-    .dm_exception_addr_i    ( magia_tile_pkg::DM_HALT_ADDR + 16'h000C),
+    .dm_halt_addr_i         ( dm_halt_addr_i        ),
+    .hart_id_i              ( 32'(HartIdBase) + mhartid_i ),
+    .dm_exception_addr_i    ( dm_exception_addr_i   ),
 
     .instr_req_o            ( core_instr_req.req    ),
     .instr_gnt_i            ( core_instr_rsp.gnt    ),
@@ -519,6 +557,8 @@ module magia_isle
   );
 
   magia_tile_icache_wrap #(
+    .CachedRegionBase ( 32'(CodeRegionBase)               ),
+    .CachedRegionMask ( CodeRegionMask                      ),
     .NumFetchPorts   ( magia_tile_pkg::NR_FETCH_PORTS       ),
     .L0_LINE_COUNT   ( magia_tile_pkg::L0_LINE_COUNT        ),
     .LINE_WIDTH      ( magia_tile_pkg::LINE_WIDTH           ),
@@ -821,6 +861,14 @@ module magia_isle
       else $error("magia_isle: OBI access to cluster ctrl range (0x%08x) but the PULP cluster is disabled",
                   core_mem_data_req[ObiSbr.l2].a.addr);
   end
+  if (!TileCfg.EnCollective) begin: gen_assert_no_coll_access
+    assert property (@(posedge sys_clk) disable iff (!rst_ni)
+      !(core_mem_data_req[ObiSbr.l2].req &&
+        core_mem_data_req[ObiSbr.l2].a.addr >= magia_tile_pkg::COLL_CTRL_ADDR_START &&
+        core_mem_data_req[ObiSbr.l2].a.addr <  magia_tile_pkg::COLL_CTRL_ADDR_END))
+      else $error("magia_isle: OBI access to collective ctrl range (0x%08x) but narrow collectives are disabled",
+                  core_mem_data_req[ObiSbr.l2].a.addr);
+  end
 `endif
 
 /*******************************************************/
@@ -909,16 +957,21 @@ module magia_isle
   logic[31:0] collective_mask;
   logic[3:0]  collective_op;
 
-  obi_slave_ctrl_coll #(
-    .BaseAddr ( magia_tile_pkg::COLL_CTRL_ADDR_START )
-  ) i_collective_ctrl (
-    .clk_i             ( sys_clk                ),
-    .rst_ni            ( rst_ni                 ),
-    .obi_req_i         ( ctrl_req[CtrlMap.coll] ),
-    .obi_rsp_o         ( ctrl_rsp[CtrlMap.coll] ),
-    .collective_mask_o ( collective_mask        ),
-    .collective_op_o   ( collective_op          )
-  );
+  if (TileCfg.EnCollective) begin: gen_collective_ctrl
+    obi_slave_ctrl_coll #(
+      .BaseAddr ( magia_tile_pkg::COLL_CTRL_ADDR_START )
+    ) i_collective_ctrl (
+      .clk_i             ( sys_clk                ),
+      .rst_ni            ( rst_ni                 ),
+      .obi_req_i         ( ctrl_req[CtrlMap.coll] ),
+      .obi_rsp_o         ( ctrl_rsp[CtrlMap.coll] ),
+      .collective_mask_o ( collective_mask        ),
+      .collective_op_o   ( collective_op          )
+    );
+  end else begin: gen_no_collective_ctrl
+    assign collective_mask = '0;
+    assign collective_op   = '0;
+  end
 
 /*******************************************************/
 /**               Control Registers End               **/
@@ -1020,14 +1073,18 @@ module magia_isle
   );
 
   // Writes to the collective window get the mask and op from the collective registers
-  collective_gen i_coll_gen (
-    .clk_i             ( sys_clk                      ),
-    .rst_ni            ( rst_ni                       ),
-    .collective_mask_i ( collective_mask              ),
-    .collective_op_i   ( collective_op                ),
-    .data_req_i        ( axi_xbar_mst_req[AxiMst.ext] ),
-    .data_req_o        ( axi_narrow_mst_req_o         )
-  );
+  if (TileCfg.EnCollective) begin: gen_collective_gen
+    collective_gen i_coll_gen (
+      .clk_i             ( sys_clk                      ),
+      .rst_ni            ( rst_ni                       ),
+      .collective_mask_i ( collective_mask              ),
+      .collective_op_i   ( collective_op                ),
+      .data_req_i        ( axi_xbar_mst_req[AxiMst.ext] ),
+      .data_req_o        ( axi_narrow_mst_req_o         )
+    );
+  end else begin: gen_no_collective_gen
+    assign axi_narrow_mst_req_o = axi_xbar_mst_req[AxiMst.ext];
+  end
 
   assign axi_xbar_mst_rsp[AxiMst.ext] = axi_narrow_mst_rsp_i;
 
@@ -1724,6 +1781,7 @@ module magia_isle
     assign spatz_irq.debug = 1'b0;
 
     spatz_cc_wrapper #(
+      .SnitchPMACfg      ( SpatzPmaCfg                             ),
       .AddrWidth         ( magia_pkg::ADDR_W                       ),
       .DataWidth         ( magia_tile_pkg::SPATZ_TCDM_DATA_WIDTH   ),
       .NumSpatzFPUs      ( TileCfg.Spatz.NumFPU                    ),
@@ -1741,7 +1799,7 @@ module magia_isle
       .rst_ni           ( rst_ni               ),
       .test_mode_i      ( test_mode_i          ),
 
-      .hart_id_i        ( mhartid_i            ),
+      .hart_id_i        ( 32'(HartIdBase) + mhartid_i ),
       .tcdm_addr_base_i ( tile_l1_start_addr   ),
 
       .irq_i            ( spatz_irq            ),
@@ -1915,7 +1973,8 @@ module magia_isle
 
     magia_cluster_wrap #(
       .TileCfg       ( TileCfg             ),
-      .NClusterCores ( NClusterCores       ),
+      .HartIdBase    ( HartIdBase          ),
+      .InstanceCount ( InstanceCount       ),
       .hci_req_t     ( tile_hci_data_req_t ),
       .hci_rsp_t     ( tile_hci_data_rsp_t )
     ) i_cluster (
@@ -1980,13 +2039,15 @@ module magia_isle
     assign cluster_l2_instr_rsp = axi_xbar_slv_rsp[magia_tile_pkg::AXI_SLV_CLUSTER_INSTR_IDX];
 
     magia_tile_icache_wrap #(
+      .CachedRegionBase ( 32'(CodeRegionBase)                       ),
+      .CachedRegionMask ( CodeRegionMask                              ),
       .NumFetchPorts  ( NClusterCores                          ),
       .L0_LINE_COUNT  ( ClusterIcacheL0LineCount               ),
       .LINE_WIDTH     ( TileCfg.Cluster.IcacheLineWidth        ),
       .LINE_COUNT     ( ClusterIcacheLineCount                 ),
       .WAY_COUNT      ( TileCfg.Cluster.IcacheNumWays          ),
       .FetchAddrWidth ( magia_tile_pkg::CLUSTER_FETCH_AW       ),
-      .FetchDataWidth ( TileCfg.Cluster.IcachePrivateDataWidth ),
+      .FetchDataWidth ( magia_tile_pkg::CLUSTER_FETCH_DW       ),
       .AxiAddrWidth   ( magia_tile_pkg::CLUSTER_FILL_AW        ),
       .AxiDataWidth   ( magia_tile_pkg::CLUSTER_FILL_DW        ),
       .axi_req_t      ( magia_tile_pkg::core_axi_instr_req_t   ),
@@ -2025,7 +2086,7 @@ module magia_isle
 /**            Verilator Observation Beginning        **/
 /*******************************************************/
 
-`ifdef VERILATOR
+`ifdef MAGIA_ISLE_OBSERVE
   // A Verilator hierarchical block cannot be probed from outside, so the VIP reads these ports
   always_comb begin
     observe_o              = '0;

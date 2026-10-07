@@ -24,7 +24,7 @@ module ctrl_demux
   import magia_tile_pkg::*;
 #(
   parameter magia_tile_pkg::magia_tile_cfg_t TileCfg       = magia_tile_pkg::MagiaTileDefaultCfg,
-  parameter magia_tile_pkg::ctrl_map_t       CtrlMap       = magia_tile_pkg::gen_ctrl_map(TileCfg)
+  localparam magia_tile_pkg::ctrl_map_t      CtrlMap       = magia_tile_pkg::gen_ctrl_map(TileCfg)
 )(
   input  logic                                                   clk_i,
   input  logic                                                   rst_ni,

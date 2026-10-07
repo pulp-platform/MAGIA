@@ -147,6 +147,17 @@ module magia_tile
   magia_tile_pkg::idma_axi_req_t     isle_wide_slv_req;
   magia_tile_pkg::idma_axi_rsp_t     isle_wide_slv_rsp;
 
+  // No debug module in the mesh: the cv32e40p jumps to DM_HALT_ADDR
+  logic[31:0] isle_dm_halt_addr;
+  logic[31:0] isle_dm_exception_addr;
+`ifdef CV32E40X
+  assign isle_dm_halt_addr      = dm_halt_addr_i;
+  assign isle_dm_exception_addr = dm_exception_addr_i;
+`else
+  assign isle_dm_halt_addr      = magia_tile_pkg::DM_HALT_ADDR;
+  assign isle_dm_exception_addr = magia_tile_pkg::DM_HALT_ADDR + 16'h000C;
+`endif
+
   magia_isle #(
     .TileCfg ( TileCfg )
   ) i_magia_isle (
@@ -186,12 +197,12 @@ module magia_tile
     .debug_pc_valid_o                         ,
     .debug_pc_o                               ,
     .fetch_enable_i                           ,
-    .core_sleep_o
+    .core_sleep_o                             ,
+    .dm_halt_addr_i       ( isle_dm_halt_addr      ),
+    .dm_exception_addr_i  ( isle_dm_exception_addr )
 `ifdef CV32E40X
     , .scan_cg_en_i                           ,
     .mtvec_addr_i                             ,
-    .dm_halt_addr_i                           ,
-    .dm_exception_addr_i                      ,
     .mimpid_patch_i                           ,
     .time_i                                   ,
     .wu_wfe_i

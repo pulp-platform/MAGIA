@@ -29,6 +29,8 @@ module spatz_cc_wrapper
   import obi_pkg::*;
   import fpnew_pkg::*;
 #(
+  // Cacheable instruction regions
+  parameter snitch_pma_pkg::snitch_pma_t SnitchPMACfg = magia_tile_pkg::SPATZ_SNITCH_PMA_CFG,
   // Spatz Core Complex Parameters
   parameter int unsigned AddrWidth                = magia_pkg::ADDR_W,
   parameter int unsigned DataWidth                = magia_tile_pkg::SPATZ_TCDM_DATA_WIDTH,
@@ -214,7 +216,7 @@ module spatz_cc_wrapper
         .acc_rsp_t                ( acc_rsp_t                 ),
         .dma_events_t             ( dma_events_t                          ),
         .dma_perf_t               ( logic                                 ),        
-        .SnitchPMACfg             ( magia_tile_pkg::SPATZ_SNITCH_PMA_CFG  ),        
+        .SnitchPMACfg             ( SnitchPMACfg                          ),        
         .FPUImplementation        ( FPUImplementation         ),
         .BootAddr                 ( BootAddr                  ),
         .RVE                      ( 1'b0                      ),
@@ -280,7 +282,7 @@ module spatz_cc_wrapper
         .acc_rsp_t                ( acc_rsp_t                 ),
         .dma_events_t             ( dma_events_t                          ),
         .dma_perf_t               ( logic                                 ),
-        .SnitchPMACfg             ( magia_tile_pkg::SPATZ_SNITCH_PMA_CFG  ),
+        .SnitchPMACfg             ( SnitchPMACfg                          ),
         .FPUImplementation        ( FPUImplementation         ),
         .BootAddr                 ( BootAddr                  ),
         .RVE                      ( 1'b0                      ),

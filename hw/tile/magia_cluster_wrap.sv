@@ -26,7 +26,11 @@ module magia_cluster_wrap
   import magia_pkg::*;
 #(
   parameter magia_tile_pkg::magia_tile_cfg_t TileCfg       = magia_tile_pkg::MagiaTileDefaultCfg,
-  parameter int unsigned                     NClusterCores = TileCfg.Cluster.NumCores,
+  // Derived from TileCfg
+  localparam int unsigned                    NClusterCores = TileCfg.Cluster.NumCores,
+  // First hart id of the block and number of tiles sharing it
+  parameter int unsigned                     HartIdBase    = 0,
+  parameter int unsigned                     InstanceCount = magia_pkg::N_TILES,
 
   // HCI types are supplied by magia_tile
   parameter type                             hci_req_t     = magia_tile_pkg::core_hci_data_req_t,
@@ -134,7 +138,7 @@ module magia_cluster_wrap
         .boot_addr_i            ( cluster_boot_addr_i[i]      ),  // From cluster CSR, dynamic per tile
         .mtvec_addr_i           ( cluster_boot_addr_i[i]      ),  // mtvec defaults to boot vector; SW can override via csrw
         .dm_halt_addr_i         ( magia_tile_pkg::DM_HALT_ADDR),
-        .hart_id_i              ( 2 * magia_pkg::N_TILES + mhartid_i * NClusterCores + i ),
+        .hart_id_i              ( 32'(HartIdBase + 2 * InstanceCount) + mhartid_i * NClusterCores + i ),
         .dm_exception_addr_i    ( magia_tile_pkg::DM_HALT_ADDR + 16'h000C), //to be checked
         // Instruction interface (-> tile-level shared cluster i$)
         .instr_req_o            ( cluster_instr_req_o[i].req         ),

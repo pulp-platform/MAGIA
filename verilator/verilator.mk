@@ -157,7 +157,7 @@ $(VERILATOR_RAW_FLIST): Bender.yml Bender.lock Makefile bender_common.mk \
 	$(VERILATOR_BENDER_STAMP) | $(VERILATOR_BUILD_DIR)
 	echo +incdir+$(VERILATOR_SRC) > $@.tmp
 	echo +incdir+$(VERILATOR_INC) >> $@.tmp
-	$(BENDER) script verilator $(VERILATOR_BENDER_TARGS) $(VERILATOR_BENDER_EXCL) $(bender_defs) -DSYNTHESIS -DVERILATOR >> $@.tmp
+	$(BENDER) script verilator $(VERILATOR_BENDER_TARGS) $(VERILATOR_BENDER_EXCL) $(bender_defs) -DSYNTHESIS -DVERILATOR -DCORE_TRACES >> $@.tmp
 	echo +incdir+$(FRACTAL_SYNC_ROOT)/hw >> $@.tmp
 	for f in $(VERILATOR_DPI); do echo $$f >> $@.tmp; done
 	@if ! cmp -s $@.tmp $@ 2>/dev/null; then mv $@.tmp $@; else rm -f $@.tmp; fi

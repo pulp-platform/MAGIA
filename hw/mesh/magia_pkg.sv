@@ -96,7 +96,6 @@ package magia_pkg;
     int unsigned IcachePrivateSize;     // private L0 tier size in bytes, per core
     int unsigned IcacheSharedSize;      // shared tier size in bytes (whole cluster)
     int unsigned IcacheNumWays;         // shared-tier set associativity
-    int unsigned IcachePrivateDataWidth; // fetch data width in bits
     int unsigned IcacheLineWidth;       // cache line width in bits (both tiers)
   } cluster_cfg_t;
 
@@ -107,6 +106,7 @@ package magia_pkg;
     bit             EnRedMule; // RedMulE HWPE: engine + HCI HWPE port + OBI control port
     bit             EnSpatzCC; // Spatz CC: core complex + bootrom + dedicated I$ + HCI/OBI master ports
     bit             EnCluster; // PULP cluster: cv32e40p cores + shared I$ + OBI master ports
+    bit             EnCollective; // Narrow collectives: control registers + collective_gen on the narrow master port
     redmule_cfg_t   RedMule;   // RedMulE parameters (valid iff EnRedMule)
     spatz_cfg_t     Spatz;     // Spatz CC parameters (valid iff EnSpatzCC)
     cluster_cfg_t   Cluster;   // PULP cluster parameters (valid iff EnCluster)
@@ -192,7 +192,6 @@ package magia_pkg;
     IcachePrivateSize:      512,
     IcacheSharedSize:       4*1024,
     IcacheNumWays:          4,
-    IcachePrivateDataWidth: 32,
     IcacheLineWidth:        256
   };
 
@@ -204,6 +203,7 @@ package magia_pkg;
     EnRedMule: 1'b1,
     EnSpatzCC: 1'b1,
     EnCluster: 1'b1,
+    EnCollective: 1'b1,
     RedMule:   MagiaRedMuleDefaultCfg,
     Spatz:     MagiaSpatzDefaultCfg,
     Cluster:   MagiaClusterDefaultCfg
@@ -217,6 +217,7 @@ package magia_pkg;
     EnRedMule: 1'b1,
     EnSpatzCC: 1'b0,
     EnCluster: 1'b0,
+    EnCollective: 1'b1,
     RedMule:   MagiaRedMuleDefaultCfg,
     Spatz:     MagiaSpatzDefaultCfg,
     Cluster:   MagiaClusterDefaultCfg
@@ -230,6 +231,7 @@ package magia_pkg;
     EnRedMule: 1'b0,
     EnSpatzCC: 1'b1,
     EnCluster: 1'b0,
+    EnCollective: 1'b1,
     RedMule:   MagiaRedMuleDefaultCfg,
     Spatz:     MagiaSpatzDefaultCfg,
     Cluster:   MagiaClusterDefaultCfg
@@ -243,6 +245,7 @@ package magia_pkg;
     EnRedMule: 1'b0,
     EnSpatzCC: 1'b0,
     EnCluster: 1'b1,
+    EnCollective: 1'b1,
     RedMule:   MagiaRedMuleDefaultCfg,
     Spatz:     MagiaSpatzDefaultCfg,
     Cluster:   MagiaClusterDefaultCfg
