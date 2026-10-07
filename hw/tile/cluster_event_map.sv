@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2023-2024 ETH Zurich and University of Bologna
  *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
+ * Licensed under the Solderpad Hardware License, Version 0.51
+ * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -16,8 +16,7 @@
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
  *
- * Simple cluster event mapping module for MAGIA project
- * This module maps various event types to the final cluster event outputs
+ * Cluster event mapping: control-core layout for NB_CORES == 1, PULP cluster layout otherwise
 */
 
 module cluster_event_map #(
@@ -40,18 +39,31 @@ module cluster_event_map #(
   output logic [NB_CORES-1:0][31:0] events_mapped_o
 );
 
-  // Simple event mapping for each core
+  // NB_CORES == 1 selects the control-core layout, so a 1-core cluster would get it too
   for (genvar i = 0; i < NB_CORES; i++) begin : gen_event_mapping
-    assign events_mapped_o[i] = {
-      cluster_events_i[i][31:16],           // [31:16] Custom cluster events (upper 16 bits)
-      cluster_events_i[i][15:12],           // [15:12] PULP cluster events
-      acc_events_i[i],                      // [11:8]  Accelerator events
-      2'b0,                                 // [7:6]   Reserved
-      timer_events_i[i],                    // [5:4]   Timer events
-      dma_events_i[i],                      // [3:2]   DMA events
-      dispatch_events_i[i],                 // [1]     Dispatch event
-      barrier_events_i[i] | mutex_events_i[i] | periph_fifo_event_i  // [0] Combined sync/periph events
-    };
+    if (NB_CORES == 1) begin : gen_ctrl_core_map
+      assign events_mapped_o[i] = {
+        cluster_events_i[i][31:16],           // [31:16] Custom cluster events (pass-through)
+        cluster_events_i[i][15:12],           // [15:12] Custom cluster events (pass-through)
+        acc_events_i[i],                      // [11:8]  Accelerator events
+        sw_events_i[i][1:0],                  // [7:6]   Software events
+        timer_events_i[i],                    // [5:4]   Timer events
+        dma_events_i[i],                      // [3:2]   DMA events
+        dispatch_events_i[i],                 // [1]     Dispatch event
+        barrier_events_i[i] | mutex_events_i[i] | periph_fifo_event_i // [0] Combined sync/periph events
+      };
+    end else begin : gen_cluster_map
+      assign events_mapped_o[i] = {
+        cluster_events_i[i][31:19],           // [31:19] Custom cluster events (unchanged position)
+        dispatch_events_i[i],                 // [18]    PULP_DISPATCH_EVENT
+        mutex_events_i[i],                    // [17]    PULP_MUTEX_EVENT
+        barrier_events_i[i],                  // [16]    PULP_HW_BAR_EVENT
+        cluster_events_i[i][15:12],           // [15:12] Custom cluster events (unchanged position)
+        sw_events_i[i],                       // [11:4]  Software events (no acc/timer events in the cluster EU)
+        dma_events_i[i],                      // [3:2]   DMA events (tied to '0 in the cluster EU)
+        2'b0                                  // [1:0]   Reserved
+      };
+    end
   end
 
 endmodule : cluster_event_map

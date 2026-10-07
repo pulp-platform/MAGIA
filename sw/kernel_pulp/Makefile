@@ -69,6 +69,7 @@ CFLAGS     = $(ARCH_FLAGS) -O2 -g -Wall -Wextra -Wno-unused-parameter \
              -fPIC -mcmodel=medany \
              -fno-jump-tables \
              -msmall-data-limit=0 \
+             -mno-relax \
              -nostartfiles -nostdlib \
              -DPULP_CORE_COUNT=$(PULP_CORE_COUNT) \
              -D$(core) -U__riscv__
@@ -107,7 +108,7 @@ HEADER    = $(HEADER_DIR)/$(HEADER_NAME).h
 
 BIN2HEADER = ../../scripts/bin2header.py
 
-.PHONY: all clean dirs bin header
+.PHONY: all clean clean-test dirs bin header
 
 all: bin
 	@rm -f $(HEADER)
@@ -166,5 +167,9 @@ $(HEADER): $(BIN) $(ELF)
 
 clean:
 	rm -rf $(BIN_DIR) $(HEADER_DIR)
+
+# Clean only the current test artifacts, so other tests can build in parallel
+clean-test:
+	rm -f $(ELF) $(BIN) $(DUMP) $(CRT0_OBJ) $(HEADER)
 
 .PRECIOUS: $(ELF) $(BIN)

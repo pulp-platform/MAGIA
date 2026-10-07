@@ -45,7 +45,10 @@
     parameter type sram_cfg_tag_t   = logic,
     /// AXI request and response structures
     parameter type axi_req_t = logic,
-    parameter type axi_rsp_t = logic   
+    parameter type axi_rsp_t = logic,
+    // Cacheable fetch region as base/mask; a zero mask caches every fetch
+    parameter logic [FetchAddrWidth-1:0] CachedRegionBase = '0,
+    parameter logic [FetchAddrWidth-1:0] CachedRegionMask = '0
  ) (
     input   logic                                                       clk_i,
     input   logic                                                       rst_ni,
@@ -76,6 +79,12 @@
     logic [NumFetchPorts-1:0] fetch_valid, fetch_ready, fetch_rerror;
     logic [NumFetchPorts-1:0][FetchAddrWidth-1:0] fetch_addr;
     logic [NumFetchPorts-1:0][FetchDataWidth-1:0] fetch_rdata;
+
+    logic [NumFetchPorts-1:0] fetch_cacheable;
+    for (genvar i = 0; i < NumFetchPorts; i++) begin : gen_fetch_cacheable
+        assign fetch_cacheable[i] =
+            ((fetch_addr[i] & CachedRegionMask) == (CachedRegionBase & CachedRegionMask));
+    end
 
     for (genvar i = 0; i < NumFetchPorts; i++) begin : gen_request_cut
         logic gnt;
@@ -135,7 +144,7 @@
         
         .inst_addr_i            ( fetch_addr            ),
         .inst_data_o            ( fetch_rdata           ),
-        .inst_cacheable_i       ( {NumFetchPorts{1'b1}} ),
+        .inst_cacheable_i       ( fetch_cacheable       ),
         .inst_valid_i           ( fetch_valid           ),
         .inst_ready_o           ( fetch_ready           ),
         .inst_error_o           ( fetch_rerror          ),

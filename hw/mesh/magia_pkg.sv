@@ -43,7 +43,243 @@ package magia_pkg;
   localparam int unsigned IRQ_ID_W         = $clog2(N_IRQ);                   // IRQ ID Width
   localparam int unsigned ID_W_OFFSET      = 1;                               // Offset to be added to ID Width
   localparam int unsigned ID_W             = 1;                               // Default ID Width
-  localparam int unsigned USR_W            = 1;                               // Default User Width
+  localparam int unsigned COLLECTIVE_OP_W  = 4;                               // Collective operation encoding (0: Unicast, 1: Multicast)
+  localparam int unsigned USR_W            = ADDR_W+COLLECTIVE_OP_W;          // The User Width encodes the collective operation
+
+  // FractalSync is mesh-wide: MAGIA_FSYNC (make fsync=1) enables it in the mesh and in every tile
+`ifdef MAGIA_FSYNC
+  localparam bit MagiaEnFractalSync = 1'b1;
+`else
+  localparam bit MagiaEnFractalSync = 1'b0;
+`endif
+
+  // Tile configuration
+
+  typedef struct packed {
+    int unsigned NumBanks;      // Number of TCDM banks
+    int unsigned NumWordsBank;  // Number of words per TCDM bank
+  } l1_cfg_t;
+
+  typedef struct packed {
+    cv32e40x_pkg::rv32_e  ISA;  // Base integer ISA (RV32I/RV32E)
+    cv32e40x_pkg::a_ext_e A;    // Atomic extension
+    cv32e40x_pkg::b_ext_e B;    // Bit-manipulation extension
+    cv32e40x_pkg::m_ext_e M;    // Multiply/divide extension
+  } ctrl_core_cfg_t;
+
+  typedef struct packed {
+    idma_pkg::error_cap_e ErrorCap;  // iDMA error handling capability
+  } idma_cfg_t;
+
+  typedef struct packed {
+    int unsigned Height;       // Systolic array height
+    int unsigned Width;        // Systolic array width
+    int unsigned NumPipeRegs;  // Pipeline registers in the systolic array
+  } redmule_cfg_t;
+
+  typedef struct packed {
+    bit          RVD;       // Double-precision vector support (drives 64-bit TCDM)
+    bit          RVF;       // Single-precision FP support
+    bit          RVV;       // Vector extension support
+    int unsigned NumIPU;    // Number of integer processing units
+    int unsigned NumFPU;    // Number of FP processing units
+    bit          XDivSqrt;  // FP division/sqrt enable
+    bit          XDMA;      // DMA inside the Spatz CC
+    int unsigned ICacheL0LineCount; // private L0 tier lines, per core
+    int unsigned ICacheLineWidth;   // cache line width in bits (both tiers)
+    int unsigned ICacheLineCount;   // shared-tier set count
+    int unsigned ICacheWays;        // shared-tier set associativity
+  } spatz_cfg_t;
+
+  typedef struct packed {
+    int unsigned NumCores;  // Number of cv32e40p cluster cores
+    int unsigned IcachePrivateSize;     // private L0 tier size in bytes, per core
+    int unsigned IcacheSharedSize;      // shared tier size in bytes (whole cluster)
+    int unsigned IcacheNumWays;         // shared-tier set associativity
+    int unsigned IcacheLineWidth;       // cache line width in bits (both tiers)
+  } cluster_cfg_t;
+
+  typedef struct packed {
+    l1_cfg_t        L1;        // L1 scratchpad (TCDM) geometry
+    ctrl_core_cfg_t CtrlCore;  // Control core (cv32e40x) ISA extensions
+    idma_cfg_t      IDma;      // iDMA parameters
+    bit             EnRedMule; // RedMulE HWPE: engine + HCI HWPE port + OBI control port
+    bit             EnSpatzCC; // Spatz CC: core complex + bootrom + dedicated I$ + HCI/OBI master ports
+    bit             EnCluster; // PULP cluster: cv32e40p cores + shared I$ + OBI master ports
+    bit             EnTimer;   // Tile timer: timer_unit + OBI control port + control-core EU timer events
+    bit             EnCollective; // Narrow collectives: control registers + collective_gen on the narrow master port
+    redmule_cfg_t   RedMule;   // RedMulE parameters (valid iff EnRedMule)
+    spatz_cfg_t     Spatz;     // Spatz CC parameters (valid iff EnSpatzCC)
+    cluster_cfg_t   Cluster;   // PULP cluster parameters (valid iff EnCluster)
+  } magia_tile_cfg_t;
+
+  // Default parameter sets
+
+  localparam l1_cfg_t MagiaL1DefaultCfg = '{
+    NumBanks:     N_MEM_BANKS,
+    NumWordsBank: N_WORDS_BANK
+  };
+
+  localparam ctrl_core_cfg_t MagiaCtrlCoreDefaultCfg = '{
+    ISA: cv32e40x_pkg::RV32I,
+    A:   cv32e40x_pkg::A,
+    B:   cv32e40x_pkg::ZBA_ZBB_ZBC_ZBS,
+    M:   cv32e40x_pkg::M
+  };
+
+  localparam idma_cfg_t MagiaIDmaDefaultCfg = '{
+    ErrorCap: idma_pkg::NO_ERROR_HANDLING
+  };
+
+  localparam redmule_cfg_t MagiaRedMuleDefaultCfg = '{
+    Height:      8,
+    Width:       8,
+    NumPipeRegs: 1
+  };
+
+ // Derived from the MAGIA Makefile (Reflects on spatz_pkg.sv in spatz_cluster dep)
+`ifdef SPATZ_RVD
+  localparam bit          MagiaSpatzRVD      = `SPATZ_RVD;
+`else
+  localparam bit          MagiaSpatzRVD      = 1'b0;
+`endif
+`ifdef SPATZ_RVF
+  localparam bit          MagiaSpatzRVF      = `SPATZ_RVF;
+`else
+  localparam bit          MagiaSpatzRVF      = 1'b1;
+`endif
+`ifdef SPATZ_RVV
+  localparam bit          MagiaSpatzRVV      = `SPATZ_RVV;
+`else
+  localparam bit          MagiaSpatzRVV      = 1'b1;
+`endif
+`ifdef SPATZ_N_IPU
+  localparam int unsigned MagiaSpatzNumIPU   = `SPATZ_N_IPU;
+`else
+  localparam int unsigned MagiaSpatzNumIPU   = 1;
+`endif
+`ifdef SPATZ_N_FPU
+  localparam int unsigned MagiaSpatzNumFPU   = `SPATZ_N_FPU;
+`else
+  localparam int unsigned MagiaSpatzNumFPU   = 4;
+`endif
+`ifdef SPATZ_XDIVSQRT
+  localparam bit          MagiaSpatzXDivSqrt = `SPATZ_XDIVSQRT;
+`else
+  localparam bit          MagiaSpatzXDivSqrt = 1'b0;
+`endif
+`ifdef SPATZ_XDMA
+  localparam bit          MagiaSpatzXDMA     = `SPATZ_XDMA;
+`else
+  localparam bit          MagiaSpatzXDMA     = 1'b0;
+`endif
+
+  localparam spatz_cfg_t MagiaSpatzDefaultCfg = '{
+    RVD:      MagiaSpatzRVD,
+    RVF:      MagiaSpatzRVF,
+    RVV:      MagiaSpatzRVV,
+    NumIPU:   MagiaSpatzNumIPU,
+    NumFPU:   MagiaSpatzNumFPU,
+    XDivSqrt: MagiaSpatzXDivSqrt,
+    XDMA:     MagiaSpatzXDMA,
+    ICacheL0LineCount: 8,
+    ICacheLineWidth:   256,
+    ICacheLineCount:   32,
+    ICacheWays:        2
+  };
+
+  localparam cluster_cfg_t MagiaClusterDefaultCfg = '{
+    NumCores: 8,
+    IcachePrivateSize:      512,
+    IcacheSharedSize:       4*1024,
+    IcacheNumWays:          4,
+    IcacheLineWidth:        256
+  };
+
+  // All accelerators enabled (full tile)
+  localparam magia_tile_cfg_t MagiaTileDefaultCfg = '{
+    L1:        MagiaL1DefaultCfg,
+    CtrlCore:  MagiaCtrlCoreDefaultCfg,
+    IDma:      MagiaIDmaDefaultCfg,
+    EnRedMule: 1'b1,
+    EnSpatzCC: 1'b1,
+    EnCluster: 1'b1,
+    EnTimer:   1'b1,
+    EnCollective: 1'b1,
+    RedMule:   MagiaRedMuleDefaultCfg,
+    Spatz:     MagiaSpatzDefaultCfg,
+    Cluster:   MagiaClusterDefaultCfg
+  };
+
+  // RedMulE-only tile
+  localparam magia_tile_cfg_t MagiaTileRedMuleCfg = '{
+    L1:        MagiaL1DefaultCfg,
+    CtrlCore:  MagiaCtrlCoreDefaultCfg,
+    IDma:      MagiaIDmaDefaultCfg,
+    EnRedMule: 1'b1,
+    EnSpatzCC: 1'b0,
+    EnCluster: 1'b0,
+    EnTimer:   1'b1,
+    EnCollective: 1'b1,
+    RedMule:   MagiaRedMuleDefaultCfg,
+    Spatz:     MagiaSpatzDefaultCfg,
+    Cluster:   MagiaClusterDefaultCfg
+  };
+
+   // SpatzCC-only tile
+  localparam magia_tile_cfg_t MagiaTileSpatzCfg = '{
+    L1:        MagiaL1DefaultCfg,
+    CtrlCore:  MagiaCtrlCoreDefaultCfg,
+    IDma:      MagiaIDmaDefaultCfg,
+    EnRedMule: 1'b0,
+    EnSpatzCC: 1'b1,
+    EnCluster: 1'b0,
+    EnTimer:   1'b1,
+    EnCollective: 1'b1,
+    RedMule:   MagiaRedMuleDefaultCfg,
+    Spatz:     MagiaSpatzDefaultCfg,
+    Cluster:   MagiaClusterDefaultCfg
+  };
+
+  // PulpCluster-only tile
+  localparam magia_tile_cfg_t MagiaTileClusterCfg = '{
+    L1:        MagiaL1DefaultCfg,
+    CtrlCore:  MagiaCtrlCoreDefaultCfg,
+    IDma:      MagiaIDmaDefaultCfg,
+    EnRedMule: 1'b0,
+    EnSpatzCC: 1'b0,
+    EnCluster: 1'b1,
+    EnTimer:   1'b1,
+    EnCollective: 1'b1,
+    RedMule:   MagiaRedMuleDefaultCfg,
+    Spatz:     MagiaSpatzDefaultCfg,
+    Cluster:   MagiaClusterDefaultCfg
+  };
+
+  localparam magia_tile_cfg_t [N_TILES-1:0] HOMO_TILE_CFGS = '{
+    // Default Homogeneus Mesh
+    default: MagiaTileDefaultCfg
+  };
+
+
+  // Supported square meshes (2x2, 4x4, 8x8, 16x16, 32x32) have equal
+  // numbers of full, RedMulE-only, Spatz-only and cluster-only tiles:
+
+  function automatic magia_tile_cfg_t [N_TILES-1:0] gen_hetero_tile_cfgs();
+    magia_tile_cfg_t [N_TILES-1:0] cfgs;
+    for (int unsigned i = 0; i < N_TILES; i++) begin
+      case ((i * 4) / N_TILES)
+        0: cfgs[i] = MagiaTileDefaultCfg;
+        1: cfgs[i] = MagiaTileRedMuleCfg;
+        2: cfgs[i] = MagiaTileSpatzCfg;
+        3: cfgs[i] = MagiaTileClusterCfg;
+        default: cfgs[i] = MagiaTileDefaultCfg;
+      endcase
+    end
+    return cfgs;
+  endfunction
+
+  localparam magia_tile_cfg_t [N_TILES-1:0] HETERO_TILE_CFGS = gen_hetero_tile_cfgs();
 
   // Parameters used by the NoC
   parameter int unsigned AXI_NOC_ID_W      = 6;                                // AXI NoC ID Width: matches slave side id_width (6 bits)
@@ -51,12 +287,13 @@ package magia_pkg;
 
   // Parameters used by the L2
   parameter int unsigned L2_ID_W           = 3;                                // The ID Width reflects the slave ID Width of the Tile AXI XBAR (for 5 ports: log2(5)=3)
-  parameter int unsigned L2_U_W            = 1;
+  parameter int unsigned L2_U_W            = USR_W;
 
   // Parameter used for the Fractal Sync network
+  parameter int unsigned FSYNC_LVL_MIN     = 2;                                // Smallest FSYNC_LVL keeping the widths below legal
   parameter int unsigned FSYNC_LVL         = (N_TILES_X == N_TILES_Y) ? 
                                               $clog2(N_TILES) : 
-                                              -1;                              // Number of levels of the Fractal Sync tree
+                                              FSYNC_LVL_MIN;                   // Number of levels of the Fractal Sync tree
   parameter int unsigned ROOT_FSYNC_AGGR_W = 1;                                // Aggregate width of the Fractal Sync Root tree out interface
   parameter int unsigned TILE_FSYNC_AGGR_W = ROOT_FSYNC_AGGR_W+FSYNC_LVL;      // Aggregate width of the Fractal Sync interface (CU-FSync interface)
   parameter int unsigned TILE_FSYNC_LVL_W  = $clog2(TILE_FSYNC_AGGR_W-1);      // Level width of the Fractal Sync interface (CU-FSync interface)
