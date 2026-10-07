@@ -87,7 +87,7 @@ packages:
       Git: https://github.com/pulp-platform/cv32e40x.git
     dependencies: []
   event_unit_flex:
-    revision: 087bc5566164ab0e48a3c0acf6c201d6613985ae
+    revision: 53c7f9c0de820ba83dcdd042c99f360605e18926
     version: null
     source:
       Git: https://github.com/pulp-platform/event_unit_flex.git
