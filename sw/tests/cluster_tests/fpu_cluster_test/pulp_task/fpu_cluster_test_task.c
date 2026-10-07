@@ -20,22 +20,22 @@
 /*
  * fpu_cluster_test - PULP cluster-core binary.
  *
- * Mirrors sw/tests/fpu_test.c but runs on all 8 cluster cores concurrently.
+ * Mirrors sw/tests/fpu_test.c but runs on all 8 cluster cores, forked by core 0 with pi_cl_team_fork().
  * Each core performs:
- *   fadd.s:  12.34 + 56.78  ≈ 69.12  (tolerance 0.1)
- *   fsub.s:  56.78 - 12.34  ≈ 44.44  (tolerance 0.1)
- *   fmul.s:  12.34 * 2.0    ≈ 24.68  (tolerance 0.1)
+ *   fadd.s:  12.34 + 56.78  ~ 69.12  (tolerance 0.1)
+ *   fsub.s:  56.78 - 12.34  ~ 44.44  (tolerance 0.1)
+ *   fmul.s:  12.34 * 2.0    ~ 24.68  (tolerance 0.1)
  *
  * 12.34 and 56.78 are NOT exact in float32, so comparisons use the same
  * 0.1 tolerance as fpu_test.c rather than bit-exact equality.
  *
- * Each core writes a 32-bit word to L2:
- *   0xFEED0000 | <error_count_16bit>
- * The CV32 main reads these back to determine pass/fail.
+ * Each core writes a 32-bit word to L2: 0xFEED0000 | <error_count_16bit>.
+ * Core 0 also returns the total error count through PULP_RETURN.
  */
 
 #include <stdint.h>
 #include "magia_tile_utils.h"
+#include "cluster_utils.h"
 
 /* L2 result area: 4 bytes per cluster core (local_id 0..7). */
 #define FPU_RESULT_BASE  (L2_BASE + 0x00060000)
@@ -50,12 +50,6 @@
 
 #define abs_diff(x, y) (((x) > (y)) ? ((x) - (y)) : ((y) - (x)))
 
-static inline uint32_t get_hartid(void) {
-    uint32_t id;
-    asm volatile("csrr %0, mhartid" : "=r"(id));
-    return id;
-}
-
 /* Enable the FPU: set mstatus.FS to INITIAL (01). */
 static inline void enable_fpu(void) {
     asm volatile (
@@ -65,28 +59,26 @@ static inline void enable_fpu(void) {
     );
 }
 
-void fpu_cluster_test_task(void *data) {
+static void fpu_cluster_test_fork_entry(void *data) {
     (void)data;
     enable_fpu();
 
-    uint32_t hartid   = get_hartid();
-    uint32_t pulp_gid = hartid - PULP_HARTID_BASE;  /* 0..127 */
-    uint32_t local_id = pulp_gid % PULP_CORE_COUNT;  /* 0..7 */
+    uint32_t local_id = cluster_core_id();
 
     unsigned int errors = 0;
 
     volatile float a = A_VAL;
     volatile float b = B_VAL;
 
-    /* fadd.s: a + b ≈ 69.12 */
+    /* fadd.s: a + b ~ 69.12 */
     float c_add = a + b;
     if (abs_diff(c_add, ADD_EXP) > FP_TH) errors++;
 
-    /* fsub.s: b - a ≈ 44.44 */
+    /* fsub.s: b - a ~ 44.44 */
     float c_sub = b - a;
     if (abs_diff(c_sub, SUB_EXP) > FP_TH) errors++;
 
-    /* fmul.s: a * 2.0 ≈ 24.68 */
+    /* fmul.s: a * 2.0 ~ 24.68 */
     volatile float two = 2.0f;
     float c_mul = a * two;
     if (abs_diff(c_mul, MUL_EXP) > FP_TH) errors++;
@@ -101,4 +93,15 @@ void fpu_cluster_test_task(void *data) {
 
     /* Write result to L2 slot for this core. */
     mmio32(FPU_RESULT_BASE + 4 * local_id) = FPU_RESULT_MAGIC | (errors & 0xFFFFu);
+}
+
+int fpu_cluster_test_task(void *data) {
+    pi_cl_team_fork(PULP_CORE_COUNT, fpu_cluster_test_fork_entry, data);
+
+    /* The fork's barrier guarantees every core has written its slot */
+    unsigned int total_errors = 0;
+    for (int i = 0; i < PULP_CORE_COUNT; i++) {
+        total_errors += mmio32(FPU_RESULT_BASE + 4 * i) & 0xFFFFu;
+    }
+    return (int)total_errors;
 }

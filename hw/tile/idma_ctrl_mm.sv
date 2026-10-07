@@ -183,6 +183,8 @@ module idma_ctrl_mm
 /*******************************************************/
 
   idma_obi_ctrl_decoder i_idma_obi_ctrl_decoder (
+    .clk_i               ( clk_i                   ),
+    .rst_ni              ( rst_ni                  ),
     .obi_req_i           ( obi_req_i               ),
     .obi_rsp_o           ( obi_rsp_o               ),
 

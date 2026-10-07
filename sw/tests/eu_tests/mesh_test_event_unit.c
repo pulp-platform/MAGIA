@@ -41,11 +41,10 @@
 #define Y_BASE (L1_BASE + 0x0001A048)
 #define Z_BASE (L2_BASE + 0x00042000) // Note: for a large number of tiles (e.g. 64x64 mesh) we might exceed memory range of L2
 #define V_BASE (L2_BASE + 0x00046000) // Note: for a large number of tiles (e.g. 64x64 mesh) we might exceed memory range of L2
-#define T_BASE (L2_BASE + 0x0004A000) // Note: for a large number of tiles (e.g. 64x64 mesh) we might exceed memory range of L2
 
 #define MHARTID_OFFSET (0x00010000)
 
-#define M_SIZE (96)
+#define M_SIZE (32) // first 32 rows of the 96x64 golden data
 #define N_SIZE (64)
 #define K_SIZE (64)
 
@@ -69,11 +68,8 @@ void idma_mv_in_pure_eu(unsigned int x_dim, unsigned int y_dim, uint16_t src_dat
     eu_initialized = 1;
   }
 
-  for (int i = 0; i < x_dim*y_dim; i++)
-    mmio16(T_BASE + get_hartid()*MHARTID_OFFSET + 2*i) = src_data[i];
-
   dst_addr = (uint32_t)dst_address;
-  src_addr = (uint32_t)(T_BASE + get_hartid()*MHARTID_OFFSET);
+  src_addr = (uint32_t)src_data;
   len      = (uint32_t)(x_dim*y_dim*2); // 2 Bytes per element
 #if VERBOSE > 10
   printf("dst_addr: 0x%0x\n", dst_addr);
@@ -204,9 +200,6 @@ int main(void) {
   // Wait for HWPE completion
   eu_redmule_wait_completion(wait_mode);
 
-  printf("Moving results through iDMA...\n");
-  idma_mv_out_pure_eu(M_SIZE, K_SIZE, Y_BASE + get_hartid()*L1_TILE_OFFSET, V_BASE + get_hartid()*MHARTID_OFFSET);
-
   printf("Verifying results...\n");
   
   unsigned int num_errors[NUM_HARTS];
@@ -214,14 +207,18 @@ int main(void) {
 
   volatile uint16_t computed[NUM_HARTS], expected[NUM_HARTS], diff[NUM_HARTS];
   for(int i = 0; i < M_SIZE*K_SIZE; i++){
-    computed[get_hartid()] = mmio16(V_BASE + get_hartid()*MHARTID_OFFSET + 2*i);
+    computed[get_hartid()] = mmio16(Y_BASE + get_hartid()*L1_TILE_OFFSET + 2*i);
     expected[get_hartid()] = z_oup[i];
     diff[get_hartid()] = (computed[get_hartid()] > expected[get_hartid()]) ? (computed[get_hartid()] - expected[get_hartid()]) : (expected[get_hartid()] - computed[get_hartid()]);
     if(diff[get_hartid()] > DIFF_TH){
       num_errors[get_hartid()]++;
-      printf("**ERROR**: V[0x%0x](=0x%0x) != Z[%0d](=0x%0x)\n", V_BASE + get_hartid()*MHARTID_OFFSET + 2*i, computed[get_hartid()], i, expected[get_hartid()]);
+      printf("**ERROR**: Y[0x%0x](=0x%0x) != Z[%0d](=0x%0x)\n", Y_BASE + get_hartid()*L1_TILE_OFFSET + 2*i, computed[get_hartid()], i, expected[get_hartid()]);
     }
   }
+
+  printf("Moving results through iDMA...\n");
+  idma_mv_out_pure_eu(M_SIZE, K_SIZE, Y_BASE + get_hartid()*L1_TILE_OFFSET, V_BASE + get_hartid()*MHARTID_OFFSET);
+
   printf("Finished test with %0d error(s)\n", num_errors[get_hartid()]);
 
   return num_errors[get_hartid()];
