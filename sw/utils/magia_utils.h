@@ -26,7 +26,7 @@
 
 #define STR_OFFSET  (0x00000000)
 #define STR_BASE    (RESERVED_START + STR_OFFSET)
-#define SYNC_OFFSET (0x0000D800)
+#define SYNC_OFFSET (0x0000B800)
 #define SYNC_BASE   (RESERVED_START + SYNC_OFFSET)
 #define SYNC_EN     (SYNC_BASE + 0x4)
 
@@ -34,7 +34,7 @@
 #define MESH_X_TILES (4)
 #define NUM_HARTS    (MESH_Y_TILES*MESH_X_TILES)
 
-#define GET_Y_ID(mhartid)  ((mhartid)/MESH_X_TILES)
+#define GET_Y_ID(mhartid)  ((mhartid)/MESH_Y_TILES)
 #define GET_X_ID(mhartid)  ((mhartid)%MESH_X_TILES)
 #define GET_ID(y_id, x_id) (((y_id)*MESH_X_TILES)+(x_id))
 
