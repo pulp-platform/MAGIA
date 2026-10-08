@@ -19,10 +19,6 @@
  * MAGIA
  */
 
-`ifndef VERILATOR
-`include "fractal_sync/assign.svh"
-`endif
-
 module magia 
   import magia_pkg::*;
   import magia_tile_pkg::*;
@@ -31,12 +27,8 @@ module magia
   parameter int unsigned N_TILES_Y         = magia_pkg::N_TILES_Y,          // Number of Tile rowns
   parameter int unsigned N_TILES_X         = magia_pkg::N_TILES_X,          // Number of Tile columns
   parameter int unsigned N_TILES           = magia_pkg::N_TILES,            // Number of Tiles in the Mesh
-  parameter int unsigned N_MEM_BANKS       = magia_pkg::N_MEM_BANKS,        // Number of TCDM banks (1 extra bank for missaligned accesses) per Tile
-  parameter int unsigned N_WORDS_BANK      = magia_pkg::N_WORDS_BANK,       // Number of words per TCDM bank
-
-  parameter int unsigned TILE_FSYNC_AGGR_W = magia_pkg::TILE_FSYNC_AGGR_W,  // Width of the FractalSync aggr of the Tile - FS network link
-  parameter int unsigned TILE_FSYNC_LVL_W  = magia_pkg::TILE_FSYNC_LVL_W,   // Width of the FractalSync lvl of the Tile - FS network link
-  parameter int unsigned TILE_FSYNC_ID_W   = magia_pkg::TILE_FSYNC_ID_W     // Width of the FractalSync id of the Tile - FS network link
+  // By Default is used the Homogeneous Mesh
+  parameter magia_pkg::magia_tile_cfg_t [N_TILES-1:0] TILE_CFGS = magia_pkg::HOMO_TILE_CFGS
 )(
   input  logic                                  clk_i,
   input  logic                                  rst_ni,
@@ -82,6 +74,16 @@ module magia
 );
 
 /*******************************************************/
+/**            Configuration Checks Beginning         **/
+/*******************************************************/
+`ifndef SYNTHESIS
+  if (N_TILES_X != N_TILES_Y)
+    $fatal(1,"magia: only square meshes are supported, got %0dx%0d tiles", N_TILES_X, N_TILES_Y);
+`endif
+
+/*******************************************************/
+/**              Configuration Checks End             **/
+/*******************************************************/
 /**       Internal Signal Definitions Beginning       **/
 /*******************************************************/
 
@@ -101,52 +103,26 @@ module magia
   floo_rsp_t  [N_TILES-1:0] tile_west_rsp_in,   tile_west_rsp_out;
   floo_wide_t [N_TILES-1:0] tile_west_wide_in,  tile_west_wide_out;
 
-  magia_tile_pkg::ht_tile_fsync_req_t ht_tile_fsync_req[N_TILES][1]; // Single link CU-FSync interface
-  magia_tile_pkg::ht_tile_fsync_rsp_t ht_tile_fsync_rsp[N_TILES][1]; // Single link CU-FSync interface
+`ifdef MAGIA_FSYNC
+  // Tile side of the 1D FractalSync links: tile ports bind to these 
+  magia_tile_pkg::ht_tile_fsync_req_t [N_TILES-1:0] ht_fsync_req;
+  magia_tile_pkg::ht_tile_fsync_rsp_t [N_TILES-1:0] ht_fsync_rsp;
+  magia_tile_pkg::vt_tile_fsync_req_t [N_TILES-1:0] vt_fsync_req;
+  magia_tile_pkg::vt_tile_fsync_rsp_t [N_TILES-1:0] vt_fsync_rsp;
+
+  // Tile links of the FractalSync tree (single link per tile)
+  magia_tile_pkg::ht_tile_fsync_req_t ht_tile_fsync_req[N_TILES][1];
+  magia_tile_pkg::ht_tile_fsync_rsp_t ht_tile_fsync_rsp[N_TILES][1];
   magia_tile_pkg::hn_tile_fsync_req_t hn_tile_fsync_req[N_TILES];
   magia_tile_pkg::hn_tile_fsync_rsp_t hn_tile_fsync_rsp[N_TILES];
-  magia_tile_pkg::vt_tile_fsync_req_t vt_tile_fsync_req[N_TILES][1]; // Single link CU-FSync interface
-  magia_tile_pkg::vt_tile_fsync_rsp_t vt_tile_fsync_rsp[N_TILES][1]; // Single link CU-FSync interface
+  magia_tile_pkg::vt_tile_fsync_req_t vt_tile_fsync_req[N_TILES][1];
+  magia_tile_pkg::vt_tile_fsync_rsp_t vt_tile_fsync_rsp[N_TILES][1];
   magia_tile_pkg::vn_tile_fsync_req_t vn_tile_fsync_req[N_TILES];
   magia_tile_pkg::vn_tile_fsync_rsp_t vn_tile_fsync_rsp[N_TILES];
-
-  magia_pkg::h_root_fsync_req_t h_root_fsync_req[1][1]; // Single node, single link root node out interface
-  magia_pkg::h_root_fsync_rsp_t h_root_fsync_rsp[1][1]; // Single node, single link root node out interface
-  magia_pkg::v_root_fsync_req_t v_root_fsync_req[1][1]; // Single node, single link root node out interface
-  magia_pkg::v_root_fsync_rsp_t v_root_fsync_rsp[1][1]; // Single node, single link root node out interface
+`endif
 
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
-`ifndef VERILATOR
-/*******************************************************/
-/**           Interface Definitions Beginning         **/
-/*******************************************************/
-
-  fractal_sync_if #(.AGGR_WIDTH(TILE_FSYNC_AGGR_W),                .LVL_WIDTH(TILE_FSYNC_LVL_W),                .ID_WIDTH(TILE_FSYNC_ID_W))                ht_fsync_if[N_TILES]();
-  fractal_sync_if #(.AGGR_WIDTH(magia_tile_pkg::FSYNC_NBR_AGGR_W), .LVL_WIDTH(magia_tile_pkg::FSYNC_NBR_LVL_W), .ID_WIDTH(magia_tile_pkg::FSYNC_NBR_ID_W)) hn_fsync_if[N_TILES]();
-  fractal_sync_if #(.AGGR_WIDTH(TILE_FSYNC_AGGR_W),                .LVL_WIDTH(TILE_FSYNC_LVL_W),                .ID_WIDTH(TILE_FSYNC_ID_W))                vt_fsync_if[N_TILES]();
-  fractal_sync_if #(.AGGR_WIDTH(magia_tile_pkg::FSYNC_NBR_AGGR_W), .LVL_WIDTH(magia_tile_pkg::FSYNC_NBR_LVL_W), .ID_WIDTH(magia_tile_pkg::FSYNC_NBR_ID_W)) vn_fsync_if[N_TILES]();
-
-/*******************************************************/
-/**             Interface Definitions End             **/
-/*******************************************************/
-/**          Interface Assignments Beginning          **/
-/*******************************************************/
-
-  for (genvar i = 0; i < N_TILES; i++) begin: gen_fsync_if_assign
-    `FSYNC_ASSIGN_I2S_REQ(ht_fsync_if[i],          ht_tile_fsync_req[i][0])
-    `FSYNC_ASSIGN_S2I_RSP(ht_tile_fsync_rsp[i][0], ht_fsync_if[i])
-    `FSYNC_ASSIGN_I2S_REQ(hn_fsync_if[i],          hn_tile_fsync_req[i])
-    `FSYNC_ASSIGN_S2I_RSP(hn_tile_fsync_rsp[i],    hn_fsync_if[i])
-    `FSYNC_ASSIGN_I2S_REQ(vt_fsync_if[i],          vt_tile_fsync_req[i][0])
-    `FSYNC_ASSIGN_S2I_RSP(vt_tile_fsync_rsp[i][0], vt_fsync_if[i])
-    `FSYNC_ASSIGN_I2S_REQ(vn_fsync_if[i],          vn_tile_fsync_req[i])
-    `FSYNC_ASSIGN_S2I_RSP(vn_tile_fsync_rsp[i],    vn_fsync_if[i])
-  end
-
-/*******************************************************/
-/**             Interface Assignments End             **/
-`endif
 /*******************************************************/
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
@@ -155,14 +131,14 @@ module magia
     assign mhartid[i] = i;
   end
 
-  assign h_root_fsync_rsp[0][0].wake    = 1'b0;
-  assign h_root_fsync_rsp[0][0].sig.lvl = '0;
-  assign h_root_fsync_rsp[0][0].sig.id  = '0;
-  assign h_root_fsync_rsp[0][0].error   = 1'b0;
-  assign v_root_fsync_rsp[0][0].wake    = 1'b0;
-  assign v_root_fsync_rsp[0][0].sig.lvl = '0;
-  assign v_root_fsync_rsp[0][0].sig.id  = '0;
-  assign v_root_fsync_rsp[0][0].error   = 1'b0;
+`ifdef MAGIA_FSYNC
+  for (genvar i = 0; i < N_TILES; i++) begin: gen_fsync_links
+    assign ht_tile_fsync_req[i][0] = ht_fsync_req[i];
+    assign ht_fsync_rsp[i]         = ht_tile_fsync_rsp[i][0];
+    assign vt_tile_fsync_req[i][0] = vt_fsync_req[i];
+    assign vt_fsync_rsp[i]         = vt_tile_fsync_rsp[i][0];
+  end
+`endif
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -174,19 +150,11 @@ module magia
     for (genvar j = 0; j < N_TILES_X; j++) begin: gen_x_tile
 `ifdef VERILATOR
       magia_tile_hier #(
-        .N_MEM_BANKS  ( N_MEM_BANKS   ),
-        .N_WORDS_BANK ( N_WORDS_BANK  )
+        .TileCfg ( TILE_CFGS[i*N_TILES_X+j] )
       ) i_magia_tile (
 `else
       magia_tile #(
-        .N_MEM_BANKS  ( N_MEM_BANKS   ),
-        .N_WORDS_BANK ( N_WORDS_BANK  ),
-
-        .CORE_ISA     (               ),
-        .CORE_A       (               ),
-        .CORE_B       (               ),
-        .CORE_M       (               ),
-        .ERROR_CAP    (               )
+        .TileCfg ( TILE_CFGS[i*N_TILES_X+j] )
       ) i_magia_tile (
 `endif
         .clk_i                                                     ,
@@ -194,18 +162,18 @@ module magia
         .test_mode_i                                               ,
         .tile_enable_i                                             ,
 
-        .noc_south_req_o     ( tile_south_req_out[i*N_TILES_X+j]  ),
-        .noc_south_rsp_i     ( tile_south_rsp_in[i*N_TILES_X+j]   ),
-        .noc_south_wide_o    ( tile_south_wide_out[i*N_TILES_X+j] ),
-        .noc_east_req_o      ( tile_east_req_out[i*N_TILES_X+j]   ),
-        .noc_east_rsp_i      ( tile_east_rsp_in[i*N_TILES_X+j]    ),
-        .noc_east_wide_o     ( tile_east_wide_out[i*N_TILES_X+j]  ),
-        .noc_north_req_o     ( tile_north_req_out[i*N_TILES_X+j]  ),
-        .noc_north_rsp_i     ( tile_north_rsp_in[i*N_TILES_X+j]   ),
-        .noc_north_wide_o    ( tile_north_wide_out[i*N_TILES_X+j] ),
-        .noc_west_req_o      ( tile_west_req_out[i*N_TILES_X+j]   ),
-        .noc_west_rsp_i      ( tile_west_rsp_in[i*N_TILES_X+j]    ),
-        .noc_west_wide_o     ( tile_west_wide_out[i*N_TILES_X+j]  ),
+        .noc_south_req_o     ( tile_south_req_out[i*N_TILES_X+j]     ),
+        .noc_south_rsp_i     ( tile_south_rsp_in[i*N_TILES_X+j]      ),
+        .noc_south_wide_o    ( tile_south_wide_out[i*N_TILES_X+j]    ),
+        .noc_east_req_o      ( tile_east_req_out[i*N_TILES_X+j]      ),
+        .noc_east_rsp_i      ( tile_east_rsp_in[i*N_TILES_X+j]       ),
+        .noc_east_wide_o     ( tile_east_wide_out[i*N_TILES_X+j]     ),
+        .noc_north_req_o     ( tile_north_req_out[i*N_TILES_X+j]     ),
+        .noc_north_rsp_i     ( tile_north_rsp_in[i*N_TILES_X+j]      ),
+        .noc_north_wide_o    ( tile_north_wide_out[i*N_TILES_X+j]    ),
+        .noc_west_req_o      ( tile_west_req_out[i*N_TILES_X+j]      ),
+        .noc_west_rsp_i      ( tile_west_rsp_in[i*N_TILES_X+j]       ),
+        .noc_west_wide_o     ( tile_west_wide_out[i*N_TILES_X+j]     ),
 
         .noc_south_req_i     ( tile_south_req_in[i*N_TILES_X+j]   ),
         .noc_south_rsp_o     ( tile_south_rsp_out[i*N_TILES_X+j]  ),
@@ -220,38 +188,33 @@ module magia
         .noc_west_rsp_o      ( tile_west_rsp_out[i*N_TILES_X+j]   ),
         .noc_west_wide_i     ( tile_west_wide_in[i*N_TILES_X+j]   ),
 
-        .x_id_i              ( j                                  ),
-        .y_id_i              ( i                                  ),
+        .x_id_i              ( {{(32-$clog2(N_TILES_X+1)){1'b0}}, CollectiveSam[i*N_TILES_X+j].idx.id.x}  ),
+        .y_id_i              ( {{(32-$clog2(N_TILES_Y)){1'b0}}, CollectiveSam[i*N_TILES_X+j].idx.id.y}    ),
   
-`ifdef VERILATOR
-        .ht_fsync_req_o      ( ht_tile_fsync_req[i*N_TILES_X+j][0] ),
-        .ht_fsync_rsp_i      ( ht_tile_fsync_rsp[i*N_TILES_X+j][0] ),
+`ifdef MAGIA_FSYNC
+        .ht_fsync_req_o      ( ht_fsync_req[i*N_TILES_X+j]      ),
+        .ht_fsync_rsp_i      ( ht_fsync_rsp[i*N_TILES_X+j]      ),
         .hn_fsync_req_o      ( hn_tile_fsync_req[i*N_TILES_X+j]    ),
         .hn_fsync_rsp_i      ( hn_tile_fsync_rsp[i*N_TILES_X+j]    ),
-        .vt_fsync_req_o      ( vt_tile_fsync_req[i*N_TILES_X+j][0] ),
-        .vt_fsync_rsp_i      ( vt_tile_fsync_rsp[i*N_TILES_X+j][0] ),
+        .vt_fsync_req_o      ( vt_fsync_req[i*N_TILES_X+j]      ),
+        .vt_fsync_rsp_i      ( vt_fsync_rsp[i*N_TILES_X+j]      ),
         .vn_fsync_req_o      ( vn_tile_fsync_req[i*N_TILES_X+j]    ),
         .vn_fsync_rsp_i      ( vn_tile_fsync_rsp[i*N_TILES_X+j]    ),
-`else
-        .ht_fsync_if_o       ( ht_fsync_if[i*N_TILES_X+j]         ),
-        .hn_fsync_if_o       ( hn_fsync_if[i*N_TILES_X+j]         ),
-        .vt_fsync_if_o       ( vt_fsync_if[i*N_TILES_X+j]         ),
-        .vn_fsync_if_o       ( vn_fsync_if[i*N_TILES_X+j]         ),
 `endif
         
-        .scan_cg_en_i                                              ,
+        .scan_cg_en_i                                                 ,
   
-        .boot_addr_i                                               ,
-        .mtvec_addr_i                                              ,
-        .dm_halt_addr_i                                            ,
-        .dm_exception_addr_i                                       ,
-        .mhartid_i           ( mhartid[i*N_TILES_X+j]             ),
-        .mimpid_patch_i                                            ,
+        .boot_addr_i                                                  ,
+        .mtvec_addr_i                                                 ,
+        .dm_halt_addr_i                                               ,
+        .dm_exception_addr_i                                          ,
+        .mhartid_i           ( mhartid[i*N_TILES_X+j]                ),
+        .mimpid_patch_i                                               ,
   
-        .mcycle_o            ( mcycle_o[i*N_TILES_X+j]            ),
-        .time_i                                                    ,
+        .mcycle_o            ( mcycle_o[i*N_TILES_X+j]               ),
+        .time_i                                                       ,
   
-        .irq_i               ( irq_i[i*N_TILES_X+j]               ),
+        .irq_i               ( irq_i[i*N_TILES_X+j]                  ),
   
         // Tile expects [N_CLUSTER_CORES:0] (1 main + 8 cluster cores).
         // Replicate the single top-level debug_req_i bit across all cores;
@@ -265,8 +228,8 @@ module magia
         .debug_pc_valid_o    ( debug_pc_valid_o[i*N_TILES_X+j]  ),
         .debug_pc_o          ( debug_pc_o[i*N_TILES_X+j]        ),
   
-        .fetch_enable_i                                            ,
-        .core_sleep_o        ( core_sleep_o[i*N_TILES_X+j]        ),
+        .fetch_enable_i                                               ,
+        .core_sleep_o        ( core_sleep_o[i*N_TILES_X+j]           ),
         .wu_wfe_i
 `ifdef VERILATOR
         , .observe_o         ( tile_observe_o[i*N_TILES_X+j]      )
@@ -276,7 +239,7 @@ module magia
   `ifdef CV32E40X
 `ifndef VERILATOR
       localparam string core_trace_file_name = $sformatf("%s%0d", "log_file_", i*N_TILES_X+j);
-      defparam i_magia_tile.i_cv32e40x_ctrl_core.rvfi_i.tracer_i.LOGFILE_PATH_PLUSARG = core_trace_file_name;
+      defparam i_magia_tile.i_magia_isle.i_cv32e40x_ctrl_core.rvfi_i.tracer_i.LOGFILE_PATH_PLUSARG = core_trace_file_name;
 `endif
   `endif
   // Note: cv32e40p tracer generates its own filename: trace_core_{cluster_id}_{core_id}.log
@@ -422,6 +385,21 @@ module magia
 /**           FractalSync Network Beginning           **/
 /*******************************************************/
 
+`ifdef MAGIA_FSYNC
+  magia_pkg::h_root_fsync_req_t h_root_fsync_req[1][1]; // Single node, single link root node out interface
+  magia_pkg::h_root_fsync_rsp_t h_root_fsync_rsp[1][1]; // Single node, single link root node out interface
+  magia_pkg::v_root_fsync_req_t v_root_fsync_req[1][1]; // Single node, single link root node out interface
+  magia_pkg::v_root_fsync_rsp_t v_root_fsync_rsp[1][1]; // Single node, single link root node out interface
+
+  assign h_root_fsync_rsp[0][0].wake    = 1'b0;
+  assign h_root_fsync_rsp[0][0].sig.lvl = '0;
+  assign h_root_fsync_rsp[0][0].sig.id  = '0;
+  assign h_root_fsync_rsp[0][0].error   = 1'b0;
+  assign v_root_fsync_rsp[0][0].wake    = 1'b0;
+  assign v_root_fsync_rsp[0][0].sig.lvl = '0;
+  assign v_root_fsync_rsp[0][0].sig.id  = '0;
+  assign v_root_fsync_rsp[0][0].error   = 1'b0;
+
   if ((N_TILES_Y == 2) && (N_TILES_X == 2)) begin: gen_2x2_fsync
     fractal_sync_2x2 i_mesh_fsync (
       .clk_i                                  ,
@@ -507,7 +485,13 @@ module magia
       .v_2d_fsync_req_o  ( v_root_fsync_req  ),
       .v_2d_fsync_rsp_i  ( v_root_fsync_rsp  )
     );
-  end else $fatal(1,"Unsupported Mesh configuration");
+  end else begin: gen_unsupported_fsync
+`ifndef SYNTHESIS
+    $fatal(1,"FractalSync: unsupported mesh size %0dx%0d (supported: 2, 4, 8, 16, 32)",
+           N_TILES_X, N_TILES_Y);
+`endif
+  end
+`endif
 
 /*******************************************************/
 /**              FractalSync Network End              **/
