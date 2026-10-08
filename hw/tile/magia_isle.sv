@@ -881,10 +881,13 @@ module magia_isle
   magia_tile_pkg::eu_events_t eu_events;
   logic                       eu_core_busy;
 
-  assign eu_events.timer = '0;  // No timer event source
-  assign eu_events.other[magia_tile_pkg::EU_OTHER_CLUSTER_DONE-1 : 0] = '0;
-  assign eu_events.other[magia_tile_pkg::EU_OTHER_SPATZ_START-1  :
-                         magia_tile_pkg::EU_OTHER_CLUSTER_DONE+1] = '0;
+  // Event slots with no source
+  assign eu_events.timer        = '0;
+  assign eu_events.acc[1]       = 1'b0;
+  assign eu_events.other[11:0]  = '0;
+  assign eu_events.other[22:13] = '0;
+  assign eu_events.other[27:25] = '0;
+  assign eu_events.other[31:30] = '0;
 
   assign eu_core_busy = ~core_sleep_o;
 
@@ -1331,24 +1334,16 @@ module magia_isle
 
   logic idma_clear;
   logic idma_axi2obi_start;
-  logic idma_axi2obi_busy;
   logic idma_axi2obi_done;
-  logic idma_axi2obi_error;
   logic idma_obi2axi_start;
-  logic idma_obi2axi_busy;
   logic idma_obi2axi_done;
-  logic idma_obi2axi_error;
 
   assign idma_clear = 1'b0;
 
   assign eu_events.dma[magia_tile_pkg::EU_DMA_A2O_DONE]      = idma_axi2obi_done;
   assign eu_events.dma[magia_tile_pkg::EU_DMA_O2A_DONE]      = idma_obi2axi_done;
-  assign eu_events.other[magia_tile_pkg::EU_OTHER_A2O_ERROR] = idma_axi2obi_error;
-  assign eu_events.other[magia_tile_pkg::EU_OTHER_O2A_ERROR] = idma_obi2axi_error;
   assign eu_events.other[magia_tile_pkg::EU_OTHER_A2O_START] = idma_axi2obi_start;
   assign eu_events.other[magia_tile_pkg::EU_OTHER_O2A_START] = idma_obi2axi_start;
-  assign eu_events.other[magia_tile_pkg::EU_OTHER_A2O_BUSY]  = idma_axi2obi_busy;
-  assign eu_events.other[magia_tile_pkg::EU_OTHER_O2A_BUSY]  = idma_obi2axi_busy;
 
   idma_ctrl_mm #(
     .ERROR_CAP         ( TileCfg.IDma.ErrorCap               ),
@@ -1379,14 +1374,14 @@ module magia_isle
     .obi_write_req_o ( idma_obi_write_req_out ),
     .obi_write_rsp_i ( idma_obi_write_rsp_out ),
 
-    .irq_a2o_busy_o  ( idma_axi2obi_busy      ),
+    .irq_a2o_busy_o  (                        ),
     .irq_a2o_start_o ( idma_axi2obi_start     ),
     .irq_a2o_done_o  ( idma_axi2obi_done      ),
-    .irq_a2o_error_o ( idma_axi2obi_error     ),
-    .irq_o2a_busy_o  ( idma_obi2axi_busy      ),
+    .irq_a2o_error_o (                        ),
+    .irq_o2a_busy_o  (                        ),
     .irq_o2a_start_o ( idma_obi2axi_start     ),
     .irq_o2a_done_o  ( idma_obi2axi_done      ),
-    .irq_o2a_error_o ( idma_obi2axi_error     )
+    .irq_o2a_error_o (                        )
   );
 
   axi_rw_join #(
@@ -1612,7 +1607,6 @@ module magia_isle
 
     assign redmule_events.evt[1] = 1'b0;
 
-    assign eu_events.acc[magia_tile_pkg::EU_ACC_REDMULE_BUSY]  = redmule_events.busy;
     assign eu_events.acc[magia_tile_pkg::EU_ACC_REDMULE_EVT_0] = redmule_events.evt[0];
     assign eu_events.acc[magia_tile_pkg::EU_ACC_REDMULE_EVT_1] = redmule_events.evt[1];
 
@@ -1643,7 +1637,7 @@ module magia_isle
       .rst_ni             ( rst_ni                ),
       .test_mode_i        ( test_mode_i           ),
 
-      .busy_o             ( redmule_events.busy   ),
+      .busy_o             (                       ),
       .evt_o              ( redmule_events.evt[0] ),
 
       // Xif ports are unused in HWPE mode
@@ -1674,7 +1668,7 @@ module magia_isle
     `HCI_ASSIGN_TO_INTF(hci_redmule_if[0], redmule_data_req_quiet, redmule_data_rsp_unused)
 
     assign eu_events.acc[magia_tile_pkg::EU_ACC_REDMULE_EVT_1 :
-                         magia_tile_pkg::EU_ACC_REDMULE_BUSY] = '0;
+                         magia_tile_pkg::EU_ACC_REDMULE_EVT_0] = '0;
   end
 
 /*******************************************************/
@@ -1685,10 +1679,8 @@ module magia_isle
 
 `ifdef MAGIA_FSYNC
   logic fsync_done;
-  logic fsync_error;
 
-  assign eu_events.other[magia_tile_pkg::EU_OTHER_FSYNC_DONE]  = fsync_done;
-  assign eu_events.other[magia_tile_pkg::EU_OTHER_FSYNC_ERROR] = fsync_error;
+  assign eu_events.other[magia_tile_pkg::EU_OTHER_FSYNC_DONE] = fsync_done;
 
   obi_slave_fsync #(
     .BASE_ADDR  ( magia_tile_pkg::FSYNC_CTRL_ADDR_START ),
@@ -1707,11 +1699,10 @@ module magia_isle
     .vt_fsync_if_o ( vt_fsync_if_o           ),
     .vn_fsync_if_o ( vn_fsync_if_o           ),
     .done_o        ( fsync_done              ),
-    .error_o       ( fsync_error             )
+    .error_o       (                         )
   );
 `else
-  assign eu_events.other[magia_tile_pkg::EU_OTHER_FSYNC_DONE]  = 1'b0;
-  assign eu_events.other[magia_tile_pkg::EU_OTHER_FSYNC_ERROR] = 1'b0;
+  assign eu_events.other[magia_tile_pkg::EU_OTHER_FSYNC_DONE] = 1'b0;
 `endif
 
 /*******************************************************/

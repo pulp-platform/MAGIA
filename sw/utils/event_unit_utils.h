@@ -76,14 +76,11 @@
 #define EU_TIMER_EVT_1_BIT           5
 
 #define EU_REDMULE_UNUSED_BIT        8   
-#define EU_REDMULE_BUSY_BIT          9   
 #define EU_REDMULE_DONE_BIT          10  
 #define EU_REDMULE_EVT1_BIT          11  
 
 // RedMulE event masks
 #define EU_REDMULE_DONE_MASK         (1 << EU_REDMULE_DONE_BIT)
-#define EU_REDMULE_BUSY_MASK         (1 << EU_REDMULE_BUSY_BIT)
-#define EU_REDMULE_ALL_MASK          0x0F00
 
 // iDMA events (DMA events [3:2] + extended [31:26])
 #define EU_IDMA_A2O_DONE_BIT         2
@@ -91,25 +88,14 @@
 #define EU_IDMA_A2O_DONE_MASK        (1 << EU_IDMA_A2O_DONE_BIT)
 #define EU_IDMA_O2A_DONE_MASK        (1 << EU_IDMA_O2A_DONE_BIT)
 #define EU_IDMA_ALL_DONE_MASK        (EU_IDMA_A2O_DONE_MASK | EU_IDMA_O2A_DONE_MASK)
-#define EU_IDMA_A2O_ERROR_BIT        26
-#define EU_IDMA_O2A_ERROR_BIT        27
 #define EU_IDMA_A2O_START_BIT        28
 #define EU_IDMA_O2A_START_BIT        29
-#define EU_IDMA_A2O_BUSY_BIT         30
-#define EU_IDMA_O2A_BUSY_BIT         31
-#define EU_IDMA_A2O_ERROR_MASK       (1 << EU_IDMA_A2O_ERROR_BIT)
-#define EU_IDMA_O2A_ERROR_MASK       (1 << EU_IDMA_O2A_ERROR_BIT)
 #define EU_IDMA_A2O_START_MASK       (1 << EU_IDMA_A2O_START_BIT)
 #define EU_IDMA_O2A_START_MASK       (1 << EU_IDMA_O2A_START_BIT)
-#define EU_IDMA_A2O_BUSY_MASK        (1 << EU_IDMA_A2O_BUSY_BIT)
-#define EU_IDMA_O2A_BUSY_MASK        (1 << EU_IDMA_O2A_BUSY_BIT)
 
 // FSync events (cluster events [25:24])
 #define EU_FSYNC_DONE_BIT            24
-#define EU_FSYNC_ERROR_BIT           25
 #define EU_FSYNC_DONE_MASK           (1 << EU_FSYNC_DONE_BIT)
-#define EU_FSYNC_ERROR_MASK          (1 << EU_FSYNC_ERROR_BIT)
-#define EU_FSYNC_ALL_MASK            (EU_FSYNC_DONE_MASK | EU_FSYNC_ERROR_MASK)
 
 // Spatz events (accelerator events [8] + cluster events [23])
 #define EU_SPATZ_DONE_BIT            8   
@@ -290,10 +276,6 @@ static inline uint32_t eu_redmule_wait_completion(eu_wait_mode_t mode) {
     return eu_wait_events(EU_REDMULE_DONE_MASK, mode, 1000000);
 }
 
-static inline uint32_t eu_redmule_is_busy(void) {
-    return eu_check_events(EU_REDMULE_BUSY_MASK);
-}
-
 static inline uint32_t eu_redmule_is_done(void) {
     return eu_check_events(EU_REDMULE_DONE_MASK);
 }
@@ -336,23 +318,13 @@ static inline uint32_t eu_idma_o2a_is_done(void) {
     return eu_check_events(EU_IDMA_O2A_DONE_MASK);
 }
 
-static inline uint32_t eu_idma_is_busy(void) {
-    uint32_t events = eu_get_events();
-    return events & (EU_IDMA_A2O_BUSY_MASK | EU_IDMA_O2A_BUSY_MASK);
-}
-
-static inline uint32_t eu_idma_has_error(void) {
-    uint32_t events = eu_get_events();
-    return events & (EU_IDMA_A2O_ERROR_MASK | EU_IDMA_O2A_ERROR_MASK);
-}
-
 //=============================================================================
 // FSYNC FUNCTIONS
 //=============================================================================
 
 static inline void eu_fsync_init(void) {
     eu_clear_events(0xFFFFFFFF);
-    eu_enable_events(EU_FSYNC_ALL_MASK);
+    eu_enable_events(EU_FSYNC_DONE_MASK);
 }
 
 static inline uint32_t eu_fsync_wait_completion(eu_wait_mode_t mode) {
@@ -361,10 +333,6 @@ static inline uint32_t eu_fsync_wait_completion(eu_wait_mode_t mode) {
 
 static inline uint32_t eu_fsync_is_done(void) {
     return eu_check_events(EU_FSYNC_DONE_MASK);
-}
-
-static inline uint32_t eu_fsync_has_error(void) {
-    return eu_check_events(EU_FSYNC_ERROR_MASK);
 }
 
 //=============================================================================
@@ -405,7 +373,7 @@ static inline void eu_multi_init(uint32_t redmule_en, uint32_t idma_a2o_en,
     uint32_t event_mask = 0;
     
     if (redmule_en) {
-        event_mask |= EU_REDMULE_ALL_MASK;
+        event_mask |= EU_REDMULE_DONE_MASK;
     }
     if (idma_a2o_en) {
         event_mask |= EU_IDMA_A2O_DONE_MASK;
@@ -414,7 +382,7 @@ static inline void eu_multi_init(uint32_t redmule_en, uint32_t idma_a2o_en,
         event_mask |= EU_IDMA_O2A_DONE_MASK;
     }
     if (fsync_en) {
-        event_mask |= EU_FSYNC_ALL_MASK;
+        event_mask |= EU_FSYNC_DONE_MASK;
     }
     
     if (event_mask) eu_enable_events(event_mask);

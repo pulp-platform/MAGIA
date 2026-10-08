@@ -47,18 +47,12 @@ package magia_tile_pkg;
   // IRQ constraints
   localparam int unsigned IRQ_IDX_REDMULE_EVT_0 = 31;
   localparam int unsigned IRQ_IDX_REDMULE_EVT_1 = 30;
-  localparam int unsigned IRQ_IDX_A2O_ERROR     = 29;
-  localparam int unsigned IRQ_IDX_O2A_ERROR     = 28;
   localparam int unsigned IRQ_IDX_A2O_DONE      = 27;
   localparam int unsigned IRQ_IDX_O2A_DONE      = 26;
   localparam int unsigned IRQ_IDX_A2O_START     = 25;
   localparam int unsigned IRQ_IDX_O2A_START     = 24;
-  localparam int unsigned IRQ_IDX_A2O_BUSY      = 23;
-  localparam int unsigned IRQ_IDX_O2A_BUSY      = 22;
-  localparam int unsigned IRQ_IDX_REDMULE_BUSY  = 21;
   localparam int unsigned IRQ_IDX_FSYNC_DONE    = 20;
-  localparam int unsigned IRQ_IDX_FSYNC_ERROR   = 19;
-  localparam int unsigned IRQ_USED              = 13;
+  localparam int unsigned IRQ_USED              = 7;
 
   // Address map
   // Bases of the tile peripherals and of the tile window (reserved, stack, L1), default 0
@@ -423,7 +417,6 @@ package magia_tile_pkg;
   /*                      Event Unit event map                       */
   /*******************************************************************/
   localparam int unsigned EU_ACC_SPATZ_DONE      = 0;
-  localparam int unsigned EU_ACC_REDMULE_BUSY    = 1;
   localparam int unsigned EU_ACC_REDMULE_EVT_0   = 2;
   localparam int unsigned EU_ACC_REDMULE_EVT_1   = 3;
 
@@ -433,16 +426,10 @@ package magia_tile_pkg;
   localparam int unsigned EU_OTHER_CLUSTER_DONE  = 12;
   localparam int unsigned EU_OTHER_SPATZ_START   = 23;
   localparam int unsigned EU_OTHER_FSYNC_DONE    = 24;
-  localparam int unsigned EU_OTHER_FSYNC_ERROR   = 25;
-  localparam int unsigned EU_OTHER_A2O_ERROR     = 26;
-  localparam int unsigned EU_OTHER_O2A_ERROR     = 27;
   localparam int unsigned EU_OTHER_A2O_START     = 28;
   localparam int unsigned EU_OTHER_O2A_START     = 29;
-  localparam int unsigned EU_OTHER_A2O_BUSY      = 30;
-  localparam int unsigned EU_OTHER_O2A_BUSY      = 31;
 
   typedef struct packed {
-    logic       busy;
     logic [1:0] evt;    // evt[0]: engine event (RedMulE evt_o); evt[1]: reserved, always 0
   } redmule_events_t;
 
