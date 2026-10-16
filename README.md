@@ -55,10 +55,6 @@ Remember to export the bender binary to your `PATH` variable.
 ```bash
 make vsim-scripts > vsim-scripts.log <mesh_dv> <core>
 ```
-**4\*)** Apply FlooNoC *patch* - **currently FlooNoC requires this step but should not need it in the future** (`MAGIA` folder):
-```bash
-make floonoc-patch
-```
 **5)** *Build* the hardware (`MAGIA` folder):
 ```bash
 make build-hw > build-hw.log <mesh_dv> <fast_sim> <core>
@@ -259,38 +255,46 @@ This map reflects the RTL memory-mapped layout defined in `hw/tile/magia_tile_pk
 
 - `tile_base = mhartid * 0x0010_0000`
 
-Per-tile local map (offset from `tile_base`, starts at `0x0000_0000`):
+Private map: the same range in every tile, each tile maps it to its own copy, other tiles cannot reach it:
 
-| Region            | Local Range             | Global Range (`tile_base + offset`) |
-|-------------------|-------------------------|--------------------------------------|
-| *RedMulE CTRL*    | `0x0000_0100-0x0000_01FF` | `tile_base + 0x0000_0100 ... 0x0000_01FF` |
-| *iDMA CTRL*       | `0x0000_0200-0x0000_05FF` | `tile_base + 0x0000_0200 ... 0x0000_05FF` |
-| *FractalSync CTRL*| `0x0000_0600-0x0000_06FF` | `tile_base + 0x0000_0600 ... 0x0000_06FF` |
-| *Event Unit*      | `0x0000_0700-0x0000_16FF` | `tile_base + 0x0000_0700 ... 0x0000_16FF` |
-| *Spatz CTRL*      | `0x0000_1700-0x0000_173F` | `tile_base + 0x0000_1700 ... 0x0000_173F` |
-| *PULP CTRL*       | `0x0000_1740-0x0000_17FF` | `tile_base + 0x0000_1740 ... 0x0000_17FF` |
-| *Collective CTRL* | `0x0000_1800-0x0000_18FF` | `tile_base + 0x0000_1800 ... 0x0000_18FF` |
-| *Reserved*        | `0x0000_1900-0x0000_FFFF` | `tile_base + 0x0000_1900 ... 0x0000_FFFF` |
-| *Stack*           | `0x0001_0000-0x0001_FFFF` | Local only: every tile sees its own stack here |
-| *L1 SPM*          | `0x0002_0000-0x000F_FFFF` | `tile_base + 0x0002_0000 ... 0x000F_FFFF` |
+| Region            | Range                     |
+|-------------------|---------------------------|
+| *RedMulE CTRL*    | `0x0000_0100-0x0000_01FF` |
+| *iDMA CTRL*       | `0x0000_0200-0x0000_05FF` |
+| *FractalSync CTRL*| `0x0000_0600-0x0000_06FF` |
+| *Event Unit*      | `0x0000_0700-0x0000_16FF` |
+| *Spatz CTRL*      | `0x0000_1700-0x0000_173F` |
+| *PULP CTRL*       | `0x0000_1740-0x0000_17FF` |
+| *Collective CTRL* | `0x0000_1800-0x0000_18FF` |
+| *Reserved*        | `0x0000_1900-0x0000_FFFF` |
+| *Stack*           | `0x0001_0000-0x0001_FFFF` |
+| *Spatz BootROM*   | `0x1000_0000-0x1000_00FF` |
 
 Shared/global map:
 
-| Region            | Range                   | Notes |
-|-------------------|-------------------------|-------|
-| *Spatz BootROM*   | `0x1000_0000-0x1000_00FF` | Tile AXI xbar bootrom target |
-| *L2*              | `0xB000_0000-0xFFFF_FFFF` | Global L2 window |
+| Region            | Range                     | Notes |
+|-------------------|---------------------------|-------|
+| *L1 SPM*          | `tile_base + 0x0002_0000 ... 0x000F_FFFF` | Reachable by every tile; the own tile's L1 still needs `tile_base` |
+| *Collectives*     | `0xB000_0000-0xB0FF_FFFF` | Tile windows with the `0xB` prefix, see [Collective Operations](#collective-operations) |
+| *L2*              | `0xC000_0000-0xFFFF_FFFF` | Global L2 window |
 | *Instructions*    | `0xCC00_0000-0xCC00_7FFF` | Instruction sub-region inside L2 |
+
+Unmapped addresses:
+- in the peripheral window: OBI `err` response from `ctrl_demux`;
+- elsewhere: the request leaves the tile on the NoC, where FlooNoC sends addresses outside its map to the first L2 bank and only flags them with a simulation assertion (`DecodeError`);
+- arriving from the NoC and not in this tile's L1: AXI DECERR, since NoC traffic never goes back out to the NoC.
+
+In simulation, the OBI `err` and the AXI DECERR stop the test with a `$fatal`.
 
 Software/test utility addresses (used by SW runtime and testbench VIP):
 
 | Region            | Address                                    | Notes |
 |-------------------|--------------------------------------------|-------|
 | *Test End*        | `0xCCFF_0000`                              | Exit code location used by SW runtime/tests |
-| *String (utoa)*   | `tile_base + 0x0000_1900`                  | String scratch location (`RESERVED_START + STR_OFFSET`) |
+| *String (utoa)*   | `0x0000_1900`                              | Private string scratch location (`RESERVED_START + STR_OFFSET`) |
 | *Print (stderr)*  | `0xFFFF_0000`                              | Memory-mapped stderr sink in simulation VIP |
 | *Print (stdio)*   | `0xFFFF_0004`                              | Memory-mapped stdio sink in simulation VIP |
-| *Synch.*          | `tile_base + 0x0000_F100`                  | Derived from `RESERVED_START + SYNC_OFFSET` |
+| *Synch.*          | `tile_base + 0x000F_F000`                  | Top 4 KiB of L1 (`L1_BASE + SYNC_OFFSET`), reachable by every tile |
 
 ## 🖥️ Programming model
 The flow is memory-mapped (MM): software configures and starts accelerators by writing control registers in each tile address space.

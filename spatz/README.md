@@ -337,15 +337,14 @@ make python_venv
 source setup_env.sh
 make python_deps
 make bender
-make update-ips > update-ips.log
-make floonoc-patch
+make vsim-scripts mesh_dv=0 > vsim-scripts.log
 
 # 2. Build hardware (QuestaSim)
-module load questasim/2024.3
+module load questa/2025.3
 make build-hw mesh_dv=0 fast_sim=1 > build-hw.log
 
-# 3. Build software (auto-detects Spatz tasks)
-module load pulp-gcc7/1.0.16
+# 3. Build software (auto-detects Spatz tasks; Spatz code needs the Spatz LLVM)
+module load corev-gcc spatz-llvm/22.1.7
 make clean all test='my_test' mesh_dv=0
 
 # 4. Run simulation

@@ -45,7 +45,8 @@ package magia_tile_pkg;
   `include "../include/alias.svh"
 
   // Address map
-  // Bases of the tile peripherals and of the tile window (reserved, stack, L1), default 0
+
+  // Bases of the tile peripherals and of the tile window, default '0
 `ifdef MAGIA_TILE_PERIPH_BASE
   localparam logic [magia_pkg::ADDR_W-1:0] TILE_PERIPH_BASE        = `MAGIA_TILE_PERIPH_BASE;
 `else
@@ -56,6 +57,8 @@ package magia_tile_pkg;
 `else
   localparam logic [magia_pkg::ADDR_W-1:0] TILE_WINDOW_BASE        = 32'h0000_0000;
 `endif
+
+  // Peripherals (private): chained control registers
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START = TILE_PERIPH_BASE + 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_SIZE       = 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_END   = REDMULE_CTRL_ADDR_START + REDMULE_CTRL_SIZE;
@@ -77,17 +80,29 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_ADDR_START    = CLUSTER_CTRL_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_SIZE          = 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_ADDR_END      = COLL_CTRL_ADDR_START + COLL_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = TILE_WINDOW_BASE + (COLL_CTRL_ADDR_END - TILE_PERIPH_BASE);
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END       = TILE_WINDOW_BASE + 32'h0000_FFFF;
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_PERIPH_ADDR_END    = COLL_CTRL_ADDR_END;
+
+  // Reserved (private): software scratch, such as the print buffer
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = TILE_WINDOW_BASE + (TILE_PERIPH_ADDR_END - TILE_PERIPH_BASE);
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END       = TILE_WINDOW_BASE + 32'h0001_0000;
+
+  // Stack (private)
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START        = RESERVED_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE              = 32'h0001_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_END          = STACK_ADDR_START + STACK_SIZE;
+
+  // L1 (shared)
   localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_START           = STACK_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_SIZE                 = 32'h000E_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_END             = L1_ADDR_START + L1_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_TILE_OFFSET          = 32'h0010_0000;
-  localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_START           = 32'hB000_0000;
-  localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                 = 32'h5000_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] TILES_ADDR_END          = TILE_WINDOW_BASE + magia_pkg::N_TILES*L1_TILE_OFFSET;  // End of all tile windows
+
+  // Collectives and L2 (global)
+  localparam logic [magia_pkg::ADDR_W-1:0] COLL_ADDR_START         = 32'hB000_0000 + TILE_WINDOW_BASE;  // collective_gen maps it onto the tile windows
+  localparam logic [magia_pkg::ADDR_W-1:0] COLL_ADDR_END           = 32'hB000_0000 + TILES_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_START           = 32'hC000_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                 = 32'h4000_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_END             = L2_ADDR_START + L2_SIZE;
 
   // Instruction region for Spatz code (cacheable region)
@@ -204,7 +219,7 @@ package magia_tile_pkg;
 `else
   parameter logic [31:0] SPATZ_BOOT_ADDR          = 32'h1000_0000;  // Spatz bootrom base address
 `endif
-  parameter logic [31:0] SPATZ_BOOTROM_SIZE       = 32'h0000_00FF;
+  parameter logic [31:0] SPATZ_BOOTROM_SIZE       = 32'h0000_0100;
   
   // Spatz TCDM parameters
   parameter int unsigned SPATZ_TCDM_ADDR_WIDTH = $clog2(magia_pkg::N_MEM_BANKS * magia_pkg::N_WORDS_BANK * magia_pkg::DATA_W / 8);  
@@ -381,16 +396,14 @@ package magia_tile_pkg;
 
   function automatic obi_sbr_map_t gen_obi_sbr_map(magia_tile_cfg_t cfg);
     obi_sbr_map_t  ret;
-    ctrl_map_t ctrl;
     ret = '0;
-    ctrl = gen_ctrl_map(cfg);
     ret.l2  = 0;
     ret.l1  = 1;
     ret.eu  = 2;
     ret.ctrl = 3;
     ret.num_sbr = 4;
-    // L2, L1, reserved, stack and EU, plus one rule per enabled control unit
-    ret.num_rules = 5 + ctrl.num_units;
+    // L2, L1, reserved, stack, EU and the control window around it
+    ret.num_rules = 7;
     return ret;
   endfunction
 
@@ -775,7 +788,7 @@ package magia_tile_pkg;
   endfunction
 
   function automatic int unsigned gen_axi_xbar_num_rules(magia_tile_cfg_t cfg);
-    return 3 + 32'(cfg.EnSpatzCC);
+    return 1 + 32'(cfg.EnSpatzCC);
   endfunction
 
   function automatic axi_pkg::xbar_cfg_t gen_axi_xbar_cfg(magia_tile_cfg_t cfg);
