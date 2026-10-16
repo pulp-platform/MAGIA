@@ -122,7 +122,10 @@ module magia_isle
   localparam magia_tile_pkg::axi_xbar_mst_map_t AxiMst     = magia_tile_pkg::gen_axi_xbar_mst_map(TileCfg);
   localparam axi_pkg::xbar_cfg_t                AxiXbarCfg = magia_tile_pkg::gen_axi_xbar_cfg(TileCfg);
   localparam magia_tile_pkg::ctrl_map_t         CtrlMap    = magia_tile_pkg::gen_ctrl_map(TileCfg);
-  localparam magia_tile_pkg::ctrl_rules_t       CtrlRules  = magia_tile_pkg::gen_ctrl_rules(TileCfg);
+
+  // NoC traffic never goes back out to the NoC: the xbar answers it with a DECERR
+  localparam bit [AxiXbarCfg.NoSlvPorts-1:0][AxiXbarCfg.NoMstPorts-1:0] AxiConnectivity =
+    ~((AxiXbarCfg.NoSlvPorts*AxiXbarCfg.NoMstPorts)'(1) << (magia_tile_pkg::AXI_SLV_EXT_IDX*AxiXbarCfg.NoMstPorts + AxiMst.ext));
 
   localparam int unsigned NumSpatzHciPorts = magia_tile_pkg::gen_tile_spatz_hci_ports(TileCfg);
   localparam int unsigned NumHciCore       = magia_tile_pkg::gen_tile_num_hci_core(TileCfg);
@@ -154,11 +157,13 @@ module magia_isle
   localparam logic[31:0] CodeRegionMask = (CodeRegionSize == 0) ? 32'h0
                                         : ~(32'(CodeRegionSize) - 32'd1);
 
+`ifndef SYNTHESIS
   if (CodeRegionSize != 0 &&
       (((CodeRegionSize & (CodeRegionSize - 1)) != 0) || ((CodeRegionBase & (CodeRegionSize - 1)) != 0))) begin: gen_code_region_err
     $fatal(1, "magia_isle: the code region 0x%0h+0x%0h is not a power of two aligned to its size",
            CodeRegionBase, CodeRegionSize);
   end
+`endif
 
   // Built through a function: a nested `default:` pattern does not elaborate in every tool
   function automatic snitch_pma_pkg::rule_t [snitch_pma_pkg::NrMaxRules-1:0] spatz_code_regions();
@@ -215,18 +220,14 @@ module magia_isle
 /**             Tile Address Map Beginning            **/
 /*******************************************************/
 
-  // L1 and reserved regions are global: each tile owns the slot at mhartid*L1_TILE_OFFSET
+  // L1 is global: each tile owns the slot at mhartid*L1_TILE_OFFSET
   logic[magia_pkg::ADDR_W-1:0] tile_l1_start_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_l1_end_addr;
-  logic[magia_pkg::ADDR_W-1:0] tile_reserved_start_addr;
-  logic[magia_pkg::ADDR_W-1:0] tile_reserved_end_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_event_unit_start_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_event_unit_end_addr;
 
   assign tile_l1_start_addr         = magia_tile_pkg::L1_ADDR_START       + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
   assign tile_l1_end_addr           = magia_tile_pkg::L1_ADDR_END         + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
-  assign tile_reserved_start_addr   = magia_tile_pkg::RESERVED_ADDR_START + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
-  assign tile_reserved_end_addr     = magia_tile_pkg::RESERVED_ADDR_END   + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
   assign tile_event_unit_start_addr = magia_tile_pkg::EVENT_UNIT_ADDR_START;
   assign tile_event_unit_end_addr   = magia_tile_pkg::EVENT_UNIT_ADDR_END;
 
@@ -715,25 +716,24 @@ module magia_isle
   localparam int unsigned RuleL1    = 1;
   localparam int unsigned RuleRes   = 2;
   localparam int unsigned RuleStack = 3;
-  localparam int unsigned RuleEu    = 4;
-  localparam int unsigned RuleCtrl  = 5;  // First of CtrlMap.num_units rules
+  localparam int unsigned RuleCtrl   = 4;
+  localparam int unsigned RuleEu     = 5;
+  localparam int unsigned RuleCtrlHi = 6;
 
   magia_tile_pkg::obi_xbar_rule_t[ObiSbr.num_rules-1:0]                        obi_xbar_rule;
   logic[ObiMgr.num_mgr-1:0]                                                    obi_xbar_en_default_idx;
   logic[ObiMgr.num_mgr-1:0][magia_tile_pkg::gen_idx_width(ObiSbr.num_sbr)-1:0] obi_xbar_default_idx;
 
-  assign obi_xbar_rule[RuleL2]    = '{idx: ObiSbr.l2, start_addr: magia_tile_pkg::L2_ADDR_START,    end_addr: magia_tile_pkg::L2_ADDR_END   };
-  assign obi_xbar_rule[RuleL1]    = '{idx: ObiSbr.l1, start_addr: tile_l1_start_addr,               end_addr: tile_l1_end_addr              };
-  assign obi_xbar_rule[RuleRes]   = '{idx: ObiSbr.l1, start_addr: tile_reserved_start_addr,         end_addr: tile_reserved_end_addr        };
-  assign obi_xbar_rule[RuleStack] = '{idx: ObiSbr.l1, start_addr: magia_tile_pkg::STACK_ADDR_START, end_addr: magia_tile_pkg::STACK_ADDR_END};
-  assign obi_xbar_rule[RuleEu]    = '{idx: ObiSbr.eu, start_addr: tile_event_unit_start_addr,       end_addr: tile_event_unit_end_addr      };
+  assign obi_xbar_rule[RuleL2]    = '{idx: ObiSbr.l2,   start_addr: magia_tile_pkg::L2_ADDR_START,       end_addr: magia_tile_pkg::L2_ADDR_END         };
+  assign obi_xbar_rule[RuleL1]    = '{idx: ObiSbr.l1,   start_addr: tile_l1_start_addr,                  end_addr: tile_l1_end_addr                    };
+  assign obi_xbar_rule[RuleRes]   = '{idx: ObiSbr.l1,   start_addr: magia_tile_pkg::RESERVED_ADDR_START, end_addr: magia_tile_pkg::RESERVED_ADDR_END   };
+  assign obi_xbar_rule[RuleStack] = '{idx: ObiSbr.l1,   start_addr: magia_tile_pkg::STACK_ADDR_START,    end_addr: magia_tile_pkg::STACK_ADDR_END      };
+  // The control window is split around the Event Unit: every address matches one rule
+  assign obi_xbar_rule[RuleCtrl]   = '{idx: ObiSbr.ctrl, start_addr: magia_tile_pkg::TILE_PERIPH_BASE, end_addr: tile_event_unit_start_addr          };
+  assign obi_xbar_rule[RuleEu]     = '{idx: ObiSbr.eu,   start_addr: tile_event_unit_start_addr,     end_addr: tile_event_unit_end_addr            };
+  assign obi_xbar_rule[RuleCtrlHi] = '{idx: ObiSbr.ctrl, start_addr: tile_event_unit_end_addr,       end_addr: magia_tile_pkg::TILE_PERIPH_ADDR_END};
 
-  // Disabled control units have no rule: their range falls to L2, where the assertions catch it
-  for (genvar i = 0; i < CtrlMap.num_units; i++) begin: gen_ctrl_rule
-    assign obi_xbar_rule[RuleCtrl+i] = '{idx: ObiSbr.ctrl, start_addr: CtrlRules[i].start_addr, end_addr: CtrlRules[i].end_addr};
-  end
-
-  // Anything outside L1 and the control registers goes to the AXI crossbar
+  // Anything outside L1 and the peripheral window goes to the AXI crossbar
   assign obi_xbar_en_default_idx = '1;
   assign obi_xbar_default_idx    = '0;
 
@@ -825,49 +825,6 @@ module magia_isle
       .mgr_port_rsp_i ( core_mem_data_rsp[i]     )
     );
   end
-
-`ifndef SYNTHESIS
-  if (!TileCfg.EnRedMule) begin: gen_assert_no_redmule_access
-    assert property (@(posedge sys_clk) disable iff (!rst_ni)
-      !(core_mem_data_req[ObiSbr.l2].req &&
-        core_mem_data_req[ObiSbr.l2].a.addr >= magia_tile_pkg::REDMULE_CTRL_ADDR_START &&
-        core_mem_data_req[ObiSbr.l2].a.addr <  magia_tile_pkg::REDMULE_CTRL_ADDR_END))
-      else $error("magia_isle: OBI access to RedMulE ctrl range (0x%08x) but RedMulE is disabled",
-                  core_mem_data_req[ObiSbr.l2].a.addr);
-  end
-`ifndef MAGIA_FSYNC
-  assert property (@(posedge sys_clk) disable iff (!rst_ni)
-    !(core_mem_data_req[ObiSbr.l2].req &&
-      core_mem_data_req[ObiSbr.l2].a.addr >= magia_tile_pkg::FSYNC_CTRL_ADDR_START &&
-      core_mem_data_req[ObiSbr.l2].a.addr <  magia_tile_pkg::FSYNC_CTRL_ADDR_END))
-    else $error("magia_isle: OBI access to FractalSync ctrl range (0x%08x) but FractalSync is disabled",
-                core_mem_data_req[ObiSbr.l2].a.addr);
-`endif
-  if (!TileCfg.EnSpatzCC) begin: gen_assert_no_spatz_access
-    assert property (@(posedge sys_clk) disable iff (!rst_ni)
-      !(core_mem_data_req[ObiSbr.l2].req &&
-        core_mem_data_req[ObiSbr.l2].a.addr >= magia_tile_pkg::SPATZ_CTRL_ADDR_START &&
-        core_mem_data_req[ObiSbr.l2].a.addr <  magia_tile_pkg::SPATZ_CTRL_ADDR_END))
-      else $error("magia_isle: OBI access to Spatz ctrl range (0x%08x) but Spatz CC is disabled",
-                  core_mem_data_req[ObiSbr.l2].a.addr);
-  end
-  if (!TileCfg.EnCluster) begin: gen_assert_no_cluster_access
-    assert property (@(posedge sys_clk) disable iff (!rst_ni)
-      !(core_mem_data_req[ObiSbr.l2].req &&
-        core_mem_data_req[ObiSbr.l2].a.addr >= magia_tile_pkg::CLUSTER_CTRL_ADDR_START &&
-        core_mem_data_req[ObiSbr.l2].a.addr <  magia_tile_pkg::CLUSTER_CTRL_ADDR_END))
-      else $error("magia_isle: OBI access to cluster ctrl range (0x%08x) but the PULP cluster is disabled",
-                  core_mem_data_req[ObiSbr.l2].a.addr);
-  end
-  if (!TileCfg.EnCollective) begin: gen_assert_no_coll_access
-    assert property (@(posedge sys_clk) disable iff (!rst_ni)
-      !(core_mem_data_req[ObiSbr.l2].req &&
-        core_mem_data_req[ObiSbr.l2].a.addr >= magia_tile_pkg::COLL_CTRL_ADDR_START &&
-        core_mem_data_req[ObiSbr.l2].a.addr <  magia_tile_pkg::COLL_CTRL_ADDR_END))
-      else $error("magia_isle: OBI access to collective ctrl range (0x%08x) but narrow collectives are disabled",
-                  core_mem_data_req[ObiSbr.l2].a.addr);
-  end
-`endif
 
 /*******************************************************/
 /**                  OBI Crossbar End                 **/
@@ -1032,20 +989,30 @@ module magia_isle
   assign axi_xbar_slv_req[magia_tile_pkg::AXI_SLV_EXT_IDX]        = axi_narrow_slv_req_i;
   assign axi_narrow_slv_rsp_o                                     = axi_xbar_slv_rsp[magia_tile_pkg::AXI_SLV_EXT_IDX];
 
-  assign axi_xbar_rule[0] = '{idx: AxiMst.ext, start_addr: magia_tile_pkg::L2_ADDR_START, end_addr: magia_tile_pkg::L2_ADDR_END};
-  assign axi_xbar_rule[1] = '{idx: AxiMst.obi, start_addr: tile_l1_start_addr,            end_addr: tile_l1_end_addr           };
-  assign axi_xbar_rule[2] = '{idx: AxiMst.obi, start_addr: tile_reserved_start_addr,      end_addr: tile_reserved_end_addr     };
+  // Only non-NoC destinations need a rule: L2, other tiles and collectives take the default
+  assign axi_xbar_rule[0] = '{idx: AxiMst.obi, start_addr: tile_l1_start_addr, end_addr: tile_l1_end_addr};
   if (TileCfg.EnSpatzCC) begin: gen_axi_bootrom_rule
-    assign axi_xbar_rule[3] = '{idx: AxiMst.bootrom, start_addr: magia_tile_pkg::SPATZ_BOOT_ADDR, end_addr: magia_tile_pkg::SPATZ_BOOT_ADDR + magia_tile_pkg::SPATZ_BOOTROM_SIZE};
+    assign axi_xbar_rule[1] = '{idx: AxiMst.bootrom, start_addr: magia_tile_pkg::SPATZ_BOOT_ADDR, end_addr: magia_tile_pkg::SPATZ_BOOT_ADDR + magia_tile_pkg::SPATZ_BOOTROM_SIZE};
   end
 
-  // Unmapped addresses (other tiles, prints) leave through the ext port
+  // Other tiles and unmapped addresses go to the NoC; AxiConnectivity stops NoC traffic looping
   assign en_default_mst_port = '1;
+
+`ifndef SYNTHESIS
+  for (genvar i = 0; i < AxiXbarCfg.NoSlvPorts; i++) begin: gen_decerr_assert
+    assert property (@(posedge sys_clk) disable iff (!rst_ni)
+      !(axi_xbar_slv_rsp[i].b_valid && axi_xbar_slv_rsp[i].b.resp == axi_pkg::RESP_DECERR))
+      else $fatal(1, "magia_isle: write to unmapped address from AXI port %0d (axi_xbar_slv_idx_e)", i);
+    assert property (@(posedge sys_clk) disable iff (!rst_ni)
+      !(axi_xbar_slv_rsp[i].r_valid && axi_xbar_slv_rsp[i].r.resp == axi_pkg::RESP_DECERR))
+      else $fatal(1, "magia_isle: read from unmapped address from AXI port %0d (axi_xbar_slv_idx_e)", i);
+  end
+`endif
 
   axi_xbar #(
     .Cfg           ( AxiXbarCfg                             ),
     .ATOPs         (                                        ),
-    .Connectivity  (                                        ),
+    .Connectivity  ( AxiConnectivity                        ),
     .slv_aw_chan_t ( magia_tile_pkg::axi_xbar_slv_aw_chan_t ),
     .mst_aw_chan_t ( magia_pkg::axi_xbar_mst_aw_chan_t      ),
     .w_chan_t      ( magia_pkg::axi_xbar_mst_w_chan_t       ),
@@ -2074,7 +2041,6 @@ module magia_isle
   // A Verilator hierarchical block cannot be probed from outside, so the VIP reads these ports
   always_comb begin
     observe_o              = '0;
-    // Prints (0xFFFF_0000/4) match no rule and leave through the ext port
     observe_o.axi_aw_addr  = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_EXT_IDX].aw.addr;
     observe_o.axi_aw_id    = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_EXT_IDX].aw.id;
     observe_o.axi_aw_valid = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_EXT_IDX].aw_valid;

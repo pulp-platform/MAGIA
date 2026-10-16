@@ -38,8 +38,12 @@ module ctrl_demux
 );
 
   localparam magia_tile_pkg::ctrl_rules_t CtrlRules = magia_tile_pkg::gen_ctrl_rules(TileCfg);
+  localparam int unsigned                 ErrIdx    = CtrlMap.num_units;  // Default port, after the units
+  localparam int unsigned                 SelW      = magia_tile_pkg::gen_idx_width(CtrlMap.num_units + 1);
 
   magia_tile_pkg::obi_xbar_rule_t[CtrlMap.num_units-1:0] ctrl_rule;
+  magia_tile_pkg::core_obi_data_req_t[CtrlMap.num_units:0] demux_req;
+  magia_tile_pkg::core_obi_data_rsp_t[CtrlMap.num_units:0] demux_rsp;
 
   for (genvar i = 0; i < CtrlMap.num_units; i++) begin: gen_ctrl_rule
     assign ctrl_rule[i] = CtrlRules[i];
@@ -49,20 +53,42 @@ module ctrl_demux
     .SbrPortObiCfg      ( magia_tile_pkg::obi_amo_cfg         ),
     .sbr_port_obi_req_t ( magia_tile_pkg::core_obi_data_req_t ),
     .sbr_port_obi_rsp_t ( magia_tile_pkg::core_obi_data_rsp_t ),
-    .NumMgrPorts        ( CtrlMap.num_units                    ),
+    .NumMgrPorts        ( CtrlMap.num_units + 1                ),
     .NumMaxTrans        ( magia_tile_pkg::N_MAX_TRAN          ),
     .NumAddrRules       ( CtrlMap.num_units                    ),
     .addr_map_rule_t    ( magia_tile_pkg::obi_xbar_rule_t     )
   ) i_ctrl_demux (
-    .clk_i            ( clk_i      ),
-    .rst_ni           ( rst_ni     ),
-    .sbr_ports_req_i  ( obi_req_i  ),
-    .sbr_ports_rsp_o  ( obi_rsp_o  ),
-    .mgr_ports_req_o  ( unit_req_o ),
-    .mgr_ports_rsp_i  ( unit_rsp_i ),
-    .addr_map_i       ( ctrl_rule   ),
-    .en_default_idx_i ( 1'b0       ),
-    .default_idx_i    ( '0         )
+    .clk_i            ( clk_i          ),
+    .rst_ni           ( rst_ni         ),
+    .sbr_ports_req_i  ( obi_req_i      ),
+    .sbr_ports_rsp_o  ( obi_rsp_o      ),
+    .mgr_ports_req_o  ( demux_req      ),
+    .mgr_ports_rsp_i  ( demux_rsp      ),
+    .addr_map_i       ( ctrl_rule      ),
+    .en_default_idx_i ( 1'b1           ),
+    .default_idx_i    ( SelW'(ErrIdx)  )
   );
+
+  assign unit_req_o                       = demux_req[CtrlMap.num_units-1:0];
+  assign demux_rsp[CtrlMap.num_units-1:0] = unit_rsp_i;
+
+  // Disabled units and holes in the control window get an error response
+  obi_err_sbr #(
+    .ObiCfg    ( magia_tile_pkg::obi_amo_cfg         ),
+    .obi_req_t ( magia_tile_pkg::core_obi_data_req_t ),
+    .obi_rsp_t ( magia_tile_pkg::core_obi_data_rsp_t )
+  ) i_obi_err_sbr (
+    .clk_i      ( clk_i             ),
+    .rst_ni     ( rst_ni            ),
+    .testmode_i ( 1'b0              ),
+    .obi_req_i  ( demux_req[ErrIdx] ),
+    .obi_rsp_o  ( demux_rsp[ErrIdx] )
+  );
+
+`ifndef SYNTHESIS
+  assert property (@(posedge clk_i) disable iff (!rst_ni) !demux_req[ErrIdx].req)
+    else $fatal(1, "ctrl_demux: OBI access to unmapped control address 0x%08x (unit disabled?)",
+                demux_req[ErrIdx].a.addr);
+`endif
 
 endmodule: ctrl_demux
