@@ -55,7 +55,7 @@ module idma_obi_ctrl_decoder
   localparam logic [magia_pkg::ADDR_W-1:0] IDMA_END_ADDR  = magia_tile_pkg::IDMA_CTRL_ADDR_END;
   
   localparam int unsigned ADDR_WIDTH = 32;
-  localparam int unsigned DIRECTION_OFFSET = 12'h200;  // +0x200 for direction change
+  localparam int unsigned DIRECTION_OFFSET = 32'h200;  // +0x200 for direction change
   
     // Register offset definitions based on official reg32_3d spec
   localparam logic [11:0] IDMA_CONFIG_OFFSET = 12'h0;

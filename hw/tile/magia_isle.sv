@@ -139,13 +139,12 @@ module magia_isle
 
   localparam int unsigned RedmuleFpW   = 16;  // FP16
   localparam int unsigned RedmuleDataW = TileCfg.RedMule.Height * (TileCfg.RedMule.NumPipeRegs + 1) * RedmuleFpW;
-  localparam int unsigned RedmuleDwh   = RedmuleDataW + 32;
-  localparam int unsigned RedmuleSwh   = RedmuleDwh / magia_tile_pkg::BWH;
 
-  `HWPE_CTRL_TYPEDEF_REQ_T(tile_redmule_ctrl_req_t, logic[magia_tile_pkg::AWC-1:0], logic[RedmuleDwh-1:0], logic[RedmuleSwh-1:0], logic[TileIW-1:0])
-  `HWPE_CTRL_TYPEDEF_RSP_T(tile_redmule_ctrl_rsp_t, logic[RedmuleDwh-1:0], logic[TileIW-1:0])
-  `HCI_TYPEDEF_REQ_T(tile_redmule_data_req_t, logic[magia_tile_pkg::AWC-1:0], logic[RedmuleDwh-1:0], logic[RedmuleSwh-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
-  `HCI_TYPEDEF_RSP_T(tile_redmule_data_rsp_t, logic[RedmuleDwh-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
+  // Sized like hwpe_ctrl_intf_periph in magia_redmule_wrap
+  `HWPE_CTRL_TYPEDEF_REQ_T(tile_redmule_ctrl_req_t, logic[magia_tile_pkg::AWC-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[hci_package::DEFAULT_IW-1:0])
+  `HWPE_CTRL_TYPEDEF_RSP_T(tile_redmule_ctrl_rsp_t, logic[magia_pkg::DATA_W-1:0], logic[hci_package::DEFAULT_IW-1:0])
+  `HCI_TYPEDEF_REQ_T(tile_redmule_data_req_t, logic[magia_tile_pkg::AWC-1:0], logic[RedmuleDataW-1:0], logic[RedmuleDataW/magia_tile_pkg::BWH-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
+  `HCI_TYPEDEF_RSP_T(tile_redmule_data_rsp_t, logic[RedmuleDataW-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
 
   `HCI_TYPEDEF_REQ_T(tile_hci_data_req_t, logic[magia_tile_pkg::AWC-1:0], logic[magia_tile_pkg::DW_LIC-1:0], logic[magia_tile_pkg::SW_LIC-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
   `HCI_TYPEDEF_RSP_T(tile_hci_data_rsp_t, logic[magia_tile_pkg::DW_LIC-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
@@ -156,9 +155,10 @@ module magia_isle
                                         : ~(32'(CodeRegionSize) - 32'd1);
 
   if (CodeRegionSize != 0 &&
-      (((CodeRegionSize & (CodeRegionSize - 1)) != 0) || ((CodeRegionBase & (CodeRegionSize - 1)) != 0)))
+      (((CodeRegionSize & (CodeRegionSize - 1)) != 0) || ((CodeRegionBase & (CodeRegionSize - 1)) != 0))) begin: gen_code_region_err
     $fatal(1, "magia_isle: the code region 0x%0h+0x%0h is not a power of two aligned to its size",
            CodeRegionBase, CodeRegionSize);
+  end
 
   // Built through a function: a nested `default:` pattern does not elaborate in every tool
   function automatic snitch_pma_pkg::rule_t [snitch_pma_pkg::NrMaxRules-1:0] spatz_code_regions();
@@ -533,8 +533,6 @@ module magia_isle
   magia_tile_pkg::core_axi_instr_rsp_t   core_l2_instr_rsp;
 
   logic                                                                     enable_prefetching;
-  snitch_icache_pkg::icache_l0_events_t[magia_tile_pkg::NR_FETCH_PORTS-1:0] icache_l0_events;
-  snitch_icache_pkg::icache_l1_events_t                                     icache_l1_events;
   logic[magia_tile_pkg::NR_FETCH_PORTS-1:0]                                 flush_valid;
   logic[magia_tile_pkg::NR_FETCH_PORTS-1:0]                                 flush_ready;
 
@@ -584,8 +582,8 @@ module magia_isle
     .fetch_rerror_o       ( core_cache_instr_rsp.rerror ),
 
     .enable_prefetching_i ( enable_prefetching          ),
-    .icache_l0_events_o   ( icache_l0_events            ),
-    .icache_l1_events_o   ( icache_l1_events            ),
+    .icache_l0_events_o   (                             ),
+    .icache_l1_events_o   (                             ),
     .flush_valid_i        ( flush_valid                 ),
     .flush_ready_o        ( flush_ready                 ),
 
@@ -1631,7 +1629,8 @@ module magia_isle
       .redmule_data_req_t ( tile_redmule_data_req_t     ),
       .redmule_data_rsp_t ( tile_redmule_data_rsp_t     ),
       .redmule_ctrl_req_t ( tile_redmule_ctrl_req_t     ),
-      .redmule_ctrl_rsp_t ( tile_redmule_ctrl_rsp_t     )
+      .redmule_ctrl_rsp_t ( tile_redmule_ctrl_rsp_t     ),
+      .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(hci_redmule_if) )
     ) i_redmule_wrap (
       .clk_i              ( sys_clk               ),
       .rst_ni             ( rst_ni                ),
@@ -1763,7 +1762,6 @@ module magia_isle
 
     // The Spatz CSR start pulse is the only interrupt source
     snitch_pkg::interrupts_t  spatz_irq;
-    snitch_pkg::core_events_t spatz_core_events;
 
     assign spatz_irq.msip  = 1'b0;
     assign spatz_irq.mtip  = 1'b0;
@@ -1810,7 +1808,7 @@ module magia_isle
       .inst_error_i     ( spatz_inst_error     ),
       .flush_i_ready_i  ( spatz_flush_i_ready  ),
 
-      .core_events_o    ( spatz_core_events    )
+      .core_events_o    (                      )
     );
 
     // Spatz i$
@@ -1867,8 +1865,6 @@ module magia_isle
     // Spatz bootrom, generated from spatz_init.S, behind an AXI-to-regbus bridge
     magia_tile_pkg::reg_dma_req_t       bootrom_reg_req;
     magia_tile_pkg::reg_dma_rsp_t       bootrom_reg_rsp;
-    logic [magia_pkg::AXI_NOC_ID_W-1:0] bootrom_reg_id;
-    logic                               bootrom_busy;
 
     axi_to_reg_v2 #(
       .AxiAddrWidth ( magia_pkg::ADDR_W             ),
@@ -1887,8 +1883,8 @@ module magia_isle
       .axi_rsp_o ( axi_xbar_mst_rsp[AxiMst.bootrom] ),
       .reg_req_o ( bootrom_reg_req                  ),
       .reg_rsp_i ( bootrom_reg_rsp                  ),
-      .reg_id_o  ( bootrom_reg_id                   ),
-      .busy_o    ( bootrom_busy                     )
+      .reg_id_o  (                                  ),
+      .busy_o    (                                  )
     );
 
     spatz_bootrom i_spatz_bootrom (
@@ -2006,10 +2002,7 @@ module magia_isle
     logic [NClusterCores-1:0]                                       cluster_cache_rerror;
 
     logic                                                     cluster_enable_prefetching;
-    snitch_icache_pkg::icache_l0_events_t [NClusterCores-1:0] cluster_icache_l0_events;
-    snitch_icache_pkg::icache_l1_events_t                     cluster_icache_l1_events;
     logic [NClusterCores-1:0]                                 cluster_icache_flush_valid;
-    logic [NClusterCores-1:0]                                 cluster_icache_flush_ready;
 
     magia_tile_pkg::core_axi_instr_req_t cluster_l2_instr_req;
     magia_tile_pkg::core_axi_instr_rsp_t cluster_l2_instr_rsp;
@@ -2054,10 +2047,10 @@ module magia_isle
       .fetch_rerror_o       ( cluster_cache_rerror       ),
 
       .enable_prefetching_i ( cluster_enable_prefetching ),
-      .icache_l0_events_o   ( cluster_icache_l0_events   ),
-      .icache_l1_events_o   ( cluster_icache_l1_events   ),
+      .icache_l0_events_o   (                            ),
+      .icache_l1_events_o   (                            ),
       .flush_valid_i        ( cluster_icache_flush_valid ),
-      .flush_ready_o        ( cluster_icache_flush_ready ),
+      .flush_ready_o        (                            ),
 
       .sram_cfg_data_i      ( '0                         ),
       .sram_cfg_tag_i       ( '0                         ),

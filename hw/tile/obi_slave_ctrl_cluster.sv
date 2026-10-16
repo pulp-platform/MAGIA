@@ -66,6 +66,7 @@ localparam logic [31:0] CLUSTER_START             = 32'h18;
 localparam logic [31:0] CLUSTER_READY             = 32'h1C;
 
 localparam int unsigned NumCoresW = magia_tile_pkg::gen_idx_width(NumCores);
+localparam logic [NumCoresW:0] NumCoresCnt = (NumCoresW+1)'(NumCores);  // NumCores at the counter width
 
 // Address decode (offset from base)
 logic [31:0] addr_offset;
@@ -158,7 +159,7 @@ always_comb begin
       end
       CLUSTER_READY: begin
         // PULP core boot complete: count; saturate at N_CLUSTER_CORES
-        if (nb_recv_ready_reqs_q < NumCores) begin
+        if (nb_recv_ready_reqs_q < NumCoresCnt) begin
           nb_recv_ready_reqs_d = nb_recv_ready_reqs_q + 1;
         end
       end
@@ -186,7 +187,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
   if (!rst_ni) begin
     clk_en_q             <= 1'b0;
     entry_point_q        <= 32'hCC000080;
-    nb_cores_to_wait_q   <= NumCores;
+    nb_cores_to_wait_q   <= NumCoresCnt;
     done_q               <= 1'b0;
     taskbin_q            <= 32'h0;
     data_q               <= 32'h0;
@@ -218,7 +219,7 @@ end
 // OBI read response logic (combinational)
 // ============================================
 logic ready_reg_val;
-assign ready_reg_val = (nb_recv_ready_reqs_q == NumCores);
+assign ready_reg_val = (nb_recv_ready_reqs_q == NumCoresCnt);
 
 always_comb begin
   rdata_d  = 32'h0;

@@ -39,10 +39,10 @@ module obi_slave_ctrl_spatz
 );
 
   // Register offsets
-  localparam logic [3:0] CLK_EN_OFFSET   = 4'h0;  // +0x00
-  localparam logic [3:0] READY_OFFSET    = 4'h4;  // +0x04
-  localparam logic [3:0] START_OFFSET    = 4'h8;  // +0x08
-  localparam logic [3:0] TASKBIN_OFFSET  = 4'hC;  // +0x0C
+  localparam logic [4:0] CLK_EN_OFFSET   = 5'h00;  // +0x00
+  localparam logic [4:0] READY_OFFSET    = 5'h04;  // +0x04
+  localparam logic [4:0] START_OFFSET    = 5'h08;  // +0x08
+  localparam logic [4:0] TASKBIN_OFFSET  = 5'h0C;  // +0x0C
   localparam logic [4:0] DATA_OFFSET     = 5'h10; // +0x10
   localparam logic [4:0] RETURN_OFFSET   = 5'h14; // +0x14
   localparam logic [4:0] DONE_OFFSET     = 5'h18; // +0x18
@@ -105,6 +105,7 @@ module obi_slave_ctrl_spatz
         DATA_OFFSET:    data_d    = obi_req_i.a.wdata;     // Preserved register
         RETURN_OFFSET:  return_d  = obi_req_i.a.wdata;     // Preserved register
         DONE_OFFSET:    done_d    = obi_req_i.a.wdata[0];  // Spatz writes 1, creates pulse
+        default: ;
       endcase
     end
   end

@@ -44,16 +44,6 @@ package magia_tile_pkg;
 
   `include "../include/alias.svh"
 
-  // IRQ constraints
-  localparam int unsigned IRQ_IDX_REDMULE_EVT_0 = 31;
-  localparam int unsigned IRQ_IDX_REDMULE_EVT_1 = 30;
-  localparam int unsigned IRQ_IDX_A2O_DONE      = 27;
-  localparam int unsigned IRQ_IDX_O2A_DONE      = 26;
-  localparam int unsigned IRQ_IDX_A2O_START     = 25;
-  localparam int unsigned IRQ_IDX_O2A_START     = 24;
-  localparam int unsigned IRQ_IDX_FSYNC_DONE    = 20;
-  localparam int unsigned IRQ_USED              = 7;
-
   // Address map
   // Bases of the tile peripherals and of the tile window (reserved, stack, L1), default 0
 `ifdef MAGIA_TILE_PERIPH_BASE
@@ -102,7 +92,6 @@ package magia_tile_pkg;
 
   // Instruction region for Spatz code (cacheable region)
   localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_ADDR_START      = 32'hCC00_0000;
-  localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_SIZE            = 32'h0000_8000;  // 32KB
 
   localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_PMA_MASK        = 32'hFFFF_8000;
 
@@ -110,7 +99,7 @@ package magia_tile_pkg;
   localparam snitch_pma_pkg::snitch_pma_t SPATZ_SNITCH_PMA_CFG = '{
     NrCachedRegionRules: 1,
     CachedRegion: '{
-      0: '{base: INSTRRAM_ADDR_START, mask: INSTRRAM_PMA_MASK},
+      0: '{base: 48'(INSTRRAM_ADDR_START), mask: 48'(INSTRRAM_PMA_MASK)},  // Snitch PMA rules are 48 bit
       default: '0
     },
     default: 0
@@ -240,16 +229,13 @@ package magia_tile_pkg;
   parameter int unsigned BW_LIC  = magia_pkg::BYTE_W;                                   // Byte Width for Log Interconnect
   parameter int unsigned UW_LIC  = magia_pkg::USR_W;                                    // User Width for Log Interconnect
   localparam int unsigned SW_LIC = DW_LIC/BW_LIC;                                       // Strobe Width for Log Interconnect
-  parameter int unsigned TS_BIT  = 21;                                                  // TEST_SET_BIT (for Log Interconnect)
   parameter int unsigned IW      = N_HWPE+N_CORE+N_DMA+N_EXT;                           // ID Width HCI
   parameter int unsigned EXPFIFO = 0;                                                   // FIFO Depth for HWPE Interconnect
   parameter int unsigned DWH     = magia_pkg::MagiaRedMuleDefaultCfg.Height *
                                    (magia_pkg::MagiaRedMuleDefaultCfg.NumPipeRegs + 1) * 16 + 32;
   parameter int unsigned AWH     = magia_pkg::ADDR_W;                                   // Address Width for HWPE Interconnect
   parameter int unsigned BWH     = magia_pkg::BYTE_W;                                   // Byte Width for HWPE Interconnect
-  parameter int unsigned WWH     = DWH;                                                 // Word Width for HWPE Interconnect
   parameter int unsigned UWH     = magia_pkg::USR_W;                                    // User Width for HWPE Interconnect
-  parameter int unsigned SEL_LIC = 1;                                                   // Log interconnect type selector
   localparam int unsigned SWH    = DWH/BWH;                                             // Strobe Width for HWPE Interconnect
 
   // Parameters used by the cv32e40x core
@@ -265,9 +251,7 @@ package magia_tile_pkg;
   parameter bit          CLIC_EN         = 1'b0;                                        // Specifies whether Smclic, Smclicshv and Smclicconfig are supported
 
   // Parameters used by cv32e40p core
-  parameter bit          PULP_CLUSTER        = 1'b1;                                    // PULP cluster mode
   parameter bit          FPU                 = 1'b1;                                    // Enable FPU (main feature)
-  parameter bit          FP_DIVSQRT          = 1'b1;                                    // FP division and square root
   parameter logic[31:0]  DM_HALT_ADDR        = 32'h1A110800;                            // Debug module halt address
 
   `ifdef ZFINX_CTRL
@@ -292,9 +276,6 @@ package magia_tile_pkg;
 `endif
   parameter int unsigned CLIC_ID_W_CLUSTER    = 5;                                       // cv32e40p irq_id_o/irq_id_i width (fixed, independent of the ctrl core's CLIC_ID_W)
   
-  // Parameters used by Event Unit
-  parameter int unsigned EVENT_UNIT_IRQ_WIDTH = 5;                                      // Width of Event Unit IRQ ID signals (supports up to 32 different event types)
-
   parameter int unsigned REDMULE_DW         = DWH-32;                                   // RedMulE Data Width (default; per-tile in magia_tile.sv)
   parameter int unsigned REDMULE_UW         = UWH;                                      // RedMulE User Width
 
@@ -445,7 +426,6 @@ package magia_tile_pkg;
   parameter int unsigned AXI_DATA_ID_W  = 3;                                            // Width of the AXI Data ID (3 bits for 5 slave ports on crossbar: 2^3=8)
   parameter int unsigned AXI_ID_W       = 3;                                            // Width of the AXI Unified Communication Channel ID (3 bits for 5 slave ports)
   parameter int unsigned AXI_DATA_U_W   = magia_pkg::USR_W;                             // Width of the AXI Data User
-  parameter int unsigned AXI_INSTR_U_W  = magia_pkg::USR_W;                             // Width of the AXI Instruction User
   parameter int unsigned AXI_U_W        = magia_pkg::USR_W;                             // Width of the AXI Unified Communication Channel User
 
   // Parameters used by the iDMA
@@ -486,7 +466,6 @@ package magia_tile_pkg;
   parameter int unsigned FSYNC_NBR_AGGR_W          = 1;                                 // Fractal Sync Aggr. width for neighbor nodes
   parameter int unsigned FSYNC_NBR_LVL_W           = 1;                                 // Fractal Sync Level width for neighbor nodes
   parameter int unsigned FSYNC_NBR_ID_W            = 2;                                 // Fractal Sync Id width for neighbor nodes
-  parameter bit          FSYNC_STALL               = 1;                                 // Fractal Sync Stall during synchronization
 
   // Parameters of the AXI XBAR
   parameter int unsigned AxiXbarNoSlvPorts     = 5;                                     // Number of Slave Ports (ext, Core Data, CV32 I$, Spatz I$, Cluster I$)
@@ -495,11 +474,6 @@ package magia_tile_pkg;
   parameter int unsigned AxiXbarMaxMstTrans    = AxiXbarMaxWTrans;                      // Maximum number of outstanding transactions per master
   parameter int unsigned AxiXbarMaxSlvTrans    = AxiXbarMaxWTrans;                      // Maximum number of outstanding transactions per slave
   parameter bit          AxiXbarFallThrough    = 1'b0;                                  // Enabled -> MUX is purely combinational
-  parameter bit          AxiXbarSpillAw        = 1'b0;                                  // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
-  parameter bit          AxiXbarSpillW         = 1'b0;                                  // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
-  parameter bit          AxiXbarSpillB         = 1'b0;                                  // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
-  parameter bit          AxiXbarSpillAr        = 1'b0;                                  // Enabled -> Spill register on read master ports, +1 cycle of latency on write channels
-  parameter bit          AxiXbarSpillR         = 1'b0;                                  // Enabled -> Spill register on read master ports, +1 cycle of latency on write channels 
 
   // Parameters used by the i$
   parameter int unsigned NR_FETCH_PORTS = 1;                                            // i$ Number of request (fetch) ports
@@ -508,7 +482,6 @@ package magia_tile_pkg;
   parameter int unsigned LINE_COUNT     = 32;                                           // i$ The number of cache lines per set. Power of two; >= 2.
   parameter int unsigned WAY_COUNT      = 32;                                           // i$ The set associativity of the cache. Power of two; >= 1.
   parameter int unsigned L0_PARITY_W    = 0;                                            // i$ Parity of the L0 cache
-  parameter int unsigned L1_PARITY_W    = L0_PARITY_W;                                  // i$ Parity of the L1 cache
   parameter int unsigned FETCH_AW       = magia_pkg::ADDR_W;                            // i$ Fetch interface address width. Same as FETCH_AW; >= 1.
   parameter int unsigned FETCH_DW       = magia_pkg::DATA_W;                            // i$ Fetch interface data width. Power of two; >= 8.
   parameter int unsigned FILL_AW        = magia_pkg::ADDR_W;                            // i$ Fill interface address width. Same as FILL_AW; >= 1.
@@ -516,7 +489,6 @@ package magia_tile_pkg;
 
   //Cluster ICache parameters (dedicated icache for cluster cores)
   parameter int unsigned CLUSTER_L0_PARITY_W    = 0;                                            // i$ Parity of the L0 cache
-  parameter int unsigned CLUSTER_L1_PARITY_W    = CLUSTER_L0_PARITY_W;                          // i$ Parity of the L1 cache
   parameter int unsigned CLUSTER_FETCH_AW       = magia_pkg::ADDR_W;                            // i$ Fetch interface address width. Same as FETCH_AW; >= 1.
   parameter int unsigned CLUSTER_FETCH_DW       = magia_pkg::DATA_W;                            // i$ Fetch interface data width. Power of two; >= 8.
   parameter int unsigned CLUSTER_FILL_AW        = magia_pkg::ADDR_W;                            // i$ Fill interface address width. Same as FILL_AW; >= 1.
@@ -702,9 +674,6 @@ package magia_tile_pkg;
   localparam obi_pkg::obi_cfg_t obi_amo_cfg = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, OBI_ID_WIDTH, obi_amo_optional_cfg);
   localparam obi_pkg::obi_cfg_t obi_no_amo_cfg = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, OBI_ID_WIDTH, obi_no_amo_optional_cfg);
   
-  // OBI full configurations - 64-bit
-  localparam obi_pkg::obi_cfg_t obi_amo_cfg_64 = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, SPATZ_TCDM_DATA_WIDTH, OBI_ID_WIDTH, obi_amo_optional_cfg);
-  localparam obi_pkg::obi_cfg_t obi_no_amo_cfg_64 = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, SPATZ_TCDM_DATA_WIDTH, OBI_ID_WIDTH, obi_no_amo_optional_cfg);
   localparam bit                         RegisterAmo          = 1;
   
   `OBI_TYPEDEF_ALL_A_OPTIONAL(core_data_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
