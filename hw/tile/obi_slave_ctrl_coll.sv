@@ -39,8 +39,8 @@ module obi_slave_ctrl_coll
 );
 
   // Register offsets
-  localparam logic [3:0] COLLECTIVE_MASK_OFFSET  = 4'h0;  // +0x00
-  localparam logic [3:0] COLLECTIVE_OP_OFFSET    = 4'h4;  // +0x04
+  localparam logic [4:0] COLLECTIVE_MASK_OFFSET  = 5'h00;  // +0x00
+  localparam logic [4:0] COLLECTIVE_OP_OFFSET    = 5'h04;  // +0x04
 
   // Registers
   logic [31:0] collective_mask_q;
@@ -80,6 +80,7 @@ module obi_slave_ctrl_coll
       case (addr_offset)
         COLLECTIVE_MASK_OFFSET: collective_mask_d  = obi_req_i.a.wdata;
         COLLECTIVE_OP_OFFSET:   collective_op_d   = obi_req_i.a.wdata[3:0];
+        default: ;
       endcase
     end
   end

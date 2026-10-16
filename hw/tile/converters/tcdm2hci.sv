@@ -41,13 +41,16 @@ module tcdm2hci #(
   /*                     TCDM → HCI Request Mapping                  */
   /*******************************************************************/
   
-  // Map request channel
+  localparam int unsigned HciAddW = $bits(hci_req_o.add);
+  localparam int unsigned HciUserW = $bits(hci_req_o.user);
+
+  // Map request channel; the TCDM offset is zero extended to the HCI address
   assign hci_req_o.req   = tcdm_req_i.q_valid;          
-  assign hci_req_o.add   = tcdm_req_i.q.addr;           
+  assign hci_req_o.add   = HciAddW'(tcdm_req_i.q.addr);
   assign hci_req_o.wen   = ~tcdm_req_i.q.write;         
   assign hci_req_o.data  = tcdm_req_i.q.data;           
   assign hci_req_o.be    = tcdm_req_i.q.strb;         
-  assign hci_req_o.user  = tcdm_req_i.q.user;
+  assign hci_req_o.user  = HciUserW'(tcdm_req_i.q.user);
   assign hci_req_o.id    = '0;
   assign hci_req_o.ecc   = '0;
   assign hci_req_o.ereq  = '0;

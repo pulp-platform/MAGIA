@@ -139,7 +139,7 @@ module magia_cluster_wrap
         .mtvec_addr_i           ( cluster_boot_addr_i[i]      ),  // mtvec defaults to boot vector; SW can override via csrw
         .dm_halt_addr_i         ( magia_tile_pkg::DM_HALT_ADDR),
         .hart_id_i              ( 32'(HartIdBase + 2 * InstanceCount) + mhartid_i * NClusterCores + i ),
-        .dm_exception_addr_i    ( magia_tile_pkg::DM_HALT_ADDR + 16'h000C), //to be checked
+        .dm_exception_addr_i    ( magia_tile_pkg::DM_HALT_ADDR + 32'h000C), //to be checked
         // Instruction interface (-> tile-level shared cluster i$)
         .instr_req_o            ( cluster_instr_req_o[i].req         ),
         .instr_addr_o           ( cluster_instr_req_o[i].addr        ),

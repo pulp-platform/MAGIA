@@ -27,13 +27,14 @@ module hci2obi_rsp #(
   output obi_rsp_t obi_rsp_o
 );
 
-  assign obi_rsp_o.gnt                 = hci_rsp_i.gnt;
-  assign obi_rsp_o.rvalid              = hci_rsp_i.r_valid;
-  assign obi_rsp_o.r.rdata             = hci_rsp_i.r_data;
-  assign obi_rsp_o.r.rid               = hci_rsp_i.r_id;
-  assign obi_rsp_o.r.err               = hci_rsp_i.r_opc;
-  assign obi_rsp_o.r.r_optional.ruser  = '0;
-  assign obi_rsp_o.r.r_optional.exokay = 1'b0;
-  assign obi_rsp_o.r.r_optional.rchk   = '0;
+  // Default zero covers the parity fields of integrity OBI types
+  always_comb begin
+    obi_rsp_o         = '0;
+    obi_rsp_o.gnt     = hci_rsp_i.gnt;
+    obi_rsp_o.rvalid  = hci_rsp_i.r_valid;
+    obi_rsp_o.r.rdata = hci_rsp_i.r_data;
+    obi_rsp_o.r.rid   = hci_rsp_i.r_id[$bits(obi_rsp_o.r.rid)-1:0];  // Only the low ID bits travel back on OBI
+    obi_rsp_o.r.err   = hci_rsp_i.r_opc;
+  end
 
 endmodule: hci2obi_rsp

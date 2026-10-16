@@ -80,10 +80,10 @@ module obi_slave_fsync
   // BASE_ADDR + 0x04: ID_REG (write-only)  
   // BASE_ADDR + 0x08: CONTROL_REG (write-only, writing triggers sync)
   // BASE_ADDR + 0x0C: STATUS_REG (read-only)
-  localparam logic [ADDR_W-1:0] AGGR_REG_OFFSET    = 4'h0;
-  localparam logic [ADDR_W-1:0] ID_REG_OFFSET      = 4'h4;
-  localparam logic [ADDR_W-1:0] CONTROL_REG_OFFSET = 4'h8;
-  localparam logic [ADDR_W-1:0] STATUS_REG_OFFSET  = 4'hC;
+  localparam logic [ADDR_W-1:0] AGGR_REG_OFFSET    = ADDR_W'('h0);
+  localparam logic [ADDR_W-1:0] ID_REG_OFFSET      = ADDR_W'('h4);
+  localparam logic [ADDR_W-1:0] CONTROL_REG_OFFSET = ADDR_W'('h8);
+  localparam logic [ADDR_W-1:0] STATUS_REG_OFFSET  = ADDR_W'('hC);
 
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
