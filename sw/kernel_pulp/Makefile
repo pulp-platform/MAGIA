@@ -69,6 +69,7 @@ CFLAGS     = $(ARCH_FLAGS) -O2 -g -Wall -Wextra -Wno-unused-parameter \
              -fPIC -mcmodel=medany \
              -fno-jump-tables \
              -msmall-data-limit=0 \
+             -mno-relax \
              -nostartfiles -nostdlib \
              -DPULP_CORE_COUNT=$(PULP_CORE_COUNT) \
              -D$(core) -U__riscv__

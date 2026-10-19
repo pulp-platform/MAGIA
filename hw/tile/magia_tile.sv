@@ -96,7 +96,7 @@ module magia_tile
 
   input  logic[magia_pkg::N_IRQ-1:0]              irq_i,
 
-  input  logic[magia_tile_pkg::N_CLUSTER_CORES:0] debug_req_i,
+  input  logic                                    debug_req_i,  // Control core, through its Event Unit
   output logic                                    debug_havereset_o,
   output logic                                    debug_running_o,
   output logic                                    debug_halted_o,
