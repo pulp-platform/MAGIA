@@ -83,7 +83,7 @@ _start:
 
 skip_bss_clear:
 
-  /* Stack initialization: top of the CV32 stack band (0x14000), grows down.
+  /* Stack initialization: top of the CV32 2 KB slot (0x1C000), above the PULP stacks, grows down.
    * Must use _stack_start (region top), NOT `stack` (region bottom + _min_stack),
    * otherwise sp starts near the floor and underflows past 0x10000. */
   la   x2, _stack_start
