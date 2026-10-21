@@ -98,8 +98,9 @@ compile_flag         ?= -suppress 2583 -suppress 13314 -suppress 3009
 questa_compile_flag  += -t 1ns -suppress 3009
 questa_opt_flag      += -suppress 3009 -debugdb +acc
 questa_opt_fast_flag += -suppress 3009 -O5 -permissive
-questa_run_flag      += -t 1ns -debugDB -suppress 3009
-questa_run_fast_flag += -t 1ns -suppress 3009 -permissive
+# TODO: drop -suppress 8386 once FlooNoC casts logic to collect_op_e in floo_nw_chimney
+questa_run_flag     += -t 1ns -debugDB -suppress 3009 -suppress 8386
+questa_run_fast_flag += -t 1ns -suppress 3009 -suppress 8386 -permissive
 
 INI_PATH  = sim/modelsim.ini
 WORK_PATH = $(BUILD_DIR)

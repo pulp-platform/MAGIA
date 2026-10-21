@@ -159,10 +159,13 @@ module local_interconnect
     );
   end
 
+  // The trees' inner nodes re-arbitrate while not granted: internal signals, not protocol ports
   hci_arbiter_tree #(
     .NB_REQUESTS          ( N_HWPE                          ),
     .NB_CHAN              ( N_MEM                           ),
-    .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(hwpe_mem_muxed) )
+    .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(hwpe_mem_muxed) ),
+    .WAIVE_RQ3_ASSERT     ( 1'b1                            ),
+    .WAIVE_RQ4_ASSERT     ( 1'b1                            )
   ) i_hwpe_wide_port_arbiter_tree (
     .clk_i   ( clk_i          ),
     .rst_ni  ( rst_ni         ),
@@ -197,7 +200,9 @@ module local_interconnect
   hci_arbiter_tree #(
     .NB_REQUESTS          ( N_DMA                          ),
     .NB_CHAN              ( N_MEM                          ),
-    .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(dma_mem_muxed) )
+    .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(dma_mem_muxed) ),
+    .WAIVE_RQ3_ASSERT     ( 1'b1                           ),
+    .WAIVE_RQ4_ASSERT     ( 1'b1                           )
   ) i_dma_wide_port_arbiter_tree (
     .clk_i   ( clk_i         ),
     .rst_ni  ( rst_ni        ),
@@ -250,7 +255,9 @@ module local_interconnect
   hci_arbiter_tree #(
     .NB_REQUESTS          ( N_CORE                          ),
     .NB_CHAN              ( N_MEM                           ),
-    .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(core_mem_muxed) )
+    .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(core_mem_muxed) ),
+    .WAIVE_RQ3_ASSERT     ( 1'b1                            ),
+    .WAIVE_RQ4_ASSERT     ( 1'b1                            )
   ) i_core_wide_port_arbiter_tree (
     .clk_i   ( clk_i          ),
     .rst_ni  ( rst_ni         ),
