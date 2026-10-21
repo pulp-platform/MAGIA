@@ -169,7 +169,7 @@ int main(void) {
   /* Arm EU before dispatching the task to avoid missing DONE. */
   cluster_arm_done_event();
 
-  cluster_dispatch_task(HELLO_REDMULE_PULP_TASK, 0xFFu);
+  cluster_dispatch_task(HELLO_REDMULE_PULP_TASK);
 
   /* Step 3: sleep (cv.elw) until all cluster cores have exited. */
   cluster_wait_done_eu();

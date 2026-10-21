@@ -29,7 +29,7 @@ module idma_ctrl_mm
   import magia_tile_pkg::*;
   import idma_pkg::*;
 #(
-  parameter int unsigned ERROR_CAP = 3,
+  parameter idma_pkg::error_cap_e ERROR_CAP = idma_pkg::NO_ERROR_HANDLING,
   parameter type obi_req_t = magia_tile_pkg::core_obi_data_req_t,
   parameter type obi_rsp_t = magia_tile_pkg::core_obi_data_rsp_t,
   parameter type idma_fe_reg_req_t = magia_tile_pkg::idma_fe_reg_req_t,
@@ -177,12 +177,20 @@ module idma_ctrl_mm
   // send more requests than we can absorb in the fifo
   assign obi_read_req_o.rready = 1'b1;
 
+  // OBI integrity parity is the inverted copy of each handshake signal
+  assign obi_read_req_o.reqpar            = ~obi_read_req_o.req;
+  assign obi_read_req_o.rreadypar         = ~obi_read_req_o.rready;
+  assign obi_read_rsp_converter.gntpar    = ~obi_read_rsp_converter.gnt;
+  assign obi_read_rsp_converter.rvalidpar = ~obi_read_rsp_converter.rvalid;
+
 
 /*******************************************************/
 /**     Memory-Mapped Bridge with IRQ Serialization   **/
 /*******************************************************/
 
   idma_obi_ctrl_decoder i_idma_obi_ctrl_decoder (
+    .clk_i               ( clk_i                   ),
+    .rst_ni              ( rst_ni                  ),
     .obi_req_i           ( obi_req_i               ),
     .obi_rsp_o           ( obi_rsp_o               ),
 
