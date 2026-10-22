@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # Copyright 2026 ETH Zurich and University of Bologna.
-# Solderpad Hardware License, Version 0.51, see LICENSE.SHL for details.
-# SPDX-License-Identifier: SHL-0.51
+# Licensed under the Apache License, Version 2.0, see LICENSE.APACHE for details.
+# SPDX-License-Identifier: Apache-2.0
 
 # Verilator counterpart of sim_ret_errors.sh. QuestaSim prints an "Errors: N"
 # summary; Verilator prints nothing of the sort, so the verdict comes from the

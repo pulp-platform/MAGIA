@@ -14,7 +14,7 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Authors: Carlotta Chiarini, Fondazione Chips-IT
+ * Authors: Carlotta Chiarini <carlotta.chiarini@chips.it>
  * 
  * MAGIA Broadcast test over the FlooNoC narrow channel
  * 1) The source tile (SOURCE_HART_ID) broadcast a single 32-bit word over the narrow channel.

@@ -14,7 +14,7 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Authors: Carlotta Chiarini
+ * Authors: Carlotta Chiarini <carlotta.chiarini@chips.it>
  * 
  * MAGIA Column synchronization test over the narrow channel
  * using the built-in FlooNoC collectives
