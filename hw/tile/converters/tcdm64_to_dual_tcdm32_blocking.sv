@@ -21,11 +21,10 @@
  */
 
 module tcdm64_to_dual_tcdm32 #(
-  parameter bit EnableSpill = 1'b1,       // Enable spill register to break timing loops
-  parameter type tcdm64_req_t = logic,  // 64-bit TCDM request type
-  parameter type tcdm64_rsp_t = logic,  // 64-bit TCDM response type
-  parameter type tcdm32_req_t = logic,  // 32-bit TCDM request type
-  parameter type tcdm32_rsp_t = logic   // 32-bit TCDM response type
+  // 64-bit Snitch types from the RVD branch: the package ones are 32-bit when RVD is off
+  parameter type tcdm64_req_t,
+  parameter type tcdm64_rsp_t,
+  parameter bit EnableSpill = 1'b1       // Enable spill register to break timing loops
 )(
   input  logic         clk_i,
   input  logic         rst_ni,
@@ -35,11 +34,15 @@ module tcdm64_to_dual_tcdm32 #(
   output tcdm64_rsp_t  tcdm_rsp_o,
   
   // TCDM 32-bit side (Two parallel TCDM ports)
-  output tcdm32_req_t  tcdm_req_lo_o,  // Lower 32-bit word (bits [31:0])
-  input  tcdm32_rsp_t  tcdm_rsp_lo_i,
-  output tcdm32_req_t  tcdm_req_hi_o,  // Upper 32-bit word (bits [63:32])
-  input  tcdm32_rsp_t  tcdm_rsp_hi_i
+  output magia_tile_pkg::spatz_tcdm32_req_t  tcdm_req_lo_o,  // Lower 32-bit word (bits [31:0])
+  input  magia_tile_pkg::spatz_tcdm32_rsp_t  tcdm_rsp_lo_i,
+  output magia_tile_pkg::spatz_tcdm32_req_t  tcdm_req_hi_o,  // Upper 32-bit word (bits [63:32])
+  input  magia_tile_pkg::spatz_tcdm32_rsp_t  tcdm_rsp_hi_i
 );
+
+  // 32-bit side, fixed by the package
+  typedef magia_tile_pkg::spatz_tcdm32_req_t tcdm32_req_t;
+  typedef magia_tile_pkg::spatz_tcdm32_rsp_t tcdm32_rsp_t;
 
   /*******************************************************************/
   /*              Spill Register (Breaking Timing Loop)              */
@@ -107,23 +110,21 @@ module tcdm64_to_dual_tcdm32 #(
   
   // Decode request type
   assign strb_is_zero = (tcdm_req_int.q.strb == 8'h00);
-  assign is_load = !tcdm_req_int.q.write;
+  assign is_load = ~tcdm_req_int.q.write;
   
-  // Determine which banks to access:
-  // - Normal operation: access banks based on strobe bits
-  // - Load with strb=0: access BOTH banks (full 64-bit read)
-  // - Store with strb=0: access NO banks (no-op)
-  assign access_lo = |tcdm_req_int.q.strb[3:0] || (strb_is_zero && is_load);
-  assign access_hi = |tcdm_req_int.q.strb[7:4] || (strb_is_zero && is_load);
+  // The strobe selects the banks; strb = 0 reads both banks on a load and none on a store
+  assign access_lo = |tcdm_req_int.q.strb[3:0] | (strb_is_zero & is_load);
+  assign access_hi = |tcdm_req_int.q.strb[7:4] | (strb_is_zero & is_load);
   
+  logic access_lo_d, access_hi_d;
   logic access_lo_q, access_hi_q;
-    // Response arrives when BOTH accessed banks have responded
+  // Response arrives when BOTH accessed banks have responded
   logic rsp_arriving;
   always_comb begin
     rsp_arriving = 1'b0;
     
     if (access_lo_q && access_hi_q) begin
-      rsp_arriving = tcdm_rsp_lo_i.p_valid && tcdm_rsp_hi_i.p_valid;
+      rsp_arriving = tcdm_rsp_lo_i.p_valid & tcdm_rsp_hi_i.p_valid;
     end else if (access_lo_q) begin
       rsp_arriving = tcdm_rsp_lo_i.p_valid;
     end else if (access_hi_q) begin
@@ -131,18 +132,27 @@ module tcdm64_to_dual_tcdm32 #(
     end
   end
   
+  always_comb begin
+    access_lo_d = access_lo_q;
+    access_hi_d = access_hi_q;
+    if (tcdm_req_int.q_valid & tcdm_rsp_int.q_ready) begin
+      // Latch access pattern for new requests
+      access_lo_d = access_lo;
+      access_hi_d = access_hi;
+    end else if (tcdm_rsp_int.p_valid) begin
+      // Reset when response completes without new request
+      access_lo_d = 1'b0;
+      access_hi_d = 1'b0;
+    end
+  end
+
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
       access_lo_q <= 1'b0;
       access_hi_q <= 1'b0;
-    end else if (tcdm_req_int.q_valid && tcdm_rsp_int.q_ready) begin
-      // Latch access pattern for new requests
-      access_lo_q <= access_lo;
-      access_hi_q <= access_hi;
-    end else if (tcdm_rsp_int.p_valid) begin
-      // Reset when response completes without new request
-      access_lo_q <= 1'b0;
-      access_hi_q <= 1'b0;
+    end else begin
+      access_lo_q <= access_lo_d;
+      access_hi_q <= access_hi_d;
     end
   end
   
@@ -177,10 +187,11 @@ module tcdm64_to_dual_tcdm32 #(
       tcdm_req_lo_o.q.user  = tcdm_req_int.q.user;
       
       // Strobe handling: load with strb=0 reads full 32-bit word
-      if (strb_is_zero && is_load)
+      if (strb_is_zero && is_load) begin
         tcdm_req_lo_o.q.strb = 4'hF;
-      else
+      end else begin
         tcdm_req_lo_o.q.strb = tcdm_req_int.q.strb[3:0];
+      end
     end
   end
   
@@ -203,10 +214,11 @@ module tcdm64_to_dual_tcdm32 #(
       tcdm_req_hi_o.q.user  = tcdm_req_int.q.user;
       
       // Strobe handling: load with strb=0 reads full 32-bit word
-      if (strb_is_zero && is_load)
+      if (strb_is_zero && is_load) begin
         tcdm_req_hi_o.q.strb = 4'hF;
-      else
+      end else begin
         tcdm_req_hi_o.q.strb = tcdm_req_int.q.strb[7:4];
+      end
     end
   end
   
@@ -218,11 +230,11 @@ module tcdm64_to_dual_tcdm32 #(
   always_comb begin
     tcdm_rsp_int.q_ready = 1'b0;
     //Block if there's a pending response to ensure in-order completion
-    if(access_lo_q || access_hi_q) begin
+    if (access_lo_q || access_hi_q) begin
       tcdm_rsp_int.q_ready = 1'b0;
     end else if (access_lo && access_hi) begin
       // Both banks accessed: need both ready
-      tcdm_rsp_int.q_ready = tcdm_rsp_lo_i.q_ready && tcdm_rsp_hi_i.q_ready;
+      tcdm_rsp_int.q_ready = tcdm_rsp_lo_i.q_ready & tcdm_rsp_hi_i.q_ready;
     end else if (access_lo) begin
       // Only LO bank accessed
       tcdm_rsp_int.q_ready = tcdm_rsp_lo_i.q_ready;

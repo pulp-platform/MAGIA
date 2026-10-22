@@ -22,8 +22,6 @@
 module eu_direct_cut 
   import magia_tile_pkg::*;
 #(
-  parameter type eu_direct_req_t = logic,
-  parameter type eu_direct_rsp_t = logic,
   parameter bit  Bypass          = 1'b0,
   parameter bit  BypassReq       = Bypass,
   parameter bit  BypassRsp       = Bypass,
@@ -58,7 +56,7 @@ module eu_direct_cut
   // ============================
   // Per-core logic
   // ============================
-  for (genvar i = 0; i < NB_CORES; i++) begin : GEN_EU_CUT
+  for (genvar i = 0; i < NB_CORES; i++) begin : gen_eu_cut
 
     // ----------------------------
     // Request path

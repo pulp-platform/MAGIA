@@ -37,12 +37,12 @@ module l1_spm #(
     assign rsp_id_d           = tcdm_slave[i].id;
     assign tcdm_slave[i].r_id = rsp_id_q;
 
-    always_ff @(posedge clk_i or negedge rst_ni)
-    begin
-      if (~rst_ni)
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+      if (!rst_ni) begin
         rsp_id_q <= '0;
-      else
+      end else begin
         rsp_id_q <= rsp_id_d;
+      end
     end
 
     tc_sram #(

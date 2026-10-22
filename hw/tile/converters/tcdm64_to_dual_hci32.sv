@@ -21,12 +21,11 @@
  */
 
 module tcdm64_to_dual_hci32 #(
-  parameter type tcdm64_req_t = logic,  // 64-bit TCDM request type
-  parameter type tcdm64_rsp_t = logic,  // 64-bit TCDM response type
-  parameter type tcdm32_req_t = logic,  // 32-bit TCDM request type
-  parameter type tcdm32_rsp_t = logic,  // 32-bit TCDM response type
-  parameter type hci_req_t    = logic,  // 32-bit HCI request type
-  parameter type hci_rsp_t    = logic   // 32-bit HCI response type
+  // 64-bit Snitch types from the RVD branch: the package ones are 32-bit when RVD is off
+  parameter type tcdm64_req_t,
+  parameter type tcdm64_rsp_t,
+  parameter type hci_req_t    = magia_tile_pkg::core_hci_data_req_t,  // 32-bit HCI request type
+  parameter type hci_rsp_t    = magia_tile_pkg::core_hci_data_rsp_t   // 32-bit HCI response type
 )(
   input  logic         clk_i,
   input  logic         rst_ni,
@@ -42,6 +41,10 @@ module tcdm64_to_dual_hci32 #(
   input  hci_rsp_t   hci_rsp_hi_i
 );
 
+  // 32-bit side, fixed by the package; the HCI end depends on TileIW
+  typedef magia_tile_pkg::spatz_tcdm32_req_t tcdm32_req_t;
+  typedef magia_tile_pkg::spatz_tcdm32_rsp_t tcdm32_rsp_t;
+
   // Internal TCDM32 signals
   tcdm32_req_t tcdm32_req_lo, tcdm32_req_hi;
   tcdm32_rsp_t tcdm32_rsp_lo, tcdm32_rsp_hi;
@@ -51,11 +54,9 @@ module tcdm64_to_dual_hci32 #(
   /*******************************************************************/
   
   tcdm64_to_dual_tcdm32 #(
-    .FIFO_DEPTH   ( 4             ),  // Match Snitch's NUM_INT_OUTSTANDING_MEM
     .tcdm64_req_t ( tcdm64_req_t  ),
     .tcdm64_rsp_t ( tcdm64_rsp_t  ),
-    .tcdm32_req_t ( tcdm32_req_t  ),
-    .tcdm32_rsp_t ( tcdm32_rsp_t  )
+    .FIFO_DEPTH   ( 4             )   // Match Snitch's NUM_INT_OUTSTANDING_MEM
   ) i_tcdm64_to_dual_tcdm32 (
     .clk_i          ( clk_i          ),
     .rst_ni         ( rst_ni         ),

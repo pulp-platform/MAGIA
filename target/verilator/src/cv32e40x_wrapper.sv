@@ -1,4 +1,4 @@
-// VENDORIZED COPY for the Verilator flow: cv32e40x bhv/cv32e40x_wrapper.sv at rev a9010121 plus the "MAGIA verilator:" changes
+// VENDORIZED COPY for the Questa and Verilator flows: cv32e40x bhv/cv32e40x_wrapper.sv at rev a9010121 plus the "MAGIA" changes
 // Copyright 2018 ETH Zurich and University of Bologna.
 // Copyright and related rights are licensed under the Solderpad Hardware
 // License, Version 0.51 (the "License"); you may not use this file except in
@@ -522,8 +522,13 @@ endgenerate
 `endif //  `ifndef COREV_ASSERT_OFF
 
 `ifdef CORE_TRACES
+`ifdef VERILATOR
   // MAGIA verilator: no bind instance lists in Verilator; the wrapper has a single cv32e40x_rvfi
   bind cv32e40x_rvfi
+`else
+  // MAGIA: Questa repeats a module-wide bind for every wrapper instance, so keep the instance list
+  bind cv32e40x_rvfi: rvfi_i
+`endif
     cv32e40x_rvfi_sim_trace
       tracer_i(.*);
 `endif
@@ -600,7 +605,8 @@ endgenerate
          .id_valid_i               ( core_i.id_stage_i.id_valid_o                                         ),
          .id_ready_i               ( core_i.id_stage_i.id_ready_o                                         ),
          .pc_id_i                  ( core_i.id_stage_i.if_id_pipe_i.pc                                    ),
-         .rf_re_id_i               ( core_i.id_stage_i.rf_re_o                                            ),
+         // MAGIA: with X_NUM_RS = 3 the core has a third read port (rs3) that this RVFI does not trace
+         .rf_re_id_i               ( core_i.id_stage_i.rf_re_o[1:0]                                       ),
          .sys_mret_id_i            ( core_i.controller_i.controller_fsm_i.sys_mret_id                     ),
          .tbljmp_id_i              ( core_i.id_stage_i.if_id_pipe_i.instr_meta.tbljmp                     ),
          .jump_in_id_i             ( core_i.controller_i.controller_fsm_i.jump_in_id                      ),

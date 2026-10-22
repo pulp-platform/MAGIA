@@ -73,7 +73,7 @@ logic [31:0] addr_offset;
 logic        addr_valid;
 
 assign addr_offset = obi_req_i.a.addr - BaseAddr;
-assign addr_valid  = (obi_req_i.a.addr >= BaseAddr) &&
+assign addr_valid  = (obi_req_i.a.addr >= BaseAddr) &
                      (obi_req_i.a.addr < (BaseAddr + 32));  // 8 registers * 4 bytes
 
 // Registers
@@ -97,7 +97,7 @@ logic [NumCores-1:0] start_irq_q, start_irq_d;
 logic        rvalid_q, rvalid_d;
 logic [31:0] rdata_q,  rdata_d;
 
-assign obi_rsp_o.gnt          = obi_req_i.req && addr_valid;
+assign obi_rsp_o.gnt          = obi_req_i.req & addr_valid;
 assign obi_rsp_o.rvalid       = rvalid_q;
 assign obi_rsp_o.r.rdata      = rdata_q;
 assign obi_rsp_o.r.rid        = '0;
@@ -122,7 +122,7 @@ always_comb begin
   start_irq_d          = '0;  // default: no IRQ pulse this cycle
 
   if (obi_req_i.req && addr_valid && obi_req_i.a.we) begin
-    case (addr_offset)
+    unique case (addr_offset)
       CLUSTER_CLK_EN: begin
         // Broadcast: any non-zero enables all cores; 0 disables all.
         clk_en_d = |obi_req_i.a.wdata;
@@ -223,10 +223,10 @@ assign ready_reg_val = (nb_recv_ready_reqs_q == NumCoresCnt);
 
 always_comb begin
   rdata_d  = 32'h0;
-  rvalid_d = obi_req_i.req && addr_valid;
+  rvalid_d = obi_req_i.req & addr_valid;
 
   if (obi_req_i.req && addr_valid && !obi_req_i.a.we) begin
-    case (addr_offset)
+    unique case (addr_offset)
       CLUSTER_CLK_EN:           rdata_d = {31'h0, clk_en_q};
       CLUSTER_BINARY:           rdata_d = entry_point_q;
       CLUSTER_NB_CORES_TO_WAIT: rdata_d = {{(32-NumCoresW-1){1'b0}}, nb_cores_to_wait_q};

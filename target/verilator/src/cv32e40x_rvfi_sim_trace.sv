@@ -1,4 +1,4 @@
-// VENDORIZED COPY for the Verilator flow: cv32e40x bhv/cv32e40x_rvfi_sim_trace.sv at rev a9010121 plus the "MAGIA verilator:" changes
+// VENDORIZED COPY for the Questa and Verilator flows: cv32e40x bhv/cv32e40x_rvfi_sim_trace.sv at rev a9010121 plus the "MAGIA" changes
 // Copyright 2022 Silicon Labs, Inc.
 //
 // This file, and derivatives thereof are licensed under the
@@ -34,7 +34,7 @@ module cv32e40x_rvfi_sim_trace
     parameter string LOGFILE_PATH_PLUSARG = "log_file",
     parameter logic  ITRACE_ENABLE = 1)
   (
-   // MAGIA verilator: bound with .* into cv32e40x_rvfi, so the hart id names the log at run time
+   // MAGIA: bound with .* into cv32e40x_rvfi, so the hart id names the log at run time
    input logic        rst_ni,
    input logic [31:0] csr_mhartid_i,
    input logic        rvfi_valid,
@@ -86,7 +86,8 @@ module cv32e40x_rvfi_sim_trace
     words = {};
     word  = "";
     for (int i = 0; i < text.len(); i++) begin
-      if (text[i] inside {" ", "\t", "\n", "\r"}) begin
+      // Carriage return as "\015": "\r" is not an IEEE 1800 escape and Questa reads it as 'r'
+      if (text[i] inside {" ", "\t", "\n", "\015"}) begin
         if (word.len() > 0) words.push_back(word);
         word = "";
       end else begin
@@ -155,7 +156,7 @@ module cv32e40x_rvfi_sim_trace
       // Parse the listing file
       initial begin
 
-        // MAGIA verilator: one plusarg per hart (log_file_<hartid>), as Questa sets with a defparam per tile
+        // MAGIA: one plusarg per hart (log_file_<hartid>), so every tile of the mesh writes its own trace
         wait (rst_ni === 1'b0);
         wait (rst_ni === 1'b1);
         logfile_plusarg = $sformatf("%s_%0d", LOGFILE_PATH_PLUSARG, csr_mhartid_i);

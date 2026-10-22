@@ -23,22 +23,21 @@
 module reqrsp64_to_obi32
   import obi_pkg::*;
 #(
-  parameter type reqrsp_req_t = logic,  // 64-bit reqrsp request type
-  parameter type reqrsp_rsp_t = logic,  // 64-bit reqrsp response type
-  parameter type obi_req_t    = logic,  // 32-bit OBI request type
-  parameter type obi_rsp_t    = logic,  // 32-bit OBI response type
+  // 64-bit Snitch types from the RVD branch: the package ones are 32-bit when RVD is off
+  parameter type reqrsp_req_t,
+  parameter type reqrsp_rsp_t,
   parameter obi_pkg::obi_cfg_t ObiCfg = obi_pkg::ObiDefaultConfig
 )(
-  input  logic         clk_i,
-  input  logic         rst_ni,
+  input  logic                                clk_i,
+  input  logic                                rst_ni,
   
   // REQRSP side (64-bit from Snitch RV64)
-  input  reqrsp_req_t  reqrsp_req_i,
-  output reqrsp_rsp_t  reqrsp_rsp_o,
+  input  reqrsp_req_t                         reqrsp_req_i,
+  output reqrsp_rsp_t                         reqrsp_rsp_o,
   
   // OBI side (32-bit to peripherals/L2)
-  output obi_req_t     obi_req_o,
-  input  obi_rsp_t     obi_rsp_i
+  output magia_tile_pkg::core_obi_data_req_t  obi_req_o,
+  input  magia_tile_pkg::core_obi_data_rsp_t  obi_rsp_i
 );
 
   /*******************************************************************/
@@ -81,11 +80,14 @@ module reqrsp64_to_obi32
   
   // Track which word half was requested (for correct response data placement)
   logic [7:0] req_strb_q;
-  
+  logic       req_fire;
+
+  assign req_fire = reqrsp_req_i.q_valid & obi_rsp_i.gnt;
+
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
       req_strb_q <= 8'h0;
-    end else if (reqrsp_req_i.q_valid && obi_rsp_i.gnt) begin
+    end else if (req_fire) begin
       req_strb_q <= reqrsp_req_i.q.strb;
     end
   end

@@ -57,11 +57,11 @@ module obi_slave_ctrl_coll
   assign addr_offset = obi_req_i.a.addr[4:0];
   
   // Check if address is in valid range
-  assign addr_valid = (obi_req_i.a.addr >= BaseAddr) && 
+  assign addr_valid = (obi_req_i.a.addr >= BaseAddr) & 
                       (obi_req_i.a.addr < (BaseAddr + 8));  // 2 registers * 4 bytes
   
   // Grant only if address is valid
-  assign obi_rsp_o.gnt = obi_req_i.req && addr_valid;
+  assign obi_rsp_o.gnt = obi_req_i.req & addr_valid;
   assign obi_rsp_o.r.err = 1'b0;
   
   // ============================================
@@ -77,7 +77,7 @@ module obi_slave_ctrl_coll
 
     // Update registers on write only if address is valid
     if (obi_req_i.req && obi_req_i.a.we && addr_valid) begin
-      case (addr_offset)
+      unique case (addr_offset)
         COLLECTIVE_MASK_OFFSET: collective_mask_d  = obi_req_i.a.wdata;
         COLLECTIVE_OP_OFFSET:   collective_op_d   = obi_req_i.a.wdata[3:0];
         default: ;
@@ -103,10 +103,10 @@ module obi_slave_ctrl_coll
   // ============================================
   always_comb begin
     rdata_d  = 32'h0;
-    rvalid_d = obi_req_i.req && addr_valid;
+    rvalid_d = obi_req_i.req & addr_valid;
     
     if (obi_req_i.req && !obi_req_i.a.we && addr_valid) begin
-      case (addr_offset)
+      unique case (addr_offset)
         COLLECTIVE_MASK_OFFSET: rdata_d = collective_mask_q;
         COLLECTIVE_OP_OFFSET:   rdata_d = {28'h0, collective_op_q};
         default:                rdata_d = 32'hDEADBEEF;

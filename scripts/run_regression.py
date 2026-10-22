@@ -382,6 +382,12 @@ def copy_changes(wt):
     diff = subprocess.run(['git', 'diff', 'HEAD', '--binary'], cwd=ROOT, check=True,
                           stdout=subprocess.PIPE).stdout
     if diff:
+        # Files the diff adds survive the reset of a reused worktree as untracked and would block the apply
+        added = subprocess.run(['git', 'diff', 'HEAD', '--name-only', '--diff-filter=AR', '-z'], cwd=ROOT,
+                               check=True, stdout=subprocess.PIPE).stdout.decode().split('\0')
+        for f in filter(None, added):
+            if os.path.isfile(os.path.join(wt, f)):
+                os.remove(os.path.join(wt, f))
         subprocess.run(['git', 'apply', '--whitespace=nowarn'], cwd=wt, input=diff, check=True)
     untracked = subprocess.run(['git', 'ls-files', '--others', '--exclude-standard', '-z'], cwd=ROOT,
                                check=True, stdout=subprocess.PIPE).stdout.decode().split('\0')

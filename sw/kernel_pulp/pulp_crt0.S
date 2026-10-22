@@ -50,7 +50,7 @@
  *   PULP STACK_TOP = 0x1B800
  *   PULP core 0: [0x1B000, 0x1B800)  (2 KB)
  *   ...
- *   PULP core 7: [0x14000, 0x14800)  (2 KB)
+ *   PULP core 7: [0x17800, 0x18000)  (2 KB)
  *
  * NOTE: stack and PULP_* MMIO addresses are loaded with 'li' (not 'la')
  * because the binary is position-independent (ORIGIN=0x0) and 'la' would

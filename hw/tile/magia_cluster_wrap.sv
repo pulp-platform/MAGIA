@@ -36,7 +36,7 @@ module magia_cluster_wrap
   parameter type                             hci_req_t     = magia_tile_pkg::core_hci_data_req_t,
   parameter type                             hci_rsp_t     = magia_tile_pkg::core_hci_data_rsp_t
 )(
-  input  logic sys_clk_i,  // Gated system clock (dispatch-IRQ stretch FSM)
+  input  logic sys_clk_i,
   input  logic rst_ni,
   input  logic test_mode_i,
 
@@ -47,9 +47,8 @@ module magia_cluster_wrap
   // Tile hart-id base (control core is 0; cluster cores start after the tiles' ctrl cores)
   input  logic [31:0] mhartid_i,
 
-  // This tile's L1 window: in-range accesses take the dedicated HCI port, else OBI crossbar.
-  input  logic [magia_pkg::ADDR_W-1:0] tile_l1_start_addr_i,
-  input  logic [magia_pkg::ADDR_W-1:0] tile_l1_end_addr_i,
+  // TCDM ranges, idx 0: they take the dedicated HCI port, everything else the OBI crossbar
+  input  magia_tile_pkg::obi_xbar_rule_t [magia_tile_pkg::NUM_TCDM_RULES-1:0] tcdm_rules_i,
 
   // Control outputs from the cluster CSR (in magia_tile).
   input  logic [31:0]              cluster_boot_addr_i    [NClusterCores-1:0],
@@ -69,7 +68,7 @@ module magia_cluster_wrap
   input  magia_tile_pkg::core_instr_rsp_t [NClusterCores-1:0] cluster_instr_rsp_i
 );
 
-  // Data-demux slave map: [0] = TCDM (L1) fast path, [1] = OBI (peripherals / default).
+  // Data-demux slave map: TCDM must match idx of tcdm_rules_i
   localparam int unsigned CLUSTER_DATA_N_SLV    = 2;
   localparam int unsigned CLUSTER_DATA_TCDM_IDX = 0;
   localparam int unsigned CLUSTER_DATA_OBI_IDX  = 1;
@@ -84,37 +83,32 @@ module magia_cluster_wrap
   magia_tile_pkg::cv32e40p_core_data_req_t [NClusterCores-1:0][CLUSTER_DATA_N_SLV-1:0] cluster_ddemux_req;
   magia_tile_pkg::cv32e40p_core_data_rsp_t [NClusterCores-1:0][CLUSTER_DATA_N_SLV-1:0] cluster_ddemux_rsp;
 
-  // IRQ ack/id + stretched dispatch IRQ and the per-core 32-bit vector.
+  // Dispatch IRQ of each core and the interrupt lines it drives
   logic [NClusterCores-1:0]                                        cluster_irq_ack;
   logic [NClusterCores-1:0][magia_tile_pkg::CLIC_ID_W_CLUSTER-1:0] cluster_irq_id;
-  logic [NClusterCores-1:0]                                        cluster_start_irq_pending;
+  logic [NClusterCores-1:0]                                        cluster_start_irq_pending_d, cluster_start_irq_pending_q;
   logic [NClusterCores-1:0][31:0]                                  cluster_irq_vec;
 
-  // Dispatch IRQ is a 1-cycle pulse from the CSR; stretch it until the core acks.
+  // Dispatch IRQ is a 1-cycle pulse from the CSR: hold it until the core acks
+  assign cluster_start_irq_pending_d = ~cluster_irq_ack & (cluster_start_irq_i | cluster_start_irq_pending_q);
+
   always_ff @(posedge sys_clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
-      cluster_start_irq_pending <= '0;
+      cluster_start_irq_pending_q <= '0;
     end else begin
-      for (int unsigned i = 0; i < NClusterCores; i++) begin
-        if (cluster_irq_ack[i]) begin
-          cluster_start_irq_pending[i] <= 1'b0;
-        end else if (cluster_start_irq_i[i]) begin
-          cluster_start_irq_pending[i] <= 1'b1;
-        end
-      end
+      cluster_start_irq_pending_q <= cluster_start_irq_pending_d;
     end
   end
 
-  // Per-core IRQ vector: MEI bit (11) driven by the stretched dispatch request,
-  // all other interrupt bits forced to 0.
+  // Only the machine external interrupt (bit 11) is used, by the pending dispatch IRQ
   for (genvar k = 0; k < NClusterCores; k++) begin : gen_cluster_irq_vec
-    assign cluster_irq_vec[k] = {20'b0, cluster_start_irq_pending[k], 11'b0};
+    assign cluster_irq_vec[k] = {20'b0, cluster_start_irq_pending_q[k], 11'b0};
   end
 
   // ---------------------------------------------------------------------------
   // Cluster cores (always CV32E40P)
   // ---------------------------------------------------------------------------
-  for (genvar i = 0; i < NClusterCores; i++) begin : CORE
+  for (genvar i = 0; i < NClusterCores; i++) begin : gen_core
     `ifndef CORE_TRACES
       cv32e40p_top #(
     `else
@@ -172,32 +166,25 @@ module magia_cluster_wrap
   end
 
   // ---------------------------------------------------------------------------
-  // Per-core data demux: L1/TCDM window -> dedicated HCI port, rest -> OBI xbar
+  // Per-core data demux: TCDM -> dedicated HCI port, rest -> OBI xbar
   // ---------------------------------------------------------------------------
   for (genvar i = 0; i < NClusterCores; i++) begin : gen_cluster_data_demux
-
-    // Runtime slave address ranges: TCDM = this tile's L1 window, OBI = default.
-    logic [magia_pkg::ADDR_W-1:0] cluster_ddemux_start_addr [CLUSTER_DATA_N_SLV-1:0];
-    logic [magia_pkg::ADDR_W-1:0] cluster_ddemux_end_addr   [CLUSTER_DATA_N_SLV-1:0];
-    assign cluster_ddemux_start_addr[CLUSTER_DATA_TCDM_IDX] = tile_l1_start_addr_i;
-    assign cluster_ddemux_end_addr  [CLUSTER_DATA_TCDM_IDX] = tile_l1_end_addr_i;
-    assign cluster_ddemux_start_addr[CLUSTER_DATA_OBI_IDX]  = '0; // unused (default slave)
-    assign cluster_ddemux_end_addr  [CLUSTER_DATA_OBI_IDX]  = '0; // unused (default slave)
-
     core_data_demux #(
       .NumSlv     ( CLUSTER_DATA_N_SLV                       ),
+      .NumRules   ( magia_tile_pkg::NUM_TCDM_RULES           ),
       .DefaultSlv ( CLUSTER_DATA_OBI_IDX                     ),
       .req_t      ( magia_tile_pkg::cv32e40p_core_data_req_t ),
       .rsp_t      ( magia_tile_pkg::cv32e40p_core_data_rsp_t )
     ) i_cluster_data_demux (
-      .clk_i            ( cluster_clk_i[i]          ),
-      .rst_ni           ( rst_ni                    ),
-      .core_data_req_i  ( cluster_data_req[i]       ),
-      .core_data_rsp_o  ( cluster_data_rsp[i]       ),
-      .slv_start_addr_i ( cluster_ddemux_start_addr ),
-      .slv_end_addr_i   ( cluster_ddemux_end_addr   ),
-      .slv_data_req_o   ( cluster_ddemux_req[i]     ),
-      .slv_data_rsp_i   ( cluster_ddemux_rsp[i]     )
+      .clk_i              ( cluster_clk_i[i]      ),
+      .rst_ni             ( rst_ni                ),
+      .clk_en_i           ( 1'b1                  ),
+      .core_data_req_i    ( cluster_data_req[i]   ),
+      .core_data_atomic_i ( 1'b0                  ),
+      .core_data_rsp_o    ( cluster_data_rsp[i]   ),
+      .addr_map_i         ( tcdm_rules_i          ),
+      .slv_data_req_o     ( cluster_ddemux_req[i] ),
+      .slv_data_rsp_i     ( cluster_ddemux_rsp[i] )
     );
   end
 

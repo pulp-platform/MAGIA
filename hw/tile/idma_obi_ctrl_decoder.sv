@@ -24,25 +24,20 @@
 module idma_obi_ctrl_decoder
   import magia_tile_pkg::*;
   import magia_pkg::*;
- #(
-  parameter type obi_req_t = magia_tile_pkg::core_obi_data_req_t,
-  parameter type obi_rsp_t = magia_tile_pkg::core_obi_data_rsp_t,
-  parameter type idma_fe_reg_req_t = magia_tile_pkg::idma_fe_reg_req_t,
-  parameter type idma_fe_reg_rsp_t = magia_tile_pkg::idma_fe_reg_rsp_t
-)(
-  input  logic         clk_i,
-  input  logic         rst_ni,
+(
+  input  logic               clk_i,
+  input  logic               rst_ni,
 
   // OBI Slave Interface (CPU access)
-  input  obi_req_t     obi_req_i,
-  output obi_rsp_t     obi_rsp_o,
+  input  core_obi_data_req_t obi_req_i,
+  output core_obi_data_rsp_t obi_rsp_o,
 
   // iDMA Register Frontend Interface  
-  output idma_fe_reg_req_t idma_axi2obi_req_o,
-  input  idma_fe_reg_rsp_t idma_axi2obi_rsp_i,
+  output idma_fe_reg_req_t   idma_axi2obi_req_o,
+  input  idma_fe_reg_rsp_t   idma_axi2obi_rsp_i,
   
-  output idma_fe_reg_req_t idma_obi2axi_req_o, 
-  input  idma_fe_reg_rsp_t idma_obi2axi_rsp_i
+  output idma_fe_reg_req_t   idma_obi2axi_req_o, 
+  input  idma_fe_reg_rsp_t   idma_obi2axi_rsp_i
 );
 
 /*******************************************************/
@@ -103,7 +98,7 @@ module idma_obi_ctrl_decoder
 /*******************************************************/
 
   // Address range validation - check if address is within iDMA control space
-  assign is_address_in_range = (obi_req_i.a.addr >= IDMA_BASE_ADDR) && 
+  assign is_address_in_range = (obi_req_i.a.addr >= IDMA_BASE_ADDR) & 
                                (obi_req_i.a.addr <= IDMA_END_ADDR);
 
   // Address decoding - check if address is in OBI2AXI range (+0x200 offset)
@@ -113,25 +108,25 @@ module idma_obi_ctrl_decoder
                       (obi_req_i.a.addr[11:0] - IDMA_BASE_ADDR[11:0]);
   
   // Validate access: must be in address range AND at known register offset
-  assign is_valid_access = is_address_in_range && (
-                          (reg_offset == IDMA_CONFIG_OFFSET) ||
+  assign is_valid_access = is_address_in_range & (
+                          (reg_offset == IDMA_CONFIG_OFFSET) |
                           // Status registers (multireg 0x4-0x40, step 4)
-                          ((reg_offset >= 12'h4) && (reg_offset <= 12'h40) && ((reg_offset & 12'h3) == 12'h0)) ||
+                          ((reg_offset >= 12'h4) & (reg_offset <= 12'h40) & ((reg_offset & 12'h3) == 12'h0)) |
                           // Next ID registers (multireg 0x44-0x80, step 4)
-                          ((reg_offset >= 12'h44) && (reg_offset <= 12'h80) && ((reg_offset & 12'h3) == 12'h0)) ||
+                          ((reg_offset >= 12'h44) & (reg_offset <= 12'h80) & ((reg_offset & 12'h3) == 12'h0)) |
                           // Done ID registers (multireg 0x84-0xc0, step 4)
-                          ((reg_offset >= 12'h84) && (reg_offset <= 12'hc0) && ((reg_offset & 12'h3) == 12'h0)) ||
+                          ((reg_offset >= 12'h84) & (reg_offset <= 12'hc0) & ((reg_offset & 12'h3) == 12'h0)) |
                           // Configuration registers at specific skipto addresses
-                          (reg_offset == IDMA_DST_ADDR_LOW_OFFSET) ||
-                          (reg_offset == IDMA_SRC_ADDR_LOW_OFFSET) ||
-                          (reg_offset == IDMA_LENGTH_LOW_OFFSET) ||
-                          (reg_offset == IDMA_DST_STRIDE_2_LOW_OFFSET) ||
-                          (reg_offset == IDMA_SRC_STRIDE_2_LOW_OFFSET) ||
-                          (reg_offset == IDMA_REPS_2_LOW_OFFSET) ||
-                          (reg_offset == IDMA_DST_STRIDE_3_LOW_OFFSET) ||
-                          (reg_offset == IDMA_SRC_STRIDE_3_LOW_OFFSET) ||
-                          (reg_offset == IDMA_REPS_3_LOW_OFFSET) || 
-                          (reg_offset == IDMA_MULTICAST_MASK_OFFSET)  ||
+                          (reg_offset == IDMA_DST_ADDR_LOW_OFFSET) |
+                          (reg_offset == IDMA_SRC_ADDR_LOW_OFFSET) |
+                          (reg_offset == IDMA_LENGTH_LOW_OFFSET) |
+                          (reg_offset == IDMA_DST_STRIDE_2_LOW_OFFSET) |
+                          (reg_offset == IDMA_SRC_STRIDE_2_LOW_OFFSET) |
+                          (reg_offset == IDMA_REPS_2_LOW_OFFSET) |
+                          (reg_offset == IDMA_DST_STRIDE_3_LOW_OFFSET) |
+                          (reg_offset == IDMA_SRC_STRIDE_3_LOW_OFFSET) |
+                          (reg_offset == IDMA_REPS_3_LOW_OFFSET) | 
+                          (reg_offset == IDMA_MULTICAST_MASK_OFFSET)  |
                           (reg_offset == IDMA_COLLECTIVE_SEL_OFFSET)
                           );
 
@@ -171,10 +166,10 @@ module idma_obi_ctrl_decoder
     selected_idma_req.write = obi_req_i.a.we;
     selected_idma_req.wdata = obi_req_i.a.wdata;
     selected_idma_req.wstrb = obi_req_i.a.be;
-    selected_idma_req.valid = obi_req_i.req && is_valid_access;
+    selected_idma_req.valid = obi_req_i.req & is_valid_access;
   end
 
-  assign obi_gnt = obi_req_i.req && is_valid_access && selected_idma_rsp.ready;
+  assign obi_gnt = obi_req_i.req & is_valid_access & selected_idma_rsp.ready;
 
   always_ff @(posedge clk_i, negedge rst_ni) begin: obi_response
     if (~rst_ni) begin

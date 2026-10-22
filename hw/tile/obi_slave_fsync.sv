@@ -29,16 +29,14 @@ module obi_slave_fsync
   parameter int unsigned       AGGR_W       = magia_tile_pkg::FSYNC_AGGR_W,
   parameter int unsigned       ID_W         = magia_tile_pkg::FSYNC_ID_W,
   parameter int unsigned       NBR_AGGR_W   = magia_tile_pkg::FSYNC_NBR_AGGR_W,
-  parameter int unsigned       NBR_ID_W     = magia_tile_pkg::FSYNC_NBR_ID_W,
-  parameter type obi_req_t     = magia_tile_pkg::core_obi_data_req_t,
-  parameter type obi_rsp_t     = magia_tile_pkg::core_obi_data_rsp_t
+  parameter int unsigned       NBR_ID_W     = magia_tile_pkg::FSYNC_NBR_ID_W
 )(
   input  logic                 clk_i,
   input  logic                 rst_ni,
   input  logic                 clear_i,
 
-  input  obi_req_t             obi_req_i,
-  output obi_rsp_t             obi_rsp_o,
+  input  core_obi_data_req_t   obi_req_i,
+  output core_obi_data_rsp_t   obi_rsp_o,
 
   fractal_sync_if.mst_port     ht_fsync_if_o,
   fractal_sync_if.mst_port     hn_fsync_if_o,
@@ -60,11 +58,12 @@ module obi_slave_fsync
   logic done;
   logic addr_match;
 
-  obi_rsp_t obi_rsp_d;  // Response computed in the address phase
+  core_obi_data_rsp_t obi_rsp_d;  // Response computed in the address phase
   logic     rvalid_q;
-  obi_rsp_t obi_rsp_q;
+  core_obi_data_rsp_t obi_rsp_q;
 
   logic[DATA_W-1:0] aggr_reg, id_reg, status_reg, control_reg;
+  logic[DATA_W-1:0] aggr_reg_d, id_reg_d;
   
   typedef enum logic[1:0] {
     IDLE,
@@ -91,7 +90,7 @@ module obi_slave_fsync
 /**            Hardwired Signals Beginning            **/
 /*******************************************************/
 
-  assign addr_match = (obi_req_i.a.addr >= BASE_ADDR) && 
+  assign addr_match = (obi_req_i.a.addr >= BASE_ADDR) & 
                       (obi_req_i.a.addr < BASE_ADDR + 32'h100);
 
   assign done_o  = done;
@@ -100,7 +99,7 @@ module obi_slave_fsync
 
   // Status register: bit 0 = done, bit 1 = error, bit 2 = busy  
   // For polling: when busy=0, operation is complete
-  assign status_reg = {29'b0, (c_sync_state == SYNC || c_sync_state == WAIT), error_o, done};
+  assign status_reg = {29'b0, (c_sync_state == SYNC | c_sync_state == WAIT), error_o, done};
 
 /*******************************************************/
 /**               Hardwired Signals End               **/
@@ -144,7 +143,7 @@ module obi_slave_fsync
       
       if (obi_req_i.a.we) begin
         // Write operation
-        case (obi_req_i.a.addr - BASE_ADDR)
+        unique case (obi_req_i.a.addr - BASE_ADDR)
           CONTROL_REG_OFFSET: begin
             sync_trigger = 1'b1;  // Writing to control register triggers sync
           end
@@ -154,7 +153,7 @@ module obi_slave_fsync
         endcase
       end else begin
         // Read operation
-        case (obi_req_i.a.addr - BASE_ADDR)
+        unique case (obi_req_i.a.addr - BASE_ADDR)
           STATUS_REG_OFFSET: begin
             obi_rsp_d.r.rdata = status_reg;
           end
@@ -166,13 +165,19 @@ module obi_slave_fsync
     end
   end
 
-  always_ff @(posedge clk_i, negedge rst_ni) begin: obi_response
-    if (~rst_ni) begin
-      rvalid_q  <= 1'b0;
-      obi_rsp_q <= '0;
+  always_ff @(posedge clk_i or negedge rst_ni) begin: obi_rvalid
+    if (!rst_ni) begin
+      rvalid_q <= 1'b0;
     end else begin
       rvalid_q <= obi_rsp_d.gnt;
-      if (obi_rsp_d.gnt) obi_rsp_q <= obi_rsp_d;
+    end
+  end
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin: obi_response
+    if (!rst_ni) begin
+      obi_rsp_q <= '0;
+    end else if (obi_rsp_d.gnt) begin
+      obi_rsp_q <= obi_rsp_d;
     end
   end
 
@@ -188,24 +193,32 @@ module obi_slave_fsync
 /**               Register Logic Beginning            **/
 /*******************************************************/
 
-  always_ff @(posedge clk_reg_g, negedge rst_ni) begin: configuration_registers
-    if (~rst_ni) begin
+  always_comb begin: configuration_registers_next
+    aggr_reg_d = aggr_reg;
+    id_reg_d   = id_reg;
+    if (clear_i) begin
+      aggr_reg_d = '0;
+      id_reg_d   = '0;
+    end else if (obi_req_i.req & addr_match & obi_req_i.a.we) begin
+      unique case (obi_req_i.a.addr - BASE_ADDR)
+        AGGR_REG_OFFSET: begin
+          aggr_reg_d = obi_req_i.a.wdata;
+        end
+        ID_REG_OFFSET: begin
+          id_reg_d = obi_req_i.a.wdata;
+        end
+        default: ;
+      endcase
+    end
+  end
+
+  always_ff @(posedge clk_reg_g or negedge rst_ni) begin: configuration_registers
+    if (!rst_ni) begin
       aggr_reg <= '0;
       id_reg   <= '0;
     end else begin
-      if (clear_i) begin
-        aggr_reg <= '0;
-        id_reg   <= '0;
-      end else if (obi_req_i.req && addr_match && obi_req_i.a.we) begin
-        case (obi_req_i.a.addr - BASE_ADDR)
-          AGGR_REG_OFFSET: begin
-            aggr_reg <= obi_req_i.a.wdata;
-          end
-          ID_REG_OFFSET: begin
-            id_reg <= obi_req_i.a.wdata;
-          end
-        endcase
-      end
+      aggr_reg <= aggr_reg_d;
+      id_reg   <= id_reg_d;
     end
   end
 
@@ -232,7 +245,7 @@ module obi_slave_fsync
     vn_fsync_if_o.aggr   = '0;
     vn_fsync_if_o.id_req = '0;
 
-    case (c_sync_state)
+    unique case (c_sync_state)
       IDLE: begin
         if (sync_trigger) begin
           n_sync_state = SYNC;
@@ -244,7 +257,7 @@ module obi_slave_fsync
       SYNC: begin
         n_sync_state = WAIT;
         if (aggr_reg != 1) begin // Tree (level > 1) request
-          case (id_reg[0])
+          unique case (id_reg[0])
             1'b0: begin                                           // Horizontal tree node request
               ht_fsync_if_o.sync   = 1'b1; 
               ht_fsync_if_o.aggr   = aggr_reg[AGGR_W-1:0];
@@ -255,9 +268,10 @@ module obi_slave_fsync
               vt_fsync_if_o.aggr   = aggr_reg[AGGR_W-1:0];
               vt_fsync_if_o.id_req = id_reg[ID_W-1:0];
             end
+            default: ;
           endcase
         end else begin                                            // Neighbor (level = 1) request
-          case (id_reg[1:0])
+          unique case (id_reg[1:0])
             2'b00: begin                                          // Horizontal tree node request
               ht_fsync_if_o.sync   = 1'b1; 
               ht_fsync_if_o.aggr   = aggr_reg[AGGR_W-1:0];
@@ -278,6 +292,7 @@ module obi_slave_fsync
               vn_fsync_if_o.aggr   = aggr_reg[NBR_AGGR_W-1:0];
               vn_fsync_if_o.id_req = id_reg[NBR_ID_W-1:0];
             end
+            default: ;
           endcase
         end
       end
@@ -294,14 +309,20 @@ module obi_slave_fsync
         n_sync_state = IDLE;
         done         = 1'b1;
       end
+
+      default: begin
+        n_sync_state = IDLE;
+      end
     endcase
   end
 
-  always_ff @(posedge clk_sync_g, negedge rst_ni) begin: sync_state
-    if (~rst_ni)   c_sync_state <= IDLE;
-    else begin
-      if (clear_i) c_sync_state <= IDLE;
-      else         c_sync_state <= n_sync_state;
+  always_ff @(posedge clk_sync_g or negedge rst_ni) begin: sync_state
+    if (!rst_ni) begin
+      c_sync_state <= IDLE;
+    end else if (clear_i) begin
+      c_sync_state <= IDLE;
+    end else begin
+      c_sync_state <= n_sync_state;
     end
   end
 

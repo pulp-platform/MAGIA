@@ -28,9 +28,9 @@ MEMORY
 /* Stack information variables.
  * Spatz owns [0x1C000, 0x20000) in the tile SPM (_stack_start = 0x1FFF8 in
  * spatz_program.ld); this region stops at 0x1C000 to avoid overlap.
- * Each hart gets _stack_slice_size bytes; crt0 computes:
- *   sp = stack - local_id * _stack_slice_size
- * Slot 0 = CV32 main core, slots 1..8 = PULP cluster cores. */
+ * Each hart gets _stack_slice_size bytes; slot n starts at
+ *   sp = stack - n * _stack_slice_size
+ * Slot 0 = CV32 main core (crt0.S), slots 1..8 = PULP harts 0..7 (pulp_crt0.S). */
 _stack_slice_size = 0x800;                       /* 2 KB per hart */
 _stack_hart_count = 9;                           /* 1 main + 8 PULP cores */
 _min_stack        = _stack_slice_size * _stack_hart_count;  /* 18 KB total */
@@ -160,8 +160,7 @@ SECTIONS
         _bss_end = .;
     } > dataram :data
 
-    /* Stack placed at the TOP of the CV32/PULP region so crt0 can compute
-     * per-hart SP = stack - local_id * _stack_slice_size. */
+    /* Stack placed at the TOP of the CV32/PULP region: stack = _stack_start = 0x1C000 */
     .stack ORIGIN(stack) + LENGTH(stack) - _min_stack (NOLOAD): {
         . = ALIGN(4);
         _stack_bottom = .;

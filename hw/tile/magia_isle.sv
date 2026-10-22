@@ -143,9 +143,6 @@ module magia_isle
   localparam int unsigned RedmuleFpW   = 16;  // FP16
   localparam int unsigned RedmuleDataW = TileCfg.RedMule.Height * (TileCfg.RedMule.NumPipeRegs + 1) * RedmuleFpW;
 
-  // Sized like hwpe_ctrl_intf_periph in magia_redmule_wrap
-  `HWPE_CTRL_TYPEDEF_REQ_T(tile_redmule_ctrl_req_t, logic[magia_tile_pkg::AWC-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[hci_package::DEFAULT_IW-1:0])
-  `HWPE_CTRL_TYPEDEF_RSP_T(tile_redmule_ctrl_rsp_t, logic[magia_pkg::DATA_W-1:0], logic[hci_package::DEFAULT_IW-1:0])
   `HCI_TYPEDEF_REQ_T(tile_redmule_data_req_t, logic[magia_tile_pkg::AWC-1:0], logic[RedmuleDataW-1:0], logic[RedmuleDataW/magia_tile_pkg::BWH-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
   `HCI_TYPEDEF_RSP_T(tile_redmule_data_rsp_t, logic[RedmuleDataW-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
 
@@ -165,19 +162,9 @@ module magia_isle
   end
 `endif
 
-  // Built through a function: a nested `default:` pattern does not elaborate in every tool
-  function automatic snitch_pma_pkg::rule_t [snitch_pma_pkg::NrMaxRules-1:0] spatz_code_regions();
-    automatic snitch_pma_pkg::rule_t [snitch_pma_pkg::NrMaxRules-1:0] rules = '{default: '0};
-    rules[0] = '{base: 48'(CodeRegionBase), mask: 48'(CodeRegionMask)};
-    return rules;
-  endfunction
-  localparam snitch_pma_pkg::snitch_pma_t SpatzCodePmaCfg = '{
-    NrCachedRegionRules: 1,
-    CachedRegion: spatz_code_regions(),
-    default: 0
-  };
   localparam snitch_pma_pkg::snitch_pma_t SpatzPmaCfg =
-    (CodeRegionSize == 0) ? magia_tile_pkg::SPATZ_SNITCH_PMA_CFG : SpatzCodePmaCfg;
+    (CodeRegionSize == 0) ? magia_tile_pkg::SPATZ_SNITCH_PMA_CFG
+                          : magia_tile_pkg::gen_spatz_pma_cfg(magia_pkg::ADDR_W'(CodeRegionBase), CodeRegionMask);
 
 /*******************************************************/
 /**                 Configuration End                 **/
@@ -188,9 +175,12 @@ module magia_isle
   logic sys_clk_en;
   logic sys_clk;
 
-  always_ff @(posedge clk_i, negedge rst_ni) begin: sys_clk_en_ff
-    if (~rst_ni) sys_clk_en <= 1'b0;
-    else         sys_clk_en <= tile_enable_i;
+  always_ff @(posedge clk_i or negedge rst_ni) begin : sys_clk_en_ff
+    if (!rst_ni) begin
+      sys_clk_en <= 1'b0;
+    end else begin
+      sys_clk_en <= tile_enable_i;
+    end
   end
 
   tc_clk_gating sys_clock_gating (
@@ -230,6 +220,11 @@ module magia_isle
   assign tile_l1_end_addr           = magia_tile_pkg::L1_ADDR_END         + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
   assign tile_event_unit_start_addr = magia_tile_pkg::EVENT_UNIT_ADDR_START;
   assign tile_event_unit_end_addr   = magia_tile_pkg::EVENT_UNIT_ADDR_END;
+
+  // TCDM ranges of core data, idx 0 of the cluster data demux
+  magia_tile_pkg::obi_xbar_rule_t [magia_tile_pkg::NUM_TCDM_RULES-1:0] tcdm_rules;
+
+  assign tcdm_rules[0] = '{idx: 0, start_addr: tile_l1_start_addr, end_addr: tile_l1_end_addr};
 
 /*******************************************************/
 /**                Tile Address Map End               **/
@@ -566,11 +561,7 @@ module magia_isle
     .FetchAddrWidth  ( magia_tile_pkg::FETCH_AW             ),
     .FetchDataWidth  ( magia_tile_pkg::FETCH_DW             ),
     .AxiAddrWidth    ( magia_tile_pkg::FILL_AW              ),
-    .AxiDataWidth    ( magia_tile_pkg::FILL_DW              ),
-    .sram_cfg_data_t (                                      ),
-    .sram_cfg_tag_t  (                                      ),
-    .axi_req_t       ( magia_tile_pkg::core_axi_instr_req_t ),
-    .axi_rsp_t       ( magia_tile_pkg::core_axi_instr_rsp_t )
+    .AxiDataWidth    ( magia_tile_pkg::FILL_DW              )
   ) i_icache (
     .clk_i                ( sys_clk                     ),
     .rst_ni               ( rst_ni                      ),
@@ -602,35 +593,62 @@ module magia_isle
 /*******************************************************/
 
   // Event Unit accesses take the direct link, everything else the OBI crossbar
-  magia_tile_pkg::core_data_req_t core_data_req_to_xbar;
-  magia_tile_pkg::core_data_rsp_t core_data_rsp_from_xbar;
+  localparam int unsigned CoreDataObi    = 0;
+  localparam int unsigned CoreDataEu     = 1;
+  localparam int unsigned CoreDataNumSlv = 2;
+
+  magia_tile_pkg::obi_xbar_rule_t [0:0]                core_data_rules;
+  magia_tile_pkg::core_data_req_t [CoreDataNumSlv-1:0] core_data_slv_req;
+  magia_tile_pkg::core_data_rsp_t [CoreDataNumSlv-1:0] core_data_slv_rsp;
+  magia_tile_pkg::core_data_rsp_t                      core_data_eu_rsp;
   magia_tile_pkg::eu_direct_req_t eu_direct_req;
   magia_tile_pkg::eu_direct_rsp_t eu_direct_rsp;
   magia_tile_pkg::eu_direct_req_t eu_direct_req_cut;
   magia_tile_pkg::eu_direct_rsp_t eu_direct_rsp_cut;
 
-  core_data_demux_eu_direct i_core_data_demux_eu_direct (
-    .clk_i           ( sys_clk                 ),
-    .rst_ni          ( rst_ni                  ),
-    .core_clock_en_i ( core_clk_en             ),
+  assign core_data_rules[0] = '{idx: CoreDataEu, start_addr: tile_event_unit_start_addr, end_addr: tile_event_unit_end_addr};
 
-    .core_data_req_i ( core_data_req           ),
-    .core_data_rsp_o ( core_data_rsp           ),
-
-    .xbar_data_req_o ( core_data_req_to_xbar   ),
-    .xbar_data_rsp_i ( core_data_rsp_from_xbar ),
-
-    .eu_direct_req_o ( eu_direct_req           ),
-    .eu_direct_rsp_i ( eu_direct_rsp           )
+  // EU accesses serialize, like cv.elw: a pipelined load must not overtake a blocking EU wait
+  core_data_demux #(
+    .NumSlv     ( CoreDataNumSlv                   ),
+    .NumRules   ( 1                                ),
+    .DefaultSlv ( CoreDataObi                      ),
+    .SerialSlv  ( CoreDataNumSlv'(1 << CoreDataEu) ),
+    .req_t      ( magia_tile_pkg::core_data_req_t  ),
+    .rsp_t      ( magia_tile_pkg::core_data_rsp_t  )
+  ) i_core_data_demux (
+    .clk_i              ( sys_clk           ),
+    .rst_ni             ( rst_ni            ),
+    .clk_en_i           ( core_clk_en       ),
+    .core_data_req_i    ( core_data_req     ),
+    .core_data_atomic_i ( 1'b0              ),
+    .core_data_rsp_o    ( core_data_rsp     ),
+    .addr_map_i         ( core_data_rules   ),
+    .slv_data_req_o     ( core_data_slv_req ),
+    .slv_data_rsp_i     ( core_data_slv_rsp )
   );
 
+  assign eu_direct_req.req   = core_data_slv_req[CoreDataEu].req;
+  assign eu_direct_req.addr  = core_data_slv_req[CoreDataEu].addr - tile_event_unit_start_addr;
+  assign eu_direct_req.wen   = ~core_data_slv_req[CoreDataEu].we;
+  assign eu_direct_req.wdata = core_data_slv_req[CoreDataEu].wdata;
+  assign eu_direct_req.be    = core_data_slv_req[CoreDataEu].be;
+
+  always_comb begin
+    core_data_eu_rsp        = '0;
+    core_data_eu_rsp.gnt    = eu_direct_rsp.gnt;
+    core_data_eu_rsp.rvalid = eu_direct_rsp.rvalid;
+    core_data_eu_rsp.rdata  = eu_direct_rsp.rdata;
+    core_data_eu_rsp.err    = eu_direct_rsp.err;
+  end
+
+  assign core_data_slv_rsp[CoreDataEu] = core_data_eu_rsp;
+
   eu_direct_cut #(
-    .eu_direct_req_t ( magia_tile_pkg::eu_direct_req_t ),
-    .eu_direct_rsp_t ( magia_tile_pkg::eu_direct_rsp_t ),
-    .Bypass          ( 1'b0                            ),
-    .BypassReq       ( 1'b0                            ),
-    .BypassRsp       ( 1'b0                            ),
-    .NB_CORES        ( 1                               )
+    .Bypass    ( 1'b0 ),
+    .BypassReq ( 1'b0 ),
+    .BypassRsp ( 1'b0 ),
+    .NB_CORES  ( 1    )
   ) i_eu_direct_cut (
     .clk_i     ( sys_clk           ),
     .rst_ni    ( rst_ni            ),
@@ -665,23 +683,23 @@ module magia_isle
 
 `ifdef CV32E40X
   cv32e40x_data2obi_req i_core_data2obi_req (
-    .data_req_i ( core_data_req_to_xbar   ),
-    .obi_req_o  ( core_obi_data_req       )
+    .data_req_i ( core_data_slv_req[CoreDataObi] ),
+    .obi_req_o  ( core_obi_data_req              )
   );
 
   cv32e40x_obi2data_rsp i_core_obi2data_rsp (
-    .obi_rsp_i  ( core_obi_data_rsp       ),
-    .data_rsp_o ( core_data_rsp_from_xbar )
+    .obi_rsp_i  ( core_obi_data_rsp              ),
+    .data_rsp_o ( core_data_slv_rsp[CoreDataObi] )
   );
 `else
   cv32e40p_data2obi_req i_core_data2obi_req (
-    .data_req_i ( core_data_req_to_xbar   ),
-    .obi_req_o  ( core_obi_data_req       )
+    .data_req_i ( core_data_slv_req[CoreDataObi] ),
+    .obi_req_o  ( core_obi_data_req              )
   );
 
   cv32e40p_obi2data_rsp i_core_obi2data_rsp (
-    .obi_rsp_i  ( core_obi_data_rsp       ),
-    .data_rsp_o ( core_data_rsp_from_xbar )
+    .obi_rsp_i  ( core_obi_data_rsp              ),
+    .data_rsp_o ( core_data_slv_rsp[CoreDataObi] )
   );
 `endif
 
@@ -1311,15 +1329,7 @@ module magia_isle
   assign eu_events.other[magia_tile_pkg::EU_OTHER_O2A_START] = idma_obi2axi_start;
 
   idma_ctrl_mm #(
-    .ERROR_CAP         ( TileCfg.IDma.ErrorCap               ),
-    .obi_req_t         ( magia_tile_pkg::core_obi_data_req_t ),
-    .obi_rsp_t         ( magia_tile_pkg::core_obi_data_rsp_t ),
-    .idma_fe_reg_req_t ( magia_tile_pkg::idma_fe_reg_req_t   ),
-    .idma_fe_reg_rsp_t ( magia_tile_pkg::idma_fe_reg_rsp_t   ),
-    .axi_req_t         ( magia_tile_pkg::idma_axi_req_t      ),
-    .axi_rsp_t         ( magia_tile_pkg::idma_axi_rsp_t      ),
-    .idma_obi_req_t    ( magia_tile_pkg::idma_obi_req_t      ),
-    .idma_obi_rsp_t    ( magia_tile_pkg::idma_obi_rsp_t      )
+    .ERROR_CAP ( TileCfg.IDma.ErrorCap )
   ) i_idma_ctrl_mm (
     .clk_i           ( sys_clk                ),
     .rst_ni          ( rst_ni                 ),
@@ -1564,21 +1574,18 @@ module magia_isle
 /*******************************************************/
 
   if (TileCfg.EnRedMule) begin: gen_redmule
-    tile_redmule_ctrl_req_t          redmule_ctrl_req;
-    tile_redmule_ctrl_rsp_t          redmule_ctrl_rsp;
-    tile_redmule_data_req_t          redmule_data_req;
-    tile_redmule_data_rsp_t          redmule_data_rsp;
-    magia_tile_pkg::redmule_events_t redmule_events;
+    magia_tile_pkg::redmule_ctrl_req_t redmule_ctrl_req;
+    magia_tile_pkg::redmule_ctrl_rsp_t redmule_ctrl_rsp;
+    tile_redmule_data_req_t            redmule_data_req;
+    tile_redmule_data_rsp_t            redmule_data_rsp;
+    magia_tile_pkg::redmule_events_t   redmule_events;
 
     assign redmule_events.evt[1] = 1'b0;
 
     assign eu_events.acc[magia_tile_pkg::EU_ACC_REDMULE_EVT_0] = redmule_events.evt[0];
     assign eu_events.acc[magia_tile_pkg::EU_ACC_REDMULE_EVT_1] = redmule_events.evt[1];
 
-    obi2hwpe_ctrl #(
-      .redmule_ctrl_req_t ( tile_redmule_ctrl_req_t ),
-      .redmule_ctrl_rsp_t ( tile_redmule_ctrl_rsp_t )
-    ) obi2hwpe_ctrl_inst (
+    obi2hwpe_ctrl obi2hwpe_ctrl_inst (
       .obi_req_i  ( ctrl_req[CtrlMap.redmule] ),
       .obi_rsp_o  ( ctrl_rsp[CtrlMap.redmule] ),
       .ctrl_req_o ( redmule_ctrl_req          ),
@@ -1595,8 +1602,6 @@ module magia_isle
       .NumPipeRegs        ( TileCfg.RedMule.NumPipeRegs ),
       .redmule_data_req_t ( tile_redmule_data_req_t     ),
       .redmule_data_rsp_t ( tile_redmule_data_rsp_t     ),
-      .redmule_ctrl_req_t ( tile_redmule_ctrl_req_t     ),
-      .redmule_ctrl_rsp_t ( tile_redmule_ctrl_rsp_t     ),
       .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(hci_redmule_if) )
     ) i_redmule_wrap (
       .clk_i              ( sys_clk               ),
@@ -1862,8 +1867,11 @@ module magia_isle
     );
 
     always_ff @(posedge sys_clk or negedge rst_ni) begin
-      if (!rst_ni) bootrom_reg_rsp.ready <= 1'b0;
-      else         bootrom_reg_rsp.ready <= bootrom_reg_req.valid;
+      if (!rst_ni) begin
+        bootrom_reg_rsp.ready <= 1'b0;
+      end else begin
+        bootrom_reg_rsp.ready <= bootrom_reg_req.valid;
+      end
     end
 
     assign bootrom_reg_rsp.error = 1'b0;
@@ -1938,8 +1946,7 @@ module magia_isle
       .cluster_clk_i          ( cluster_clk                  ),
       .debug_req_i            ( debug_req_i[NClusterCores:1] ),
       .mhartid_i              ( mhartid_i                    ),
-      .tile_l1_start_addr_i   ( tile_l1_start_addr           ),
-      .tile_l1_end_addr_i     ( tile_l1_end_addr             ),
+      .tcdm_rules_i           ( tcdm_rules                   ),
       .cluster_boot_addr_i    ( cluster_boot_addr            ),
       .cluster_fetch_enable_i ( cluster_fetch_enable         ),
       .cluster_start_irq_i    ( cluster_start_irq            ),
@@ -2000,9 +2007,7 @@ module magia_isle
       .FetchAddrWidth ( magia_tile_pkg::CLUSTER_FETCH_AW       ),
       .FetchDataWidth ( magia_tile_pkg::CLUSTER_FETCH_DW       ),
       .AxiAddrWidth   ( magia_tile_pkg::CLUSTER_FILL_AW        ),
-      .AxiDataWidth   ( magia_tile_pkg::CLUSTER_FILL_DW        ),
-      .axi_req_t      ( magia_tile_pkg::core_axi_instr_req_t   ),
-      .axi_rsp_t      ( magia_tile_pkg::core_axi_instr_rsp_t   )
+      .AxiDataWidth   ( magia_tile_pkg::CLUSTER_FILL_DW        )
     ) cluster_icache_top_i (
       .clk_i                ( clk_i                      ),
       .rst_ni               ( rst_ni                     ),
