@@ -110,15 +110,17 @@ package magia_tile_pkg;
 
   localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_PMA_MASK        = 32'hFFFF_8000;
 
-  // Snitch PMA Configuration - defines cacheable regions for instruction fetches
-  localparam snitch_pma_pkg::snitch_pma_t SPATZ_SNITCH_PMA_CFG = '{
-    NrCachedRegionRules: 1,
-    CachedRegion: '{
-      0: '{base: 48'(INSTRRAM_ADDR_START), mask: 48'(INSTRRAM_PMA_MASK)},  // Snitch PMA rules are 48 bit
-      default: '0
-    },
-    default: 0
-  };
+  // Snitch PMA with one cacheable instruction region
+  function automatic snitch_pma_pkg::snitch_pma_t gen_spatz_pma_cfg(logic [magia_pkg::ADDR_W-1:0] base,
+                                                                   logic [magia_pkg::ADDR_W-1:0] mask);
+    snitch_pma_pkg::snitch_pma_t cfg;
+    cfg                     = '0;
+    cfg.NrCachedRegionRules = 1;
+    cfg.CachedRegion[0]     = '{base: 48'(base), mask: 48'(mask)};  // Snitch PMA rules are 48 bit
+    return cfg;
+  endfunction
+
+  localparam snitch_pma_pkg::snitch_pma_t SPATZ_SNITCH_PMA_CFG = gen_spatz_pma_cfg(INSTRRAM_ADDR_START, INSTRRAM_PMA_MASK);
 
   // Spatz parameters 
 
@@ -339,9 +341,7 @@ package magia_tile_pkg;
     return ret;
   endfunction
 
-  // Control registers: every control-register unit sits behind one OBI crossbar port and is
-  // demuxed by ctrl_demux. The Event Unit keeps its own port: its responses can be held
-  // back, and the crossbar returns responses in order.
+  // Control units share one crossbar port through ctrl_demux; the EU keeps its own, its responses wait
   localparam int unsigned CTRL_MAX_UNITS = 6;
 
   typedef struct packed {
@@ -537,27 +537,33 @@ package magia_tile_pkg;
     logic[magia_pkg::ADDR_W-1:0] end_addr;
   } obi_xbar_rule_t;
 
+  // TCDM ranges taken by the dedicated HCI ports: the shared L1, reserved and stack go through OBI
+  localparam int unsigned NUM_TCDM_RULES = 1;
+
   typedef obi_xbar_rule_t [CTRL_MAX_UNITS-1:0] ctrl_rules_t;
 
-  // Address rule of each control unit, indexed as in gen_ctrl_map(): idx is the ctrl_demux
-  // output port. Entries past num_units are unused. A disabled unit has no rule, so the OBI
-  // crossbar default-routes its range to L2 and the magia_tile assertions flag the access.
+  // One rule per ctrl_demux port as in gen_ctrl_map(); a disabled unit's range falls to L2 and is flagged
   function automatic ctrl_rules_t gen_ctrl_rules(magia_tile_cfg_t cfg);
     ctrl_rules_t ret;
     ctrl_map_t   map;
     ret = '0;
     map = gen_ctrl_map(cfg);
-    if (cfg.EnRedMule)
+    if (cfg.EnRedMule) begin
       ret[map.redmule] = '{idx: map.redmule, start_addr: REDMULE_CTRL_ADDR_START, end_addr: REDMULE_CTRL_ADDR_END};
+    end
     ret[map.idma] = '{idx: map.idma, start_addr: IDMA_CTRL_ADDR_START, end_addr: IDMA_CTRL_ADDR_END};
-    if (magia_pkg::MagiaEnFractalSync)
+    if (magia_pkg::MagiaEnFractalSync) begin
       ret[map.fsync] = '{idx: map.fsync, start_addr: FSYNC_CTRL_ADDR_START, end_addr: FSYNC_CTRL_ADDR_END};
-    if (cfg.EnSpatzCC)
+    end
+    if (cfg.EnSpatzCC) begin
       ret[map.spatz] = '{idx: map.spatz, start_addr: SPATZ_CTRL_ADDR_START, end_addr: SPATZ_CTRL_ADDR_END};
-    if (cfg.EnCluster)
+    end
+    if (cfg.EnCluster) begin
       ret[map.cluster] = '{idx: map.cluster, start_addr: CLUSTER_CTRL_ADDR_START, end_addr: CLUSTER_CTRL_ADDR_END};
-    if (cfg.EnCollective)
+    end
+    if (cfg.EnCollective) begin
       ret[map.coll] = '{idx: map.coll, start_addr: COLL_CTRL_ADDR_START, end_addr: COLL_CTRL_ADDR_END};
+    end
     return ret;
   endfunction
 
@@ -674,8 +680,8 @@ package magia_tile_pkg;
 
   typedef logic[iDMA_AddrWidth-1:0] idma_addr_t;
 
-  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic[IW-1:0])
-  `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic[DWH-1:0], logic[IW-1:0])
+  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic[AWC-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[hci_package::DEFAULT_IW-1:0])
+  `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic[magia_pkg::DATA_W-1:0], logic[hci_package::DEFAULT_IW-1:0])
 
   `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic[UWH-1:0], logic[IW-1:0], logic[0:0], logic[0:0])
   `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic[DWH-1:0], logic[UWH-1:0],  logic[IW-1:0], logic[0:0], logic[0:0])
@@ -810,10 +816,7 @@ package magia_tile_pkg;
   // Packed observation boundary required by hierarchical Verilation.
   typedef struct packed {
     logic [magia_pkg::ADDR_W-1:0]     axi_aw_addr;
-    // axi_aw_id is driven from axi_xbar_mst_req_t.aw.id (magia_pkg's NoC AXI
-    // alias), whose ID width is magia_pkg::AXI_NOC_ID_W. This tile package's
-    // own AXI_ID_W (3 bits) sizes a *different* xbar (the tile-internal one
-    // with 5 slave ports) and must not be reused here.
+    // NoC AXI ID width: AXI_ID_W of this package sizes the tile-internal xbar, not this one
     logic [magia_pkg::AXI_NOC_ID_W-1:0] axi_aw_id;
     logic                             axi_aw_valid;
     logic [magia_pkg::DATA_W-1:0] axi_w_data;

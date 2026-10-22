@@ -23,21 +23,12 @@
 module tcdm64_to_dual_hci32_atomic
   import obi_pkg::*;
 #(
-  parameter type tcdm64_req_t = logic,  // 64-bit TCDM request type (with AMO)
-  parameter type tcdm64_rsp_t = logic,  // 64-bit TCDM response type
-  parameter type tcdm32_req_t = logic,  // 32-bit TCDM request type (with AMO)
-  parameter type tcdm32_rsp_t = logic,  // 32-bit TCDM response type
-  parameter type obi32_req_t  = logic,  // 32-bit OBI request type
-  parameter type obi32_rsp_t  = logic,  // 32-bit OBI response type
-  parameter type obi32_a_chan_t = logic, // 32-bit OBI address channel type
-  parameter type obi32_r_chan_t = logic, // 32-bit OBI response channel type
-  parameter type hci_req_t    = logic,  // 32-bit HCI request type
-  parameter type hci_rsp_t    = logic,  // 32-bit HCI response type
-  
-  // OBI optional types for atomic resolvers
-  parameter type obi32_a_optional_t = logic,
-  parameter type obi32_r_optional_t = logic,
-  
+  // 64-bit Snitch types from the RVD branch: the package ones are 32-bit when RVD is off
+  parameter type tcdm64_req_t,
+  parameter type tcdm64_rsp_t,
+  parameter type hci_req_t    = magia_tile_pkg::core_hci_data_req_t,     // 32-bit HCI request type
+  parameter type hci_rsp_t    = magia_tile_pkg::core_hci_data_rsp_t,     // 32-bit HCI response type
+
   // OBI configuration for atomic resolvers
   parameter obi_pkg::obi_cfg_t SbrPortObiCfg = obi_pkg::ObiDefaultConfig,
   parameter obi_pkg::obi_cfg_t MgrPortObiCfg = obi_pkg::ObiDefaultConfig,
@@ -57,6 +48,16 @@ module tcdm64_to_dual_hci32_atomic
   input  hci_rsp_t   hci_rsp_hi_i
 );
 
+  // 32-bit side, fixed by the package; the HCI end depends on TileIW
+  typedef magia_tile_pkg::spatz_tcdm32_req_t tcdm32_req_t;
+  typedef magia_tile_pkg::spatz_tcdm32_rsp_t tcdm32_rsp_t;
+  typedef magia_tile_pkg::spatz_obi32_req_t obi32_req_t;
+  typedef magia_tile_pkg::spatz_obi32_rsp_t obi32_rsp_t;
+  typedef magia_tile_pkg::spatz_obi32_a_chan_t obi32_a_chan_t;
+  typedef magia_tile_pkg::spatz_obi32_r_chan_t obi32_r_chan_t;
+  typedef magia_tile_pkg::spatz_obi32_a_optional_t obi32_a_optional_t;
+  typedef magia_tile_pkg::spatz_obi32_r_optional_t obi32_r_optional_t;
+
   // Internal TCDM32 signals after tcdm64_to_dual_tcdm32
   tcdm32_req_t tcdm32_req_lo, tcdm32_req_hi;
   tcdm32_rsp_t tcdm32_rsp_lo, tcdm32_rsp_hi;
@@ -66,11 +67,9 @@ module tcdm64_to_dual_hci32_atomic
   /*******************************************************************/
   
   tcdm64_to_dual_tcdm32 #(
-    .FIFO_DEPTH   ( 4             ),  // Match Snitch's NUM_INT_OUTSTANDING_MEM
     .tcdm64_req_t ( tcdm64_req_t  ),
     .tcdm64_rsp_t ( tcdm64_rsp_t  ),
-    .tcdm32_req_t ( tcdm32_req_t  ),
-    .tcdm32_rsp_t ( tcdm32_rsp_t  )
+    .FIFO_DEPTH   ( 4             )   // Match Snitch's NUM_INT_OUTSTANDING_MEM
   ) i_tcdm64_to_dual_tcdm32 (
     .clk_i          ( clk_i          ),
     .rst_ni         ( rst_ni         ),

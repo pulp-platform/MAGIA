@@ -90,7 +90,6 @@ sources:
       - hw/tile/obi_slave_ctrl_cluster.sv
       - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cc_wrapper.sv
-      - hw/tile/core_data_demux_eu_direct.sv
       - hw/tile/core_data_demux.sv
       - hw/tile/eu_direct_cut.sv
       - hw/tile/magia_tile_icache_wrap.sv
@@ -100,6 +99,11 @@ sources:
       - hw/tile/ctrl_demux.sv
       - hw/tile/magia_cluster_wrap.sv
       - hw/tile/magia_isle.sv
+
+  - target: all(cv32e40x_bhv, not(verilator))
+    files:
+      - target/verilator/src/cv32e40x_rvfi_sim_trace.sv
+      - target/verilator/src/cv32e40x_wrapper.sv
 
   # MAGIA standalone tile
   - target: all(magia_dv, standalone_tile)

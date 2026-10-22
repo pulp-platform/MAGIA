@@ -77,8 +77,9 @@ module magia
 /**            Configuration Checks Beginning         **/
 /*******************************************************/
 `ifndef SYNTHESIS
-  if (N_TILES_X != N_TILES_Y)
-    $fatal(1,"magia: only square meshes are supported, got %0dx%0d tiles", N_TILES_X, N_TILES_Y);
+  if (N_TILES_X != N_TILES_Y) begin : gen_square_mesh_check
+    $fatal(1, "magia: only square meshes are supported, got %0dx%0d tiles", N_TILES_X, N_TILES_Y);
+  end
 `endif
 
 /*******************************************************/
@@ -235,18 +236,9 @@ module magia
         , .observe_o         ( tile_observe_o[i*N_TILES_X+j]      )
 `endif
       );
-  `ifdef CORE_TRACES
-  `ifdef CV32E40X
-`ifndef VERILATOR
-      localparam string core_trace_file_name = $sformatf("%s%0d", "log_file_", i*N_TILES_X+j);
-      defparam i_magia_tile.i_magia_isle.i_cv32e40x_ctrl_core.rvfi_i.tracer_i.LOGFILE_PATH_PLUSARG = core_trace_file_name;
-`endif
-  `endif
-  // Note: cv32e40p tracer generates its own filename: trace_core_{cluster_id}_{core_id}.log
-  `endif
 
-      if (i == 0) begin
-        if (j == 0) begin // T-L corner
+      if (i == 0) begin : gen_first_row
+        if (j == 0) begin : gen_top_left
           assign tile_north_req_in[i*N_TILES_X+j]  = '0;
           assign tile_north_rsp_in[i*N_TILES_X+j]  = '0;
           assign tile_north_wide_in[i*N_TILES_X+j] = '0;
@@ -262,7 +254,7 @@ module magia
           assign tile_east_req_in[i*N_TILES_X+j]   = tile_west_req_out[i*N_TILES_X+j+1];
           assign tile_east_rsp_in[i*N_TILES_X+j]   = tile_west_rsp_out[i*N_TILES_X+j+1];
           assign tile_east_wide_in[i*N_TILES_X+j]  = tile_west_wide_out[i*N_TILES_X+j+1];
-        end else if (j == N_TILES_X-1) begin // T-R corner
+        end else if (j == N_TILES_X-1) begin : gen_top_right
           assign tile_north_req_in[i*N_TILES_X+j]  = '0;
           assign tile_north_rsp_in[i*N_TILES_X+j]  = '0;
           assign tile_north_wide_in[i*N_TILES_X+j] = '0;
@@ -275,7 +267,7 @@ module magia
           assign tile_east_req_in[i*N_TILES_X+j]   = '0;
           assign tile_east_rsp_in[i*N_TILES_X+j]   = '0;
           assign tile_east_wide_in[i*N_TILES_X+j]  = '0;
-        end else if ((j > 0) && (j < (N_TILES_X-1))) begin // First row without corners
+        end else if ((j > 0) && (j < (N_TILES_X-1))) begin : gen_top_edge
           assign tile_north_req_in[i*N_TILES_X+j]  = '0;
           assign tile_north_rsp_in[i*N_TILES_X+j]  = '0;
           assign tile_north_wide_in[i*N_TILES_X+j] = '0;
@@ -289,8 +281,8 @@ module magia
           assign tile_east_rsp_in[i*N_TILES_X+j]   = tile_west_rsp_out[i*N_TILES_X+j+1];
           assign tile_east_wide_in[i*N_TILES_X+j]  = tile_west_wide_out[i*N_TILES_X+j+1];
         end
-      end else if (i == N_TILES_Y-1) begin
-        if (j == 0) begin // B-L corner
+      end else if (i == N_TILES_Y-1) begin : gen_last_row
+        if (j == 0) begin : gen_bottom_left
           assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
           assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
           assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];
@@ -306,7 +298,7 @@ module magia
           assign tile_east_req_in[i*N_TILES_X+j]   = tile_west_req_out[i*N_TILES_X+j+1];
           assign tile_east_rsp_in[i*N_TILES_X+j]   = tile_west_rsp_out[i*N_TILES_X+j+1];
           assign tile_east_wide_in[i*N_TILES_X+j]  = tile_west_wide_out[i*N_TILES_X+j+1];
-        end else if (j == N_TILES_X-1) begin // B-R corner
+        end else if (j == N_TILES_X-1) begin : gen_bottom_right
           assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
           assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
           assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];
@@ -319,7 +311,7 @@ module magia
           assign tile_east_req_in[i*N_TILES_X+j]   = '0;
           assign tile_east_rsp_in[i*N_TILES_X+j]   = '0;
           assign tile_east_wide_in[i*N_TILES_X+j]  = '0;
-        end else if ((j > 0) && (j < (N_TILES_X-1))) begin // Last row without corners
+        end else if ((j > 0) && (j < (N_TILES_X-1))) begin : gen_bottom_edge
           assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
           assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
           assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];
@@ -333,7 +325,7 @@ module magia
           assign tile_east_rsp_in[i*N_TILES_X+j]   = tile_west_rsp_out[i*N_TILES_X+j+1];
           assign tile_east_wide_in[i*N_TILES_X+j]  = tile_west_wide_out[i*N_TILES_X+j+1];
         end
-      end else if (j == 0 && i != 0 && i != N_TILES_Y-1) begin // First column
+      end else if (j == 0 && i != 0 && i != N_TILES_Y-1) begin : gen_left_edge
         assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
         assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
         assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];
@@ -349,7 +341,7 @@ module magia
         assign tile_east_req_in[i*N_TILES_X+j]   = tile_west_req_out[i*N_TILES_X+j+1];
         assign tile_east_rsp_in[i*N_TILES_X+j]   = tile_west_rsp_out[i*N_TILES_X+j+1];
         assign tile_east_wide_in[i*N_TILES_X+j]  = tile_west_wide_out[i*N_TILES_X+j+1];
-      end else if (j == N_TILES_X-1 && i != 0 && i != N_TILES_Y-1) begin // Last column
+      end else if (j == N_TILES_X-1 && i != 0 && i != N_TILES_Y-1) begin : gen_right_edge
         assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
         assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
         assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];
@@ -362,7 +354,7 @@ module magia
         assign tile_east_req_in[i*N_TILES_X+j]   = '0;
         assign tile_east_rsp_in[i*N_TILES_X+j]   = '0;
         assign tile_east_wide_in[i*N_TILES_X+j]  = '0;
-      end else begin // Central tiles
+      end else begin : gen_center
         assign tile_north_req_in[i*N_TILES_X+j]  = tile_south_req_out[(i-1)*N_TILES_X+j];
         assign tile_north_rsp_in[i*N_TILES_X+j]  = tile_south_rsp_out[(i-1)*N_TILES_X+j];
         assign tile_north_wide_in[i*N_TILES_X+j] = tile_south_wide_out[(i-1)*N_TILES_X+j];

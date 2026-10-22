@@ -168,7 +168,7 @@ module magia_tile_fixture;
 
     .irq_i               ( irq               ),
 
-    .debug_req_i         ( debug_req         ),
+    .debug_req_i         ( {{magia_tile_pkg::N_CLUSTER_CORES{1'b0}}, debug_req} ),
     .debug_havereset_o   ( debug_havereset   ),
     .debug_running_o     ( debug_running     ),
     .debug_halted_o      ( debug_halted      ),
@@ -179,15 +179,6 @@ module magia_tile_fixture;
     .core_sleep_o        ( core_sleep        ),
     .wu_wfe_i            ( wu_wfe            )
   );
-`ifdef CORE_TRACES
-`ifdef CV32E40X
-`ifndef VERILATOR
-  localparam string core_trace_file_name = "log_file_0";
-  defparam i_magia_tile.i_magia_isle.i_cv32e40x_ctrl_core.rvfi_i.tracer_i.LOGFILE_PATH_PLUSARG = core_trace_file_name;
-`endif
-`endif
-  // Note: cv32e40p tracer generates its own filename: trace_core_{cluster_id}_{core_id}.log
-`endif
 
 /*******************************************************/
 /**                      DUT End                      **/

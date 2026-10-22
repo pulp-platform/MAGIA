@@ -20,10 +20,10 @@
  */
 
 module tcdm2hci #(
-  parameter type tcdm_req_t = logic,
-  parameter type tcdm_rsp_t = logic,
-  parameter type hci_req_t  = logic,
-  parameter type hci_rsp_t  = logic
+  parameter type tcdm_req_t = magia_tile_pkg::spatz_tcdm_req_t,
+  parameter type tcdm_rsp_t = magia_tile_pkg::spatz_tcdm_rsp_t,
+  parameter type hci_req_t  = magia_tile_pkg::core_hci_data_req_t,
+  parameter type hci_rsp_t  = magia_tile_pkg::core_hci_data_rsp_t
 )(
   input  logic       clk_i,
   input  logic       rst_ni,
