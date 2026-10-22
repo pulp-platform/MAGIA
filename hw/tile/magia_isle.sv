@@ -221,10 +221,12 @@ module magia_isle
   assign tile_event_unit_start_addr = magia_tile_pkg::CTRL_EU_ADDR_START;
   assign tile_event_unit_end_addr   = magia_tile_pkg::CTRL_EU_ADDR_END;
 
-  // TCDM ranges of core data, idx 0 of the cluster data demux
+  // TCDM ranges of core data, idx 0 of every core data demux
   magia_tile_pkg::obi_xbar_rule_t [magia_tile_pkg::NUM_TCDM_RULES-1:0] tcdm_rules;
 
-  assign tcdm_rules[0] = '{idx: 0, start_addr: tile_l1_start_addr, end_addr: tile_l1_end_addr};
+  // Reserved and stack are a private alias, the same in every tile, the L1 is shifted per tile
+  assign tcdm_rules[0] = '{idx: 0, start_addr: magia_tile_pkg::RESERVED_ADDR_START, end_addr: magia_tile_pkg::STACK_ADDR_END};
+  assign tcdm_rules[1] = '{idx: 0, start_addr: tile_l1_start_addr,                  end_addr: tile_l1_end_addr            };
 
 /*******************************************************/
 /**                Tile Address Map End               **/

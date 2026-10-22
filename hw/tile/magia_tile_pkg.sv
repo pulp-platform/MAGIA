@@ -574,8 +574,8 @@ package magia_tile_pkg;
     logic[magia_pkg::ADDR_W-1:0] end_addr;
   } obi_xbar_rule_t;
 
-  // TCDM ranges taken by the dedicated HCI ports: the shared L1, reserved and stack go through OBI
-  localparam int unsigned NUM_TCDM_RULES = 1;
+  // TCDM ranges taken by the dedicated HCI ports: the private reserved and stack regions, the shared L1
+  localparam int unsigned NUM_TCDM_RULES = 2;
 
   typedef obi_xbar_rule_t [CTRL_MAX_UNITS-1:0] ctrl_rules_t;
 
