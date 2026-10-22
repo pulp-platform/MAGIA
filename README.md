@@ -31,9 +31,9 @@ The following *optional* parameters can be specified:
 
 `gui`: **0**|**1** (**Default**: 0). 0 simulation without GUI; 1 simulation with GUI.
 
-`core`: **CV32E40P**|**CV32E40X** (**Default**: CV32E40P). Control core type.
+`core`: **CV32E40P**|**CV32E40X** (**Default**: CV32E40P). Control core type; the cluster cores are always CV32E40P.
 
-`fsync`: **0**|**1** (**Default**: 1). 1 builds the FractalSync network in the mesh and in every tile (`MAGIA_FSYNC`).
+`fsync`: **0**|**1** (**Default**: 1). 1 builds the FractalSync network (`MAGIA_FSYNC`).
 
 
 **Instructions to build HW/SW and run simulations**:
@@ -84,26 +84,20 @@ make run test=fsync_test
 
 MAGIA can also be simulated with [Verilator](https://verilator.org) instead of
 QuestaSim. The flow is independent of the `vsim` one above: it has its own
-targets, its own build directory (`verilator/build`), and needs no
+targets, its own build directories under `verilator/`, and needs no
 `build-hw`/`vsim-scripts` step.
 
-`mesh_dv` picks the model, exactly as in the Questa flow, and each one has its
-own build directory, so both can be built side by side:
+`mesh_dv` picks the model, as in the Questa flow:
 
-- `mesh_dv=1` (`magia_tb`, `verilator/build`): the mesh is built
-  **hierarchically**. The tile is compiled once into a separate library
-  (`magia_tile_hier`) and instantiated 16 times, instead of being flattened 16
-  times over. This is what keeps the build tractable.
-- `mesh_dv=0` (`magia_tile_tb`, `verilator/build-tile`): the standalone tile is
-  built **flat**, so Verilator optimizes across its whole hierarchy. See
-  [Single tile](#single-tile) below.
+- `mesh_dv=1` builds the mesh (`magia_tb`) **hierarchically**: the tile is
+  compiled once into a separate library (`magia_tile_hier`) and instantiated
+  for every tile, instead of being flattened. This keeps the build tractable.
+- `mesh_dv=0` builds the standalone tile (`magia_tile_tb`).
 
 The following *optional* parameters can be specified:
 
-`core`: **CV32E40P**|**CV32E40X** (**Default**: CV32E40P). Each core has its own
-build directory (`verilator/build[-tile]-cv32e40x` for CV32E40X), so both can be
-built side by side. CV32E40X writes its RVFI trace to `core_<hartid>_traces.log`,
-as in the Questa flow.
+`core`: **CV32E40P**|**CV32E40X** (**Default**: CV32E40P). Each core and each
+`mesh_dv` has its own build directory, so the models can be built side by side.
 
 `VERILATOR_JOBS`: **N** (**Default**: 4). Parallelism used to *build* the model.
 Unrelated to simulation speed.
@@ -124,8 +118,8 @@ make verilate core=CV32E40P mesh_dv=1 VERILATOR_JOBS=16
 make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test
 ```
 Step **1** is *required at least once*: `verilate-run` compiles the test but
-never the model — it runs the `Vmagia_tb` that is already in
-`verilator/build/obj_dir`, and errors out if there is none.
+never the model — it runs the model already built for that `mesh_dv` and
+`core`, and errors out if there is none.
 **After changing the RTL, re-run `make verilate` yourself**, or you will keep simulating the old model.
 
 **Full example**:
@@ -138,6 +132,16 @@ make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test
 Other targets: `verilate-gen` (code generation only), `verilate-build` (native
 compile only), `verilate-check-hierarchy` (asserts the model really links the
 tile library instead of inlining it), and `clean-verilate`.
+
+#### Single tile
+
+`mesh_dv=0` builds the standalone tile (`magia_tile_tb`) in its own build
+directory, and runs the same tile tests as the Questa flow (`make run mesh_dv=0`):
+
+```bash
+make verilate core=CV32E40P mesh_dv=0 VERILATOR_JOBS=16
+make verilate-run core=CV32E40P mesh_dv=0 test=hello_world
+```
 
 #### Waveforms (FST)
 
@@ -152,10 +156,8 @@ make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test VERILATOR_FST=dump.
 The file is written in the test's build directory. Waveforms include the
 internals of every tile.
 
-**Let the simulation reach `$finish`.** A run killed before it gets there
-leaves the FST unclosed, and an unclosed FST is not a file you can keep: the hierarchy is still sitting in a `<dump>.fst.hier`
-companion, so the dump reads only in place and loses every signal name the
-moment it is moved.
+`Ctrl-C` (or `SIGTERM`) stops the run at the next time step and still closes
+the FST, so an interrupted run leaves a waveform you can open.
 
 #### Multithreaded simulation (experimental)
 
@@ -177,31 +179,6 @@ To change the thread count, re-run `make verilate` with the new value.
 - `VERILATOR_THREADS=4` **segfaults at time zero**, deterministically, in an
   `eval_initial` coroutine — from a clean build, same flags but the count.
 
-#### Single tile
-
-`mesh_dv=0` builds `magia_tile_tb` flat in `verilator/build-tile`, next to the
-mesh model. It runs the same tests as `make run mesh_dv=0`, with the same
-plusargs, the same `transcript` in the test directory and the same core traces
-(`trace_core_<hartid>.log`, sorted into `traces/` for tests with PULP tasks):
-
-```bash
-make verilate core=CV32E40P mesh_dv=0 VERILATOR_JOBS=48
-make verilate-run core=CV32E40P mesh_dv=0 test=hello_world
-make verilate-run core=CV32E40P mesh_dv=0 test=l1_test VERILATOR_FST=dump.fst
-```
-
-- The build takes about 5-6 minutes on a 48-way build machine; changing RTL or
-  testbench files triggers a new one on the next `make verilate`.
-- The tile model runs single-threaded by default: `VERILATOR_THREADS=4` was
-  1.6x slower on `mm_tests/tile_test_mm`.
-- On the tile tests it is 5-10x faster than the optimized Questa build, e.g.
-  `eu_tests/event_unit_test` 754 s → 79 s, `l1_test` 502 s → 64 s,
-  `mm_tests/tile_test_mm` 535 s → 99 s, `hello_world` 9.5 s → 1.7 s.
-- `Ctrl-C` (or `SIGTERM`) stops the run at the next time step and still closes
-  the FST, so a hung test can be interrupted and its waveform opened.
-- `VERILATOR_USER_ARGS` passes extra options to Verilator (e.g. `-fno-dfg` to
-  rule out an optimizer bug while debugging).
-
 ## ⚙️ Architecture
 
 ![](doc/MAGIA.png)
@@ -211,13 +188,13 @@ The central piece of the architecture is the MAGIA tile containing a GeMM accele
 
 Each tile is controlled by a [CV32E40P](https://github.com/pulp-platform/cv32e40p) or [CV32E40X](https://github.com/openhwgroup/cv32e40x) main core (`core=`). Control of iDMA, RedMulE, FractalSync, Spatz CC, and the PULP cluster follows a memory-mapped model, with the Event Unit handling event aggregation for system control.
 
-`magia_tile` wraps `magia_isle` (cores, accelerators, L1, crossbars and Event Unit) with the FlooNoC network interface and router. What a tile contains is set by its `TileCfg` (`magia_tile_cfg_t` in `hw/mesh/magia_pkg.sv`): which of RedMulE, Spatz CC and the PULP cluster are instantiated and their parameters, the L1 geometry, the control core ISA extensions and the iDMA options. A disabled unit has no hardware, and accesses to its control range raise a simulation assertion.
+`magia_tile` wraps `magia_isle` (cores, accelerators, L1, crossbars and Event Unit) with the FlooNoC network interface and router. What a tile contains is set by its `TileCfg` (`magia_tile_cfg_t` in `hw/mesh/magia_pkg.sv`).
 
 #### PULP Cluster
-Each tile embeds a cluster of `TileCfg.Cluster.NumCores` [CV32E40P](https://github.com/pulp-platform/cv32e40p) cores (8 by default). Cluster cores share a Snitch instruction cache with an AXI refill path to L2; each core reaches the tile's L1 through its own HCI port and everything else (accelerator registers, PULP_CTRL, remote memory) through its own OBI master port into the tile crossbar. Cluster cores receive interrupts exclusively from the `PULP_CTRL` block — they are not connected to the Event Unit. The main core dispatches tasks to the cluster via the `PULP_CTRL` register block (`0x1740`), which provides: binary entry point (`PULP_BINARY`), per-core MEI dispatch (`PULP_START`), task function pointer (`PULP_TASKBIN`), data pointer (`PULP_DATA`), completion quorum (`PULP_NB_CORES_TO_WAIT`), and readiness/done handshake registers (`PULP_READY`, `PULP_DONE`). When the done quorum is reached, `PULP_CTRL` raises EU bit 12 on the main core's Event Unit, allowing the main core to sleep in WFE until the cluster finishes.
+Each tile embeds a cluster of `TileCfg.Cluster.NumCores` (8 by default) [CV32E40P](https://github.com/pulp-platform/cv32e40p) cores. Cluster cores share a Snitch instruction cache with an AXI refill path to L2, each core reaches the tile's L1 through its own HCI port and everything else (accelerator registers, PULP_CTRL, remote memory) through its own OBI master port into the tile crossbar. Cluster cores receive interrupts exclusively from the tile CSR (`PULP_CTRL`) — they are not connected to the Event Unit. The main core dispatches tasks to the cluster via the `PULP_CTRL` register block (`0x1740`), which provides: binary entry point (`PULP_BINARY`), per-core MEI dispatch (`PULP_START`), task function pointer (`PULP_TASKBIN`), data pointer (`PULP_DATA`), completion quorum (`PULP_NB_CORES_TO_WAIT`), and readiness/done handshake registers (`PULP_READY`, `PULP_DONE`). When the done quorum is reached, the tile CSR raises EU bit 12 on the main core's Event Unit, allowing the main core to sleep in WFE until the cluster finishes.
 
 ### Mesh
-Replicating the MAGIA tile, we scale up to a two-dimensional (2D) mesh of compute tiles. Each tile takes its own `TileCfg` from the `TILE_CFGS` parameter of `magia`: `HOMO_TILE_CFGS` (default) gives every tile all units, `HETERO_TILE_CFGS` splits the tiles into four equal groups of full, RedMulE-only, Spatz-only and cluster-only tiles. The NoC allows access to the global west-side L2 through row-side interfaces, while tiles exchange traffic through FlooNoC router. The mesh uses XY routing and carries both AXI narrow channels (32-bit) and AXI wide channels (256-bit), with protocol conversion handled by per-tile Network Interfaces (NIs).
+Replicating the MAGIA tile, we scale up to a two-dimensional (2D) mesh of compute tiles. Each tile takes its `TileCfg` from the `TILE_CFGS` parameter of `magia` (`HOMO_TILE_CFGS` by default). The NoC allows access to the global west-side L2 through row-side interfaces, while tiles exchange traffic through FlooNoC router. The mesh uses XY routing and carries both AXI narrow channels (32-bit) and AXI wide channels (256-bit), with protocol conversion handled by per-tile Network Interfaces (NIs).
 
 Rendez-vous among tiles are managed through the FractalSync (FS) mechanism and the dedicated network.
 
@@ -287,7 +264,7 @@ This map reflects the RTL memory-mapped layout defined in `hw/tile/magia_tile_pk
 
 - `tile_base = mhartid * 0x0010_0000`
 
-Private map: the same range in every tile, each tile maps it to its own copy, other tiles cannot reach it:
+Private map: the same range in every tile, each tile maps it to its own copy:
 
 | Region            | Range                     |
 |-------------------|---------------------------|
@@ -306,33 +283,27 @@ Shared/global map:
 
 | Region            | Range                     | Notes |
 |-------------------|---------------------------|-------|
-| *L1 SPM*          | `tile_base + 0x0002_0000 ... 0x000F_FFFF` | Reachable by every tile; the own tile's L1 still needs `tile_base` |
-| *Collectives*     | `0xB000_0000-0xB0FF_FFFF` | Tile windows with the `0xB` prefix, see [Collective Operations](#collective-operations) |
+| *L1 SPM*          | `tile_base + 0x0002_0000 ... 0x000F_FFFF` | Reachable by every tile |
 | *L2*              | `0xC000_0000-0xFFFF_FFFF` | Global L2 window |
 | *Instructions*    | `0xCC00_0000-0xCC00_7FFF` | Instruction sub-region inside L2 |
 
-Unmapped addresses:
-- in the peripheral window: OBI `err` response from `ctrl_demux`;
-- elsewhere: the request leaves the tile on the NoC, where FlooNoC sends addresses outside its map to the first L2 bank and only flags them with a simulation assertion (`DecodeError`);
-- arriving from the NoC and not in this tile's L1: AXI DECERR, since NoC traffic never goes back out to the NoC.
-
-In simulation, the OBI `err` and the AXI DECERR stop the test with a `$fatal`.
+An access to an unmapped address of the peripheral window gets an OBI error, and in simulation it stops the test.
 
 Software/test utility addresses (used by SW runtime and testbench VIP):
 
 | Region            | Address                                    | Notes |
 |-------------------|--------------------------------------------|-------|
 | *Test End*        | `0xCCFF_0000`                              | Exit code location used by SW runtime/tests |
-| *String (utoa)*   | `0x0000_1900`                              | Private string scratch location (`RESERVED_START + STR_OFFSET`) |
+| *String (utoa)*   | `0x0000_1900`                              | String scratch location (`RESERVED_START + STR_OFFSET`) |
 | *Print (stderr)*  | `0xFFFF_0000`                              | Memory-mapped stderr sink in simulation VIP |
 | *Print (stdio)*   | `0xFFFF_0004`                              | Memory-mapped stdio sink in simulation VIP |
-| *Synch.*          | `tile_base + 0x000F_F000`                  | Top 4 KiB of L1 (`L1_BASE + SYNC_OFFSET`), reachable by every tile |
+| *Synch.*          | `tile_base + 0x000F_F000`                  | Top 4 KiB of L1 (`L1_BASE + SYNC_OFFSET`) |
 
 ## 🖥️ Programming model
 The flow is memory-mapped (MM): software configures and starts accelerators by writing control registers in each tile address space.
 
 - Execution model: SPMD over tiles, with `mhartid` selecting `tile_base = mhartid * 0x0010_0000`.
-- Control path: CV32E40P accesses RedMulE, iDMA, FractalSync, Event Unit, and Spatz control registers via MMIO.
+- Control path: the control core (CV32E40P or CV32E40X) accesses RedMulE, iDMA, FractalSync, Event Unit, and Spatz control registers via MMIO.
 - Data path: iDMA moves data between L1 and external memory, while compute engines consume/produce data in L1.
 - Synchronization: Event Unit and FractalSync provide interrupt/event and barrier mechanisms for inter-tile coordination.
 
@@ -376,10 +347,10 @@ The PULP cluster uses a bare-metal dynamic dispatch model. The cluster binary is
 
 **Dispatch flow** (`sw/utils/cluster_utils.h`, `sw/utils/magia_pulp_utils.h`):
 
-1. `cluster_boot(binary_start)` — writes `PULP_BINARY`, asserts `CLK_EN`, polls `PULP_READY` until all 8 cores have armed their dispatcher loop.
+1. `cluster_boot(binary_start)` — writes `PULP_BINARY`, asserts `CLK_EN`, polls `PULP_READY` until all cluster cores have armed their dispatcher loop.
 2. `cluster_arm_done_event()` — clears the CV32 Event Unit buffer and enables only EU bit 12 (cluster-done), avoiding spurious wakeups from stale RedMulE/iDMA events.
 3. `cluster_dispatch_task(task_addr, core_mask)` — writes `NB_CORES_TO_WAIT`, `TASKBIN`, then `PULP_START = core_mask`, which fires a per-core MEI to each selected core. Returns once all selected cores have ACK'd (i.e., `PULP_START` self-clears).
-4. `cluster_wait_done_eu()` — CV32 sleeps in `cv.elw` until EU bit 12 fires (PULP_DONE quorum reached).
+4. `cluster_wait_done_eu()` — the control core sleeps on a blocking Event Unit load (`cv.elw` on CV32E40P, `lw` on CV32E40X) until EU bit 12 fires (PULP_DONE quorum reached).
 5. `cluster_stop()` — de-asserts `CLK_EN` to gate the cluster clock.
 
 Each cluster core runs a dispatcher loop that waits in `WFI` for the MEI, reads `PULP_TASKBIN`/`PULP_DATA` from the trap handler, calls the task function, writes `PULP_DONE`, and re-enters `WFI`.
@@ -395,18 +366,14 @@ Cluster task sources live under `sw/tests/<test>/pulp_task/`. A test directory c
 **RTL/TB** : The `N_TILES_X` and `N_TILES_Y` parameters in `hw/mesh/magia_pkg.sv` specifie the number of tiles and allows the derivation of the appropriate data and syncrhonization networks.
 
 ## 🧪Local testing
-The [`run_regression.py`](scripts/run_regression.py) Python script runs the tests listed in [`tests.yml`](sw/tests/tests.yml), which gives for each test its testbench (`mesh` or `tile`), the control cores it runs on (`cores`) and the defines it needs (`requires`). The configurations to run are always given explicitly, run one after the other, and each one is built in its own git worktree under `.regression/`; the HW is rebuilt only when its sources change.
-
-The script is invoked from the main directory of this repository. The RISC-V GCC and `bender` must be on `PATH` (or set `BENDER`), `SPATZ_LLVM_PATH` points to the Spatz LLVM, and `MAGIA_QUESTA_SETUP` / `MAGIA_VERILATOR_SETUP` can hold the commands that load the simulators (e.g. `module load ...`):
+The [`run_regression.py`](scripts/run_regression.py) Python script builds the hardware and software and runs the tests listed in [`tests.yml`](sw/tests/tests.yml), for Questa and Verilator. It is invoked from the main directory of this repository:
 ```sh
 scripts/run_regression.py --sim questa --core CV32E40P --fsync on --test general/hello_mesh   # one test
-scripts/run_regression.py --sim verilator --core CV32E40P --fsync on --test collective_tests  # one folder
-scripts/run_regression.py --sim questa --core all --fsync on --test tile                      # every tile test
 scripts/run_regression.py --sim all --core all --fsync all --test all                         # everything
 scripts/run_regression.py --sim all --core all --fsync all --test all --list                  # plan only
 ```
 
-`--test` takes `all`, a testbench (`mesh`, `tile`), a folder of `sw/tests/` (`general` is `sw/tests/` itself) or one test as `folder/test`. The run shows a dashboard of every build; the results, `summary.md` and one log per HW build and per test end up in `.regression/results/<date_time>/`. See the header of the script for every option.
+`scripts/run_regression.py -h` lists every option.
 
 ## 🔏 License
 MAGIA is an open-source project with a permissive license. All `software` sources are licensed under the Apache License 2.0 ([`LICENSE.APACHE`](LICENSE.APACHE)). All `hardware` sources are licensed under the Solderpad Hardware License 0.51 ([`LICENSE.SHL`](LICENSE.SHL)).

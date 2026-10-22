@@ -20,8 +20,8 @@
  */
 
 module hci2obi_rsp #(
-  parameter type hci_rsp_t = logic,
-  parameter type obi_rsp_t = logic
+  parameter type hci_rsp_t = magia_tile_pkg::core_hci_data_rsp_t,
+  parameter type obi_rsp_t = magia_tile_pkg::core_obi_data_rsp_t
 )(
   input  hci_rsp_t hci_rsp_i,
   output obi_rsp_t obi_rsp_o

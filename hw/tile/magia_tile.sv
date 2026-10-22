@@ -155,7 +155,7 @@ module magia_tile
   assign isle_dm_exception_addr = dm_exception_addr_i;
 `else
   assign isle_dm_halt_addr      = magia_tile_pkg::DM_HALT_ADDR;
-  assign isle_dm_exception_addr = magia_tile_pkg::DM_HALT_ADDR + 16'h000C;
+  assign isle_dm_exception_addr = magia_tile_pkg::DM_HALT_ADDR + 32'h0000_000C;
 `endif
 
   magia_isle #(
@@ -222,9 +222,12 @@ module magia_tile
   logic noc_clk_en;
   logic noc_clk;
 
-  always_ff @(posedge clk_i, negedge rst_ni) begin: noc_clk_en_ff
-    if (~rst_ni) noc_clk_en <= 1'b0;
-    else         noc_clk_en <= tile_enable_i;
+  always_ff @(posedge clk_i or negedge rst_ni) begin: noc_clk_en_ff
+    if (!rst_ni) begin
+      noc_clk_en <= 1'b0;
+    end else begin
+      noc_clk_en <= tile_enable_i;
+    end
   end
 
   tc_clk_gating noc_clock_gating (
@@ -242,7 +245,7 @@ module magia_tile
 
   id_t floo_id;
 
-  assign floo_id = '{x: x_id_i, y: y_id_i, port_id: 0};
+  assign floo_id = '{x: ($bits(floo_id.x))'(x_id_i), y: ($bits(floo_id.y))'(y_id_i), port_id: '0};
 
   // Router port 4 is the local port
   floo_req_t  [4:0] floo_router_req_in;
@@ -318,6 +321,8 @@ module magia_tile
   red_narrow_req_t offload_narrow_req;
   red_narrow_rsp_t offload_narrow_rsp;
   logic[63:0]      narrow_alu_result;
+
+  assign offload_wide_rsp = '0;
 
   floo_reduction_alu i_narrow_floo_alu (
     .clk_i            ( noc_clk                                        ),

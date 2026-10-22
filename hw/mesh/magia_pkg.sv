@@ -263,7 +263,7 @@ package magia_pkg;
   function automatic magia_tile_cfg_t [N_TILES-1:0] gen_hetero_tile_cfgs();
     magia_tile_cfg_t [N_TILES-1:0] cfgs;
     for (int unsigned i = 0; i < N_TILES; i++) begin
-      case ((i * 4) / N_TILES)
+      unique case ((i * 4) / N_TILES)
         0: cfgs[i] = MagiaTileDefaultCfg;
         1: cfgs[i] = MagiaTileRedMuleCfg;
         2: cfgs[i] = MagiaTileSpatzCfg;

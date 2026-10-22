@@ -67,11 +67,11 @@ module obi_slave_ctrl_spatz
   assign addr_offset = obi_req_i.a.addr[4:0];
   
   // Check if address is in valid range
-  assign addr_valid = (obi_req_i.a.addr >= BaseAddr) && 
+  assign addr_valid = (obi_req_i.a.addr >= BaseAddr) & 
                       (obi_req_i.a.addr < (BaseAddr + 28));  // 7 registers * 4 bytes
   
   // Grant only if address is valid
-  assign obi_rsp_o.gnt = obi_req_i.req && addr_valid;
+  assign obi_rsp_o.gnt = obi_req_i.req & addr_valid;
   assign obi_rsp_o.r.err = 1'b0;
   
   // ============================================
@@ -97,7 +97,7 @@ module obi_slave_ctrl_spatz
     
     // Update registers on write only if address is valid
     if (obi_req_i.req && obi_req_i.a.we && addr_valid) begin
-      case (addr_offset)
+      unique case (addr_offset)
         CLK_EN_OFFSET:  clk_en_d  = obi_req_i.a.wdata[0];
         READY_OFFSET:   ready_d   = obi_req_i.a.wdata[0];  // Spatz sets to 1 when ready for interrupts
         START_OFFSET:   start_d   = obi_req_i.a.wdata[0];  // CV32 sets to 1, Spatz clears to 0
@@ -138,10 +138,10 @@ module obi_slave_ctrl_spatz
   // ============================================
   always_comb begin
     rdata_d  = 32'h0;
-    rvalid_d = obi_req_i.req && addr_valid;
+    rvalid_d = obi_req_i.req & addr_valid;
     
     if (obi_req_i.req && !obi_req_i.a.we && addr_valid) begin
-      case (addr_offset)
+      unique case (addr_offset)
         CLK_EN_OFFSET:  rdata_d = {31'h0, clk_en_q};
         READY_OFFSET:   rdata_d = {31'h0, ready_q};
         START_OFFSET:   rdata_d = {31'h0, start_q};

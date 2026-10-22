@@ -83,33 +83,31 @@ import magia_tile_pkg::*;
   
   // Convert abstract eu_direct interface to XBAR_PERIPH_BUS (one per core)
   // eu_direct_addr_i already contains relative offset (subtracted by demux)
-  generate
-    for (genvar k = 0; k < NB_CORES; k++) begin : gen_eu_direct_link
-      assign eu_direct_link[k].req   = eu_direct_req_i[k];
-      assign eu_direct_link[k].add   = eu_direct_addr_i[k];
-      assign eu_direct_link[k].wen   = eu_direct_wen_i[k];
-      assign eu_direct_link[k].wdata = eu_direct_wdata_i[k];
-      assign eu_direct_link[k].be    = eu_direct_be_i[k];
-      assign eu_direct_link[k].id    = '0;
+  for (genvar k = 0; k < NB_CORES; k++) begin : gen_eu_direct_link
+    assign eu_direct_link[k].req   = eu_direct_req_i[k];
+    assign eu_direct_link[k].add   = eu_direct_addr_i[k];
+    assign eu_direct_link[k].wen   = eu_direct_wen_i[k];
+    assign eu_direct_link[k].wdata = eu_direct_wdata_i[k];
+    assign eu_direct_link[k].be    = eu_direct_be_i[k];
+    assign eu_direct_link[k].id    = '0;
 
-      assign eu_direct_gnt_o[k]    = eu_direct_link[k].gnt;
-      assign eu_direct_rvalid_o[k] = eu_direct_link[k].r_valid;
-      assign eu_direct_rdata_o[k]  = eu_direct_link[k].r_rdata;
-      assign eu_direct_err_o[k]    = eu_direct_link[k].r_opc;
-    end
-  endgenerate
+    assign eu_direct_gnt_o[k]    = eu_direct_link[k].gnt;
+    assign eu_direct_rvalid_o[k] = eu_direct_link[k].r_valid;
+    assign eu_direct_rdata_o[k]  = eu_direct_link[k].r_rdata;
+    assign eu_direct_err_o[k]    = eu_direct_link[k].r_opc;
+  end
 
   // Address range check and offset calculation
   localparam logic [magia_pkg::ADDR_W-1:0] EU_BASE_ADDR = magia_tile_pkg::EVENT_UNIT_ADDR_START;
   logic addr_in_range;
   logic [magia_pkg::ADDR_W-1:0] addr_offset;
   
-  assign addr_in_range = (obi_req_i.a.addr >= magia_tile_pkg::EVENT_UNIT_ADDR_START) &&
+  assign addr_in_range = (obi_req_i.a.addr >= magia_tile_pkg::EVENT_UNIT_ADDR_START) &
                          (obi_req_i.a.addr <  magia_tile_pkg::EVENT_UNIT_ADDR_END);
   assign addr_offset   = obi_req_i.a.addr - EU_BASE_ADDR;
   
   // OBI to XBAR_PERIPH_BUS conversion - pass RELATIVE address (offset from base)
-  assign speriph_slave.req   = obi_req_i.req && addr_in_range;
+  assign speriph_slave.req   = obi_req_i.req & addr_in_range;
   assign speriph_slave.add   = addr_offset;           
   assign speriph_slave.wen   = ~obi_req_i.a.we;       
   assign speriph_slave.wdata = obi_req_i.a.wdata;
