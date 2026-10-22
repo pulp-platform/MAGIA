@@ -339,12 +339,10 @@ make python_deps
 make bender
 make vsim-scripts mesh_dv=0 > vsim-scripts.log
 
-# 2. Build hardware (QuestaSim)
-module load questa/2025.3
+# 2. Build hardware (QuestaSim on PATH)
 make build-hw mesh_dv=0 fast_sim=1 > build-hw.log
 
-# 3. Build software (auto-detects Spatz tasks; Spatz code needs the Spatz LLVM)
-module load corev-gcc spatz-llvm/22.1.7
+# 3. Build software (auto-detects Spatz tasks; RISC-V GCC on PATH, SPATZ_LLVM_PATH set to the Spatz LLVM)
 make clean all test='my_test' mesh_dv=0
 
 # 4. Run simulation

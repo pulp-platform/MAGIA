@@ -110,15 +110,17 @@ package magia_tile_pkg;
 
   localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_PMA_MASK        = 32'hFFFF_8000;
 
-  // Snitch PMA Configuration - defines cacheable regions for instruction fetches
-  localparam snitch_pma_pkg::snitch_pma_t SPATZ_SNITCH_PMA_CFG = '{
-    NrCachedRegionRules: 1,
-    CachedRegion: '{
-      0: '{base: 48'(INSTRRAM_ADDR_START), mask: 48'(INSTRRAM_PMA_MASK)},  // Snitch PMA rules are 48 bit
-      default: '0
-    },
-    default: 0
-  };
+  // Snitch PMA with one cacheable instruction region
+  function automatic snitch_pma_pkg::snitch_pma_t gen_spatz_pma_cfg(logic [magia_pkg::ADDR_W-1:0] base,
+                                                                   logic [magia_pkg::ADDR_W-1:0] mask);
+    snitch_pma_pkg::snitch_pma_t cfg;
+    cfg                     = '0;
+    cfg.NrCachedRegionRules = 1;
+    cfg.CachedRegion[0]     = '{base: 48'(base), mask: 48'(mask)};  // Snitch PMA rules are 48 bit
+    return cfg;
+  endfunction
+
+  localparam snitch_pma_pkg::snitch_pma_t SPATZ_SNITCH_PMA_CFG = gen_spatz_pma_cfg(INSTRRAM_ADDR_START, INSTRRAM_PMA_MASK);
 
   // Spatz parameters 
 
@@ -537,6 +539,9 @@ package magia_tile_pkg;
     logic[magia_pkg::ADDR_W-1:0] end_addr;
   } obi_xbar_rule_t;
 
+  // TCDM ranges taken by the dedicated HCI ports: the shared L1, reserved and stack go through OBI
+  localparam int unsigned NUM_TCDM_RULES = 1;
+
   typedef obi_xbar_rule_t [CTRL_MAX_UNITS-1:0] ctrl_rules_t;
 
   // Address rule of each control unit, indexed as in gen_ctrl_map(): idx is the ctrl_demux
@@ -674,8 +679,8 @@ package magia_tile_pkg;
 
   typedef logic[iDMA_AddrWidth-1:0] idma_addr_t;
 
-  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic[IW-1:0])
-  `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic[DWH-1:0], logic[IW-1:0])
+  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic[AWC-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[hci_package::DEFAULT_IW-1:0])
+  `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic[magia_pkg::DATA_W-1:0], logic[hci_package::DEFAULT_IW-1:0])
 
   `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic[UWH-1:0], logic[IW-1:0], logic[0:0], logic[0:0])
   `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic[DWH-1:0], logic[UWH-1:0],  logic[IW-1:0], logic[0:0], logic[0:0])

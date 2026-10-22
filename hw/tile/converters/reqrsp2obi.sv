@@ -22,20 +22,16 @@
 module reqrsp2obi
   import reqrsp_pkg::*;
 #(
-  parameter obi_pkg::obi_cfg_t ObiCfg = obi_pkg::ObiDefaultConfig,
-  parameter type obi_req_t = logic,
-  parameter type obi_rsp_t = logic,
-  parameter type reqrsp_req_t = logic,
-  parameter type reqrsp_rsp_t = logic
+  parameter obi_pkg::obi_cfg_t ObiCfg = obi_pkg::ObiDefaultConfig
 ) (
-  input  logic        clk_i,
-  input  logic        rst_ni,
+  input  logic                               clk_i,
+  input  logic                               rst_ni,
 
-  input  reqrsp_req_t reqrsp_req_i,
-  output reqrsp_rsp_t reqrsp_rsp_o,
+  input  magia_tile_pkg::spatz_reqrsp_req_t  reqrsp_req_i,
+  output magia_tile_pkg::spatz_reqrsp_rsp_t  reqrsp_rsp_o,
 
-  output obi_req_t    obi_req_o,
-  input  obi_rsp_t    obi_rsp_i
+  output magia_tile_pkg::core_obi_data_req_t obi_req_o,
+  input  magia_tile_pkg::core_obi_data_rsp_t obi_rsp_i
 );
 
   // Convert reqrsp AMO to OBI ATOP encoding

@@ -23,22 +23,18 @@
 module reqrsp64_to_obi32
   import obi_pkg::*;
 #(
-  parameter type reqrsp_req_t = logic,  // 64-bit reqrsp request type
-  parameter type reqrsp_rsp_t = logic,  // 64-bit reqrsp response type
-  parameter type obi_req_t    = logic,  // 32-bit OBI request type
-  parameter type obi_rsp_t    = logic,  // 32-bit OBI response type
   parameter obi_pkg::obi_cfg_t ObiCfg = obi_pkg::ObiDefaultConfig
 )(
-  input  logic         clk_i,
-  input  logic         rst_ni,
+  input  logic                                clk_i,
+  input  logic                                rst_ni,
   
   // REQRSP side (64-bit from Snitch RV64)
-  input  reqrsp_req_t  reqrsp_req_i,
-  output reqrsp_rsp_t  reqrsp_rsp_o,
+  input  magia_tile_pkg::spatz_reqrsp64_req_t reqrsp_req_i,
+  output magia_tile_pkg::spatz_reqrsp64_rsp_t reqrsp_rsp_o,
   
   // OBI side (32-bit to peripherals/L2)
-  output obi_req_t     obi_req_o,
-  input  obi_rsp_t     obi_rsp_i
+  output magia_tile_pkg::core_obi_data_req_t  obi_req_o,
+  input  magia_tile_pkg::core_obi_data_rsp_t  obi_rsp_i
 );
 
   /*******************************************************************/

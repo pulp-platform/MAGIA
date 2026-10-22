@@ -50,13 +50,10 @@ module ctrl_demux
   end
 
   obi_demux_addr #(
-    .SbrPortObiCfg      ( magia_tile_pkg::obi_amo_cfg         ),
-    .sbr_port_obi_req_t ( magia_tile_pkg::core_obi_data_req_t ),
-    .sbr_port_obi_rsp_t ( magia_tile_pkg::core_obi_data_rsp_t ),
-    .NumMgrPorts        ( CtrlMap.num_units + 1                ),
-    .NumMaxTrans        ( magia_tile_pkg::N_MAX_TRAN          ),
-    .NumAddrRules       ( CtrlMap.num_units                    ),
-    .addr_map_rule_t    ( magia_tile_pkg::obi_xbar_rule_t     )
+    .SbrPortObiCfg ( magia_tile_pkg::obi_amo_cfg ),
+    .NumMgrPorts   ( CtrlMap.num_units + 1       ),
+    .NumMaxTrans   ( magia_tile_pkg::N_MAX_TRAN  ),
+    .NumAddrRules  ( CtrlMap.num_units           )
   ) i_ctrl_demux (
     .clk_i            ( clk_i          ),
     .rst_ni           ( rst_ni         ),

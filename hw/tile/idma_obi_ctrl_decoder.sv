@@ -24,25 +24,20 @@
 module idma_obi_ctrl_decoder
   import magia_tile_pkg::*;
   import magia_pkg::*;
- #(
-  parameter type obi_req_t = magia_tile_pkg::core_obi_data_req_t,
-  parameter type obi_rsp_t = magia_tile_pkg::core_obi_data_rsp_t,
-  parameter type idma_fe_reg_req_t = magia_tile_pkg::idma_fe_reg_req_t,
-  parameter type idma_fe_reg_rsp_t = magia_tile_pkg::idma_fe_reg_rsp_t
-)(
-  input  logic         clk_i,
-  input  logic         rst_ni,
+(
+  input  logic               clk_i,
+  input  logic               rst_ni,
 
   // OBI Slave Interface (CPU access)
-  input  obi_req_t     obi_req_i,
-  output obi_rsp_t     obi_rsp_o,
+  input  core_obi_data_req_t obi_req_i,
+  output core_obi_data_rsp_t obi_rsp_o,
 
   // iDMA Register Frontend Interface  
-  output idma_fe_reg_req_t idma_axi2obi_req_o,
-  input  idma_fe_reg_rsp_t idma_axi2obi_rsp_i,
+  output idma_fe_reg_req_t   idma_axi2obi_req_o,
+  input  idma_fe_reg_rsp_t   idma_axi2obi_rsp_i,
   
-  output idma_fe_reg_req_t idma_obi2axi_req_o, 
-  input  idma_fe_reg_rsp_t idma_obi2axi_rsp_i
+  output idma_fe_reg_req_t   idma_obi2axi_req_o, 
+  input  idma_fe_reg_rsp_t   idma_obi2axi_rsp_i
 );
 
 /*******************************************************/
