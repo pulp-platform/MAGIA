@@ -1,5 +1,5 @@
 // Copyright 2026 ETH Zurich and University of Bologna
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: SHL-0.51
 //
 // Minimal stand-in for UVM's uvm_macros.svh, for the Verilator flow only.
 //

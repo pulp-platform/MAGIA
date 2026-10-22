@@ -14,7 +14,7 @@
 # limitations under the License.
 # SPDX-License-Identifier: Apache-2.0
 #
-# Author: Luca Balboni <luca.balboni@chips.it>
+# Author: Luca Balboni, Fondazione Chips-IT
 #
 # Run the MAGIA tests of sw/tests/tests.yml over several build configurations, one after the other.
 #

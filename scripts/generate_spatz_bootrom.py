@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2024 ETH Zurich and University of Bologna.
-# Solderpad Hardware License, Version 0.51, see LICENSE for details.
-# SPDX-License-Identifier: SHL-0.51
+# Licensed under the Apache License, Version 2.0, see LICENSE.APACHE for details.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Generate SystemVerilog bootrom module from binary file
 
@@ -31,7 +31,7 @@ def generate_bootrom_sv(bin_file, output_file):
     
     # Generate SystemVerilog module (like spatz_cluster)
     sv_content = f'''// Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT.
-// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// Solderpad Hardware License, Version 0.51, see LICENSE.SHL for details.
 // SPDX-License-Identifier: SHL-0.51
 //
 // Auto-generated bootrom for Spatz core complex
