@@ -14,7 +14,7 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  * 
- * Authors: Luca Balboni <luca.balboni@chips.it>
+ * Authors: Luca Balboni, Fondazione Chips-IT
  * 
  *  hetero_mesh_test - PULP cluster-core task.
  */

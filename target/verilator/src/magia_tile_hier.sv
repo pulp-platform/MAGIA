@@ -2,7 +2,7 @@
  * Copyright (C) 2026 ETH Zurich and University of Bologna
  * SPDX-License-Identifier: SHL-0.51
  *
- * Authors: Luca Balboni <luca.balboni@chips.it>
+ * Authors: Luca Balboni, Fondazione Chips-IT
  *
  * Simulator-neutral packed-port wrapper used as the Verilator hierarchy
  * boundary.

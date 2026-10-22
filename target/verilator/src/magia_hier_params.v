@@ -1,5 +1,5 @@
 // Copyright 2026 ETH Zurich and University of Bologna
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: SHL-0.51
 //
 // Deliberately empty because: Verilator 5.046 only substitutes a prebuilt hier_block
 // library for its instances when ParameterizedHierBlocks::m_hierSubRun is set

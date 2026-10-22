@@ -14,7 +14,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Authors: Alessandro Nadalini <alessandro.nadalini3@unibo.it>
-#          Luca Balboni <luca.balboni@chips.it>
+#          Luca Balboni, Fondazione Chips-IT
 #
 # MAGIA test list, read by scripts/run_regression.py.
 #
