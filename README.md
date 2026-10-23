@@ -273,7 +273,8 @@ Private map: the same range in every tile, each tile maps it to its own copy:
 | *FractalSync CTRL*| `0x0000_0600-0x0000_06FF` |
 | *Ctrl-core Event Unit* | `0x0000_0700-0x0000_16FF` |
 | *Spatz CTRL*      | `0x0000_1700-0x0000_173F` |
-| *PULP CTRL*       | `0x0000_1740-0x0000_17FF` |
+| *PULP CTRL*       | `0x0000_1740-0x0000_17BF` |
+| *HCI CTRL*        | `0x0000_17C0-0x0000_17FF` |
 | *Collective CTRL* | `0x0000_1800-0x0000_18FF` |
 | *Cluster Event Unit (direct)*   | `0x0000_1900-0x0000_28FF` |
 | *Cluster Event Unit (SoC-side)* | `0x0000_2900-0x0000_38FF` |
