@@ -324,6 +324,11 @@ spatz_tests:
 
 # PULP cluster
 cluster_tests:
+  hello_pulp_barrier:
+    testbench: mesh
+    cores: [CV32E40P, CV32E40X]
+    sims: [questa, verilator]
+    requires: []
   hello_pulp:
     testbench: tile
     cores: [CV32E40P, CV32E40X]
@@ -340,6 +345,16 @@ cluster_tests:
     sims: [questa, verilator]
     requires: []
   hello_spatz_pulp:
+    testbench: tile
+    cores: [CV32E40P, CV32E40X]
+    sims: [questa, verilator]
+    requires: []
+  parallel_groups:
+    testbench: tile
+    cores: [CV32E40P, CV32E40X]
+    sims: [questa, verilator]
+    requires: []
+  vector_add:
     testbench: tile
     cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
