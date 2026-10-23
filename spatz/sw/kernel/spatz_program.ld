@@ -20,8 +20,8 @@
  *   0xCC000000: CV32 .text
  *   0xCC000000 + CV32_size: .spatz_binary (Spatz code inline)
  * 
- * Stack: Spatz uses remaining 16KB after CV32 (0x0001C000-0x00020000)
- *   - CV32 uses: 0x00010000-0x0001C000 (48KB)
+ * Stack: Spatz uses the 16KB above the CV32/PULP stack region (0x0001C000-0x00020000)
+ *   - CV32 and PULP: below 0x0001C000 (2KB slots, see sw/kernel/link.ld)
  *   - Spatz uses: 0x0001C000-0x00020000 (16KB)
  */
 
@@ -33,9 +33,7 @@ MEMORY
     prog (rwxa)  : ORIGIN = 0x00000000, LENGTH = 0x10000  /* 64KB max - relative addressing */
 }
 
-/* Stack configuration - Spatz uses remaining 16KB after CV32 */
-/* CV32 uses: 0x00010000-0x0001C000 (48KB, from CV32 link.ld) */
-/* Spatz uses: 0x0001C000-0x00020000 (16KB) */
+/* Spatz stack: 0x0001C000-0x00020000 (16KB), above the CV32/PULP slots of sw/kernel/link.ld */
 _stack_start = 0x0001FFF8;  /* Top of Spatz stack (grows downward) */
 
 SECTIONS

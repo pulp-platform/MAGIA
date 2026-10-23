@@ -5,10 +5,10 @@
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://solderpad.org/licenses/SHL-0.51
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * Unless required by applicable law or agreed to in writing, software, hardware
+ * and materials distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -20,10 +20,10 @@
  */
 
 module tcdm2hci #(
-  parameter type tcdm_req_t = logic,
-  parameter type tcdm_rsp_t = logic,
-  parameter type hci_req_t  = logic,
-  parameter type hci_rsp_t  = logic
+  parameter type tcdm_req_t = magia_tile_pkg::spatz_tcdm_req_t,
+  parameter type tcdm_rsp_t = magia_tile_pkg::spatz_tcdm_rsp_t,
+  parameter type hci_req_t  = magia_tile_pkg::core_hci_data_req_t,
+  parameter type hci_rsp_t  = magia_tile_pkg::core_hci_data_rsp_t
 )(
   input  logic       clk_i,
   input  logic       rst_ni,
@@ -41,13 +41,16 @@ module tcdm2hci #(
   /*                     TCDM → HCI Request Mapping                  */
   /*******************************************************************/
   
-  // Map request channel
+  localparam int unsigned HciAddW = $bits(hci_req_o.add);
+  localparam int unsigned HciUserW = $bits(hci_req_o.user);
+
+  // Map request channel; the TCDM offset is zero extended to the HCI address
   assign hci_req_o.req   = tcdm_req_i.q_valid;          
-  assign hci_req_o.add   = tcdm_req_i.q.addr;           
+  assign hci_req_o.add   = HciAddW'(tcdm_req_i.q.addr);
   assign hci_req_o.wen   = ~tcdm_req_i.q.write;         
   assign hci_req_o.data  = tcdm_req_i.q.data;           
   assign hci_req_o.be    = tcdm_req_i.q.strb;         
-  assign hci_req_o.user  = tcdm_req_i.q.user;
+  assign hci_req_o.user  = HciUserW'(tcdm_req_i.q.user);
   assign hci_req_o.id    = '0;
   assign hci_req_o.ecc   = '0;
   assign hci_req_o.ereq  = '0;

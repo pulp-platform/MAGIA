@@ -14,7 +14,7 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Author: Carlotta Chiarini, Fondazione Chips-IT
+ * Author: Carlotta Chiarini <carlotta.chiarini@chips.it>
  * 
  * MAGIA Row Reduce test over the narrow channel using the built-in FlooNoC collectives
  *

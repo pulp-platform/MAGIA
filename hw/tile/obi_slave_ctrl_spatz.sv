@@ -5,10 +5,10 @@
  * (the "License"); you may not use this file except in compliance 
  * with the License. You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://solderpad.org/licenses/SHL-0.51
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * Unless required by applicable law or agreed to in writing, software, hardware
+ * and materials distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -23,7 +23,7 @@
 module obi_slave_ctrl_spatz
   import magia_tile_pkg::*;
 #(
-  parameter logic [31:0] BaseAddr  = 32'h00001700  // Base address for control registers
+  parameter logic [31:0] BaseAddr  = magia_tile_pkg::SPATZ_CTRL_ADDR_START  // Base address for control registers
 ) (
   input  logic              clk_i,
   input  logic              rst_ni,
@@ -39,10 +39,10 @@ module obi_slave_ctrl_spatz
 );
 
   // Register offsets
-  localparam logic [3:0] CLK_EN_OFFSET   = 4'h0;  // +0x00
-  localparam logic [3:0] READY_OFFSET    = 4'h4;  // +0x04
-  localparam logic [3:0] START_OFFSET    = 4'h8;  // +0x08
-  localparam logic [3:0] TASKBIN_OFFSET  = 4'hC;  // +0x0C
+  localparam logic [4:0] CLK_EN_OFFSET   = 5'h00;  // +0x00
+  localparam logic [4:0] READY_OFFSET    = 5'h04;  // +0x04
+  localparam logic [4:0] START_OFFSET    = 5'h08;  // +0x08
+  localparam logic [4:0] TASKBIN_OFFSET  = 5'h0C;  // +0x0C
   localparam logic [4:0] DATA_OFFSET     = 5'h10; // +0x10
   localparam logic [4:0] RETURN_OFFSET   = 5'h14; // +0x14
   localparam logic [4:0] DONE_OFFSET     = 5'h18; // +0x18
@@ -67,11 +67,11 @@ module obi_slave_ctrl_spatz
   assign addr_offset = obi_req_i.a.addr[4:0];
   
   // Check if address is in valid range
-  assign addr_valid = (obi_req_i.a.addr >= BaseAddr) && 
+  assign addr_valid = (obi_req_i.a.addr >= BaseAddr) & 
                       (obi_req_i.a.addr < (BaseAddr + 28));  // 7 registers * 4 bytes
   
   // Grant only if address is valid
-  assign obi_rsp_o.gnt = obi_req_i.req && addr_valid;
+  assign obi_rsp_o.gnt = obi_req_i.req & addr_valid;
   assign obi_rsp_o.r.err = 1'b0;
   
   // ============================================
@@ -97,7 +97,7 @@ module obi_slave_ctrl_spatz
     
     // Update registers on write only if address is valid
     if (obi_req_i.req && obi_req_i.a.we && addr_valid) begin
-      case (addr_offset)
+      unique case (addr_offset)
         CLK_EN_OFFSET:  clk_en_d  = obi_req_i.a.wdata[0];
         READY_OFFSET:   ready_d   = obi_req_i.a.wdata[0];  // Spatz sets to 1 when ready for interrupts
         START_OFFSET:   start_d   = obi_req_i.a.wdata[0];  // CV32 sets to 1, Spatz clears to 0
@@ -105,6 +105,7 @@ module obi_slave_ctrl_spatz
         DATA_OFFSET:    data_d    = obi_req_i.a.wdata;     // Preserved register
         RETURN_OFFSET:  return_d  = obi_req_i.a.wdata;     // Preserved register
         DONE_OFFSET:    done_d    = obi_req_i.a.wdata[0];  // Spatz writes 1, creates pulse
+        default: ;
       endcase
     end
   end
@@ -137,10 +138,10 @@ module obi_slave_ctrl_spatz
   // ============================================
   always_comb begin
     rdata_d  = 32'h0;
-    rvalid_d = obi_req_i.req && addr_valid;
+    rvalid_d = obi_req_i.req & addr_valid;
     
     if (obi_req_i.req && !obi_req_i.a.we && addr_valid) begin
-      case (addr_offset)
+      unique case (addr_offset)
         CLK_EN_OFFSET:  rdata_d = {31'h0, clk_en_q};
         READY_OFFSET:   rdata_d = {31'h0, ready_q};
         START_OFFSET:   rdata_d = {31'h0, start_q};

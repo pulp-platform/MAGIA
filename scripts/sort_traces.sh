@@ -13,7 +13,7 @@
 # limitations under the License.
 # SPDX-License-Identifier: Apache-2.0
 #
-# Authors: Niccolò Giuliani, Fondazione Chips-IT
+# Authors: Niccolò Giuliani <niccolo.giuliani@chips.it>
 
 # sort_traces.sh — distribute per-core trace files into per-tile subdirectories.
 #

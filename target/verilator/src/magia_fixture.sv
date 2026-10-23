@@ -5,10 +5,10 @@
  * (the "License"); you may not use this file except in compliance 
  * with the License. You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://solderpad.org/licenses/SHL-0.51
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * Unless required by applicable law or agreed to in writing, software, hardware
+ * and materials distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -79,12 +79,7 @@ module magia_fixture;
   magia #(
     .N_TILES_Y         ( magia_tb_pkg::N_TILES_Y         ),
     .N_TILES_X         ( magia_tb_pkg::N_TILES_X         ),
-    .N_TILES           ( magia_tb_pkg::N_TILES           ),
-    .N_MEM_BANKS       ( magia_tb_pkg::N_MEM_BANKS       ),
-    .N_WORDS_BANK      ( magia_tb_pkg::N_WORDS_BANK      ),
-    .TILE_FSYNC_AGGR_W ( magia_tb_pkg::TILE_FSYNC_AGGR_W ),
-    .TILE_FSYNC_LVL_W  ( magia_tb_pkg::TILE_FSYNC_LVL_W  ),
-    .TILE_FSYNC_ID_W   ( magia_tb_pkg::TILE_FSYNC_ID_W   )
+    .N_TILES           ( magia_tb_pkg::N_TILES           )
   ) i_magia (
     .clk_i               ( clk               ),
     .rst_ni              ( rst_n             ),
