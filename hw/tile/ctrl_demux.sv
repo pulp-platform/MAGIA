@@ -14,11 +14,10 @@
  * limitations under the License.
  * SPDX-License-Identifier: SHL-0.51
  *
- * Authors: Luca Balboni <luca.balboni@chips.it>
+ * Author: Luca Balboni <luca.balboni@chips.it>
  *
- * MAGIA control demux: demuxes the single control port of the OBI crossbar towards
- * the control registers of each enabled unit
-*/
+ * MAGIA control demux: splits the control port of the OBI crossbar towards the enabled control units
+ */
 
 module ctrl_demux
   import magia_tile_pkg::*;

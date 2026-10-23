@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Fondazione Chips-IT
+ * Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
- * 
- * Authors: Luca Balboni <luca.balboni@chips.it>
- * 
- *  Test for the heterogeneous mesh
+ *
+ * Author: Luca Balboni <luca.balboni@chips.it>
+ *
+ * Test for the heterogeneous mesh
  */
 
 
@@ -156,7 +156,7 @@ static unsigned int run_cluster(void) {
     eu_init();
     cluster_boot(PULP_BINARY_START);
     eu_cluster_done_init();
-    cluster_dispatch_task(HETERO_CLUSTER_TASK, (1u << PULP_CORE_COUNT) - 1u);
+    cluster_dispatch_task(HETERO_CLUSTER_TASK);
     eu_cluster_done_wait(EU_WAIT_MODE_WFE);
 
     uint32_t base = CL_RESULT_BASE + get_hartid() * CL_RESULT_STRIDE;

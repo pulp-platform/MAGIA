@@ -50,13 +50,25 @@
  * ------------------------------------------------------------------------- */
 #define VLEN         256                      /* number of FP16 elements     */
 
-#define X_BASE       (L1_BASE + 0x00000000)  /* X[256] : 512 B              */
-#define Y_BASE       (L1_BASE + 0x00001000)  /* Y[256] : 512 B              */
-#define Z_BASE       (L1_BASE + 0x00002000)  /* Z[256] : 512 B (Spatz out)  */
-#define PARAMS_BASE  (L1_BASE + 0x00003000)  /* vecsum_params_t : 16 B      */
+#define X_BASE       l1(0x00000000)  /* X[256] : 512 B              */
+#define Y_BASE       l1(0x00001000)  /* Y[256] : 512 B              */
+#define Z_BASE       l1(0x00002000)  /* Z[256] : 512 B (Spatz out)  */
+#define PARAMS_BASE  l1(0x00003000)  /* vecsum_params_t : 16 B      */
 
-/* One uint32 slot per cluster core in L2. */
-#define RESULT_BASE  (L2_BASE + 0x00060000)
+/* One uint32 slot per cluster core in L2, one block per tile: must match pulp_task/ */
+#define RESULT_BASE   (L2_BASE + 0x00060000 + get_hartid() * RESULT_STRIDE)
+#define RESULT_STRIDE (0x00000100)
+
+static inline uint32_t get_hartid(void) {
+    uint32_t hartid;
+    asm volatile("csrr %0, mhartid" : "=r"(hartid));
+    return hartid;
+}
+
+/* L1_BASE is tile 0's L1 in the global map, add our own slice */
+static inline uint32_t l1(uint32_t off) {
+    return L1_BASE + get_hartid() * L1_TILE_OFFSET + off;
+}
 
 /* -------------------------------------------------------------------------
  * FP16 constants
@@ -142,7 +154,7 @@ int main(void) {
     printf("[CV32] Booting PULP cluster cores...\n");
     cluster_boot(PULP_BINARY_START);
     cluster_arm_done_event();
-    cluster_dispatch_task(HELLO_SPATZ_PULP_TASK, 0xFFu);
+    cluster_dispatch_task(HELLO_SPATZ_PULP_TASK);
     cluster_wait_done_eu();
 
     /* ------------------------------------------------------------------
@@ -167,6 +179,14 @@ int main(void) {
     } else {
         printf("[CV32] Grand total=0x%08x expected=0x%08x FAIL\n",
                grand_total, (unsigned)GOLDEN_TOTAL);
+        errors++;
+    }
+
+    /* Cross-check with the grand total the cluster returns through PULP_RETURN */
+    uint32_t returned_total = (uint32_t)cluster_get_return_value();
+    if (returned_total != grand_total) {
+        printf("[CV32] PULP_RETURN=0x%08x != L2 grand_total=0x%08x FAIL\n",
+               returned_total, grand_total);
         errors++;
     }
 
