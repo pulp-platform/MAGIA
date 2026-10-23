@@ -5,10 +5,10 @@
  * (the "License"); you may not use this file except in compliance 
  * with the License. You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://solderpad.org/licenses/SHL-0.51
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * Unless required by applicable law or agreed to in writing, software, hardware
+ * and materials distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -29,46 +29,38 @@ module idma_ctrl_mm
   import magia_tile_pkg::*;
   import idma_pkg::*;
 #(
-  parameter int unsigned ERROR_CAP = 3,
-  parameter type obi_req_t = magia_tile_pkg::core_obi_data_req_t,
-  parameter type obi_rsp_t = magia_tile_pkg::core_obi_data_rsp_t,
-  parameter type idma_fe_reg_req_t = magia_tile_pkg::idma_fe_reg_req_t,
-  parameter type idma_fe_reg_rsp_t = magia_tile_pkg::idma_fe_reg_rsp_t,
-  parameter type axi_req_t = magia_tile_pkg::idma_axi_req_t,
-  parameter type axi_rsp_t = magia_tile_pkg::idma_axi_rsp_t,
-  parameter type idma_obi_req_t = magia_tile_pkg::idma_obi_req_t,
-  parameter type idma_obi_rsp_t = magia_tile_pkg::idma_obi_rsp_t
+  parameter idma_pkg::error_cap_e ERROR_CAP = idma_pkg::NO_ERROR_HANDLING
 )(
-  input  logic         clk_i,
-  input  logic         rst_ni,
-  input  logic         test_en_i,
-  input  logic         clear_i,
+  input  logic               clk_i,
+  input  logic               rst_ni,
+  input  logic               test_en_i,
+  input  logic               clear_i,
 
   // OBI Slave Interface (CPU memory-mapped access)
-  input  obi_req_t     obi_req_i,
-  output obi_rsp_t     obi_rsp_o,
+  input  core_obi_data_req_t obi_req_i,
+  output core_obi_data_rsp_t obi_rsp_o,
 
   // AXI Master Interfaces (to L2 memory)
-  output axi_req_t     axi_read_req_o,   // AXI2OBI: L2 read
-  input  axi_rsp_t     axi_read_rsp_i,
-  output axi_req_t     axi_write_req_o,  // OBI2AXI: L2 write
-  input  axi_rsp_t     axi_write_rsp_i,
+  output idma_axi_req_t      axi_read_req_o,   // AXI2OBI: L2 read
+  input  idma_axi_rsp_t      axi_read_rsp_i,
+  output idma_axi_req_t      axi_write_req_o,  // OBI2AXI: L2 write
+  input  idma_axi_rsp_t      axi_write_rsp_i,
 
   // OBI Master Interfaces (to L1 memory)
-  output idma_obi_req_t obi_read_req_o,   // OBI2AXI: L1 read
-  input  idma_obi_rsp_t obi_read_rsp_i,
-  output idma_obi_req_t obi_write_req_o,  // AXI2OBI: L1 write
-  input  idma_obi_rsp_t obi_write_rsp_i,
+  output idma_obi_req_t      obi_read_req_o,   // OBI2AXI: L1 read
+  input  idma_obi_rsp_t      obi_read_rsp_i,
+  output idma_obi_req_t      obi_write_req_o,  // AXI2OBI: L1 write
+  input  idma_obi_rsp_t      obi_write_rsp_i,
 
   // Serialized IRQ outputs
-  output logic         irq_a2o_busy_o,
-  output logic         irq_a2o_start_o,
-  output logic         irq_a2o_done_o,
-  output logic         irq_a2o_error_o,
-  output logic         irq_o2a_busy_o,
-  output logic         irq_o2a_start_o,
-  output logic         irq_o2a_done_o,
-  output logic         irq_o2a_error_o
+  output logic               irq_a2o_busy_o,
+  output logic               irq_a2o_start_o,
+  output logic               irq_a2o_done_o,
+  output logic               irq_a2o_error_o,
+  output logic               irq_o2a_busy_o,
+  output logic               irq_o2a_start_o,
+  output logic               irq_o2a_done_o,
+  output logic               irq_o2a_error_o
 );
 
 /*******************************************************/
@@ -98,13 +90,7 @@ module idma_ctrl_mm
   // AXI2OBI Transfer Channel (L2 to L1)
   idma_axi_obi_transfer_ch #(
     .CHANNEL_T         ( magia_tile_pkg::AXI2OBI           ),
-    .ERROR_CAP         ( ERROR_CAP                         ),
-    .idma_fe_reg_req_t ( magia_tile_pkg::idma_fe_reg_req_t ),
-    .idma_fe_reg_rsp_t ( magia_tile_pkg::idma_fe_reg_rsp_t ),
-    .axi_req_t         ( magia_tile_pkg::idma_axi_req_t    ),
-    .axi_rsp_t         ( magia_tile_pkg::idma_axi_rsp_t    ),
-    .obi_req_t         ( magia_tile_pkg::idma_obi_req_t    ),
-    .obi_rsp_t         ( magia_tile_pkg::idma_obi_rsp_t    )
+    .ERROR_CAP         ( ERROR_CAP                         )
   ) i_l2_to_l1_ch (
     .clk_i            ( clk_i                           ),
     .rst_ni           ( rst_ni                          ),
@@ -128,13 +114,7 @@ module idma_ctrl_mm
   // OBI2AXI Transfer Channel (L1 to L2)
   idma_axi_obi_transfer_ch #(
     .CHANNEL_T         ( magia_tile_pkg::OBI2AXI           ),
-    .ERROR_CAP         ( ERROR_CAP                         ),
-    .idma_fe_reg_req_t ( magia_tile_pkg::idma_fe_reg_req_t ),
-    .idma_fe_reg_rsp_t ( magia_tile_pkg::idma_fe_reg_rsp_t ),
-    .axi_req_t         ( magia_tile_pkg::idma_axi_req_t    ),
-    .axi_rsp_t         ( magia_tile_pkg::idma_axi_rsp_t    ),
-    .obi_req_t         ( magia_tile_pkg::idma_obi_req_t    ),
-    .obi_rsp_t         ( magia_tile_pkg::idma_obi_rsp_t    )
+    .ERROR_CAP         ( ERROR_CAP                         )
   ) i_l1_to_l2_ch (
     .clk_i            ( clk_i                           ),
     .rst_ni           ( rst_ni                          ),
@@ -177,12 +157,20 @@ module idma_ctrl_mm
   // send more requests than we can absorb in the fifo
   assign obi_read_req_o.rready = 1'b1;
 
+  // OBI integrity parity is the inverted copy of each handshake signal
+  assign obi_read_req_o.reqpar            = ~obi_read_req_o.req;
+  assign obi_read_req_o.rreadypar         = ~obi_read_req_o.rready;
+  assign obi_read_rsp_converter.gntpar    = ~obi_read_rsp_converter.gnt;
+  assign obi_read_rsp_converter.rvalidpar = ~obi_read_rsp_converter.rvalid;
+
 
 /*******************************************************/
 /**     Memory-Mapped Bridge with IRQ Serialization   **/
 /*******************************************************/
 
   idma_obi_ctrl_decoder i_idma_obi_ctrl_decoder (
+    .clk_i               ( clk_i                   ),
+    .rst_ni              ( rst_ni                  ),
     .obi_req_i           ( obi_req_i               ),
     .obi_rsp_o           ( obi_rsp_o               ),
 

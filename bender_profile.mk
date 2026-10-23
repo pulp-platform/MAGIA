@@ -26,6 +26,9 @@ profile_targs += -t magia_tile_test
 
 profile_targs += -t magia_dv
 
+# Core traces in DV builds
+profile_defs += -D CORE_TRACES
+
 profile_defs += -D PROFILE_SENTINEL
 # profile_defs += -D PROFILE_SYNC
 # profile_defs += -D PROFILE_DETAILED

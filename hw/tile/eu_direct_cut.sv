@@ -5,10 +5,10 @@
  * (the "License"); you may not use this file except in compliance 
  * with the License. You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://solderpad.org/licenses/SHL-0.51
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * Unless required by applicable law or agreed to in writing, software, hardware
+ * and materials distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -22,8 +22,6 @@
 module eu_direct_cut 
   import magia_tile_pkg::*;
 #(
-  parameter type eu_direct_req_t = logic,
-  parameter type eu_direct_rsp_t = logic,
   parameter bit  Bypass          = 1'b0,
   parameter bit  BypassReq       = Bypass,
   parameter bit  BypassRsp       = Bypass,
@@ -58,7 +56,7 @@ module eu_direct_cut
   // ============================
   // Per-core logic
   // ============================
-  for (genvar i = 0; i < NB_CORES; i++) begin : GEN_EU_CUT
+  for (genvar i = 0; i < NB_CORES; i++) begin : gen_eu_cut
 
     // ----------------------------
     // Request path

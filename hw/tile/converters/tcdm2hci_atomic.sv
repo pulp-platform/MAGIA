@@ -5,10 +5,10 @@
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://solderpad.org/licenses/SHL-0.51
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * Unless required by applicable law or agreed to in writing, software, hardware
+ * and materials distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -26,20 +26,20 @@ module tcdm2hci_atomic
   import obi_pkg::*;
   import magia_tile_pkg::*;
 #(
-  parameter type tcdm_req_t = logic,
-  parameter type tcdm_rsp_t = logic,
-  parameter type obi_req_t  = logic,
-  parameter type obi_rsp_t  = logic,
-  parameter type hci_req_t  = logic,
-  parameter type hci_rsp_t  = logic,
+  parameter type tcdm_req_t = magia_tile_pkg::spatz_tcdm_req_t,
+  parameter type tcdm_rsp_t = magia_tile_pkg::spatz_tcdm_rsp_t,
+  parameter type obi_req_t  = magia_tile_pkg::core_obi_data_req_t,
+  parameter type obi_rsp_t  = magia_tile_pkg::core_obi_data_rsp_t,
+  parameter type hci_req_t  = magia_tile_pkg::core_hci_data_req_t,
+  parameter type hci_rsp_t  = magia_tile_pkg::core_hci_data_rsp_t,
   
   // OBI channel types
-  parameter type obi_a_chan_t = logic,
-  parameter type obi_r_chan_t = logic,
+  parameter type obi_a_chan_t = magia_tile_pkg::core_data_obi_a_chan_t,
+  parameter type obi_r_chan_t = magia_tile_pkg::core_data_obi_r_chan_t,
   
   // OBI optional types for atomic resolver
-  parameter type obi_a_optional_t = logic,
-  parameter type obi_r_optional_t = logic,
+  parameter type obi_a_optional_t = magia_tile_pkg::core_data_obi_a_optional_t,
+  parameter type obi_r_optional_t = magia_tile_pkg::core_data_obi_r_optional_t,
   
   // OBI configuration for atomic resolver
   parameter obi_pkg::obi_cfg_t SbrPortObiCfg = obi_pkg::ObiDefaultConfig,
@@ -119,27 +119,25 @@ module tcdm2hci_atomic
   /*  Stage 3: OBI Cut (optional - controlled by BypassCut param)   */
   /*******************************************************************/
   
-  generate
-    if (BypassCut) begin : gen_bypass_cut
-      assign obi_cut_req = obi_resolved_req;
-      assign obi_resolved_rsp = obi_cut_rsp;
-    end else begin : gen_enable_cut
-      obi_cut #(
-        .ObiCfg       ( MgrPortObiCfg ),
-        .obi_a_chan_t ( obi_a_chan_t  ),
-        .obi_r_chan_t ( obi_r_chan_t  ),
-        .obi_req_t    ( obi_req_t     ),
-        .obi_rsp_t    ( obi_rsp_t     )
-      ) i_obi_cut_post_atomic (
-        .clk_i           ( clk_i            ),
-        .rst_ni          ( rst_ni           ),
-        .sbr_port_req_i  ( obi_resolved_req ),
-        .sbr_port_rsp_o  ( obi_resolved_rsp ),
-        .mgr_port_req_o  ( obi_cut_req      ),
-        .mgr_port_rsp_i  ( obi_cut_rsp      )
-      );
-    end
-  endgenerate
+  if (BypassCut) begin : gen_bypass_cut
+    assign obi_cut_req = obi_resolved_req;
+    assign obi_resolved_rsp = obi_cut_rsp;
+  end else begin : gen_enable_cut
+    obi_cut #(
+      .ObiCfg       ( MgrPortObiCfg ),
+      .obi_a_chan_t ( obi_a_chan_t  ),
+      .obi_r_chan_t ( obi_r_chan_t  ),
+      .obi_req_t    ( obi_req_t     ),
+      .obi_rsp_t    ( obi_rsp_t     )
+    ) i_obi_cut_post_atomic (
+      .clk_i           ( clk_i            ),
+      .rst_ni          ( rst_ni           ),
+      .sbr_port_req_i  ( obi_resolved_req ),
+      .sbr_port_rsp_o  ( obi_resolved_rsp ),
+      .mgr_port_req_o  ( obi_cut_req      ),
+      .mgr_port_rsp_i  ( obi_cut_rsp      )
+    );
+  end
   
   /*******************************************************************/
   /*  Stage 4: OBI → HCI conversion (request and response)          */

@@ -14,7 +14,7 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Authors: Niccolò Giuliani, Fondazione Chips-IT
+ * Authors: Niccolò Giuliani <niccolo.giuliani@chips.it>
  */
 
 /*
@@ -34,7 +34,8 @@
 
 /* Result slot: 4 bytes per cluster core.
  * Cluster cores write 0xFEEDxxxx where xx = error count. */
-#define FPU_RESULT_BASE  (L2_BASE + 0x00060000)
+#define FPU_RESULT_BASE   (L2_BASE + 0x00060000 + get_hartid() * FPU_RESULT_STRIDE)
+#define FPU_RESULT_STRIDE (0x00000100)  /* One block per tile, must match pulp_task/ */
 #define FPU_RESULT_MAGIC (0xFEED0000u)
 #define FPU_RESULT_MASK  (0xFFFF0000u)
 
@@ -55,7 +56,7 @@ int main(void) {
     /* Arm EU before dispatching the task to avoid missing DONE. */
     cluster_arm_done_event();
 
-    cluster_dispatch_task(FPU_CLUSTER_TEST_TASK, 0xFFu);
+    cluster_dispatch_task(FPU_CLUSTER_TEST_TASK);
 
     /* Sleep (cv.elw) until all cluster cores have signalled task done. */
     cluster_wait_done_eu();
@@ -90,6 +91,13 @@ int main(void) {
                    total_errors, passed_cores, PULP_CORE_COUNT);
     }
 
+    /* Cross-check with the total error count the cluster returns through PULP_RETURN */
+    int returned_errors = cluster_get_return_value();
+    if (print_summary && returned_errors != (int)total_errors) {
+        printf("[fpu_cluster_test] PULP_RETURN=%d != L2 total_errors=%u FAIL\n",
+               returned_errors, total_errors);
+        total_errors++;
+    }
+
     return (int)total_errors;
-    
 }

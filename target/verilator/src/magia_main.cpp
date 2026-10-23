@@ -1,9 +1,7 @@
 // Copyright 2026 ETH Zurich and University of Bologna
 // SPDX-License-Identifier: Apache-2.0
 
-// Simulation entry point for the hierarchical Verilator build, replacing the
-// one Verilator generates with --main. It exists to own waveform dumping,
-// which the testbench cannot do correctly for a --hierarchical model.
+// Verilator main of the mesh and tile models: owns +FST dumping, which a --hierarchical testbench cannot do
 //
 // A hier_block instance is a protect-library child model: it is constructed by
 // the DPI call in the generated wrapper during the *first* evaluation of the
@@ -16,12 +14,20 @@
 
 #include "verilated.h"
 
-#include "Vmagia_tb.h"
+// Model class from verilator.mk: Vmagia_tb (mesh) or Vmagia_tile_tb (tile)
+#ifndef MAGIA_TOP
+#define MAGIA_TOP Vmagia_tb
+#endif
+#define MAGIA_STR_(x) #x
+#define MAGIA_STR(x) MAGIA_STR_(x)
+#include MAGIA_STR(MAGIA_TOP.h)
 
 #if VM_TRACE
 #include "verilated_fst_c.h"
 #endif
 
+#include <csignal>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 
@@ -40,10 +46,25 @@ static const char* fstPath(VerilatedContext* contextp) {
 }
 #endif
 
+// SIGINT/SIGTERM stop at the next time slot so the FST gets closed; a second signal kills
+static volatile std::sig_atomic_t g_stop = 0;
+
+static void onStopSignal(int sig) {
+    if (g_stop) {
+        std::signal(sig, SIG_DFL);
+        std::raise(sig);
+    }
+    g_stop = 1;
+}
+
 int main(int argc, char** argv, char**) {
+    std::signal(SIGINT, onStopSignal);
+    std::signal(SIGTERM, onStopSignal);
     Verilated::debug(0);
     const std::unique_ptr<VerilatedContext> contextp{new VerilatedContext};
     contextp->threads(MAGIA_THREADS);
+    // Like Questa, $error reports and goes on; +verilator+error+limit+N still overrides it
+    contextp->errorLimit(1000000);
     contextp->commandArgs(argc, argv);
 
 #if VM_TRACE
@@ -60,7 +81,7 @@ int main(int argc, char** argv, char**) {
     // first dump segfaults inside fstWriterEmitValueChange. Any non-empty name
     // works; "TOP" is Verilator's own convention and prefixes every dumped
     // signal path with a "TOP" scope.
-    const std::unique_ptr<Vmagia_tb> topp{new Vmagia_tb{contextp.get(), "TOP"}};
+    const std::unique_ptr<MAGIA_TOP> topp{new MAGIA_TOP{contextp.get(), "TOP"}};
 
     // Constructs every hier_block child and registers its trace callbacks.
     topp->eval();
@@ -76,8 +97,17 @@ int main(int argc, char** argv, char**) {
     }
 #endif
 
-    while (VL_LIKELY(!contextp->gotFinish())) {
+    // +STOP_AT=<time> ends the run before that time slot, so a hang leaves a closed FST
+    const char* const stop_arg = contextp->commandArgsPlusMatch("STOP_AT=");
+    const uint64_t stop_at =
+        (stop_arg && stop_arg[0]) ? std::strtoull(stop_arg + 9, nullptr, 0) : UINT64_MAX;
+
+    while (VL_LIKELY(!contextp->gotFinish()) && !g_stop) {
         if (!topp->eventsPending()) break;
+        if (topp->nextTimeSlot() >= stop_at) {
+            g_stop = 1;
+            break;
+        }
         contextp->time(topp->nextTimeSlot());
         topp->eval();
 #if VM_TRACE
@@ -85,7 +115,10 @@ int main(int argc, char** argv, char**) {
 #endif
     }
 
-    if (VL_LIKELY(!contextp->gotFinish())) {
+    if (g_stop) {
+        VL_PRINTF("[INFO] interrupted at time %llu\n",
+                  static_cast<unsigned long long>(contextp->time()));
+    } else if (VL_LIKELY(!contextp->gotFinish())) {
         VL_DEBUG_IF(VL_PRINTF("+ Exiting without $finish; no events left\n"););
     }
 
@@ -95,5 +128,5 @@ int main(int argc, char** argv, char**) {
     if (tracep) tracep->close();
 #endif
     contextp->statsPrintSummary();
-    return 0;
+    return g_stop ? 1 : 0;
 }

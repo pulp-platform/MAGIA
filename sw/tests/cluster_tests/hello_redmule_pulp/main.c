@@ -14,7 +14,7 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Authors: Niccolò Giuliani, Fondazione Chips-IT
+ * Authors: Niccolò Giuliani <niccolo.giuliani@chips.it>
  */
 
 /*
@@ -41,16 +41,27 @@
  * X, W, Y live in tile-local L1 (private per tile, no cross-tile race).
  * The golden reference Z is read directly from z_oup[] in the main
  * ELF .rodata (already in L2), so no per-tile L2 copy is needed. */
-#define X_BASE (L1_BASE + 0x00012048)   /* shared, read-only */
-#define W_BASE (L1_BASE + 0x00016048)   /* shared, read-only */
+#define X_BASE l1(0x00012048)   /* read-only */
+#define W_BASE l1(0x00016048)   /* read-only */
 /* PER-CORE output Y: each of the 8 cluster cores computes into its OWN
    private slot at Y_BASE + c*Y_STRIDE, so no two cores ever touch the same
    word -> the result is fully deterministic (no shared-buffer race). The
    CV32 main pre-loads every slot with the y_inp bias before dispatch, so
    the cores never reload the bias themselves.
    MUST match Y_BASE/Y_STRIDE in pulp_task/hello_redmule_pulp_task.c. */
-#define Y_BASE   (L1_BASE + 0x0001A048)
+#define Y_BASE   l1(0x0001A048)
 #define Y_STRIDE (0x00001000)            /* 4 KB per core (8 slots) */
+
+static inline uint32_t get_hartid(void) {
+  uint32_t hartid;
+  asm volatile("csrr %0, mhartid" : "=r"(hartid));
+  return hartid;
+}
+
+/* L1_BASE is tile 0's L1 in the global map, add our own slice */
+static inline uint32_t l1(uint32_t off) {
+  return L1_BASE + get_hartid() * L1_TILE_OFFSET + off;
+}
 
 /* Enable the FPU: set mstatus.FS to INITIAL (01).
  * Without this any FPU instruction faults. CV32E40P (and the cluster
@@ -169,7 +180,7 @@ int main(void) {
   /* Arm EU before dispatching the task to avoid missing DONE. */
   cluster_arm_done_event();
 
-  cluster_dispatch_task(HELLO_REDMULE_PULP_TASK, 0xFFu);
+  cluster_dispatch_task(HELLO_REDMULE_PULP_TASK);
 
   /* Step 3: sleep (cv.elw) until all cluster cores have exited. */
   cluster_wait_done_eu();

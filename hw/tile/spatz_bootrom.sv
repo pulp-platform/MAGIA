@@ -1,5 +1,5 @@
 // Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT.
-// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// Solderpad Hardware License, Version 0.51, see LICENSE.SHL for details.
 // SPDX-License-Identifier: SHL-0.51
 //
 // Auto-generated bootrom for Spatz core complex
@@ -35,5 +35,5 @@ module spatz_bootrom #(
   end
   
   // Return data based on registered address
-  assign rdata_o = (addr_q < RomSize) ? mem[addr_q] : '0;
+  assign rdata_o = (32'(addr_q) < RomSize) ? mem[addr_q] : '0;
 endmodule

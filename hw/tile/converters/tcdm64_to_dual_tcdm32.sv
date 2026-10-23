@@ -5,10 +5,10 @@
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  * 
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://solderpad.org/licenses/SHL-0.51
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * Unless required by applicable law or agreed to in writing, software, hardware
+ * and materials distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -21,12 +21,11 @@
  */
 
 module tcdm64_to_dual_tcdm32 #(
+  // 64-bit Snitch types from the RVD branch: the package ones are 32-bit when RVD is off
+  parameter type tcdm64_req_t,
+  parameter type tcdm64_rsp_t,
   parameter int unsigned FIFO_DEPTH = 4,  // Match Snitch's NUM_INT_OUTSTANDING_MEM
   parameter bit EnableSpill = 1'b1,
-  parameter type tcdm64_req_t = logic,
-  parameter type tcdm64_rsp_t = logic,
-  parameter type tcdm32_req_t = logic,
-  parameter type tcdm32_rsp_t = logic,
   // Local parameter matching fifo_v3 definition
   parameter int unsigned ADDR_DEPTH = (FIFO_DEPTH > 1) ? $clog2(FIFO_DEPTH) : 1
 )(
@@ -36,11 +35,15 @@ module tcdm64_to_dual_tcdm32 #(
   input  tcdm64_req_t  tcdm_req_i,
   output tcdm64_rsp_t  tcdm_rsp_o,
   
-  output tcdm32_req_t  tcdm_req_lo_o,
-  input  tcdm32_rsp_t  tcdm_rsp_lo_i,
-  output tcdm32_req_t  tcdm_req_hi_o,
-  input  tcdm32_rsp_t  tcdm_rsp_hi_i
+  output magia_tile_pkg::spatz_tcdm32_req_t  tcdm_req_lo_o,
+  input  magia_tile_pkg::spatz_tcdm32_rsp_t  tcdm_rsp_lo_i,
+  output magia_tile_pkg::spatz_tcdm32_req_t  tcdm_req_hi_o,
+  input  magia_tile_pkg::spatz_tcdm32_rsp_t  tcdm_rsp_hi_i
 );
+
+  // 32-bit side, fixed by the package
+  typedef magia_tile_pkg::spatz_tcdm32_req_t tcdm32_req_t;
+  typedef magia_tile_pkg::spatz_tcdm32_rsp_t tcdm32_rsp_t;
 
   /*******************************************************************/
   /*              Spill Register (Breaking Timing Loop)              */
@@ -105,9 +108,9 @@ module tcdm64_to_dual_tcdm32 #(
   logic strb_is_zero, is_load, access_lo, access_hi;
   
   assign strb_is_zero = (tcdm_req_int.q.strb == 8'h00);
-  assign is_load = !tcdm_req_int.q.write;
-  assign access_lo = |tcdm_req_int.q.strb[3:0] || (strb_is_zero && is_load);
-  assign access_hi = |tcdm_req_int.q.strb[7:4] || (strb_is_zero && is_load);
+  assign is_load = ~tcdm_req_int.q.write;
+  assign access_lo = |tcdm_req_int.q.strb[3:0] | (strb_is_zero & is_load);
+  assign access_hi = |tcdm_req_int.q.strb[7:4] | (strb_is_zero & is_load);
   
   // FIFO signals
   logic       fifo_full, fifo_empty;
@@ -116,7 +119,7 @@ module tcdm64_to_dual_tcdm32 #(
   logic [ADDR_DEPTH-1:0] fifo_usage;  // Match fifo_v3 usage_o width
   
   // FIFO push: when request is accepted 
-  assign fifo_push = tcdm_req_int.q_valid && tcdm_rsp_int.q_ready;
+  assign fifo_push = tcdm_req_int.q_valid & tcdm_rsp_int.q_ready;
   
   // FIFO pop: when response is sent
   assign fifo_pop = tcdm_rsp_int.p_valid;
@@ -157,7 +160,7 @@ module tcdm64_to_dual_tcdm32 #(
     
     if (!fifo_empty) begin
       if (access_lo_rsp && access_hi_rsp) begin
-        rsp_arriving = tcdm_rsp_lo_i.p_valid && tcdm_rsp_hi_i.p_valid;
+        rsp_arriving = tcdm_rsp_lo_i.p_valid & tcdm_rsp_hi_i.p_valid;
       end else if (access_lo_rsp) begin
         rsp_arriving = tcdm_rsp_lo_i.p_valid;
       end else if (access_hi_rsp) begin
@@ -201,10 +204,11 @@ module tcdm64_to_dual_tcdm32 #(
       tcdm_req_lo_o.q.data  = tcdm_req_int.q.data[31:0];
       tcdm_req_lo_o.q.user  = tcdm_req_int.q.user;
       
-      if (strb_is_zero && is_load)
+      if (strb_is_zero && is_load) begin
         tcdm_req_lo_o.q.strb = 4'hF;
-      else
+      end else begin
         tcdm_req_lo_o.q.strb = tcdm_req_int.q.strb[3:0];
+      end
     end
   end
   
@@ -226,10 +230,11 @@ module tcdm64_to_dual_tcdm32 #(
       tcdm_req_hi_o.q.data  = tcdm_req_int.q.data[63:32];
       tcdm_req_hi_o.q.user  = tcdm_req_int.q.user;
       
-      if (strb_is_zero && is_load)
+      if (strb_is_zero && is_load) begin
         tcdm_req_hi_o.q.strb = 4'hF;
-      else
+      end else begin
         tcdm_req_hi_o.q.strb = tcdm_req_int.q.strb[7:4];
+      end
     end
   end
   
@@ -244,7 +249,7 @@ module tcdm64_to_dual_tcdm32 #(
     if (fifo_full) begin
       tcdm_rsp_int.q_ready = 1'b0;
     end else if (access_lo && access_hi) begin
-      tcdm_rsp_int.q_ready = tcdm_rsp_lo_i.q_ready && tcdm_rsp_hi_i.q_ready;
+      tcdm_rsp_int.q_ready = tcdm_rsp_lo_i.q_ready & tcdm_rsp_hi_i.q_ready;
     end else if (access_lo) begin
       tcdm_rsp_int.q_ready = tcdm_rsp_lo_i.q_ready;
     end else if (access_hi) begin

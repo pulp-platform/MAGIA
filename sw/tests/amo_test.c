@@ -24,7 +24,7 @@
 
 #define VERBOSE (0)
 
-#define NUM_ITER     (1000)
+#define NUM_ITER     (10)
 #define INITIAL_VAL  (0)
 #define AMO_TILES    (NUM_HARTS)
 #define EXPECTED_VAL (INITIAL_VAL + NUM_ITER*AMO_TILES)

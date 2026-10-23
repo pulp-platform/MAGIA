@@ -67,7 +67,9 @@ localparam sam_rule_t[SamNumRules-1:0] Sam = '{
     XYAddrOffsetY: 33,
     IdAddrOffset: 0,
     NumSamRules: 2,
-    NumRoutes: 0};
+    NumRoutes: 0,
+    // No collectives in the standalone tile
+    CollectiveCfg: '0};
 
 
     typedef logic[31:0] axi_narrow_data_mst_addr_t;

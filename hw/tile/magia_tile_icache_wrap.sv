@@ -1,14 +1,14 @@
 /*
- * Copyright (C) 2026 ETH Zurich, University of Bologna and Chips-IT
+ * Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
  *
  * Licensed under the Solderpad Hardware License, Version 0.51 
  * (the "License"); you may not use this file except in compliance 
  * with the License. You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://solderpad.org/licenses/SHL-0.51
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * Unless required by applicable law or agreed to in writing, software, hardware
+ * and materials distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -40,12 +40,9 @@
     parameter int AxiAddrWidth = -1,
     /// Fill interface data width. Power of 2; >= 8.
     parameter int AxiDataWidth = -1,
-    /// Configuration input types for memory cuts used in implementation.
-    parameter type sram_cfg_data_t  = logic,
-    parameter type sram_cfg_tag_t   = logic,
-    /// AXI request and response structures
-    parameter type axi_req_t = logic,
-    parameter type axi_rsp_t = logic   
+    // Cacheable fetch region as base/mask; a zero mask caches every fetch
+    parameter logic [FetchAddrWidth-1:0] CachedRegionBase = '0,
+    parameter logic [FetchAddrWidth-1:0] CachedRegionMask = '0
  ) (
     input   logic                                                       clk_i,
     input   logic                                                       rst_ni,
@@ -65,17 +62,23 @@
     output  logic [NumFetchPorts-1:0]                                   flush_ready_o,
 
     // SRAM configs
-    input   sram_cfg_data_t                                             sram_cfg_data_i,
-    input   sram_cfg_tag_t                                              sram_cfg_tag_i,
+    input   logic                                                       sram_cfg_data_i,
+    input   logic                                                       sram_cfg_tag_i,
 
     // AXI interface
-    output  axi_req_t                                                   axi_req_o,
-    input   axi_rsp_t                                                   axi_rsp_i
+    output  magia_tile_pkg::core_axi_instr_req_t                        axi_req_o,
+    input   magia_tile_pkg::core_axi_instr_rsp_t                        axi_rsp_i
  );
 
     logic [NumFetchPorts-1:0] fetch_valid, fetch_ready, fetch_rerror;
     logic [NumFetchPorts-1:0][FetchAddrWidth-1:0] fetch_addr;
     logic [NumFetchPorts-1:0][FetchDataWidth-1:0] fetch_rdata;
+
+    logic [NumFetchPorts-1:0] fetch_cacheable;
+    for (genvar i = 0; i < NumFetchPorts; i++) begin : gen_fetch_cacheable
+        assign fetch_cacheable[i] =
+            ((fetch_addr[i] & CachedRegionMask) == (CachedRegionBase & CachedRegionMask));
+    end
 
     for (genvar i = 0; i < NumFetchPorts; i++) begin : gen_request_cut
         logic gnt;
@@ -83,17 +86,17 @@
         assign fetch_gnt_o[i] = gnt & fetch_req_i[i];
 
         spill_register #(
-            .T      ( logic [FetchAddrWidth-1:0]    ),
-            .Bypass ( 1'b0                          )
+            .T                   ( logic [FetchAddrWidth-1:0]           ),
+            .Bypass              ( 1'b0                                 )
         ) i_spill_reg (
-            .clk_i      ( clk_i             ),
-            .rst_ni     ( rst_ni            ),
-            .valid_i    ( fetch_req_i   [i] ),
-            .ready_o    ( gnt               ),
-            .data_i     ( fetch_addr_i  [i] ),
-            .valid_o    ( fetch_valid   [i] ),
-            .ready_i    ( fetch_ready   [i] ),
-            .data_o     ( fetch_addr    [i] )
+            .clk_i               ( clk_i                                ),
+            .rst_ni              ( rst_ni                               ),
+            .valid_i             ( fetch_req_i   [i]                    ),
+            .ready_o             ( gnt                                  ),
+            .data_i              ( fetch_addr_i  [i]                    ),
+            .valid_o             ( fetch_valid   [i]                    ),
+            .ready_i             ( fetch_ready   [i]                    ),
+            .data_o              ( fetch_addr    [i]                    )
         );
 
         assign fetch_rdata_o    [i] = fetch_rdata   [i];
@@ -102,26 +105,26 @@
     end
 
     snitch_icache #(
-        .NR_FETCH_PORTS         ( NumFetchPorts     ),
-        .L0_LINE_COUNT          ( L0_LINE_COUNT     ),
-        .LINE_WIDTH             ( LINE_WIDTH        ),
-        .LINE_COUNT             ( LINE_COUNT        ),
-        .WAY_COUNT              ( WAY_COUNT         ),
-        .FETCH_AW               ( FetchAddrWidth    ),
-        .FETCH_DW               ( FetchDataWidth    ),
-        .FILL_AW                ( AxiAddrWidth      ),
-        .FILL_DW                ( AxiDataWidth      ),
-        .FETCH_PRIORITY         ( 1                 ),
-        .MERGE_FETCHES          ( 1                 ),
-        .L1_TAG_SCM             ( 1                 ),
-        .SERIAL_LOOKUP          ( 1                 ),
-        .NUM_AXI_OUTSTANDING    ( 4                 ), // wouldn-t be better to expose this parameter?
-        .EARLY_LATCH            ( 0                 ),
-        .ISO_CROSSING           ( 0                 ),
-        .sram_cfg_data_t        ( sram_cfg_data_t   ),
-        .sram_cfg_tag_t         ( sram_cfg_tag_t    ),
-        .axi_req_t              ( axi_req_t         ),
-        .axi_rsp_t              ( axi_rsp_t         )
+        .NR_FETCH_PORTS      ( NumFetchPorts                        ),
+        .L0_LINE_COUNT       ( L0_LINE_COUNT                        ),
+        .LINE_WIDTH          ( LINE_WIDTH                           ),
+        .LINE_COUNT          ( LINE_COUNT                           ),
+        .WAY_COUNT           ( WAY_COUNT                            ),
+        .FETCH_AW            ( FetchAddrWidth                       ),
+        .FETCH_DW            ( FetchDataWidth                       ),
+        .FILL_AW             ( AxiAddrWidth                         ),
+        .FILL_DW             ( AxiDataWidth                         ),
+        .FETCH_PRIORITY      ( 1                                    ),
+        .MERGE_FETCHES       ( 1                                    ),
+        .L1_TAG_SCM          ( 1                                    ),
+        .SERIAL_LOOKUP       ( 1                                    ),
+        .NUM_AXI_OUTSTANDING ( 4                                    ), // wouldn-t be better to expose this parameter?
+        .EARLY_LATCH         ( 0                                    ),
+        .ISO_CROSSING        ( 0                                    ),
+        .sram_cfg_data_t     ( logic                                ),
+        .sram_cfg_tag_t      ( logic                                ),
+        .axi_req_t           ( magia_tile_pkg::core_axi_instr_req_t ),
+        .axi_rsp_t           ( magia_tile_pkg::core_axi_instr_rsp_t )
     ) i_snitch_icache (
         .clk_i                  ( clk_i                 ),
         .clk_d2_i               ( clk_i                 ),
@@ -135,7 +138,7 @@
         
         .inst_addr_i            ( fetch_addr            ),
         .inst_data_o            ( fetch_rdata           ),
-        .inst_cacheable_i       ( {NumFetchPorts{1'b1}} ),
+        .inst_cacheable_i       ( fetch_cacheable       ),
         .inst_valid_i           ( fetch_valid           ),
         .inst_ready_o           ( fetch_ready           ),
         .inst_error_o           ( fetch_rerror          ),

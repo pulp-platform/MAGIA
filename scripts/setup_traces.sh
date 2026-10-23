@@ -13,7 +13,7 @@
 # limitations under the License.
 # SPDX-License-Identifier: Apache-2.0
 #
-# Authors: Niccolò Giuliani, Fondazione Chips-IT
+# Authors: Niccolò Giuliani <niccolo.giuliani@chips.it>
 
 # setup_traces.sh — pre-simulation: create the per-tile trace directory tree.
 #

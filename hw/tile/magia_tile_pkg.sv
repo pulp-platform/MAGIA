@@ -5,10 +5,10 @@
  * (the "License"); you may not use this file except in compliance 
  * with the License. You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://solderpad.org/licenses/SHL-0.51
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * Unless required by applicable law or agreed to in writing, software, hardware
+ * and materials distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -21,6 +21,15 @@
  */
 
 package magia_tile_pkg;
+  /*******************************************************************/
+  /*                       Tile Configuration                        */
+  /*******************************************************************/
+
+  // Selects which accelerators are instantiated inside the tile 
+  typedef magia_pkg::magia_tile_cfg_t magia_tile_cfg_t;
+
+  // Default: All Accelerators are instanstiated
+  localparam magia_tile_cfg_t MagiaTileDefaultCfg = magia_pkg::MagiaTileDefaultCfg;
 
   `include "hci_helpers.svh"
   `include "hwpe_ctrl_helpers.svh"
@@ -35,24 +44,22 @@ package magia_tile_pkg;
 
   `include "../include/alias.svh"
 
-  // IRQ constraints
-  localparam int unsigned IRQ_IDX_REDMULE_EVT_0 = 31;
-  localparam int unsigned IRQ_IDX_REDMULE_EVT_1 = 30;
-  localparam int unsigned IRQ_IDX_A2O_ERROR     = 29;
-  localparam int unsigned IRQ_IDX_O2A_ERROR     = 28;
-  localparam int unsigned IRQ_IDX_A2O_DONE      = 27;
-  localparam int unsigned IRQ_IDX_O2A_DONE      = 26;
-  localparam int unsigned IRQ_IDX_A2O_START     = 25;
-  localparam int unsigned IRQ_IDX_O2A_START     = 24;
-  localparam int unsigned IRQ_IDX_A2O_BUSY      = 23;
-  localparam int unsigned IRQ_IDX_O2A_BUSY      = 22;
-  localparam int unsigned IRQ_IDX_REDMULE_BUSY  = 21;
-  localparam int unsigned IRQ_IDX_FSYNC_DONE    = 20;
-  localparam int unsigned IRQ_IDX_FSYNC_ERROR   = 19;
-  localparam int unsigned IRQ_USED              = 13;
-
   // Address map
-  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START = 32'h0000_0100;
+
+  // Bases of the tile peripherals and of the tile window, default '0
+`ifdef MAGIA_TILE_PERIPH_BASE
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_PERIPH_BASE        = `MAGIA_TILE_PERIPH_BASE;
+`else
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_PERIPH_BASE        = 32'h0000_0000;
+`endif
+`ifdef MAGIA_TILE_WINDOW_BASE
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_WINDOW_BASE        = `MAGIA_TILE_WINDOW_BASE;
+`else
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_WINDOW_BASE        = 32'h0000_0000;
+`endif
+
+  // Peripherals (private): chained control registers
+  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START = TILE_PERIPH_BASE + 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_SIZE       = 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_END   = REDMULE_CTRL_ADDR_START + REDMULE_CTRL_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_START    = REDMULE_CTRL_ADDR_END;
@@ -61,94 +68,101 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_START   = IDMA_CTRL_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_SIZE         = 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_END     = FSYNC_CTRL_ADDR_START + FSYNC_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_START   = FSYNC_CTRL_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_SIZE         = 32'h0000_1000;
-  localparam logic [magia_pkg::ADDR_W-1:0] EVENT_UNIT_ADDR_END     = EVENT_UNIT_ADDR_START + EVENT_UNIT_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_START          = EVENT_UNIT_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_SIZE           = 32'h0000_0200;
-  localparam logic [magia_pkg::ADDR_W-1:0] TILE_CSR_END            = TILE_CSR_START + TILE_CSR_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = TILE_CSR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END       = 32'h0000_FFFF;
+  localparam logic [magia_pkg::ADDR_W-1:0] CTRL_EU_ADDR_START      = FSYNC_CTRL_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] CTRL_EU_SIZE            = 32'h0000_1000;
+  localparam logic [magia_pkg::ADDR_W-1:0] CTRL_EU_ADDR_END        = CTRL_EU_ADDR_START + CTRL_EU_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_ADDR_START   = CTRL_EU_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_SIZE         = 32'h0000_0040;
+  localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_ADDR_END     = SPATZ_CTRL_ADDR_START + SPATZ_CTRL_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_CTRL_ADDR_START = SPATZ_CTRL_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_CTRL_SIZE       = 32'h0000_0080;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_CTRL_ADDR_END   = CLUSTER_CTRL_ADDR_START + CLUSTER_CTRL_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] HCI_CTRL_ADDR_START     = CLUSTER_CTRL_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] HCI_CTRL_SIZE           = 32'h0000_0040;
+  localparam logic [magia_pkg::ADDR_W-1:0] HCI_CTRL_ADDR_END       = HCI_CTRL_ADDR_START + HCI_CTRL_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_ADDR_START    = HCI_CTRL_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_SIZE          = 32'h0000_0100;
+  localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_ADDR_END      = COLL_CTRL_ADDR_START + COLL_CTRL_SIZE;
+  // Cluster-private Event Unit: direct link of the cluster cores, and memory-mapped view on the OBI crossbar
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_DIRECT_START = COLL_CTRL_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_DIRECT_SIZE  = 32'h0000_1000;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_DIRECT_END   = CLUSTER_EU_DIRECT_START + CLUSTER_EU_DIRECT_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_ADDR_START   = CLUSTER_EU_DIRECT_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_SIZE         = 32'h0000_1000;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_ADDR_END     = CLUSTER_EU_ADDR_START + CLUSTER_EU_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_PERIPH_ADDR_END    = CLUSTER_EU_ADDR_END;
+
+  // Reserved (private): software scratch, such as the print buffer
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = TILE_WINDOW_BASE + (TILE_PERIPH_ADDR_END - TILE_PERIPH_BASE);
+  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END       = TILE_WINDOW_BASE + 32'h0001_0000;
+
+  // Stack (private)
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START        = RESERVED_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE              = 32'h0001_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_END          = STACK_ADDR_START + STACK_SIZE;
+
+  // L1 (shared)
   localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_START           = STACK_ADDR_END;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_SIZE                 = 32'h000E_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_END             = L1_ADDR_START + L1_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] L1_TILE_OFFSET          = 32'h0010_0000;
-  localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_START           = 32'hB000_0000;
-  localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                 = 32'h5000_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] TILES_ADDR_END          = TILE_WINDOW_BASE + magia_pkg::N_TILES*L1_TILE_OFFSET;  // End of all tile windows
+
+  // Collectives and L2 (global)
+  localparam logic [magia_pkg::ADDR_W-1:0] COLL_ADDR_START         = 32'hB000_0000 + TILE_WINDOW_BASE;  // collective_gen maps it onto the tile windows
+  localparam logic [magia_pkg::ADDR_W-1:0] COLL_ADDR_END           = 32'hB000_0000 + TILES_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_START           = 32'hC000_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                 = 32'h4000_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_END             = L2_ADDR_START + L2_SIZE;
 
   // Instruction region for Spatz code (cacheable region)
   localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_ADDR_START      = 32'hCC00_0000;
-  localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_SIZE            = 32'h0000_8000;  // 32KB
 
   localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_PMA_MASK        = 32'hFFFF_8000;
 
-  // Snitch PMA Configuration - defines cacheable regions for instruction fetches
-  localparam snitch_pma_pkg::snitch_pma_t SPATZ_SNITCH_PMA_CFG = '{
-    NrCachedRegionRules: 1,
-    CachedRegion: '{
-      0: '{base: INSTRRAM_ADDR_START, mask: INSTRRAM_PMA_MASK},
-      default: '0
-    },
-    default: 0
-  };
+  // Snitch PMA with one cacheable instruction region
+  function automatic snitch_pma_pkg::snitch_pma_t gen_spatz_pma_cfg(logic [magia_pkg::ADDR_W-1:0] base,
+                                                                   logic [magia_pkg::ADDR_W-1:0] mask);
+    snitch_pma_pkg::snitch_pma_t cfg;
+    cfg                     = '0;
+    cfg.NrCachedRegionRules = 1;
+    cfg.CachedRegion[0]     = '{base: 48'(base), mask: 48'(mask)};  // Snitch PMA rules are 48 bit
+    return cfg;
+  endfunction
 
-  //SPATZ PARAMETERS from Makefile defines
-  //SPATZ_RVD (Double-width vector extension support)
-  `ifdef SPATZ_RVD
-    localparam bit SPATZ_RVD_PARAM = `SPATZ_RVD;
-  `else
-    localparam bit SPATZ_RVD_PARAM = 1'b0;
-  `endif
+  localparam snitch_pma_pkg::snitch_pma_t SPATZ_SNITCH_PMA_CFG = gen_spatz_pma_cfg(INSTRRAM_ADDR_START, INSTRRAM_PMA_MASK);
+
+  // Spatz parameters 
+
+  localparam bit          SPATZ_RVD_PARAM      = magia_pkg::MagiaSpatzRVD;
+  localparam int unsigned SPATZ_NUM_IPU        = magia_pkg::MagiaSpatzNumIPU;
+  localparam int unsigned SPATZ_NUM_FPU        = magia_pkg::MagiaSpatzNumFPU;
+  localparam bit          SPATZ_XDIVSQRT_PARAM = magia_pkg::MagiaSpatzXDivSqrt;
+  localparam bit          SPATZ_XDMA_PARAM     = magia_pkg::MagiaSpatzXDMA;
+  localparam bit          SPATZ_RVF_PARAM      = magia_pkg::MagiaSpatzRVF;
+  localparam bit          SPATZ_RVV_PARAM      = magia_pkg::MagiaSpatzRVV;
   
-  //SPATZ_N_IPU and SPATZ_N_FPU
-  `ifdef SPATZ_N_IPU
-    localparam int unsigned SPATZ_NUM_IPU = `SPATZ_N_IPU;
-  `else
-    localparam int unsigned SPATZ_NUM_IPU = 1;
-  `endif
-  
-  `ifdef SPATZ_N_FPU
-    localparam int unsigned SPATZ_NUM_FPU = `SPATZ_N_FPU;
-  `else
-    localparam int unsigned SPATZ_NUM_FPU = 4;
-  `endif
-  
-  //SPATZ_XDIVSQRT (FP division/sqrt enable)
-  `ifdef SPATZ_XDIVSQRT
-    localparam bit SPATZ_XDIVSQRT_PARAM = `SPATZ_XDIVSQRT;
-  `else
-    localparam bit SPATZ_XDIVSQRT_PARAM = 1'b0;
-  `endif
-  
-  //SPATZ_XDMA (DMA inside Spatz_cc)
-  `ifdef SPATZ_XDMA
-    localparam bit SPATZ_XDMA_PARAM = `SPATZ_XDMA;
-  `else
-    localparam bit SPATZ_XDMA_PARAM = 1'b0;
-  `endif
-  
-  //SPATZ_RVF (Single-precision FP support)
-  `ifdef SPATZ_RVF
-    localparam bit SPATZ_RVF_PARAM = `SPATZ_RVF;
-  `else
-    localparam bit SPATZ_RVF_PARAM = 1'b1;
-  `endif
-  
-  //SPATZ_RVV (Vector extension support)
-  `ifdef SPATZ_RVV
-    localparam bit SPATZ_RVV_PARAM = `SPATZ_RVV;
-  `else
-    localparam bit SPATZ_RVV_PARAM = 1'b1;
-  `endif
-  
-  // Spatz CC parameters (must be defined before HCI parameters)
-  localparam int unsigned SPATZ_NUM_FU            = (SPATZ_NUM_FPU > SPATZ_NUM_IPU) ? SPATZ_NUM_FPU : SPATZ_NUM_IPU;  // Max of FPU and IPU
-  localparam int unsigned SPATZ_TCDM_PORTS        = SPATZ_NUM_FU + 1;  // N_FU + 1 TCDM ports (N_FU vector + 1 snitch)
-  localparam int unsigned SPATZ_HCI_PORTS         = SPATZ_RVD_PARAM ? (SPATZ_TCDM_PORTS * 2) : SPATZ_TCDM_PORTS;  // RVD=1: 2xTCDM HCI32, RVD=0: 1xTCDM HCI32
+  function automatic int unsigned gen_spatz_num_fu(magia_pkg::spatz_cfg_t cfg);
+    return (cfg.NumFPU > cfg.NumIPU) ? cfg.NumFPU : cfg.NumIPU;
+  endfunction
+
+  function automatic int unsigned gen_spatz_tcdm_ports(magia_pkg::spatz_cfg_t cfg);
+    return cfg.RVV ? (gen_spatz_num_fu(cfg) + 1) : 1;
+  endfunction
+
+  function automatic int unsigned gen_spatz_hci_ports(magia_pkg::spatz_cfg_t cfg);
+    return cfg.RVD ? (gen_spatz_tcdm_ports(cfg) * 2) : gen_spatz_tcdm_ports(cfg);
+  endfunction
+
+  function automatic int unsigned gen_tile_spatz_hci_ports(magia_tile_cfg_t cfg);
+    return cfg.EnSpatzCC ? gen_spatz_hci_ports(cfg.Spatz) : 0;
+  endfunction
+
+  function automatic int unsigned gen_tile_num_hci_core(magia_tile_cfg_t cfg);
+    // Remote L1 route from the xbar + ctrl core + Spatz TCDM ports + one port per cluster core
+    return 1 + 1 + gen_tile_spatz_hci_ports(cfg) + (cfg.EnCluster ? cfg.Cluster.NumCores : 0);
+  endfunction
+  localparam int unsigned SPATZ_HCI_PORTS = gen_spatz_hci_ports(magia_pkg::MagiaSpatzDefaultCfg);
 
   // Spatz CC outstanding transactions and timing parameters
   parameter int unsigned SPATZ_NUM_INT_OUTSTANDING_LOADS   = 1;   // Snitch core outstanding loads
@@ -212,8 +226,12 @@ package magia_tile_pkg;
   };
 
   // Spatz bootrom parameters
+`ifdef MAGIA_SPATZ_BOOT_ADDR
+  parameter logic [31:0] SPATZ_BOOT_ADDR          = `MAGIA_SPATZ_BOOT_ADDR;  // Spatz bootrom base address
+`else
   parameter logic [31:0] SPATZ_BOOT_ADDR          = 32'h1000_0000;  // Spatz bootrom base address
-  parameter logic [31:0] SPATZ_BOOTROM_SIZE       = 32'h0000_00FF;
+`endif
+  parameter logic [31:0] SPATZ_BOOTROM_SIZE       = 32'h0000_0100;
   
   // Spatz TCDM parameters
   parameter int unsigned SPATZ_TCDM_ADDR_WIDTH = $clog2(magia_pkg::N_MEM_BANKS * magia_pkg::N_WORDS_BANK * magia_pkg::DATA_W / 8);  
@@ -222,8 +240,9 @@ package magia_tile_pkg;
 
 
   // Parameters used by the HCI
+  parameter int unsigned N_CLUSTER_CORES = magia_pkg::MagiaClusterDefaultCfg.NumCores;  // Upper bound for TileCfg.Cluster.NumCores
   parameter int unsigned N_HWPE  = 1;                                                   // Number of HWPEs attached to the port
-  parameter int unsigned N_CORE  = 1 + SPATZ_HCI_PORTS;                                 // Number of core-side HCI ports (CV32 + Spatz TCDM ports)
+  parameter int unsigned N_CORE  = 1 + 1 + SPATZ_HCI_PORTS + N_CLUSTER_CORES;           // MAX core-side HCI ports (remote + ctrl + Spatz + cluster); actual count from gen_tile_num_hci_core(), only sizes IW
   parameter int unsigned N_DMA   = 4;                                                   // Number of DMA ports (1 out read channel, 1 out write channel, 1 in read channel and 1 in write channel)
   typedef enum logic[1:0]{
     HCI_DMA_OUT_CH_READ_IDX  = 2'b00,
@@ -235,23 +254,19 @@ package magia_tile_pkg;
   parameter int unsigned AWC     = magia_pkg::ADDR_W;                                   // Address width core   (slave ports)
   parameter int unsigned DW_LIC  = magia_pkg::DATA_W;                                   // Data Width for Log Interconnect
   parameter int unsigned BW_LIC  = magia_pkg::BYTE_W;                                   // Byte Width for Log Interconnect
-  localparam int unsigned AWM    = 
-                          $clog2(magia_pkg::N_WORDS_BANK*DW_LIC/BW_LIC);                // Address width memory (master ports)
   parameter int unsigned UW_LIC  = magia_pkg::USR_W;                                    // User Width for Log Interconnect
   localparam int unsigned SW_LIC = DW_LIC/BW_LIC;                                       // Strobe Width for Log Interconnect
-  localparam int unsigned WD_LIC = DW_LIC/DW_LIC;                                       // Number of words per data for Log Interconnect
   parameter int unsigned TS_BIT  = 21;                                                  // TEST_SET_BIT (for Log Interconnect)
+  parameter int unsigned HCI_QOS_NUM = 1;                                               // Default HCI arbiter ratio, see obi_slave_ctrl_hci
+  parameter int unsigned HCI_QOS_DEN = 2;                                               // Used while ARB_CTRL denominator is 0
   parameter int unsigned IW      = N_HWPE+N_CORE+N_DMA+N_EXT;                           // ID Width HCI
   parameter int unsigned EXPFIFO = 0;                                                   // FIFO Depth for HWPE Interconnect
-  parameter int unsigned DWH     = 288;                                                 // Data Width for HWPE Interconnect: RedMulE Hx(P+1)xBits + Bank width for misaligned
+  parameter int unsigned DWH     = magia_pkg::MagiaRedMuleDefaultCfg.Height *
+                                   (magia_pkg::MagiaRedMuleDefaultCfg.NumPipeRegs + 1) * 16 + 32;
   parameter int unsigned AWH     = magia_pkg::ADDR_W;                                   // Address Width for HWPE Interconnect
   parameter int unsigned BWH     = magia_pkg::BYTE_W;                                   // Byte Width for HWPE Interconnect
-  parameter int unsigned WWH     = DWH;                                                 // Word Width for HWPE Interconnect
-  parameter int unsigned OWH     = AWH;                                                 // Offset Width for HWPE Interconnect
   parameter int unsigned UWH     = magia_pkg::USR_W;                                    // User Width for HWPE Interconnect
-  parameter int unsigned SEL_LIC = 1;                                                   // Log interconnect type selector
   localparam int unsigned SWH    = DWH/BWH;                                             // Strobe Width for HWPE Interconnect
-  localparam int unsigned WDH    = DWH/WWH;                                             // Number of words per data for HWPE Interconnect
 
   // Parameters used by the cv32e40x core
   parameter bit          X_EXT_EN        = 1;                                           // Enable eXtension Interface (X) support, see eXtension Interface
@@ -266,9 +281,7 @@ package magia_tile_pkg;
   parameter bit          CLIC_EN         = 1'b0;                                        // Specifies whether Smclic, Smclicshv and Smclicconfig are supported
 
   // Parameters used by cv32e40p core
-  parameter bit          PULP_CLUSTER        = 1'b1;                                    // PULP cluster mode
   parameter bit          FPU                 = 1'b1;                                    // Enable FPU (main feature)
-  parameter bit          FP_DIVSQRT          = 1'b1;                                    // FP division and square root
   parameter logic[31:0]  DM_HALT_ADDR        = 32'h1A110800;                            // Debug module halt address
 
   `ifdef ZFINX_CTRL
@@ -293,16 +306,15 @@ package magia_tile_pkg;
 `endif
   parameter int unsigned CLIC_ID_W_CLUSTER    = 5;                                       // cv32e40p irq_id_o/irq_id_i width (fixed, independent of the ctrl core's CLIC_ID_W)
   
-  // Parameters used by Event Unit
-  parameter int unsigned EVENT_UNIT_IRQ_WIDTH = 5;                                      // Width of Event Unit IRQ ID signals (supports up to 32 different event types)
+  // Cluster-private Event Unit configuration
+  parameter int unsigned CLUSTER_EU_NB_SW_EVT       = 8;                                // SW events (pulp-sdk uses up to 8)
+  parameter int unsigned CLUSTER_EU_NB_HW_MUT       = 1;                                // HW mutexes (pulp_cluster default)
+  parameter int unsigned CLUSTER_EU_MUTEX_MSG_W     = 32;                               // HW mutex message width
+  parameter int unsigned CLUSTER_EU_DISP_FIFO_DEPTH = 8;                                // Dispatch FIFO depth (IP default; >=4 needed for fork/join)
+  parameter int unsigned CLUSTER_EU_EVNT_WIDTH      = 8;                                // SoC event ID width
+  parameter int unsigned CLUSTER_EU_SOC_FIFO_DEPTH  = 8;                                // SoC event FIFO depth
 
-  // Parameters used by RedMulE
-  parameter int unsigned REDMULE_HEIGHT          = 8;                                   // RedMulE systolic array height
-  parameter int unsigned REDMULE_WIDTH           = 8;                                   // RedMulE systolic array width
-  parameter int unsigned REDMULE_NUM_PIPE_REGS   = 1;                                   // RedMulE pipeline registers
-  parameter int unsigned REDMULE_DW         = DWH-32;                                   // RedMulE Data Width 
-  parameter int unsigned REDMULE_ID_W       = magia_pkg::ID_W + 
-                                              magia_pkg::ID_W_OFFSET;                   // RedMulE ID Width
+  parameter int unsigned REDMULE_DW         = DWH-32;                                   // RedMulE Data Width (default; per-tile in magia_tile.sv)
   parameter int unsigned REDMULE_UW         = UWH;                                      // RedMulE User Width
 
   // Parameters used by OBI
@@ -314,23 +326,148 @@ package magia_tile_pkg;
   parameter int unsigned AID_WIDTH    = 1;                                              // Width of the aid   signal (address channel identifier, see OBI documentation)
   parameter int unsigned RID_WIDTH    = 1;                                              // Width of the rid   signal (response channel identifier, see OBI documentation)
   parameter int unsigned MID_WIDTH    = 1;                                              // Width of the mid   signal (manager identifier, see OBI documentation)
-  parameter int unsigned OBI_ID_WIDTH = 1; 
-  parameter int unsigned N_CLUSTER_CORES = 8;                                           // Width of the id - configuration
-  parameter int unsigned N_SBR        = 7;                                              // Number of OBI slaves (HCI, AXI XBAR, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl, Event_Unit, Spatz_Ctrl)
-  parameter int unsigned N_MGR        = 3 + N_CLUSTER_CORES;                            // Number of masters (Core, AXI XBAR, Spatz CC)
+  parameter int unsigned OBI_ID_WIDTH = 1;
   parameter int unsigned N_MAX_TRAN   = 1;                                              // Number of maximum outstanding transactions
-  parameter int unsigned N_ADDR_RULE  = 9;                                              // Number of OBI address rules (L2, L1, Stack, Reserved, RedMulE_Ctrl, iDMA_Ctrl, FSync_Ctrl, Event_Unit, Spatz_Ctrl) 
-  localparam int unsigned N_BIT_SBR           = $clog2(N_SBR);                          // Number of bits required to identify each slave
-  localparam int unsigned N_BIT_MGR           = $clog2(N_MGR);                          // Number of bits required to identify each master
-  localparam int unsigned N_BIT_CLUSTER_CORES = $clog2(N_CLUSTER_CORES);                // Number of bits required to identify each slave
+
+  function automatic int unsigned gen_idx_width(int unsigned num);
+    return (num > 1) ? $clog2(num) : 1;
+  endfunction
+
+  typedef struct packed {
+    int unsigned num_mgr;       // Number of managers attached to the crossbar
+    int unsigned core;          // Ctrl core data port
+    int unsigned ext;           // External (AXI-to-OBI) port
+    int unsigned spatz;         // Spatz CC data port      (valid iff EnSpatzCC)
+    int unsigned cluster_base;  // First cluster core port (valid iff EnCluster)
+  } obi_mgr_map_t;
+
+  function automatic obi_mgr_map_t gen_obi_mgr_map(magia_tile_cfg_t cfg);
+    obi_mgr_map_t ret;
+    int unsigned  idx;
+    ret = '0;
+    idx = 0;
+    ret.core = idx;
+    idx = idx + 1;
+    ret.ext  = idx;
+    idx = idx + 1;
+    if (cfg.EnSpatzCC) begin
+      ret.spatz = idx;
+      idx = idx + 1;
+    end
+    if (cfg.EnCluster) begin
+      ret.cluster_base = idx;
+      idx += cfg.Cluster.NumCores;  // per-tile cluster core count (<= N_CLUSTER_CORES max)
+    end
+    ret.num_mgr = idx;
+    return ret;
+  endfunction
+
+  // Control units share one crossbar port through ctrl_demux; the EU keeps its own, its responses wait
+  localparam int unsigned CTRL_MAX_UNITS = 7;
+
+  typedef struct packed {
+    int unsigned num_units;  // Number of units behind the control port (one address rule each)
+    int unsigned redmule;    // RedMulE control (valid iff EnRedMule)
+    int unsigned idma;       // iDMA control
+    int unsigned fsync;      // FractalSync control (valid iff MAGIA_FSYNC)
+    int unsigned spatz;      // Spatz CC control (valid iff EnSpatzCC)
+    int unsigned cluster;    // PULP cluster control (valid iff EnCluster)
+    int unsigned hci;        // HCI arbiter control
+    int unsigned coll;       // Collective control (valid iff EnCollective)
+  } ctrl_map_t;
+
+  function automatic ctrl_map_t gen_ctrl_map(magia_tile_cfg_t cfg);
+    ctrl_map_t ret;
+    int unsigned   idx;
+    ret = '0;
+    idx = 0;
+    if (cfg.EnRedMule) begin
+      ret.redmule = idx;
+      idx = idx + 1;
+    end
+    ret.idma = idx;
+    idx = idx + 1;
+    if (magia_pkg::MagiaEnFractalSync) begin
+      ret.fsync = idx;
+      idx = idx + 1;
+    end
+    if (cfg.EnSpatzCC) begin
+      ret.spatz = idx;
+      idx = idx + 1;
+    end
+    if (cfg.EnCluster) begin
+      ret.cluster = idx;
+      idx = idx + 1;
+    end
+    ret.hci = idx;
+    idx = idx + 1;
+    if (cfg.EnCollective) begin
+      ret.coll = idx;
+      idx = idx + 1;
+    end
+    ret.num_units = idx;
+    return ret;
+  endfunction
+
+  typedef struct packed {
+    int unsigned num_sbr;    // Number of subordinates attached to the crossbar
+    int unsigned num_rules;  // Number of address decode rules
+    int unsigned l2;         // AXI crossbar (L2) port - must stay 0: it is the crossbar default port
+    int unsigned l1;         // L1 SPM (HCI) port
+    int unsigned eu;         // Event Unit port (control core)
+    int unsigned ctrl;       // Control port (every control-register unit, see ctrl_map_t)
+    int unsigned cluster_eu; // Cluster-private Event Unit, memory-mapped view (valid iff EnCluster)
+  } obi_sbr_map_t;
+
+  function automatic obi_sbr_map_t gen_obi_sbr_map(magia_tile_cfg_t cfg);
+    obi_sbr_map_t  ret;
+    ret = '0;
+    ret.l2  = 0;
+    ret.l1  = 1;
+    ret.eu  = 2;
+    ret.ctrl = 3;
+    if (cfg.EnCluster) begin
+      ret.cluster_eu = 4;
+    end
+    ret.num_sbr = 4 + 32'(cfg.EnCluster);
+    // L2, L1, reserved, stack, EU and the control window around it, plus the cluster EU
+    ret.num_rules = 7 + 32'(cfg.EnCluster);
+    return ret;
+  endfunction
+
+  /*******************************************************************/
+  /*                      Event Unit event map                       */
+  /*******************************************************************/
+  localparam int unsigned EU_ACC_SPATZ_DONE      = 0;
+  localparam int unsigned EU_ACC_REDMULE_EVT_0   = 2;
+  localparam int unsigned EU_ACC_REDMULE_EVT_1   = 3;
+
+  localparam int unsigned EU_DMA_A2O_DONE        = 0;
+  localparam int unsigned EU_DMA_O2A_DONE        = 1;
+
+  localparam int unsigned EU_OTHER_CLUSTER_DONE  = 12;
+  localparam int unsigned EU_OTHER_CLUSTER_START = 13;
+  localparam int unsigned EU_OTHER_SPATZ_START   = 23;
+  localparam int unsigned EU_OTHER_FSYNC_DONE    = 24;
+  localparam int unsigned EU_OTHER_A2O_START     = 28;
+  localparam int unsigned EU_OTHER_O2A_START     = 29;
+
+  typedef struct packed {
+    logic [1:0] evt;    // evt[0]: engine event (RedMulE evt_o); evt[1]: reserved, always 0
+  } redmule_events_t;
+
+  // The assembled event bus handed to magia_event_unit (control core only).
+  typedef struct packed {
+    logic [3:0]  acc;
+    logic [1:0]  dma;
+    logic [1:0]  timer;
+    logic [31:0] other;
+  } eu_events_t;
 
   // Parameters used by AXI
   parameter int unsigned AXI_DATA_ID_W  = 3;                                            // Width of the AXI Data ID (3 bits for 5 slave ports on crossbar: 2^3=8)
-  parameter int unsigned AXI_INSTR_ID_W = 3;                                            // Width of the AXI Instruction ID (3 bits for 5 slave ports on crossbar)
   parameter int unsigned AXI_ID_W       = 3;                                            // Width of the AXI Unified Communication Channel ID (3 bits for 5 slave ports)
-  localparam int unsigned AXI_MST_ID_W  = 6;                                            // Width of master port ID (slave 3b + prepend 3b for 5 ports)
   parameter int unsigned AXI_DATA_U_W   = magia_pkg::USR_W;                             // Width of the AXI Data User
-  parameter int unsigned AXI_INSTR_U_W  = magia_pkg::USR_W;                             // Width of the AXI Instruction User
   parameter int unsigned AXI_U_W        = magia_pkg::USR_W;                             // Width of the AXI Unified Communication Channel User
 
   // Parameters used by the iDMA
@@ -371,21 +508,14 @@ package magia_tile_pkg;
   parameter int unsigned FSYNC_NBR_AGGR_W          = 1;                                 // Fractal Sync Aggr. width for neighbor nodes
   parameter int unsigned FSYNC_NBR_LVL_W           = 1;                                 // Fractal Sync Level width for neighbor nodes
   parameter int unsigned FSYNC_NBR_ID_W            = 2;                                 // Fractal Sync Id width for neighbor nodes
-  parameter bit          FSYNC_STALL               = 1;                                 // Fractal Sync Stall during synchronization
 
   // Parameters of the AXI XBAR
   parameter int unsigned AxiXbarNoSlvPorts     = 5;                                     // Number of Slave Ports (ext, Core Data, CV32 I$, Spatz I$, Cluster I$)
-  parameter int unsigned AxiXbarNoMstPorts     = 3;                                     // Number of Master Ports (to ext, to internal L1, to Spatz bootrom)
   localparam int unsigned AxiXbarSlvAxiIDWidth = AXI_DATA_ID_W;                         // Number of bits to indentify each Slave Port
   parameter int unsigned AxiXbarMaxWTrans      = 16;                                    // Maximum number of outstanding transactions per write
   parameter int unsigned AxiXbarMaxMstTrans    = AxiXbarMaxWTrans;                      // Maximum number of outstanding transactions per master
   parameter int unsigned AxiXbarMaxSlvTrans    = AxiXbarMaxWTrans;                      // Maximum number of outstanding transactions per slave
   parameter bit          AxiXbarFallThrough    = 1'b0;                                  // Enabled -> MUX is purely combinational
-  parameter bit          AxiXbarSpillAw        = 1'b0;                                  // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
-  parameter bit          AxiXbarSpillW         = 1'b0;                                  // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
-  parameter bit          AxiXbarSpillB         = 1'b0;                                  // Enabled -> Spill register on write master ports, +1 cycle of latency on read channels
-  parameter bit          AxiXbarSpillAr        = 1'b0;                                  // Enabled -> Spill register on read master ports, +1 cycle of latency on write channels
-  parameter bit          AxiXbarSpillR         = 1'b0;                                  // Enabled -> Spill register on read master ports, +1 cycle of latency on write channels 
 
   // Parameters used by the i$
   parameter int unsigned NR_FETCH_PORTS = 1;                                            // i$ Number of request (fetch) ports
@@ -394,26 +524,13 @@ package magia_tile_pkg;
   parameter int unsigned LINE_COUNT     = 32;                                           // i$ The number of cache lines per set. Power of two; >= 2.
   parameter int unsigned WAY_COUNT      = 32;                                           // i$ The set associativity of the cache. Power of two; >= 1.
   parameter int unsigned L0_PARITY_W    = 0;                                            // i$ Parity of the L0 cache
-  parameter int unsigned L1_PARITY_W    = L0_PARITY_W;                                  // i$ Parity of the L1 cache
   parameter int unsigned FETCH_AW       = magia_pkg::ADDR_W;                            // i$ Fetch interface address width. Same as FETCH_AW; >= 1.
   parameter int unsigned FETCH_DW       = magia_pkg::DATA_W;                            // i$ Fetch interface data width. Power of two; >= 8.
   parameter int unsigned FILL_AW        = magia_pkg::ADDR_W;                            // i$ Fill interface address width. Same as FILL_AW; >= 1.
   parameter int unsigned FILL_DW        = magia_pkg::DATA_W;                            // i$ Fill interface data width. Power of two; >= 8.
 
-  // Spatz ICache parameters (dedicated icache for Spatz CC)
-  parameter int unsigned SPATZ_ICACHE_LINE_WIDTH = 256;                                 // Spatz i$ cache line width (should be investigated which is the best value)
-  parameter int unsigned SPATZ_ICACHE_LINE_COUNT = 32;                                  // Spatz i$ number of cache lines
-  parameter int unsigned SPATZ_ICACHE_WAYS       = 2;                                   // Spatz i$ number of ways (2-way set associative)
-  localparam int unsigned SPATZ_L0_EARLY_TAG_W   = snitch_pkg::PAGE_SHIFT - $clog2(SPATZ_ICACHE_LINE_WIDTH/8); // L0 early tag width
-  
   //Cluster ICache parameters (dedicated icache for cluster cores)
-  parameter int unsigned CLUSTER_NR_FETCH_PORTS = N_CLUSTER_CORES;                              // i$ Number of request (fetch) ports
-  parameter int unsigned CLUSTER_L0_LINE_COUNT  = 32*N_CLUSTER_CORES;                           // i$ L0 Cache Line Count
-  parameter int unsigned CLUSTER_LINE_WIDTH     = 128;                                          // i$ Cache Line Width; >= 64
-  parameter int unsigned CLUSTER_LINE_COUNT     = 32*N_CLUSTER_CORES;                           // i$ The number of cache lines per set. Power of two; >= 2.
-  parameter int unsigned CLUSTER_WAY_COUNT      = 32;                                           // i$ The set associativity of the cache. Power of two; >= 1.
   parameter int unsigned CLUSTER_L0_PARITY_W    = 0;                                            // i$ Parity of the L0 cache
-  parameter int unsigned CLUSTER_L1_PARITY_W    = CLUSTER_L0_PARITY_W;                          // i$ Parity of the L1 cache
   parameter int unsigned CLUSTER_FETCH_AW       = magia_pkg::ADDR_W;                            // i$ Fetch interface address width. Same as FETCH_AW; >= 1.
   parameter int unsigned CLUSTER_FETCH_DW       = magia_pkg::DATA_W;                            // i$ Fetch interface data width. Power of two; >= 8.
   parameter int unsigned CLUSTER_FILL_AW        = magia_pkg::ADDR_W;                            // i$ Fill interface address width. Same as FILL_AW; >= 1.
@@ -449,11 +566,36 @@ package magia_tile_pkg;
     logic[magia_pkg::ADDR_W-1:0] end_addr;
   } obi_xbar_rule_t;
 
-  typedef enum logic[1:0]{
-    OBI_SPATZ_IDX = 2,
-    OBI_EXT_IDX   = 1,
-    OBI_CORE_IDX  = 0
-  } obi_xbar_idx_e;
+  // TCDM ranges taken by the dedicated HCI ports: the private reserved and stack regions, the shared L1
+  localparam int unsigned NUM_TCDM_RULES = 2;
+
+  typedef obi_xbar_rule_t [CTRL_MAX_UNITS-1:0] ctrl_rules_t;
+
+  // One rule per ctrl_demux port as in gen_ctrl_map(); a disabled unit's range gets an OBI error
+  function automatic ctrl_rules_t gen_ctrl_rules(magia_tile_cfg_t cfg);
+    ctrl_rules_t ret;
+    ctrl_map_t   map;
+    ret = '0;
+    map = gen_ctrl_map(cfg);
+    if (cfg.EnRedMule) begin
+      ret[map.redmule] = '{idx: map.redmule, start_addr: REDMULE_CTRL_ADDR_START, end_addr: REDMULE_CTRL_ADDR_END};
+    end
+    ret[map.idma] = '{idx: map.idma, start_addr: IDMA_CTRL_ADDR_START, end_addr: IDMA_CTRL_ADDR_END};
+    if (magia_pkg::MagiaEnFractalSync) begin
+      ret[map.fsync] = '{idx: map.fsync, start_addr: FSYNC_CTRL_ADDR_START, end_addr: FSYNC_CTRL_ADDR_END};
+    end
+    if (cfg.EnSpatzCC) begin
+      ret[map.spatz] = '{idx: map.spatz, start_addr: SPATZ_CTRL_ADDR_START, end_addr: SPATZ_CTRL_ADDR_END};
+    end
+    if (cfg.EnCluster) begin
+      ret[map.cluster] = '{idx: map.cluster, start_addr: CLUSTER_CTRL_ADDR_START, end_addr: CLUSTER_CTRL_ADDR_END};
+    end
+    ret[map.hci] = '{idx: map.hci, start_addr: HCI_CTRL_ADDR_START, end_addr: HCI_CTRL_ADDR_END};
+    if (cfg.EnCollective) begin
+      ret[map.coll] = '{idx: map.coll, start_addr: COLL_CTRL_ADDR_START, end_addr: COLL_CTRL_ADDR_END};
+    end
+    return ret;
+  endfunction
 
 
   typedef struct packed {
@@ -514,6 +656,12 @@ package magia_tile_pkg;
   typedef cv32e40p_core_data_rsp_t core_data_rsp_t;
 `endif
 
+  // Core data demux signals: [0] = TCDM (L1) direct path, [1] = OBI xbar (default), [2] = EU direct link window
+  localparam int unsigned CORE_DATA_DEMUX_N_SLV    = 3;
+  localparam int unsigned CORE_DATA_DEMUX_TCDM_IDX = 0;
+  localparam int unsigned CORE_DATA_DEMUX_OBI_IDX  = 1;
+  localparam int unsigned CORE_DATA_DEMUX_EU_IDX   = 2;
+
   // EU Direct Link interface types
   typedef struct packed {
     logic                        req;
@@ -542,18 +690,6 @@ package magia_tile_pkg;
     logic[NR_FETCH_PORTS-1:0]               rerror;
   } core_cache_instr_rsp_t;
 
-  typedef enum logic[3:0]{
-    OBI_XBAR_STACK_IDX         = 8,
-    OBI_XBAR_RESERVED_IDX      = 7,
-    OBI_XBAR_TILE_CSR_IDX      = 6,
-    OBI_XBAR_EVENT_UNIT_IDX    = 5,
-    OBI_XBAR_FSYNC_CTRL_IDX    = 4,
-    OBI_XBAR_IDMA_IDX          = 3,
-    OBI_XBAR_REDMULE_CTRL_IDX  = 2,
-    OBI_XBAR_L1SPM_IDX         = 1,
-    OBI_XBAR_L2_IDX            = 0
-  } obi_mem_array_idx_e;
-
   typedef enum logic[2:0]{
     AXI_XBAR_STACK_IDX    = 4,
     AXI_XBAR_RESERVED_IDX = 3,
@@ -580,8 +716,8 @@ package magia_tile_pkg;
 
   typedef logic[iDMA_AddrWidth-1:0] idma_addr_t;
 
-  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic[IW-1:0])
-  `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic[DWH-1:0], logic[IW-1:0])
+  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic[AWC-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0], logic[hci_package::DEFAULT_IW-1:0])
+  `HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic[magia_pkg::DATA_W-1:0], logic[hci_package::DEFAULT_IW-1:0])
 
   `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic[AWC-1:0], logic[DWH-1:0], logic[SWH-1:0], logic[UWH-1:0], logic[IW-1:0], logic[0:0], logic[0:0])
   `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic[DWH-1:0], logic[UWH-1:0],  logic[IW-1:0], logic[0:0], logic[0:0])
@@ -593,9 +729,6 @@ package magia_tile_pkg;
   localparam obi_pkg::obi_cfg_t obi_amo_cfg = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, OBI_ID_WIDTH, obi_amo_optional_cfg);
   localparam obi_pkg::obi_cfg_t obi_no_amo_cfg = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, OBI_ID_WIDTH, obi_no_amo_optional_cfg);
   
-  // OBI full configurations - 64-bit
-  localparam obi_pkg::obi_cfg_t obi_amo_cfg_64 = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, SPATZ_TCDM_DATA_WIDTH, OBI_ID_WIDTH, obi_amo_optional_cfg);
-  localparam obi_pkg::obi_cfg_t obi_no_amo_cfg_64 = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, SPATZ_TCDM_DATA_WIDTH, OBI_ID_WIDTH, obi_no_amo_optional_cfg);
   localparam bit                         RegisterAmo          = 1;
   
   `OBI_TYPEDEF_ALL_A_OPTIONAL(core_data_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
@@ -657,7 +790,7 @@ package magia_tile_pkg;
   
   localparam axi_pkg::xbar_cfg_t axi_xbar_cfg = '{
     NoSlvPorts          : AxiXbarNoSlvPorts,
-    NoMstPorts          : AxiXbarNoMstPorts,
+    NoMstPorts          : 0,  // placeholder: gen_axi_xbar_cfg() fills it from gen_axi_xbar_mst_map()
     MaxMstTrans         : AxiXbarMaxMstTrans,
     MaxSlvTrans         : AxiXbarMaxSlvTrans,
     FallThrough         : AxiXbarFallThrough,
@@ -668,8 +801,47 @@ package magia_tile_pkg;
     UniqueIds           : 1'b0,
     AxiAddrWidth        : magia_pkg::ADDR_W,
     AxiDataWidth        : magia_pkg::DATA_W,
-    NoAddrRules         : 4
+    NoAddrRules         : 0,  // placeholder: gen_axi_xbar_cfg() fills it from gen_axi_xbar_num_rules()
+    default             : '0  // Fields of newer axi revisions
   };
+
+  typedef struct packed {
+    int unsigned num_mst;   // Number of AXI xbar master ports
+    int unsigned ext;       // to NoC          (always, index 0)
+    int unsigned obi;       // to internal OBI (always, index 1)
+    int unsigned bootrom;   // to Spatz bootrom (valid iff EnSpatzCC)
+  } axi_xbar_mst_map_t;
+
+  function automatic axi_xbar_mst_map_t gen_axi_xbar_mst_map(magia_tile_cfg_t cfg);
+    axi_xbar_mst_map_t ret;
+    int unsigned       idx;
+    ret = '0;
+    idx = 0;
+    ret.ext = idx;
+    idx = idx + 1;
+    ret.obi = idx;
+    idx = idx + 1;
+    if (cfg.EnSpatzCC) begin
+      ret.bootrom = idx;
+      idx = idx + 1;
+    end
+    ret.num_mst = idx;
+    return ret;
+  endfunction
+
+  function automatic int unsigned gen_axi_xbar_num_rules(magia_tile_cfg_t cfg);
+    return 1 + 32'(cfg.EnSpatzCC);
+  endfunction
+
+  function automatic axi_pkg::xbar_cfg_t gen_axi_xbar_cfg(magia_tile_cfg_t cfg);
+    axi_pkg::xbar_cfg_t ret;
+    axi_xbar_mst_map_t  mst_map;
+    mst_map                = gen_axi_xbar_mst_map(cfg);
+    ret                    = axi_xbar_cfg;
+    ret.NoMstPorts         = mst_map.num_mst;
+    ret.NoAddrRules        = gen_axi_xbar_num_rules(cfg);
+    return ret;
+  endfunction
 
   `FSYNC_TYPEDEF_ALL(ht_tile_fsync, logic[FSYNC_AGGR_W-1:0], logic[FSYNC_LVL_W-1:0], logic[FSYNC_ID_W-1:0])
   `FSYNC_TYPEDEF_ALL(vt_tile_fsync, logic[FSYNC_AGGR_W-1:0], logic[FSYNC_LVL_W-1:0], logic[FSYNC_ID_W-1:0])
@@ -680,10 +852,7 @@ package magia_tile_pkg;
   // Packed observation boundary required by hierarchical Verilation.
   typedef struct packed {
     logic [magia_pkg::ADDR_W-1:0]     axi_aw_addr;
-    // axi_aw_id is driven from axi_xbar_mst_req_t.aw.id (magia_pkg's NoC AXI
-    // alias), whose ID width is magia_pkg::AXI_NOC_ID_W. This tile package's
-    // own AXI_ID_W (3 bits) sizes a *different* xbar (the tile-internal one
-    // with 5 slave ports) and must not be reused here.
+    // NoC AXI ID width: AXI_ID_W of this package sizes the tile-internal xbar, not this one
     logic [magia_pkg::AXI_NOC_ID_W-1:0] axi_aw_id;
     logic                             axi_aw_valid;
     logic [magia_pkg::DATA_W-1:0] axi_w_data;
@@ -742,11 +911,14 @@ package magia_tile_pkg;
   `OBI_TYPEDEF_RSP_T(spatz_obi32_rsp_t, spatz_obi32_r_chan_t)
 
 
+  // Router reduction types for magia_tile, dropped by MAGIA_NO_NOC_TYPES
+`ifndef MAGIA_NO_NOC_TYPES
   typedef logic [255:0] wide_data_t;
   `FLOO_RED_TYPEDEF_REQ_RSP_LINK(wide, wide_data_t, wide_req, wide_rsp)
 
   typedef logic [31:0] narrow_data_t;
   `FLOO_RED_TYPEDEF_REQ_RSP_LINK(narrow, narrow_data_t, narrow_req, narrow_rsp)
+`endif
 
 
 

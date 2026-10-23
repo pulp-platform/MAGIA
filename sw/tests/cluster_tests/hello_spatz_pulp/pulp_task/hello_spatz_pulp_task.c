@@ -14,32 +14,31 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Authors: Niccolò Giuliani, Fondazione Chips-IT
+ * Authors: Niccolò Giuliani <niccolo.giuliani@chips.it>
  */
 
 /*
  * hello_spatz_pulp — PULP cluster-core task.
  *
- * Dispatched via cluster_dispatch_task(HELLO_SPATZ_PULP_TASK, 0xFF). Each of the
- * 8 cluster cores reads its 1/8th slice of the Z vector (filled by Spatz on
- * the CV32 side: Z[i] = 1.0 + 2.0 = 3.0 FP16 = 0x4200), sums the raw uint16
- * bit-patterns into a uint32 partial sum, and writes the result to its
- * per-core L2 slot. On return the trap handler writes 1 to PULP_DONE.
+ * Core 0 forks hello_spatz_pulp_fork_entry onto all 8 cores with pi_cl_team_fork().
+ * Each core sums its slice of Z (Spatz output, 3.0 FP16 = 0x4200) as raw uint16 into its L2 slot.
+ * Core 0 then returns the grand total through PULP_RETURN.
  *
  * Memory layout (shared with main.c):
- *   Z_BASE      = L1_BASE + 0x00002000   (256 FP16 elements, Spatz output)
- *   RESULT_BASE = L2_BASE + 0x00060000   (8 × uint32, one per cluster core)
+ *   Z_BASE      = this tile's L1 + 0x00002000                 (256 FP16 elements, Spatz output)
+ *   RESULT_BASE = L2_BASE + 0x00060000 + tile * RESULT_STRIDE (8 x uint32, one per cluster core)
  */
 
 #include <stdint.h>
 #include "magia_tile_utils.h"
 #include "cluster_utils.h"
 
-#define VLEN        256
-#define Z_BASE      (L1_BASE + 0x00002000)
-#define RESULT_BASE (L2_BASE + 0x00060000)
+#define VLEN          256
+#define Z_BASE        (L1_BASE + cluster_tile_id() * L1_TILE_OFFSET + 0x00002000)
+#define RESULT_BASE   (L2_BASE + 0x00060000 + cluster_tile_id() * RESULT_STRIDE)
+#define RESULT_STRIDE (0x00000100)
 
-void hello_spatz_pulp_task(void *data) {
+static void hello_spatz_pulp_fork_entry(void *data) {
     (void)data;
 
     uint32_t local_id = cluster_core_id();
@@ -56,4 +55,15 @@ void hello_spatz_pulp_task(void *data) {
 
     if (local_id == 0)
         printf("[PULP core 0] partial_sum=0x%08x\n", partial_sum);
+}
+
+int hello_spatz_pulp_task(void *data) {
+    pi_cl_team_fork(PULP_CORE_COUNT, hello_spatz_pulp_fork_entry, data);
+
+    /* The fork's barrier guarantees every core has written its partial */
+    uint32_t grand_total = 0;
+    for (int i = 0; i < PULP_CORE_COUNT; i++) {
+        grand_total += mmio32(RESULT_BASE + 4 * i);
+    }
+    return (int)grand_total;
 }

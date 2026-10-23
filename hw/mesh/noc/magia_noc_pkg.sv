@@ -5,10 +5,10 @@
  * (the "License"); you may not use this file except in compliance 
  * with the License. You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://solderpad.org/licenses/SHL-0.51
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * Unless required by applicable law or agreed to in writing, software, hardware
+ * and materials distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -74,7 +74,7 @@ package magia_noc_pkg;
     function automatic sam_rule_t[SamNumRules-1:0] gen_sam_table(int unsigned num_tiles);
         sam_rule_t[SamNumRules-1:0] Sam;
 
-        case (num_tiles)
+        unique case (num_tiles)
             32'd4:  begin
                 Sam = floo_axi_nw_mesh_2x2_noc_pkg::Sam;
             end
@@ -90,6 +90,9 @@ package magia_noc_pkg;
             32'd1024: begin
                 Sam = floo_axi_nw_mesh_32x32_noc_pkg::Sam;
             end
+            default: begin
+                Sam = '0;
+            end
         endcase
 
         return Sam;
@@ -99,7 +102,7 @@ package magia_noc_pkg;
     function automatic collective_sam_rule_t[SamNumRules-1:0] gen_collective_sam_table(int unsigned num_tiles);
         collective_sam_rule_t[SamNumRules-1:0] CollectiveSam;
 
-        case (num_tiles)
+        unique case (num_tiles)
             32'd4:  begin
                 CollectiveSam = floo_axi_nw_mesh_2x2_noc_pkg::CollectiveSam;
             end
@@ -115,6 +118,9 @@ package magia_noc_pkg;
             32'd1024: begin
                 CollectiveSam = floo_axi_nw_mesh_32x32_noc_pkg::Sam;
             end
+            default: begin
+                CollectiveSam = '0;
+            end
         endcase
 
         return CollectiveSam;
@@ -128,7 +134,7 @@ package magia_noc_pkg;
     function automatic route_cfg_t gen_route_config(int unsigned num_tiles);
         route_cfg_t RouteCfg;
 
-        case (num_tiles)
+        unique case (num_tiles)
             32'd4:  begin
                 RouteCfg = floo_axi_nw_mesh_2x2_noc_pkg::RouteCfg;
             end
@@ -143,6 +149,9 @@ package magia_noc_pkg;
             end
             32'd1024: begin
                 RouteCfg = floo_axi_nw_mesh_32x32_noc_pkg::RouteCfg;
+            end
+            default: begin
+                RouteCfg = '0;
             end
         endcase
 

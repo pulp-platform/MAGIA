@@ -5,10 +5,10 @@
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://solderpad.org/licenses/SHL-0.51
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * Unless required by applicable law or agreed to in writing, software, hardware
+ * and materials distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -22,25 +22,21 @@
 module reqrsp2obi
   import reqrsp_pkg::*;
 #(
-  parameter obi_pkg::obi_cfg_t ObiCfg = obi_pkg::ObiDefaultConfig,
-  parameter type obi_req_t = logic,
-  parameter type obi_rsp_t = logic,
-  parameter type reqrsp_req_t = logic,
-  parameter type reqrsp_rsp_t = logic
+  parameter obi_pkg::obi_cfg_t ObiCfg = obi_pkg::ObiDefaultConfig
 ) (
-  input  logic        clk_i,
-  input  logic        rst_ni,
+  input  logic                               clk_i,
+  input  logic                               rst_ni,
 
-  input  reqrsp_req_t reqrsp_req_i,
-  output reqrsp_rsp_t reqrsp_rsp_o,
+  input  magia_tile_pkg::spatz_reqrsp_req_t  reqrsp_req_i,
+  output magia_tile_pkg::spatz_reqrsp_rsp_t  reqrsp_rsp_o,
 
-  output obi_req_t    obi_req_o,
-  input  obi_rsp_t    obi_rsp_i
+  output magia_tile_pkg::core_obi_data_req_t obi_req_o,
+  input  magia_tile_pkg::core_obi_data_rsp_t obi_rsp_i
 );
 
   // Convert reqrsp AMO to OBI ATOP encoding
   function automatic logic [5:0] amo_to_atop(reqrsp_pkg::amo_op_e amo);
-    case (amo)
+    unique case (amo)
       reqrsp_pkg::AMONone:  return 6'h00;
       reqrsp_pkg::AMOSwap:  return 6'h21;
       reqrsp_pkg::AMOAdd:   return 6'h20;
@@ -65,7 +61,7 @@ module reqrsp2obi
   assign amo_detected = (reqrsp_req_i.q.amo != reqrsp_pkg::AMONone);
   assign obi_req_o.req                  = reqrsp_req_i.q_valid;
   assign obi_req_o.a.addr               = reqrsp_req_i.q.addr;
-  assign obi_req_o.a.we                 = reqrsp_req_i.q.write || amo_detected;
+  assign obi_req_o.a.we                 = reqrsp_req_i.q.write | amo_detected;
   assign obi_req_o.a.wdata              = reqrsp_req_i.q.data;
   assign obi_req_o.a.be                 = reqrsp_req_i.q.strb;
   assign obi_req_o.a.aid                = '0;
