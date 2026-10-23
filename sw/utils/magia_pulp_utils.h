@@ -14,22 +14,7 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Bare-metal PULP Cluster Utility Functions (CV32 control side).
- *
- * Dynamic dispatch model (CV32 -> PULP cluster):
- *   1. pulp_init(binary)        boot all cores into the PULP dispatcher loop;
- *                               polls PULP_READY until every core is armed.
- *   2. pulp_run_task(task,mask) dispatch the task function to a subset of
- *                               cores: writes NB_CORES_TO_WAIT = popcount(mask),
- *                               TASKBIN = task, then PULP_START = mask which
- *                               fires per-core MEI pulses. CV32 polls
- *                               PULP_START until it self-clears (all ACKs).
- *   3. cluster_wait_done_eu()/_polling() wait for DONE quorum (PULP_DONE).
- *
- *   pulp_run_task_with_params() also writes PULP_DATA so the task receives a
- *   context pointer as its first argument (a0 in the trap handler).
- *
- * Register map: see magia_tile_utils.h (PULP_CTRL_BASE).
+ * Bare-metal PULP Cluster Utility Functions (CV32 control side): boot the cluster and dispatch tasks to core 0
  */
 #ifndef MAGIA_PULP_UTILS_H
 #define MAGIA_PULP_UTILS_H
@@ -39,15 +24,11 @@
 
 /* ---- Low-level register helpers ---------------------------------------- */
 
-static inline void pulp_clk_en(void)  { mmio32(PULP_CLK_EN) = 1; }
-static inline void pulp_clk_dis(void) { mmio32(PULP_CLK_EN) = 0; }
+/* Start all cores once after reset: FETCH_EN is sticky in the cores and every write clears READY */
+static inline void pulp_fetch_en(void) { mmio32(PULP_FETCH_EN) = 1; }
 
 static inline void pulp_set_binary(uint32_t addr) {
     mmio32(PULP_BINARY) = addr;
-}
-
-static inline void pulp_set_nb_cores_to_wait(uint32_t nb_cores) {
-    mmio32(PULP_NB_CORES_TO_WAIT) = nb_cores;
 }
 
 static inline void pulp_set_func(uint32_t task_addr) {
@@ -58,47 +39,27 @@ static inline void pulp_pass_params(uint32_t params_ptr) {
     mmio32(PULP_DATA) = params_ptr;
 }
 
-static inline uint32_t _pulp_popcount(uint32_t x) {
-    x = x - ((x >> 1) & 0x55555555u);
-    x = (x & 0x33333333u) + ((x >> 2) & 0x33333333u);
-    x = (x + (x >> 4)) & 0x0f0f0f0fu;
-    return (x * 0x01010101u) >> 24;
-}
-
 /* ---- High-level dispatch API ------------------------------------------- */
 
-/**
- * @brief Boot the PULP cluster: write the binary entry point, enable all
- *        cores (CLK_EN broadcast), then wait until every core has armed its
- *        dispatcher (PULP_READY == 1).
- */
+/* Boot once after reset: set the entry point, broadcast FETCH_EN, wait for PULP_READY */
 static inline void pulp_init(uint32_t binary_start) {
     pulp_set_binary(binary_start);
-    pulp_clk_en();
+    pulp_fetch_en();
     while ((mmio32(PULP_READY) & 1u) == 0u) { }
 }
 
-/**
- * @brief Dispatch @p task_addr to the cores selected by @p core_mask.
- *        Returns once every selected core has ACK'd the start (write-0 to
- *        PULP_START), i.e. once the cores have entered the task function.
- *        Use cluster_wait_done_eu()/cluster_wait_done_polling() for completion.
- */
-static inline void pulp_run_task(uint32_t task_addr, uint32_t core_mask) {
-    pulp_set_nb_cores_to_wait(_pulp_popcount(core_mask));
+/* Dispatch a task to core 0, returning once core 0 has ACK'd PULP_START */
+static inline void pulp_run_task(uint32_t task_addr) {
     pulp_set_func(task_addr);
-    mmio32(PULP_START) = core_mask;
+    mmio32(PULP_START) = 1;
     while (mmio32(PULP_START) != 0u) { }
 }
 
-/**
- * @brief Dispatch a task with a context pointer passed as first argument.
- */
+/* Dispatch a task with a context pointer passed as first argument */
 static inline void pulp_run_task_with_params(uint32_t task_addr,
-                                             uint32_t params_ptr,
-                                             uint32_t core_mask) {
+                                             uint32_t params_ptr) {
     pulp_pass_params(params_ptr);
-    pulp_run_task(task_addr, core_mask);
+    pulp_run_task(task_addr);
 }
 
 #endif /* MAGIA_PULP_UTILS_H */

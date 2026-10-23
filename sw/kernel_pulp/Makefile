@@ -48,6 +48,7 @@ task           ?=
 PULP_TASK_DIR  ?=
 
 ARCH_FLAGS = -march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI)
+# -fPIE, not -fPIC
 # -msmall-data-limit=0: never use gp/zero-relative addressing for globals.
 #     Required because the PIC binary is linked with ORIGIN=0, so .sdata
 #     symbols would otherwise be accessed via `lw rd, imm(zero)`, which
@@ -66,9 +67,10 @@ ARCH_FLAGS = -march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI)
 CFLAGS     = $(ARCH_FLAGS) -O2 -g -Wall -Wextra -Wno-unused-parameter \
              -Wno-unused-variable -Wno-unused-function -Wundef \
              -ffunction-sections -fdata-sections \
-             -fPIC -mcmodel=medany \
+             -fPIE -mcmodel=medany \
              -fno-jump-tables \
              -msmall-data-limit=0 \
+             -mno-relax \
              -nostartfiles -nostdlib \
              -DPULP_CORE_COUNT=$(PULP_CORE_COUNT) \
              -D$(core) -U__riscv__
