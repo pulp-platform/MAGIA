@@ -27,11 +27,10 @@
  *   1) Print a "hello" banner.
  *   2) Boot the PULP cluster cores into their dispatcher loop
  *      (cluster_boot -> pulp_init: programs PULP_BINARY, broadcasts
- *      CLK_EN, polls PULP_READY).
+ *      FETCH_EN once after reset, polls PULP_READY).
  *   3) Arm the CV32 Event Unit for PULP_DONE (EU bit 12).
- *   4) Dispatch the hello task to all 8 PULP cores by programming
- *      NB_CORES_TO_WAIT, TASKBIN and START.
- *   5) Sleep in WFE until the DONE quorum reaches the Event Unit.
+ *   4) Dispatch the hello task to PULP core 0 by programming TASKBIN and START.
+ *   5) Sleep in WFE until PULP_DONE reaches the Event Unit.
  *   6) Print the "done" message.
  */
 
@@ -57,8 +56,8 @@ int main(void) {
     /* Arm EU before dispatching the task to avoid missing DONE. */
     cluster_arm_done_event();
 
-    /* Dispatch the hello task to all 8 cluster cores of this tile. */
-    cluster_dispatch_task(HELLO_PULP_TASK, 0xFFu);
+    /* Dispatch the hello task to cluster core 0 of this tile. */
+    cluster_dispatch_task(HELLO_PULP_TASK);
 
     /* Sleep (cv.elw) until every cluster core of this tile has signalled
      * task completion. */
