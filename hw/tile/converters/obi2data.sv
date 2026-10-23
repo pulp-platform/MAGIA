@@ -17,15 +17,15 @@
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  *          Luca Balboni <luca.balboni@chips.it>
  *
- * OBI - CV32E40P Core Data RSP Converter
+ * OBI - Core Data RSP Converter
  *
  */
 
-module cv32e40p_obi2data_rsp
+module obi2data_rsp
   import magia_tile_pkg::*;
 (
-  input  magia_tile_pkg::core_obi_data_rsp_t       obi_rsp_i,
-  output magia_tile_pkg::cv32e40p_core_data_rsp_t  data_rsp_o
+  input  magia_tile_pkg::core_obi_data_rsp_t obi_rsp_i,
+  output magia_tile_pkg::core_data_rsp_t     data_rsp_o
 );
 
   assign data_rsp_o.gnt    = obi_rsp_i.gnt;
@@ -33,4 +33,4 @@ module cv32e40p_obi2data_rsp
   assign data_rsp_o.rdata  = obi_rsp_i.r.rdata;
   assign data_rsp_o.err    = obi_rsp_i.r.err;
 
-endmodule: cv32e40p_obi2data_rsp
+endmodule: obi2data_rsp

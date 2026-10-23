@@ -119,11 +119,11 @@ typedef enum {
 // LOW-LEVEL HAL (PULP-compatible evt_read32)
 //=============================================================================
 
-/* cv.elw on CV32E40P, p.elw on older PULP toolchains */
+/* cv.elw on CV32E40PX, p.elw on older PULP toolchains */
 static inline unsigned int evt_read32(unsigned int base, unsigned int offset) {
     unsigned int value;
     unsigned int addr = base + offset;
-#if defined(CV32E40P)
+#if defined(CV32E40PX)
     __asm__ __volatile__ (
         "cv.elw %0, 0(%1)"
         : "=r" (value)
@@ -131,7 +131,7 @@ static inline unsigned int evt_read32(unsigned int base, unsigned int offset) {
         : "memory"
     );
 #else
-    // Standard lw for cores without PULP extensions (CV32E40X, etc.)
+    // Standard lw for cores without PULP extensions
     __asm__ __volatile__ (
         "lw %0, 0(%1)"
         : "=r" (value)

@@ -41,7 +41,7 @@ module obi_slave_ctrl_cluster
 
 //-----------------------------------------------------------------------------
 // Register map (offsets from BaseAddr; instantiated inside gen_pulp_cluster at CLUSTER_CTRL_ADDR_START = 0x1740)
-//   0x00 FETCH_EN        : RW broadcast fetch_enable, resets READY; sticky in cv32e40p, so 0 does not stop the cores
+//   0x00 FETCH_EN        : RW broadcast fetch_enable, resets READY; sticky in cv32e40px, so 0 does not stop the cores
 //   0x04 BINARY          : RW PULP binary entry point (boot address)
 //   0x08 DONE            : W  the dispatcher core writes 1 after the task returns -> done_o pulses
 //   0x0C TASKBIN         : RW task function address; read by PULP cores

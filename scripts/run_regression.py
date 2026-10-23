@@ -31,8 +31,8 @@
 # and optionally MAGIA_QUESTA_SETUP / MAGIA_VERILATOR_SETUP to load the simulators.
 #
 # Examples:
-#   scripts/run_regression.py --sim questa --core CV32E40P --fsync on --test mm_tests/fsync_test_mm
-#   scripts/run_regression.py --sim verilator --core CV32E40P --fsync on --test collective_tests
+#   scripts/run_regression.py --sim questa --core CV32E40PX --fsync on --test mm_tests/fsync_test_mm
+#   scripts/run_regression.py --sim verilator --core CV32E40PX --fsync on --test collective_tests
 #   scripts/run_regression.py --sim all --core all --fsync all --test all
 
 import argparse
@@ -67,7 +67,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_YML = ['sw/tests/tests.yml']
 TESTBENCHES = ('mesh', 'tile')
 SIMS = ('questa', 'verilator')
-CORES = ('CV32E40P', 'CV32E40X')
+CORES = ('CV32E40PX',)
 FSYNC = ('on', 'off')
 
 print_lock = threading.Lock()
@@ -300,7 +300,7 @@ class Config:
         if self.sim not in test['sims']:
             return f"runs only on {'/'.join(test['sims'])}"
         if self.core not in test['cores']:
-            return f"runs only on {'/'.join(test['cores'])}"
+            return f"runs only on {'/'.join(test['cores']) or 'no core'}"
         missing = set(test['requires']) - self.defines
         if missing:
             return f"requires {' '.join(sorted(missing))}"
@@ -382,6 +382,12 @@ def copy_changes(wt):
     diff = subprocess.run(['git', 'diff', 'HEAD', '--binary'], cwd=ROOT, check=True,
                           stdout=subprocess.PIPE).stdout
     if diff:
+        # A reused worktree still holds, untracked, the files the previous apply created
+        created = subprocess.run(['git', 'diff', 'HEAD', '--name-only', '--diff-filter=AR', '-z'], cwd=ROOT,
+                                 check=True, stdout=subprocess.PIPE).stdout.decode().split('\0')
+        for f in filter(None, created):
+            if os.path.isfile(os.path.join(wt, f)):
+                os.remove(os.path.join(wt, f))
         subprocess.run(['git', 'apply', '--whitespace=nowarn'], cwd=wt, input=diff, check=True)
     untracked = subprocess.run(['git', 'ls-files', '--others', '--exclude-standard', '-z'], cwd=ROOT,
                                check=True, stdout=subprocess.PIPE).stdout.decode().split('\0')
@@ -433,7 +439,7 @@ def job_name(cfg, mesh_dv, fast):
 
 
 def job_label(cfg, mesh_dv, fast):
-    return (f"{cfg.sim:9s} {cfg.core:8s} {'fsync' if cfg.fsync else 'nofsync':7s} "
+    return (f"{cfg.sim:9s} {cfg.core:9s} {'fsync' if cfg.fsync else 'nofsync':7s} "
             f"{'mesh' if mesh_dv else 'tile'}{'' if fast else ' nofast'}")
 
 

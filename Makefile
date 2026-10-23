@@ -21,7 +21,7 @@
 
 # Paths to folders
 ROOT_DIR       := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
-core           ?= CV32E40P
+core           ?= CV32E40PX
 
 MAGIA_DIR  ?= $(shell pwd)
 
@@ -48,32 +48,16 @@ fsync         ?= 1
 
 PULP_XTEN_BASE := xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw
 
-# TODO: Solve fpu_ss issues with core X
-ifeq ($(core), CV32E40X)
-  ISA = riscv
-  ifeq ($(zfinx),1)
-    # No zhinx: fpu_ss does not work with zhinx, so we disable it for now. 
-    XTEN = imac_zfinx
-    ABI            ?= ilp
-    XABI           ?=
-  else
-    # CV32E40X ties xif_compressed_if to zero, so c.flw/c.fsw/c.flwsp/c.fswsp
-    # trap: F mode breaks on any FP spill. Use zfinx, or drop the c from XTEN.
-    XTEN = imafc
-    ABI            ?= ilp
-    XABI           ?= f
-  endif
+# CV32E40PX has the CV32E40P ISA (CORE-V Xcv extensions, no A), built with the CORE-V GCC
+ISA = cv32e40px
+ifeq ($(zfinx),1)
+  XTEN = imc_$(PULP_XTEN_BASE)_zfinx_zhinxmin
+  ABI            ?= ilp
+  XABI           ?=
 else
-  ISA = cv32e40p
-  ifeq ($(zfinx),1)
-    XTEN = imc_$(PULP_XTEN_BASE)_zfinx_zhinxmin
-    ABI            ?= ilp
-    XABI           ?=
-  else
-    XTEN = imfc_$(PULP_XTEN_BASE)
-    ABI            ?= ilp
-    XABI           ?= f
-  endif
+  XTEN = imfc_$(PULP_XTEN_BASE)
+  ABI            ?= ilp
+  XABI           ?= f
 endif
 
 # Auto-detect test location under sw/tests/ recursively — no cluster= flag needed.
@@ -131,13 +115,7 @@ ifeq ($(debug),1)
 	FLAGS += -DDEBUG
 endif
 
-ifeq ($(core), CV32E40X)
-  FLAGS += -DCV32E40X
-endif
-
-ifeq ($(core), CV32E40P)
-  FLAGS += -DCV32E40P
-endif
+FLAGS += -D$(core)
 
 
 # Include directories
@@ -174,13 +152,8 @@ CC=riscv64-unknown-elf-gcc
 OBJDUMP=riscv64-unknown-elf-objdump
 NM=riscv64-unknown-elf-nm
 LD=$(CC)
-ifneq ($(core), CV32E40P)
-  CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
-	LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
-else
-  CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O2 -U__riscv__ -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
-  LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -U__riscv__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
-endif
+CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -O2 -U__riscv__ -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
+LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI) -D__$(ISA)__ -U__riscv__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
 
 # Spatz embedded binary support (via header)
 SPATZ_SW_DIR   := spatz/sw
@@ -234,12 +207,11 @@ spatz-header:
 # Build PULP cluster binary (magia-sdk style): produces
 #   sw/kernel_pulp/headers_bin/<test>_pulp_task_bin.h
 # embedding the position-independent flat binary in section .pulp_binary.
-# PULP cluster cores are always CV32E40P (see magia_tile.sv), independent of which core is selected via $(core)
 .PHONY: pulp-header
 pulp-header:
 	@if [ -n "$(PULP_TASKS)" ]; then \
 		echo "[PULP] Auto-detected tasks: $(PULP_TASKS)"; \
-		$(MAKE) -C $(PULP_SW_DIR) TEST_NAME=$(TEST_NAME) task="$(PULP_TASKS)" PULP_TASK_DIR=$(ROOT_DIR)/$(PULP_TASK_DIR_PATH) core=CV32E40P zfinx=$(cluster_zfinx) all; \
+		$(MAKE) -C $(PULP_SW_DIR) TEST_NAME=$(TEST_NAME) task="$(PULP_TASKS)" PULP_TASK_DIR=$(ROOT_DIR)/$(PULP_TASK_DIR_PATH) core=$(core) zfinx=$(cluster_zfinx) all; \
 	else \
 		echo "[PULP] No pulp_task/ directory — skipping PULP cluster compilation"; \
 	fi
@@ -364,24 +336,11 @@ include bender_sim.mk
 include bender_synth.mk
 include bender_profile.mk
 
-ifeq ($(core), CV32E40X)
-  bender_defs += -D COREV_ASSERT_OFF
-endif
-
-ifeq ($(core), CV32E40X)
-  bender_defs += -D CV32E40X
-else ifeq ($(core), CV32E40P)
-  bender_defs += -D CV32E40P
-else
-  $(error Detected unsupported core, must choose among CV32E40X or CV32E40P )
+ifneq ($(core), CV32E40PX)
+  $(error Detected unsupported core, must be CV32E40PX)
 endif
 
 bender_defs += -D ZFINX_CTRL=$(zfinx)
-# fpu_ss picks its predecoder from this `define, not from its PULP_ZFINX
-# parameter: without it Zfinx runs with the F predecoder (wrong rs/writeback).
-ifeq ($(zfinx),1)
-  bender_defs += -D PULP_ZFINX_DEF
-endif
 bender_defs += -D ZFINX_CLUSTER=$(cluster_zfinx)
 
 ifeq ($(fsync),1)
@@ -391,7 +350,8 @@ endif
 
 bender_targs += -t rtl
 bender_targs += -t test
-bender_targs += -t cv32e40p_include_tracer
+bender_targs += -t cv32e40px_include_tracer
+bender_targs += $(bender_excl)
 
 
 # Targets needed to avoid error even though the module is not used
@@ -405,12 +365,7 @@ else
 	tb         := magia_tile_tb
 endif
 
-ifeq ($(core), CV32E40X)
-  bender_targs += -t redmule_complex
-  bender_targs += -t cv32e40x_bhv
-else
-  bender_targs += -t redmule_hwpe
-endif
+bender_targs += -t redmule_hwpe
 
 # Define for Spatz target
 bender_defs  += -D TARGET_SPATZ

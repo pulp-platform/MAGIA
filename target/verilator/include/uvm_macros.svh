@@ -3,7 +3,7 @@
 //
 // Minimal stand-in for UVM's uvm_macros.svh, for the Verilator flow only.
 //
-// cv32e40p's tracer (bhv/cv32e40p_tracer.sv) pulls in UVM purely to report
+// cv32e40px's tracer (bhv/cv32e40px_tracer.sv) pulls in UVM purely to report
 // messages: it includes "uvm_macros.svh", imports uvm_pkg, and calls `uvm_info
 // and `uvm_fatal. Nothing else in it touches UVM -- the actual trace output
 // goes through $fopen/$fwrite. Verilator has no UVM, so that include alone

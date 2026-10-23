@@ -21,7 +21,6 @@
 
 module idma_axi_obi_transfer_ch 
   import magia_tile_pkg::*;
-  import cv32e40x_pkg::*;
   import idma_pkg::*;
 #(
   parameter magia_tile_pkg::idma_transfer_ch_e CHANNEL_T         = magia_tile_pkg::AXI2OBI,

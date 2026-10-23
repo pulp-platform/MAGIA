@@ -140,7 +140,7 @@ static inline void sentinel_end(){
 }
 
 static inline void ccount_en(){
-#if defined(CV32E40X) || defined(CV32E40P)
+#if defined(CV32E40PX)
     asm volatile("csrrci zero, 0x320, 0x1" ::);
 #else
     asm volatile("csrw 0x7E0, %0" :: "r"(0x1));
@@ -149,7 +149,7 @@ static inline void ccount_en(){
 }
 
 static inline void ccount_dis(){
-#if defined(CV32E40X) || defined(CV32E40P)
+#if defined(CV32E40PX)
     asm volatile("csrrsi zero, 0x320, 0x1" ::);
 #else
     asm volatile("csrw 0x7E1, %0" :: "r"(0x0));
@@ -158,7 +158,7 @@ static inline void ccount_dis(){
 
 static inline uint32_t get_cyclel(){
     uint32_t cyclel;
-#if defined(CV32E40X) || defined(CV32E40P)
+#if defined(CV32E40PX)
     asm volatile("csrr %0, cycle"
                  :"=r"(cyclel):);
 #else
@@ -183,13 +183,8 @@ uint32_t get_cycle(){
 
 static inline uint32_t get_timel(){
     uint32_t timel;
-#ifdef CV32E40X
-    asm volatile("csrr %0, time"
-                 :"=r"(timel):);
-#else
     asm volatile("csrr %0, 0x781"
                  :"=r"(timel):);
-#endif
     return timel;
 }
 

@@ -80,13 +80,13 @@ module magia_cluster_wrap
   // -------------------------------------------------------------------------
   logic [NClusterCores-1:0] cluster_core_sleep;
 
-  // Cluster core data interface (CV32E40P native channel type).
-  magia_tile_pkg::cv32e40p_core_data_req_t [NClusterCores-1:0] cluster_data_req;
-  magia_tile_pkg::cv32e40p_core_data_rsp_t [NClusterCores-1:0] cluster_data_rsp;
+  // Cluster core data interface
+  magia_tile_pkg::core_data_req_t [NClusterCores-1:0] cluster_data_req;
+  magia_tile_pkg::core_data_rsp_t [NClusterCores-1:0] cluster_data_rsp;
 
   // Per-core demux downstream ports ([i][TCDM], [i][OBI]).
-  magia_tile_pkg::cv32e40p_core_data_req_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_req;
-  magia_tile_pkg::cv32e40p_core_data_rsp_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_rsp;
+  magia_tile_pkg::core_data_req_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_req;
+  magia_tile_pkg::core_data_rsp_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_rsp;
 
   // Per-core 32-bit interrupt vector
   logic [NClusterCores-1:0][31:0]                                  cluster_irq_vec;
@@ -112,7 +112,7 @@ module magia_cluster_wrap
   assign cluster_irq_vec = '0;
 
   // ---------------------------------------------------------------------------
-  // Cluster cores (always CV32E40P)
+  // Cluster cores
   // ---------------------------------------------------------------------------
   for (genvar i = 0; i < NClusterCores; i++) begin : CORE
     logic core_clk;
@@ -124,11 +124,7 @@ module magia_cluster_wrap
       .clk_o     ( core_clk               )
     );
 
-    `ifndef CORE_TRACES
-      cv32e40p_top #(
-    `else
-      cv32e40p_wrapper #(
-    `endif
+    magia_cv32e40px_wrap #(
         .COREV_PULP          ( 1                                   ),
         .COREV_CLUSTER       ( 1                                   ),
         .FPU                 ( FPU                                 ),
@@ -136,7 +132,7 @@ module magia_cluster_wrap
         .FPU_ADDMUL_LAT      ( 1                                   ), // Match C_LAT_FP32=1 in fpnew wrapper
         .FPU_OTHERS_LAT      ( 1                                   ), // Match C_LAT_NONCOMP=1 in fpnew wrapper
         .NUM_MHPMCOUNTERS    ( 29                                  )
-      ) i_cv32e40p_core (
+      ) i_core (
         // Clock and Reset
         .clk_i                  ( core_clk              ),  // Per-core EU-controlled clock
         .rst_ni                 ( rst_ni                ),
@@ -196,8 +192,8 @@ module magia_cluster_wrap
     core_data_demux #(
       .NumSlv     ( CLUSTER_DATA_DEMUX_N_SLV                       ),
       .DefaultSlv ( CLUSTER_DATA_DEMUX_OBI_IDX                     ),
-      .req_t      ( magia_tile_pkg::cv32e40p_core_data_req_t ),
-      .rsp_t      ( magia_tile_pkg::cv32e40p_core_data_rsp_t )
+      .req_t      ( magia_tile_pkg::core_data_req_t                ),
+      .rsp_t      ( magia_tile_pkg::core_data_rsp_t                )
     ) i_cluster_data_demux (
       .clk_i            ( clk_i                     ),
       .rst_ni           ( rst_ni                    ),
@@ -217,12 +213,12 @@ module magia_cluster_wrap
   for (genvar i = 0; i < NClusterCores; i++) begin : gen_cluster_data_obi
 
     // --- OBI (peripheral) path ---
-    cv32e40p_data2obi_req i_cluster_data2obi (
+    data2obi_req i_cluster_data2obi (
       .data_req_i ( cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_OBI_IDX] ),
       .obi_req_o  ( cluster_obi_data_req_o[i]                   )
     );
 
-    cv32e40p_obi2data_rsp i_cluster_obi2data (
+    obi2data_rsp i_cluster_obi2data (
       .obi_rsp_i  ( cluster_obi_data_rsp_i[i]                   ),
       .data_rsp_o ( cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_OBI_IDX] )
     );
@@ -231,12 +227,12 @@ module magia_cluster_wrap
     magia_tile_pkg::core_obi_data_req_t cluster_tcdm_obi_req;
     magia_tile_pkg::core_obi_data_rsp_t cluster_tcdm_obi_rsp;
 
-    cv32e40p_data2obi_req i_cluster_tcdm_data2obi (
+    data2obi_req i_cluster_tcdm_data2obi (
       .data_req_i ( cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_TCDM_IDX] ),
       .obi_req_o  ( cluster_tcdm_obi_req                         )
     );
 
-    cv32e40p_obi2data_rsp i_cluster_tcdm_obi2data (
+    obi2data_rsp i_cluster_tcdm_obi2data (
       .obi_rsp_i  ( cluster_tcdm_obi_rsp                         ),
       .data_rsp_o ( cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_TCDM_IDX] )
     );

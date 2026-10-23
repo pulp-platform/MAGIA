@@ -35,10 +35,6 @@ module magia_isle
   import magia_pkg::*;
   import redmule_pkg::*;
   import hci_package::*;
-`ifdef CV32E40X
-  import cv32e40x_pkg::*;
-  import fpu_ss_pkg::*;
-`endif
   import snitch_icache_pkg::*;
   import idma_pkg::*;
   import obi_pkg::*;
@@ -100,14 +96,6 @@ module magia_isle
   // Debug halt and exception entry points of the control core
   input  logic[31:0]                              dm_halt_addr_i,
   input  logic[31:0]                              dm_exception_addr_i
-`ifdef CV32E40X
-  // Read only by the CV32E40X
-  , input  logic                                  scan_cg_en_i,
-  input  logic[31:0]                              mtvec_addr_i,
-  input  logic[ 3:0]                              mimpid_patch_i,
-  input  logic[63:0]                              time_i,
-  input  logic                                    wu_wfe_i
-`endif
 `ifdef MAGIA_ISLE_OBSERVE
   , output magia_tile_observe_t                   observe_o
 `endif
@@ -242,9 +230,6 @@ module magia_isle
   magia_tile_pkg::core_data_req_t  core_data_req;
   magia_tile_pkg::core_data_rsp_t  core_data_rsp;
 
-  logic fencei_flush_req;
-  logic fencei_flush_ack;
-
   // No CPU interrupts: the control core waits on the Event Unit
   logic[31:0] core_irq_vec;
 
@@ -253,131 +238,7 @@ module magia_isle
   // Debug request, forwarded by the Event Unit
   logic eu_core_dbg_req;
 
-`ifdef CV32E40X
-  logic                                clic_irq;
-  logic[magia_tile_pkg::CLIC_ID_W-1:0] clic_irq_id;
-  logic[7:0]                           clic_irq_level;
-  logic[1:0]                           clic_irq_priv;
-  logic                                clic_irq_shv;
-
-  assign clic_irq       = 1'b0;
-  assign clic_irq_id    = '0;
-  assign clic_irq_level = '0;
-  assign clic_irq_priv  = '0;
-  assign clic_irq_shv   = 1'b0;
-
-  // Shared by the core (cpu_*) and the FPU (coproc_*)
-  cv32e40x_if_xif #(
-    .X_NUM_RS    ( magia_tile_pkg::X_NUM_RS ),
-    .X_ID_WIDTH  ( magia_tile_pkg::X_ID_W   ),
-    .X_MEM_WIDTH ( magia_tile_pkg::X_MEM_W  ),
-    .X_RFR_WIDTH ( magia_tile_pkg::X_RFR_W  ),
-    .X_RFW_WIDTH ( magia_tile_pkg::X_RFW_W  ),
-    .X_MISA      ( magia_tile_pkg::X_MISA   ),
-    .X_ECS_XS    ( magia_tile_pkg::X_ECS_XS )
-  ) xif_if ();
-
-`ifndef CORE_TRACES
-  cv32e40x_core #(
-`else
-  cv32e40x_wrapper #(
-`endif
-    .RV32             ( TileCfg.CtrlCore.ISA            ),
-    .A_EXT            ( TileCfg.CtrlCore.A              ),
-    .B_EXT            ( TileCfg.CtrlCore.B              ),
-    .M_EXT            ( TileCfg.CtrlCore.M              ),
-    .X_EXT            ( magia_tile_pkg::X_EXT_EN        ),
-    .X_NUM_RS         ( magia_tile_pkg::X_NUM_RS        ),
-    .X_ID_WIDTH       ( magia_tile_pkg::X_ID_W          ),
-    .X_MEM_WIDTH      ( magia_tile_pkg::X_MEM_W         ),
-    .X_RFR_WIDTH      ( magia_tile_pkg::X_RFR_W         ),
-    .X_RFW_WIDTH      ( magia_tile_pkg::X_RFW_W         ),
-    .X_MISA           ( magia_tile_pkg::X_MISA          ),
-    .X_ECS_XS         ( magia_tile_pkg::X_ECS_XS        ),
-    .NUM_MHPMCOUNTERS ( 1                               ),
-    .DEBUG            ( 1                               ),
-    .DM_REGION_START  ( magia_tile_pkg::DM_REGION_START ),
-    .DM_REGION_END    ( magia_tile_pkg::DM_REGION_END   ),
-    .DBG_NUM_TRIGGERS ( 1                               ),
-    .PMA_NUM_REGIONS  ( 0                               ),
-    .PMA_CFG          (                                 ),
-    .CLIC             ( magia_tile_pkg::CLIC_EN         ),
-    .CLIC_ID_WIDTH    ( magia_tile_pkg::CLIC_ID_W       )
-  ) i_cv32e40x_ctrl_core (
-    .clk_i               ( core_clk               ),
-    .rst_ni              ( rst_ni                 ),
-    .scan_cg_en_i                                  ,
-
-    .boot_addr_i                                   ,
-    .mtvec_addr_i                                  ,
-    .dm_halt_addr_i                                ,
-    .dm_exception_addr_i                           ,
-    .mhartid_i           ( 32'(HartIdBase) + mhartid_i ),
-    .mimpid_patch_i                                ,
-
-    .instr_req_o         ( core_instr_req.req     ),
-    .instr_gnt_i         ( core_instr_rsp.gnt     ),
-    .instr_addr_o        ( core_instr_req.addr    ),
-    .instr_memtype_o     ( core_instr_req.memtype ),
-    .instr_prot_o        ( core_instr_req.prot    ),
-    .instr_dbg_o         ( core_instr_req.dbg     ),
-    .instr_rvalid_i      ( core_instr_rsp.rvalid  ),
-    .instr_rdata_i       ( core_instr_rsp.rdata   ),
-    .instr_err_i         ( core_instr_rsp.err     ),
-
-    .data_req_o          ( core_data_req.req      ),
-    .data_gnt_i          ( core_data_rsp.gnt      ),
-    .data_addr_o         ( core_data_req.addr     ),
-    .data_atop_o         ( core_data_req.atop     ),
-    .data_be_o           ( core_data_req.be       ),
-    .data_memtype_o      ( core_data_req.memtype  ),
-    .data_prot_o         ( core_data_req.prot     ),
-    .data_dbg_o          ( core_data_req.dbg      ),
-    .data_wdata_o        ( core_data_req.wdata    ),
-    .data_we_o           ( core_data_req.we       ),
-    .data_rvalid_i       ( core_data_rsp.rvalid   ),
-    .data_rdata_i        ( core_data_rsp.rdata    ),
-    .data_err_i          ( core_data_rsp.err      ),
-    .data_exokay_i       ( core_data_rsp.exokay   ),
-
-    .mcycle_o                                      ,
-    .time_i                                        ,
-
-    .xif_compressed_if   ( xif_if.cpu_compressed  ),
-    .xif_issue_if        ( xif_if.cpu_issue       ),
-    .xif_commit_if       ( xif_if.cpu_commit      ),
-    .xif_mem_if          ( xif_if.cpu_mem         ),
-    .xif_mem_result_if   ( xif_if.cpu_mem_result  ),
-    .xif_result_if       ( xif_if.cpu_result      ),
-
-    .irq_i               ( core_irq_vec           ),
-
-    .clic_irq_i          ( clic_irq               ),
-    .clic_irq_id_i       ( clic_irq_id            ),
-    .clic_irq_level_i    ( clic_irq_level         ),
-    .clic_irq_priv_i     ( clic_irq_priv          ),
-    .clic_irq_shv_i      ( clic_irq_shv           ),
-
-    .fencei_flush_req_o  ( fencei_flush_req       ),
-    .fencei_flush_ack_i  ( fencei_flush_ack       ),
-
-    .debug_req_i         ( eu_core_dbg_req        ),
-    .debug_havereset_o                             ,
-    .debug_running_o                               ,
-    .debug_halted_o                                ,
-    .debug_pc_valid_o                              ,
-    .debug_pc_o                                    ,
-
-    .fetch_enable_i                                ,
-    .core_sleep_o                                  ,
-    .wu_wfe_i
-  );
-`else
-`ifndef CORE_TRACES
-  cv32e40p_top #(
-`else
-  cv32e40p_wrapper #(
-`endif
+  magia_cv32e40px_wrap #(
     .COREV_PULP          ( 1                                   ),
     .COREV_CLUSTER       ( 1                                   ),
     .FPU                 ( FPU                                 ),
@@ -385,7 +246,7 @@ module magia_isle
     .FPU_ADDMUL_LAT      ( 1                                   ),  // Match C_LAT_FP32 in the fpnew wrapper
     .FPU_OTHERS_LAT      ( 1                                   ),  // Match C_LAT_NONCOMP in the fpnew wrapper
     .NUM_MHPMCOUNTERS    ( 29                                  )
-  ) i_cv32e40p_ctrl_core (
+  ) i_ctrl_core (
     .clk_i                  ( core_clk              ),
     .rst_ni                 ( rst_ni                ),
 
@@ -432,99 +293,9 @@ module magia_isle
   assign mcycle_o         = 64'h0;
   assign debug_pc_valid_o = 1'b0;
   assign debug_pc_o       = 32'h0;
-`endif
 
 /*******************************************************/
 /**                  Control Core End                 **/
-/*******************************************************/
-/**           Floating-Point Unit Beginning           **/
-/*******************************************************/
-
-`ifdef CV32E40X
-  logic                           x_compressed_valid;
-  logic                           x_compressed_ready;
-  fpu_ss_pkg::x_compressed_req_t  x_compressed_req;
-  fpu_ss_pkg::x_compressed_resp_t x_compressed_resp;
-  logic                           x_issue_valid;
-  logic                           x_issue_ready;
-  fpu_ss_pkg::x_issue_req_t       x_issue_req;
-  fpu_ss_pkg::x_issue_resp_t      x_issue_resp;
-  logic                           x_commit_valid;
-  fpu_ss_pkg::x_commit_t          x_commit;
-  logic                           x_mem_valid;
-  logic                           x_mem_ready;
-  fpu_ss_pkg::x_mem_req_t         x_mem_req;
-  fpu_ss_pkg::x_mem_resp_t        x_mem_resp;
-  logic                           x_mem_result_valid;
-  fpu_ss_pkg::x_mem_result_t      x_mem_result;
-  logic                           x_result_valid;
-  logic                           x_result_ready;
-  fpu_ss_pkg::x_result_t          x_result;
-
-  xif_if2struct i_xif_if2struct (
-    .xif_compressed_if_i  ( xif_if.coproc_compressed ),
-    .xif_issue_if_i       ( xif_if.coproc_issue      ),
-    .xif_commit_if_i      ( xif_if.coproc_commit     ),
-    .xif_mem_if_o         ( xif_if.coproc_mem        ),
-    .xif_mem_result_if_i  ( xif_if.coproc_mem_result ),
-    .xif_result_if_o      ( xif_if.coproc_result     ),
-    .x_compressed_valid_o ( x_compressed_valid       ),
-    .x_compressed_ready_i ( x_compressed_ready       ),
-    .x_compressed_req_o   ( x_compressed_req         ),
-    .x_compressed_resp_i  ( x_compressed_resp        ),
-    .x_issue_valid_o      ( x_issue_valid            ),
-    .x_issue_ready_i      ( x_issue_ready            ),
-    .x_issue_req_o        ( x_issue_req              ),
-    .x_issue_resp_i       ( x_issue_resp             ),
-    .x_commit_valid_o     ( x_commit_valid           ),
-    .x_commit_o           ( x_commit                 ),
-    .x_mem_valid_i        ( x_mem_valid              ),
-    .x_mem_ready_o        ( x_mem_ready              ),
-    .x_mem_req_i          ( x_mem_req                ),
-    .x_mem_resp_o         ( x_mem_resp               ),
-    .x_mem_result_valid_o ( x_mem_result_valid       ),
-    .x_mem_result_o       ( x_mem_result             ),
-    .x_result_valid_i     ( x_result_valid           ),
-    .x_result_ready_o     ( x_result_ready           ),
-    .x_result_i           ( x_result                 )
-  );
-
-  fpu_ss #(
-    .PULP_ZFINX                ( magia_tile_pkg::ZFINX_CTRL         ),
-    .INPUT_BUFFER_DEPTH        ( magia_tile_pkg::FPU_BUFFER_DEPTH   ),
-    .INPUT_BUFFER_FALL_THROUGH ( magia_tile_pkg::FPU_BUFFER_FT      ),
-    .OUT_OF_ORDER              ( magia_tile_pkg::FPU_OOO            ),
-    .FORWARDING                ( magia_tile_pkg::FPU_FWD            ),
-    .PulpDivsqrt               ( magia_tile_pkg::FPU_DIVSQRT        ),
-    .FPU_FEATURES              ( magia_tile_pkg::FPU_FEATURES       ),
-    .FPU_IMPLEMENTATION        ( magia_tile_pkg::FPU_IMPLEMENTATION )
-  ) i_fpu (
-    .clk_i                ( sys_clk            ),
-    .rst_ni               ( rst_ni             ),
-    .x_compressed_valid_i ( x_compressed_valid ),
-    .x_compressed_ready_o ( x_compressed_ready ),
-    .x_compressed_req_i   ( x_compressed_req   ),
-    .x_compressed_resp_o  ( x_compressed_resp  ),
-    .x_issue_valid_i      ( x_issue_valid      ),
-    .x_issue_ready_o      ( x_issue_ready      ),
-    .x_issue_req_i        ( x_issue_req        ),
-    .x_issue_resp_o       ( x_issue_resp       ),
-    .x_commit_valid_i     ( x_commit_valid     ),
-    .x_commit_i           ( x_commit           ),
-    .x_mem_valid_o        ( x_mem_valid        ),
-    .x_mem_ready_i        ( x_mem_ready        ),
-    .x_mem_req_o          ( x_mem_req          ),
-    .x_mem_resp_i         ( x_mem_resp         ),
-    .x_mem_result_valid_i ( x_mem_result_valid ),
-    .x_mem_result_i       ( x_mem_result       ),
-    .x_result_valid_o     ( x_result_valid     ),
-    .x_result_ready_i     ( x_result_ready     ),
-    .x_result_o           ( x_result           )
-  );
-`endif
-
-/*******************************************************/
-/**              Floating-Point Unit End              **/
 /*******************************************************/
 /**         Control Core i$ Beginning                 **/
 /*******************************************************/
@@ -539,12 +310,7 @@ module magia_isle
   logic[magia_tile_pkg::NR_FETCH_PORTS-1:0]                                 flush_ready;
 
   assign enable_prefetching = 1'b0;
-`ifdef CV32E40X
-  assign flush_valid[0]   = fencei_flush_req;
-  assign fencei_flush_ack = flush_ready[0];
-`else
-  assign flush_valid      = '0;
-`endif
+  assign flush_valid        = '0;
 
   instr2cache_req i_core_instr2cache_req (
     .instr_req_i ( core_instr_req       ),
@@ -620,7 +386,7 @@ module magia_isle
     .DefaultSlv  ( magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX ),
     .EnSerialSlv ( 1'b1                                    ),  // EU waits block like cv.elw
     .SerialSlv   ( magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX  ),
-    .EnAtomics   ( magia_tile_pkg::CORE_DATA_ATOMICS       ),
+    .EnAtomics   ( 1'b0                                    ),  // No A extension
     .req_t       ( magia_tile_pkg::core_data_req_t         ),
     .rsp_t       ( magia_tile_pkg::core_data_rsp_t         )
   ) i_core_data_demux (
@@ -651,9 +417,6 @@ module magia_isle
   assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].rvalid = eu_direct_rsp.rvalid;
   assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].rdata  = eu_direct_rsp.rdata;
   assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].err    = eu_direct_rsp.err;
-`ifdef CV32E40X
-  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].exokay = 1'b0;
-`endif
 
   eu_direct_cut #(
     .eu_direct_req_t ( magia_tile_pkg::eu_direct_req_t ),
@@ -700,47 +463,25 @@ module magia_isle
   tile_hci_data_req_t                 core_l1_direct_req;
   tile_hci_data_rsp_t                 core_l1_direct_rsp;
 
-`ifdef CV32E40X
-  cv32e40x_data2obi_req i_core_data2obi_req (
+  data2obi_req i_core_data2obi_req (
     .data_req_i ( core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX] ),
     .obi_req_o  ( core_obi_data_req                                            )
   );
 
-  cv32e40x_obi2data_rsp i_core_obi2data_rsp (
+  obi2data_rsp i_core_obi2data_rsp (
     .obi_rsp_i  ( core_obi_data_rsp                                            ),
     .data_rsp_o ( core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX] )
   );
 
-  cv32e40x_data2obi_req i_core_l1_direct_data2obi_req (
+  data2obi_req i_core_l1_direct_data2obi_req (
     .data_req_i ( core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX] ),
     .obi_req_o  ( core_l1_direct_obi_req                                        )
   );
 
-  cv32e40x_obi2data_rsp i_core_l1_direct_obi2data_rsp (
+  obi2data_rsp i_core_l1_direct_obi2data_rsp (
     .obi_rsp_i  ( core_l1_direct_obi_rsp                                        ),
     .data_rsp_o ( core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX] )
   );
-`else
-  cv32e40p_data2obi_req i_core_data2obi_req (
-    .data_req_i ( core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX] ),
-    .obi_req_o  ( core_obi_data_req                                            )
-  );
-
-  cv32e40p_obi2data_rsp i_core_obi2data_rsp (
-    .obi_rsp_i  ( core_obi_data_rsp                                            ),
-    .data_rsp_o ( core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX] )
-  );
-
-  cv32e40p_data2obi_req i_core_l1_direct_data2obi_req (
-    .data_req_i ( core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX] ),
-    .obi_req_o  ( core_l1_direct_obi_req                                        )
-  );
-
-  cv32e40p_obi2data_rsp i_core_l1_direct_obi2data_rsp (
-    .obi_rsp_i  ( core_l1_direct_obi_rsp                                        ),
-    .data_rsp_o ( core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX] )
-  );
-`endif
 
 `ifndef SYNTHESIS
   assert property (@(posedge sys_clk) disable iff (!rst_ni)
@@ -2131,22 +1872,13 @@ module magia_isle
     observe_o.axi_aw_valid = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_EXT_IDX].aw_valid;
     observe_o.axi_w_data   = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_EXT_IDX].w.data;
     observe_o.axi_w_valid  = axi_xbar_mst_req[magia_tile_pkg::AXI_MST_EXT_IDX].w_valid;
-`ifdef CV32E40X
-    observe_o.instr_ex = i_cv32e40x_ctrl_core.core_i.id_stage_i.id_ex_pipe_o.instr.bus_resp.rdata;
-    observe_o.instr_id = i_cv32e40x_ctrl_core.core_i.id_stage_i.if_id_pipe_i.instr.bus_resp.rdata;
-    observe_o.instr_wb = i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr_valid ?
-                         i_cv32e40x_ctrl_core.core_i.wb_stage_i.ex_wb_pipe_i.instr.bus_resp.rdata : '0;
-    observe_o.wb_data  = observe_o.instr_wb;
-`else
-    // magia_dv always defines CORE_TRACES, so the control core is a cv32e40p_wrapper
-    observe_o.instr_ex = i_cv32e40p_ctrl_core.cv32e40p_top_i.core_i.ex_valid ?
-                         i_cv32e40p_ctrl_core.cv32e40p_top_i.core_i.id_stage_i.instr_rdata_i : '0;
-    observe_o.instr_id = i_cv32e40p_ctrl_core.cv32e40p_top_i.core_i.id_stage_i.instr_rdata_i;
-    observe_o.instr_wb = i_cv32e40p_ctrl_core.cv32e40p_top_i.core_i.wb_valid ?
-                         i_cv32e40p_ctrl_core.cv32e40p_top_i.core_i.instr_rdata_id : '0;
-    observe_o.wb_data  = i_cv32e40p_ctrl_core.cv32e40p_top_i.core_i.wb_valid ?
-                         i_cv32e40p_ctrl_core.cv32e40p_top_i.core_i.regfile_wdata : '0;
-`endif
+    observe_o.instr_ex = i_ctrl_core.i_cv32e40px_top.core_i.ex_valid ?
+                         i_ctrl_core.i_cv32e40px_top.core_i.id_stage_i.instr_rdata_i : '0;
+    observe_o.instr_id = i_ctrl_core.i_cv32e40px_top.core_i.id_stage_i.instr_rdata_i;
+    observe_o.instr_wb = i_ctrl_core.i_cv32e40px_top.core_i.wb_valid ?
+                         i_ctrl_core.i_cv32e40px_top.core_i.instr_rdata_id : '0;
+    observe_o.wb_data  = i_ctrl_core.i_cv32e40px_top.core_i.wb_valid ?
+                         i_ctrl_core.i_cv32e40px_top.core_i.regfile_wdata : '0;
   end
 `endif
 

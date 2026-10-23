@@ -67,7 +67,7 @@ typedef struct {
 typedef uint16_t fp16_t;
 
 int main(void) {
-    // Enable cycle counter (generic for both CV32E40P and CV32E40X)
+    // Enable cycle counter
     ccount_en();
     
 

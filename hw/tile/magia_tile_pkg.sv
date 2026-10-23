@@ -260,19 +260,7 @@ package magia_tile_pkg;
   parameter int unsigned UWH     = magia_pkg::USR_W;                                    // User Width for HWPE Interconnect
   localparam int unsigned SWH    = DWH/BWH;                                             // Strobe Width for HWPE Interconnect
 
-  // Parameters used by the cv32e40x core
-  parameter bit          X_EXT_EN        = 1;                                           // Enable eXtension Interface (X) support, see eXtension Interface
-  parameter int unsigned X_ID_W          = 4;                                           // Identification width for the eXtension interface
-  parameter int unsigned X_MEM_W         = 32;                                          // Memory access width for loads/stores via the eXtension interface
-  parameter int unsigned X_RFR_W         = 32;                                          // Register file read access width for the eXtension interface
-  parameter int unsigned X_RFW_W         = 32;                                          // Register file write access width for the eXtension interface
-  parameter bit[31:0]    X_MISA          = 32'h20;                                      // MISA extensions implemented on the eXtension interface, see Machine ISA (misa). X_MISA can only be used to set a subset of the following: {P, V, F, M}
-  parameter bit[1 :0]    X_ECS_XS        = 2'b0;                                        // Default value for mstatus.XS if X_EXT = 1, see Machine Status (mstatus)
-  parameter bit[31:0]    DM_REGION_START = 32'hF0000000;                                // Start address of Debug Module region, see Debug & Trigger
-  parameter bit[31:0]    DM_REGION_END   = 32'hF0003FFF;                                // End address of Debug Module region, see Debug & Trigger
-  parameter bit          CLIC_EN         = 1'b0;                                        // Specifies whether Smclic, Smclicshv and Smclicconfig are supported
-
-  // Parameters used by cv32e40p core
+  // Parameters used by the cv32e40px cores
   parameter bit          FPU                 = 1'b1;                                    // Enable FPU (main feature)
   parameter logic[31:0]  DM_HALT_ADDR        = 32'h1A110800;                            // Debug module halt address
 
@@ -289,15 +277,6 @@ package magia_tile_pkg;
   parameter bit           ZFINX_CTRL    = ZFINX_CTRL_PARAM;    // Zfinx for the control core
   parameter bit           ZFINX_CLUSTER = ZFINX_CLUSTER_PARAM; // Zfinx for the PULP cluster cores
 
-`ifdef CV32E40X
-  parameter int unsigned X_NUM_RS        = 3;                                           // Number of register file read ports that can be used by the eXtension interface
-  parameter int unsigned CLIC_ID_W       = 1;                                           // Width of clic_irq_id_i and clic_irq_id_o. The maximum number of supported interrupts in CLIC mode is 2^CLIC_ID_WIDTH. Trap vector table alignment is restricted as described in Machine Trap Vector Table Base Address (mtvt)
-`else
-  parameter int unsigned X_NUM_RS            = 2;                                       // Number of register file read ports (R-type instructions have 2 source operands)
-  parameter int unsigned CLIC_ID_W           = 5;                                       // CLIC interrupt ID width (5 bits for 32 interrupts)
-`endif
-  parameter int unsigned CLIC_ID_W_CLUSTER    = 5;                                       // cv32e40p irq_id_o/irq_id_i width (fixed, independent of the ctrl core's CLIC_ID_W)
-  
   // Cluster-private Event Unit configuration
   parameter int unsigned CLUSTER_EU_NB_SW_EVT       = 8;                                // SW events (pulp-sdk uses up to 8)
   parameter int unsigned CLUSTER_EU_NB_HW_MUT       = 1;                                // HW mutexes (pulp_cluster default)
@@ -310,11 +289,11 @@ package magia_tile_pkg;
   parameter int unsigned REDMULE_UW         = UWH;                                      // RedMulE User Width
 
   // Parameters used by OBI
-  parameter int unsigned AUSER_WIDTH  = 1;                                              // Width of the auser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned WUSER_WIDTH  = 1;                                              // Width of the wuser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned ACHK_WIDTH   = 1;                                              // Width of the achk  signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned RUSER_WIDTH  = 1;                                              // Width of the ruser signal (see OBI documentation): not used by the CV32E40X
-  parameter int unsigned RCHK_WIDTH   = 1;                                              // Width of the rchk  signal (see OBI documentation): not used by the CV32E40X
+  parameter int unsigned AUSER_WIDTH  = 1;                                              // Width of the auser signal (see OBI documentation)
+  parameter int unsigned WUSER_WIDTH  = 1;                                              // Width of the wuser signal (see OBI documentation)
+  parameter int unsigned ACHK_WIDTH   = 1;                                              // Width of the achk  signal (see OBI documentation)
+  parameter int unsigned RUSER_WIDTH  = 1;                                              // Width of the ruser signal (see OBI documentation)
+  parameter int unsigned RCHK_WIDTH   = 1;                                              // Width of the rchk  signal (see OBI documentation)
   parameter int unsigned AID_WIDTH    = 1;                                              // Width of the aid   signal (address channel identifier, see OBI documentation)
   parameter int unsigned RID_WIDTH    = 1;                                              // Width of the rid   signal (response channel identifier, see OBI documentation)
   parameter int unsigned MID_WIDTH    = 1;                                              // Width of the mid   signal (manager identifier, see OBI documentation)
@@ -525,30 +504,6 @@ package magia_tile_pkg;
   parameter int unsigned CLUSTER_FILL_AW        = magia_pkg::ADDR_W;                            // i$ Fill interface address width. Same as FILL_AW; >= 1.
   parameter int unsigned CLUSTER_FILL_DW        = magia_pkg::DATA_W;                            // i$ Fill interface data width. Power of two; >= 8.
 
-  // Parameters used by the FPU
-  parameter int unsigned                    FPU_BUFFER_DEPTH   = 8;                     // FPU FIFO depth that buffers instructions coming from core
-  parameter bit                             FPU_BUFFER_FT      = 0;                     // FPU FIFO fall through that buffers instructions coming from core
-  parameter bit                             FPU_OOO            = 1;                     // FPU enable out-of-order execution
-  parameter bit                             FPU_FWD            = 1;                     // FPU enable forwarding from output to input of FPnew
-  parameter bit                             FPU_DIVSQRT        = 0;                     // FPU disable FPnew T-head-based DivSqrt unit (supported only for FP32 unit)
-  parameter fpnew_pkg::fpu_features_t       FPU_FEATURES       = '{
-    Width:         32,
-    EnableVectors: 1'b0,
-    EnableNanBox:  1'b1,
-    FpFmtMask:     6'b100000,
-    IntFmtMask:    4'b0010
-  };                                                                                    // FPU features: support only for FP32 and INT32
-  parameter fpnew_pkg::fpu_implementation_t FPU_IMPLEMENTATION = '{
-    PipeRegs:   '{default: 2},
-    UnitTypes:  '{'{default: fpnew_pkg::PARALLEL},
-                  '{default: fpnew_pkg::MERGED},
-                  '{default: fpnew_pkg::PARALLEL},
-                  '{default: fpnew_pkg::MERGED},
-                  '{default: fpnew_pkg::DISABLED}
-                },
-    PipeConfig: fpnew_pkg::DISTRIBUTED
-  };                                                                                    // FPU implementation
-
   typedef struct packed {
     int unsigned                 idx;
     logic[magia_pkg::ADDR_W-1:0] start_addr;
@@ -601,44 +556,14 @@ package magia_tile_pkg;
     logic[3                  :0] be;
     logic[magia_pkg::DATA_W-1:0] wdata;
     logic                        we;
-  } cv32e40p_core_data_req_t;
+  } core_data_req_t;
 
   typedef struct packed {
     logic                        gnt;
     logic                        rvalid;
     logic[magia_pkg::DATA_W-1:0] rdata;
     logic                        err;
-  } cv32e40p_core_data_rsp_t;
-
-  typedef struct packed {
-    logic                        req;
-    logic[magia_pkg::ADDR_W-1:0] addr;
-    logic[5                  :0] atop;
-    logic[3                  :0] be;
-    logic[1                  :0] memtype;
-    logic[2                  :0] prot;
-    logic                        dbg;
-    logic[magia_pkg::DATA_W-1:0] wdata;
-    logic                        we;
-  } cv32e40x_core_data_req_t;
-
-  typedef struct packed {
-    logic                        gnt;
-    logic                        rvalid;
-    logic[magia_pkg::DATA_W-1:0] rdata;
-    logic                        err;
-    logic                        exokay;
-  } cv32e40x_core_data_rsp_t;
-
-`ifdef CV32E40X
-  typedef cv32e40x_core_data_req_t core_data_req_t;
-  typedef cv32e40x_core_data_rsp_t core_data_rsp_t;
-  localparam bit CORE_DATA_ATOMICS = 1'b1;
-`else
-  typedef cv32e40p_core_data_req_t core_data_req_t;
-  typedef cv32e40p_core_data_rsp_t core_data_rsp_t;
-  localparam bit CORE_DATA_ATOMICS = 1'b0;
-`endif
+  } core_data_rsp_t;
 
   // Core data demux signals: [0] = TCDM (L1) direct path, [1] = OBI xbar (default), [2] = EU direct link window
   localparam int unsigned CORE_DATA_DEMUX_N_SLV    = 3;

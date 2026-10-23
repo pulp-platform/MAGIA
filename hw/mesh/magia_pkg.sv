@@ -61,13 +61,6 @@ package magia_pkg;
   } l1_cfg_t;
 
   typedef struct packed {
-    cv32e40x_pkg::rv32_e  ISA;  // Base integer ISA (RV32I/RV32E)
-    cv32e40x_pkg::a_ext_e A;    // Atomic extension
-    cv32e40x_pkg::b_ext_e B;    // Bit-manipulation extension
-    cv32e40x_pkg::m_ext_e M;    // Multiply/divide extension
-  } ctrl_core_cfg_t;
-
-  typedef struct packed {
     idma_pkg::error_cap_e ErrorCap;  // iDMA error handling capability
   } idma_cfg_t;
 
@@ -92,7 +85,7 @@ package magia_pkg;
   } spatz_cfg_t;
 
   typedef struct packed {
-    int unsigned NumCores;  // Number of cv32e40p cluster cores
+    int unsigned NumCores;  // Number of cv32e40px cluster cores
     int unsigned IcachePrivateSize;     // private L0 tier size in bytes, per core
     int unsigned IcacheSharedSize;      // shared tier size in bytes (whole cluster)
     int unsigned IcacheNumWays;         // shared-tier set associativity
@@ -101,11 +94,10 @@ package magia_pkg;
 
   typedef struct packed {
     l1_cfg_t        L1;        // L1 scratchpad (TCDM) geometry
-    ctrl_core_cfg_t CtrlCore;  // Control core (cv32e40x) ISA extensions
     idma_cfg_t      IDma;      // iDMA parameters
     bit             EnRedMule; // RedMulE HWPE: engine + HCI HWPE port + OBI control port
     bit             EnSpatzCC; // Spatz CC: core complex + bootrom + dedicated I$ + HCI/OBI master ports
-    bit             EnCluster; // PULP cluster: cv32e40p cores + shared I$ + OBI master ports
+    bit             EnCluster; // PULP cluster: cv32e40px cores + shared I$ + OBI master ports
     bit             EnCollective; // Narrow collectives: control registers + collective_gen on the narrow master port
     redmule_cfg_t   RedMule;   // RedMulE parameters (valid iff EnRedMule)
     spatz_cfg_t     Spatz;     // Spatz CC parameters (valid iff EnSpatzCC)
@@ -117,13 +109,6 @@ package magia_pkg;
   localparam l1_cfg_t MagiaL1DefaultCfg = '{
     NumBanks:     N_MEM_BANKS,
     NumWordsBank: N_WORDS_BANK
-  };
-
-  localparam ctrl_core_cfg_t MagiaCtrlCoreDefaultCfg = '{
-    ISA: cv32e40x_pkg::RV32I,
-    A:   cv32e40x_pkg::A,
-    B:   cv32e40x_pkg::ZBA_ZBB_ZBC_ZBS,
-    M:   cv32e40x_pkg::M
   };
 
   localparam idma_cfg_t MagiaIDmaDefaultCfg = '{
@@ -198,7 +183,6 @@ package magia_pkg;
   // All accelerators enabled (full tile)
   localparam magia_tile_cfg_t MagiaTileDefaultCfg = '{
     L1:        MagiaL1DefaultCfg,
-    CtrlCore:  MagiaCtrlCoreDefaultCfg,
     IDma:      MagiaIDmaDefaultCfg,
     EnRedMule: 1'b1,
     EnSpatzCC: 1'b1,
@@ -212,7 +196,6 @@ package magia_pkg;
   // RedMulE-only tile
   localparam magia_tile_cfg_t MagiaTileRedMuleCfg = '{
     L1:        MagiaL1DefaultCfg,
-    CtrlCore:  MagiaCtrlCoreDefaultCfg,
     IDma:      MagiaIDmaDefaultCfg,
     EnRedMule: 1'b1,
     EnSpatzCC: 1'b0,
@@ -226,7 +209,6 @@ package magia_pkg;
    // SpatzCC-only tile
   localparam magia_tile_cfg_t MagiaTileSpatzCfg = '{
     L1:        MagiaL1DefaultCfg,
-    CtrlCore:  MagiaCtrlCoreDefaultCfg,
     IDma:      MagiaIDmaDefaultCfg,
     EnRedMule: 1'b0,
     EnSpatzCC: 1'b1,
@@ -240,7 +222,6 @@ package magia_pkg;
   // PulpCluster-only tile
   localparam magia_tile_cfg_t MagiaTileClusterCfg = '{
     L1:        MagiaL1DefaultCfg,
-    CtrlCore:  MagiaCtrlCoreDefaultCfg,
     IDma:      MagiaIDmaDefaultCfg,
     EnRedMule: 1'b0,
     EnSpatzCC: 1'b0,
