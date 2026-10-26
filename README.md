@@ -2,7 +2,7 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE.APACHE)
 [![SHL-0.51 license](https://img.shields.io/badge/license-SHL--0.51-green)](LICENSE.SHL)
 
-This repo contains MAGIA (**M**esh **A**rchitecture for **G**enerative **I**ntelligence **A**cceleration), an open-source large-scale accelerator designed for Generative Artificial Intelligence (GenAI). MAGIA is a network of tiles that have at their heart [RedMulE](https://github.com/pulp-platform/redmule) for General Matrix Multiply (GeMM) acceleration, [iDMA](https://github.com/pulp-platform/iDMA) for fast and efficient data movement, [Spatz Core Complex (Spatz CC)](https://github.com/pulp-platform/spatz) for vector workloads acceleration, a [PULP cluster](https://github.com/pulp-platform/cv32e40p) of 8 RISC-V cores for data-parallel workloads, and an L1 scratchpad memory (SPM). Tiles are connected to a mesh Network-on-Chip (NoC) - [FlooNoC](https://github.com/pulp-platform/FlooNoC) - used for communication, and a dedicated network for synchronization - [FractalSync](https://github.com/VictorIsachi/fractal_sync). Each tile is equipped with an [Event Unit](https://github.com/pulp-platform/event_unit_flex) for tile synchronization and event aggregation. MAGIA is designed to support matrices of sizes that vary by orders of magnitude, and also sparse matrix multiplication.
+This repo contains MAGIA (**M**esh **A**rchitecture for **G**enerative **I**ntelligence **A**cceleration), an open-source large-scale accelerator designed for Generative Artificial Intelligence (GenAI). MAGIA is a network of tiles that have at their heart [RedMulE](https://github.com/pulp-platform/redmule) for General Matrix Multiply (GeMM) acceleration, [iDMA](https://github.com/pulp-platform/iDMA) for fast and efficient data movement, [Spatz Core Complex (Spatz CC)](https://github.com/pulp-platform/spatz) for vector workloads acceleration, a [PULP cluster](https://github.com/FondazioneChipsIT/cv32e40px) of 8 RISC-V cores for data-parallel workloads, and an L1 scratchpad memory (SPM). Tiles are connected to a mesh Network-on-Chip (NoC) - [FlooNoC](https://github.com/pulp-platform/FlooNoC) - used for communication, and a dedicated network for synchronization - [FractalSync](https://github.com/VictorIsachi/fractal_sync). Each tile is equipped with an [Event Unit](https://github.com/pulp-platform/event_unit_flex) for tile synchronization and event aggregation. MAGIA is designed to support matrices of sizes that vary by orders of magnitude, and also sparse matrix multiplication.
 
 MAGIA is developed as part of the [PULP (Parallel Ultra-Low Power)](https://pulp-platform.org/) project, a joint effort between ETH Zurich and the University of Bologna.
 
@@ -31,7 +31,7 @@ The following *optional* parameters can be specified:
 
 `gui`: **0**|**1** (**Default**: 0). 0 simulation without GUI; 1 simulation with GUI.
 
-`core`: **CV32E40P**|**CV32E40X** (**Default**: CV32E40P). Control core type; the cluster cores are always CV32E40P.
+`core`: **CV32E40PX** (**Default**: CV32E40PX). Core of the tile and of the PULP cluster, the only one supported.
 
 `fsync`: **0**|**1** (**Default**: 1). 1 builds the FractalSync network (`MAGIA_FSYNC`).
 
@@ -96,9 +96,6 @@ targets, its own build directories under `verilator/`, and needs no
 
 The following *optional* parameters can be specified:
 
-`core`: **CV32E40P**|**CV32E40X** (**Default**: CV32E40P). Each core and each
-`mesh_dv` has its own build directory, so the models can be built side by side.
-
 `VERILATOR_JOBS`: **N** (**Default**: 16). Parallelism used to *build* the model.
 Unrelated to simulation speed.
 
@@ -115,11 +112,11 @@ precompiled headers, and the model then segfaults at time zero.
 
 **1)** *Build* the model (`MAGIA` folder):
 ```bash
-make verilate core=CV32E40P mesh_dv=1 VERILATOR_JOBS=16
+make verilate core=CV32E40PX mesh_dv=1 VERILATOR_JOBS=16
 ```
 **2)** *Compile and run* a test (`MAGIA` folder):
 ```bash
-make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test
+make verilate-run core=CV32E40PX mesh_dv=1 test=inter_l1_test
 ```
 Step **1** is *required at least once*: `verilate-run` compiles the test but
 never the model — it runs the model already built for that `mesh_dv` and
@@ -129,8 +126,8 @@ never the model — it runs the model already built for that `mesh_dv` and
 **Full example**:
 ```bash
 source setup_env.sh
-make verilate core=CV32E40P mesh_dv=1 VERILATOR_JOBS=16
-make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test
+make verilate core=CV32E40PX mesh_dv=1 VERILATOR_JOBS=16
+make verilate-run core=CV32E40PX mesh_dv=1 test=inter_l1_test
 ```
 
 Other targets: `verilate-gen` (code generation only), `verilate-build` (native
@@ -143,8 +140,8 @@ tile library instead of inlining it), and `clean-verilate`.
 directory, and runs the same tile tests as the Questa flow (`make run mesh_dv=0`):
 
 ```bash
-make verilate core=CV32E40P mesh_dv=0 VERILATOR_JOBS=16
-make verilate-run core=CV32E40P mesh_dv=0 test=hello_world
+make verilate core=CV32E40PX mesh_dv=0 VERILATOR_JOBS=16
+make verilate-run core=CV32E40PX mesh_dv=0 test=hello_world
 ```
 
 #### Waveforms (FST)
@@ -154,7 +151,7 @@ to capture a waveform. Dumping is off until a run asks for it, and a run that
 does not ask pays nothing beyond a larger binary:
 
 ```bash
-make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test VERILATOR_FST=dump.fst
+make verilate-run core=CV32E40PX mesh_dv=1 test=inter_l1_test VERILATOR_FST=dump.fst
 ```
 
 The file is written in the test's build directory. Waveforms include the
@@ -168,8 +165,8 @@ the FST, so an interrupted run leaves a waveform you can open.
 `VERILATOR_THREADS=8` runs the model on 8 threads:
 
 ```bash
-make verilate core=CV32E40P mesh_dv=1 VERILATOR_JOBS=16 VERILATOR_THREADS=8
-make verilate-run core=CV32E40P mesh_dv=1 test=inter_l1_test
+make verilate core=CV32E40PX mesh_dv=1 VERILATOR_JOBS=16 VERILATOR_THREADS=8
+make verilate-run core=CV32E40PX mesh_dv=1 test=inter_l1_test
 ```
 
 `VERILATOR_THREADS` is compiled *into* the model, so it belongs on `verilate`
@@ -184,12 +181,12 @@ To change the thread count, re-run `make verilate` with the new value.
 
 ## ⚙️ Architecture
 
-![](doc/MAGIA_v4.png)
+![MAGIA mesh and tile](doc/MAGIA_v4.svg)
 
 ### Tile
 The central piece of the architecture is the MAGIA tile containing a GeMM accelerator, a Vector Processor, a DMA engine, a PULP cluster of RISC-V cores, a multi-banked L1 SPM, an Event Unit, and a lightweight control core. The L1 features interleaved memory banks that compose the Tightly-Coupled Data Memory (TCDM). Each tile has access to the global L2 and to a subset of other tiles' L1, accessing the latter via on-chip remote direct memory access (RDMA). Inter-tile and global communication is carried out through AXI-based narrow (32-bit) and wide (256-bit) NoC channels in [FlooNoC](https://github.com/pulp-platform/FlooNoC). External tiles access the L1 through an OpenBus Interface ([OBI](https://github.com/pulp-platform/obi)) XBAR, the control core through its own HCI port.
 
-Each tile is controlled by a [CV32E40P](https://github.com/pulp-platform/cv32e40p) or [CV32E40X](https://github.com/openhwgroup/cv32e40x) main core (`core=`). Control of iDMA, RedMulE, FractalSync, Spatz CC, and the PULP cluster follows a memory-mapped model, with the Event Unit handling event aggregation for system control.
+Each tile is controlled by a [CV32E40PX](https://github.com/FondazioneChipsIT/cv32e40px) main core. Control of iDMA, RedMulE, FractalSync, Spatz CC, and the PULP cluster follows a memory-mapped model, with the Event Unit handling event aggregation for system control.
 
 `magia_tile` wraps `magia_isle` (cores, accelerators, L1, crossbars and Event Unit) with the FlooNoC network interface and router. What a tile contains is set by its `TileCfg` (`magia_tile_cfg_t` in `hw/mesh/magia_pkg.sv`).
 
@@ -289,7 +286,7 @@ in the global part.
 The flow is memory-mapped (MM): software configures and starts accelerators by writing control registers in each tile address space.
 
 - Execution model: SPMD over tiles, with `mhartid` selecting `tile_base = mhartid * L1_TILE_OFFSET`.
-- Control path: the control core (CV32E40P or CV32E40X) accesses RedMulE, iDMA, FractalSync, Event Unit, and Spatz control registers via MMIO.
+- Control path: the control core (CV32E40PX) accesses RedMulE, iDMA, FractalSync, Event Unit, and Spatz control registers via MMIO.
 - Data path: iDMA moves data between L1 and external memory, while compute engines consume/produce data in L1.
 - Synchronization: Event Unit and FractalSync provide interrupt/event and barrier mechanisms for inter-tile coordination.
 
@@ -315,7 +312,7 @@ Vector core complex running tasks from the Spatz binary embedded in the CV32 ELF
 `eu_wait_spatz_polling(..)` waits for it. See [spatz/README.md](spatz/README.md).
 
 #### PULP Cluster
-Each tile embeds a cluster of `TileCfg.Cluster.NumCores` (8 by default) [CV32E40P](https://github.com/pulp-platform/cv32e40p) cores with a shared instruction cache and their own [Event Unit](https://github.com/pulp-platform/event_unit_flex) (dispatch FIFO, hardware barriers and mutex).
+Each tile embeds a cluster of `TileCfg.Cluster.NumCores` (8 by default) [CV32E40PX](https://github.com/FondazioneChipsIT/cv32e40px) cores with a shared instruction cache and their own [Event Unit](https://github.com/pulp-platform/event_unit_flex) (dispatch FIFO, hardware barriers and mutex).
 
 The PULP cluster uses a bare-metal, two-level dispatch model. The cluster binary is compiled as a position-independent ELF (origin `0x0`), converted to a flat binary, and embedded in the CV32 ELF as a byte array in the `.pulp_binary` section (see `sw/kernel_pulp/`).
 
@@ -324,7 +321,7 @@ The PULP cluster uses a bare-metal, two-level dispatch model. The cluster binary
 1. `cluster_boot(binary_start)` — writes `PULP_BINARY`, sets `PULP_FETCH_EN`, polls `PULP_READY` until all cluster cores have booted.
 2. `cluster_arm_done_event()` — clears the CV32 Event Unit buffer and enables only EU bit 12 (cluster-done).
 3. `cluster_dispatch_task(task_addr)` — writes `PULP_TASKBIN`/`PULP_DATA` and rings `PULP_START`; returns once core 0 has taken the task.
-4. `cluster_wait_done_eu()` — the control core sleeps on a blocking Event Unit load (`cv.elw` on CV32E40P, `lw` on CV32E40X) until EU bit 12 fires.
+4. `cluster_wait_done_eu()` — the control core sleeps on a blocking Event Unit load (`cv.elw`) until EU bit 12 fires.
 
 **Core 0 → the other cores** (`sw/utils/cluster_utils.h`): `pi_cl_team_fork(n, entry, arg)` runs `entry(arg)` on `n` cores through the cluster Event Unit and ends on a hardware barrier, as in the pulp-sdk API.
 
@@ -432,7 +429,7 @@ A store is then tagged collective if it is written at `COLLECTIVE_ADDR_OFFSET`, 
 ## 🧪Local testing
 The [`run_regression.py`](scripts/run_regression.py) Python script builds the hardware and software and runs the tests listed in [`tests.yml`](sw/tests/tests.yml), for Questa and Verilator. It is invoked from the main directory of this repository:
 ```sh
-scripts/run_regression.py --sim questa --core CV32E40P --fsync on --test general/hello_mesh   # one test
+scripts/run_regression.py --sim questa --core CV32E40PX --fsync on --test general/hello_mesh   # one test
 scripts/run_regression.py --sim all --core all --fsync all --test all                         # everything
 scripts/run_regression.py --sim all --core all --fsync all --test all --list                  # plan only
 ```

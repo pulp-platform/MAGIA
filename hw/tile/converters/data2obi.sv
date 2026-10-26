@@ -17,14 +17,14 @@
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  *          Luca Balboni, Fondazione Chips-IT
  *
- * CV32E40P Core Data - OBI REQ Converter
+ * Core Data - OBI REQ Converter
  */
 
-module cv32e40p_data2obi_req
+module data2obi_req
   import magia_tile_pkg::*;
 (
-  input  magia_tile_pkg::cv32e40p_core_data_req_t data_req_i,
-  output magia_tile_pkg::core_obi_data_req_t       obi_req_o
+  input  magia_tile_pkg::core_data_req_t     data_req_i,
+  output magia_tile_pkg::core_obi_data_req_t obi_req_o
 );
 
   assign obi_req_o.req                  = data_req_i.req;
@@ -42,4 +42,4 @@ module cv32e40p_data2obi_req
   assign obi_req_o.a.a_optional.prot    = 'b0;
   assign obi_req_o.a.a_optional.dbg     = 'b0;
 
-endmodule: cv32e40p_data2obi_req
+endmodule: data2obi_req

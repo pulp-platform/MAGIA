@@ -3,11 +3,11 @@
 //
 // Minimal stand-in for UVM's uvm_macros.svh, for the Verilator flow only.
 //
-// cv32e40p's tracer (bhv/cv32e40p_tracer.sv) pulls in UVM purely to report
+// cv32e40px's tracer (bhv/cv32e40px_tracer.sv) pulls in UVM purely to report
 // messages: it includes "uvm_macros.svh", imports uvm_pkg, and calls `uvm_info
 // and `uvm_fatal. Nothing else in it touches UVM -- the actual trace output
 // goes through $fopen/$fwrite. Verilator has no UVM, so that include alone
-// breaks the build whenever CV32E40P_TRACE_EXECUTION is on.
+// breaks the build whenever CV32E40PX_TRACE_EXECUTION is on.
 //
 // This header supplies just enough to compile: the verbosity enum the tracer
 // names (UVM_DEBUG), report functions wrapping $info/$warning/$error/$fatal,
