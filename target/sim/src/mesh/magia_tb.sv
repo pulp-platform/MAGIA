@@ -46,7 +46,7 @@ module magia_tb;
     if (!$value$plusargs("DATA_HEX=%s" ,      data_hex))      data_hex      = "";
     if (!$value$plusargs("BOOT_ADDR=%h",      boot_addr))     boot_addr     = 0;
 
-    // Single-binary flow: the CV32 ELF (@ 0xCC000000) embeds the optional
+    // Single-binary flow: the CV32 ELF (@ 0xC0000000) embeds the optional
     // Spatz/PULP task binaries in dedicated linker sections
     // (.spatz_binary / .pulp_binary), so only one stimulus pair is preloaded.
     fixture.vip.inst_preload(inst_hex);

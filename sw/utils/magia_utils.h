@@ -24,13 +24,15 @@
 
 #include "magia_tile_utils.h"
 
-// Print buffer in the tile-private reserved region
+// Print buffer in the private scratch of each tile
 #define STR_OFFSET  (0x00000000)
-#define STR_BASE    (RESERVED_START + STR_OFFSET)
+#define STR_BASE    (SCRATCH_BASE + STR_OFFSET)
 // Sync words in the top 4 KiB of L1, which every tile can reach
 #define SYNC_OFFSET (L1_SIZE - 0x00001000)
 #define SYNC_BASE   (L1_BASE + SYNC_OFFSET)
 #define SYNC_EN     (SYNC_BASE + 0x4)
+// The testbench VIPs decode only this address, in every tile
+#define STDIO_ADDR  (0xFFFF0004)
 
 #define MESH_Y_TILES (4)
 #define MESH_X_TILES (4)
@@ -97,38 +99,38 @@ char* hs(uint32_t x) {
 }
 
 void h_psprint(uint32_t hartid, const char* string){
-    mmio8(0xFFFF0004 + (hartid*4)) = '[';
-    mmio8(0xFFFF0004 + (hartid*4)) = 'm';
-    mmio8(0xFFFF0004 + (hartid*4)) = 'h';
-    mmio8(0xFFFF0004 + (hartid*4)) = 'a';
-    mmio8(0xFFFF0004 + (hartid*4)) = 'r';
-    mmio8(0xFFFF0004 + (hartid*4)) = 't';
-    mmio8(0xFFFF0004 + (hartid*4)) = 'i';
-    mmio8(0xFFFF0004 + (hartid*4)) = 'd';
-    mmio8(0xFFFF0004 + (hartid*4)) = ' ';
+    mmio8(STDIO_ADDR) = '[';
+    mmio8(STDIO_ADDR) = 'm';
+    mmio8(STDIO_ADDR) = 'h';
+    mmio8(STDIO_ADDR) = 'a';
+    mmio8(STDIO_ADDR) = 'r';
+    mmio8(STDIO_ADDR) = 't';
+    mmio8(STDIO_ADDR) = 'i';
+    mmio8(STDIO_ADDR) = 'd';
+    mmio8(STDIO_ADDR) = ' ';
     char*   mhardid_str = ds(hartid);
     uint8_t mhartid_idx = 0;
     while (mhardid_str[mhartid_idx] != '\0')
-        mmio8(0xFFFF0004 + (hartid*4)) = mhardid_str[mhartid_idx++];
-    mmio8(0xFFFF0004 + (hartid*4)) = ']';
-    mmio8(0xFFFF0004 + (hartid*4)) = ' ';
+        mmio8(STDIO_ADDR) = mhardid_str[mhartid_idx++];
+    mmio8(STDIO_ADDR) = ']';
+    mmio8(STDIO_ADDR) = ' ';
 
     uint8_t index = 0;
     while (string[index] != '\0')
-        mmio8(0xFFFF0004 + (hartid*4)) = string[index++];
+        mmio8(STDIO_ADDR) = string[index++];
 }
 
 void n_psprint(uint32_t hartid, const char* string){
     uint8_t index = 0;
     while (string[index] != '\0')
-        mmio8(0xFFFF0004 + (hartid*4)) = string[index++];
-    mmio8(0xFFFF0004 + (hartid*4)) = '\n';
+        mmio8(STDIO_ADDR) = string[index++];
+    mmio8(STDIO_ADDR) = '\n';
 }
 
 void psprint(uint32_t hartid, const char* string){
     uint8_t index = 0;
     while (string[index] != '\0')
-        mmio8(0xFFFF0004 + (hartid*4)) = string[index++];
+        mmio8(STDIO_ADDR) = string[index++];
 }
 
 #endif /*MAGIA_UTILS_H*/
