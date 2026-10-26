@@ -58,6 +58,7 @@ package magia_pkg;
   typedef struct packed {
     int unsigned NumBanks;      // Number of TCDM banks
     int unsigned NumWordsBank;  // Number of words per TCDM bank
+    int unsigned PrivBytes;     // Bytes at the bottom of L1, reachable only by the own tile
   } l1_cfg_t;
 
   typedef struct packed {
@@ -117,7 +118,8 @@ package magia_pkg;
 
   localparam l1_cfg_t MagiaL1DefaultCfg = '{
     NumBanks:     N_MEM_BANKS,
-    NumWordsBank: N_WORDS_BANK
+    NumWordsBank: N_WORDS_BANK,
+    PrivBytes:    32'h0002_0000  // 128 KiB
   };
 
   localparam ctrl_core_cfg_t MagiaCtrlCoreDefaultCfg = '{

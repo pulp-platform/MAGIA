@@ -110,9 +110,9 @@ gui           ?= 0
 ipstools      ?= 0
 inst_hex_name ?= build/stim_instr.txt 
 data_hex_name ?= build/stim_data.txt 
-inst_entry    ?= 0xCC000000
-data_entry    ?= 0xCC010000
-boot_addr     ?= 0xCC000080
+inst_entry    ?= 0xC0000000
+data_entry    ?= 0xC0008800
+boot_addr     ?= 0xC0000080
 test          ?= hello_world
 mesh_dv       ?= 1
 fast_sim      ?= 0
@@ -158,7 +158,7 @@ INC += -Isw/kernel_pulp/headers_bin
 #   sw/kernel_pulp/headers_bin/<test>_pulp_task_bin.h
 # which the CV32 main.c `#include`s. The linker (sw/kernel/link.ld) KEEPs
 # that array inside the `.pulp_binary` section, right after the optional
-# Spatz binary in instrram (0xCC000000...).  This mirrors what is done for
+# Spatz binary in instrram (0xC0000000...).  This mirrors what is done for
 # Spatz tasks via spatz/sw/Makefile and the `.spatz_binary` section.
 # ----------------------------------------------------------------------------
 TEST_DIR_PATH       := $(if $(_FOUND_TEST_DIR),$(_FOUND_TEST_DIR),sw/tests/$(test))
