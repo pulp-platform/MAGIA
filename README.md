@@ -99,13 +99,17 @@ The following *optional* parameters can be specified:
 `core`: **CV32E40P**|**CV32E40X** (**Default**: CV32E40P). Each core and each
 `mesh_dv` has its own build directory, so the models can be built side by side.
 
-`VERILATOR_JOBS`: **N** (**Default**: 4). Parallelism used to *build* the model.
+`VERILATOR_JOBS`: **N** (**Default**: 16). Parallelism used to *build* the model.
 Unrelated to simulation speed.
 
-`VERILATOR_THREADS`: **N** (**Default**: 1). Threads the *simulation itself* runs on. See
+`VERILATOR_THREADS`: **N** (**Default**: 4 for the mesh, 1 for the tile). Threads the *simulation itself* runs on. See
 the note below before changing it.
 
 `VERILATOR_FST`: **&lt;file&gt;** (**Default**: empty). Dump a waveform to this file.
+
+`OBJCACHE`: **ccache** (**Default**: empty). Compiler cache for the model. Off by
+default: ccache 3.x can serve objects of an older model with Verilator's
+precompiled headers, and the model then segfaults at time zero.
 
 **Instructions to build and run a Verilator simulation**:
 
@@ -176,8 +180,7 @@ To change the thread count, re-run `make verilate` with the new value.
 
 - `VERILATOR_THREADS=8` halved `inter_l1_test` (132 s → 66 s, same result, same
   `$finish` time). Only that one test was checked, once.
-- `VERILATOR_THREADS=4` **segfaults at time zero**, deterministically, in an
-  `eval_initial` coroutine — from a clean build, same flags but the count.
+- `VERILATOR_THREADS=4` is the mesh default, used by the regression.
 
 ## ⚙️ Architecture
 
@@ -190,15 +193,144 @@ Each tile is controlled by a [CV32E40P](https://github.com/pulp-platform/cv32e40
 
 `magia_tile` wraps `magia_isle` (cores, accelerators, L1, crossbars and Event Unit) with the FlooNoC network interface and router. What a tile contains is set by its `TileCfg` (`magia_tile_cfg_t` in `hw/mesh/magia_pkg.sv`).
 
-#### PULP Cluster
-Each tile embeds a cluster of `TileCfg.Cluster.NumCores` (8 by default) [CV32E40P](https://github.com/pulp-platform/cv32e40p) cores. Cluster cores share a Snitch instruction cache with an AXI refill path to L2; each core reaches the tile's L1, stack and reserved region through its own HCI port and everything else (accelerator registers, `PULP_CTRL`, remote memory) through its own OBI master port into the tile crossbar. The cluster has its own [Event Unit](https://github.com/pulp-platform/event_unit_flex), separate from the main core's, with a dispatch FIFO, hardware barriers and a hardware mutex. The main core dispatches a task to cluster core 0 through the `PULP_CTRL` register block (`0x1740`); core 0 can then spread it over the other cores through the cluster Event Unit. When the task ends, `PULP_CTRL` raises EU bit 12 on the main core's Event Unit.
+Memories of a tile with the default `TileCfg`:
+
+| Memory | Size | Organization |
+|---|---|---|
+| L1 (TCDM) | 1 MiB: 128 KiB private + 896 KiB global | 32 banks x 8192 words x 32 bit |
+| PULP cluster I$ | 8 KiB, shared by the 8 cores | 4 ways x 64 lines x 256 bit |
+| Control-core I$ | 2 KiB | 4 ways x 32 lines x 128 bit |
+| Spatz CC I$ | 2 KiB | 2 ways x 32 lines x 256 bit |
 
 ### Mesh
 Replicating the MAGIA tile, we scale up to a two-dimensional (2D) mesh of compute tiles. Each tile takes its `TileCfg` from the `TILE_CFGS` parameter of `magia` (`HOMO_TILE_CFGS` by default). The NoC allows access to the global west-side L2 through row-side interfaces, while tiles exchange traffic through FlooNoC router. The mesh uses XY routing and carries both AXI narrow channels (32-bit) and AXI wide channels (256-bit), with protocol conversion handled by per-tile Network Interfaces (NIs).
 
 Rendez-vous among tiles are managed through the FractalSync (FS) mechanism and the dedicated network.
 
-#### Collective Operations
+The routers also implement collective operations (multicast, broadcast, reduction, barrier) in
+hardware: see [Collective Operations](#collective-operations).
+
+
+### Memory map
+The hardware sets where each memory and peripheral answers (`hw/tile/magia_tile_pkg.sv`); the
+software sets where code, data and stacks go ([Software layout](#software-layout)).
+
+![MAGIA memory map](doc/memory_map.svg)
+
+Address space seen by tile k, with N tiles (up to 16x16) and tile j from 0 to N-1, ends included:
+
+| Start                           | End                                 | Region |
+|---------------------------------|-------------------------------------|--------|
+| `j * 0x0010_0000`               | `j * 0x0010_0000 + 0x0001_FFFF`     | Unmapped |
+| `j * 0x0010_0000 + 0x0002_0000` | `j * 0x0010_0000 + 0x000F_FFFF`     | L1 of tile j, global part (896 KiB) |
+| `N * 0x0010_0000`               | `0x0FFF_FFFF`                       | Unmapped |
+| `0x1000_0000`                   | `0x1000_00FF`                       | Spatz CC BootROM |
+| `0x1000_0100`                   | `0x9FFF_FFFF`                       | Unmapped |
+| `0xA000_0000`                   | `0xA000_4FFF`                       | Tile peripherals (below) |
+| `0xA000_5000`                   | `0xA00F_FFFF`                       | Unmapped |
+| `0xA010_0000`                   | `0xA011_FFFF`                       | L1 of tile k, private part (128 KiB) |
+| `0xA012_0000`                   | `0xAFFF_FFFF`                       | Unmapped |
+| `0xB000_0000`                   | `0xB000_0000 + N * 0x0010_0000 - 1` | Collective window |
+| `0xB000_0000 + N * 0x0010_0000` | `0xBFFF_FFFF`                       | Unmapped |
+| `0xC000_0000`                   | `0xFFFF_FFFF`                       | L2 (1 GiB) |
+
+A smaller L1 keeps the same map: with `N_WORDS_BANK` = 2048 (256 KiB) the global part ends at
+`j * 0x0010_0000 + 0x0003_FFFF` and the rest of the window is unmapped. Set `WORDS_BANK` and
+`L1_PRIV_SIZE` in `sw/utils/magia_tile_utils.h` to the instantiated sizes.
+
+**Tile peripherals.** Units every tile has come first, the optional ones after. An absent unit or
+an unmapped address answers with an OBI error, which stops the test in simulation.
+
+| Start         | End           | Unit |
+|---------------|---------------|------|
+| `0xA000_0000` | `0xA000_0FFF` | Ctrl-core Event Unit |
+| `0xA000_1000` | `0xA000_13FF` | iDMA CTRL |
+| `0xA000_1400` | `0xA000_143F` | HCI CTRL |
+| `0xA000_1440` | `0xA000_1FFF` | Free |
+| `0xA000_2000` | `0xA000_20FF` | RedMulE CTRL (optional) |
+| `0xA000_2100` | `0xA000_21FF` | FractalSync CTRL (optional) |
+| `0xA000_2200` | `0xA000_223F` | Spatz CTRL (optional) |
+| `0xA000_2300` | `0xA000_237F` | PULP CTRL (optional) |
+| `0xA000_2400` | `0xA000_24FF` | Collective CTRL (optional) |
+| `0xA000_2500` | `0xA000_2FFF` | Free |
+| `0xA000_3000` | `0xA000_3FFF` | Cluster Event Unit, direct (cluster cores only) |
+| `0xA000_4000` | `0xA000_4FFF` | Cluster Event Unit, SoC-side |
+
+**Simulation only**, decoded by the testbench VIP:
+
+| Address       | Use |
+|---------------|-----|
+| `0xFFFF_0000` | Memory-mapped stderr sink |
+| `0xFFFF_0004` | Memory-mapped stdio sink |
+
+### Software layout
+Set by the software (`sw/utils/magia_tile_utils.h`, the linker scripts and the crt0 files). Every
+tile runs the same ELF; the L2 part is contiguous from `0xC000_0000`.
+
+![MAGIA software layout](doc/sw_layout.svg)
+
+| Start                           | End                             | Memory     | Region |
+|---------------------------------|---------------------------------|------------|--------|
+| `0xC000_0000`                   | `0xC000_7FFF`                   | L2         | Code: control core, then the embedded Spatz and PULP binaries |
+| `0xC000_8000`                   | `0xC000_87FF`                   | L2         | Exit codes, 2 B per tile, read by the testbench |
+| `0xC000_8800`                   | `0xC0FF_FFFF`                   | L2         | `.data`, `.rodata`, `.bss`, shared by every tile |
+| `0xC100_0000`                   | `0xFFFF_FFFF`                   | L2         | Free |
+| `k * 0x0010_0000 + 0x0002_0000` | `k * 0x0010_0000 + 0x000F_EFFF` | L1 global  | Data buffers (`L1_BASE + mhartid * L1_TILE_OFFSET`) |
+| `k * 0x0010_0000 + 0x000F_F000` | `k * 0x0010_0000 + 0x000F_FFFF` | L1 global  | Sync words (`SYNC_BASE`) |
+| `0xA010_0000`                   | `0xA011_77FF`                   | L1 private | Scratch (`SCRATCH_BASE`) |
+| `0xA011_7800`                   | `0xA011_B7FF`                   | L1 private | PULP stacks, 8 x 2 KiB |
+| `0xA011_B800`                   | `0xA011_BFFF`                   | L1 private | Control-core stack, 2 KiB |
+| `0xA011_C000`                   | `0xA011_FFFF`                   | L1 private | Spatz stack, 16 KiB |
+
+Stacks have the same address in every tile; data shared with other tiles, DMA or collectives goes
+in the global part.
+
+## 🖥️ Programming model
+The flow is memory-mapped (MM): software configures and starts accelerators by writing control registers in each tile address space.
+
+- Execution model: SPMD over tiles, with `mhartid` selecting `tile_base = mhartid * L1_TILE_OFFSET`.
+- Control path: the control core (CV32E40P or CV32E40X) accesses RedMulE, iDMA, FractalSync, Event Unit, and Spatz control registers via MMIO.
+- Data path: iDMA moves data between L1 and external memory, while compute engines consume/produce data in L1.
+- Synchronization: Event Unit and FractalSync provide interrupt/event and barrier mechanisms for inter-tile coordination.
+
+Software APIs for MM control are under `sw/utils/` (for example `redmule_mm_utils.h`, `idma_mm_utils.h`, `fsync_mm_api.h`, `magia_spatz_utils.h` and `event_unit_utils.h`).
+
+### Accelerators
+The control core drives each accelerator through its registers and waits for it by polling or on
+its Event Unit (`event_unit_utils.h`).
+
+#### iDMA
+Moves data between the tile's L1 and the L2 or another tile's L1 (`idma_mm_utils.h`):
+`idma_L2ToL1(src, dst, len)` and `idma_L1ToL2(src, dst, len)` start a transfer, `dma_wait(id)`
+waits for it. It also issues the wide collectives.
+
+#### RedMulE
+GeMM engine on operands in L1 (`redmule_mm_utils.h`): `hwpe_acquire_job()` reserves it,
+`redmule_cfg(..)` sets addresses, sizes and format, `hwpe_trigger_job()` starts it and
+`hwpe_wait_for_completion()` waits for the end.
+
+#### Spatz CC
+Vector core complex running tasks from the Spatz binary embedded in the CV32 ELF
+(`magia_spatz_utils.h`): `spatz_init(..)` boots it, `spatz_run_task(..)` starts a task and
+`eu_wait_spatz_polling(..)` waits for it. See [spatz/README.md](spatz/README.md).
+
+#### PULP Cluster
+Each tile embeds a cluster of `TileCfg.Cluster.NumCores` (8 by default) [CV32E40P](https://github.com/pulp-platform/cv32e40p) cores with a shared instruction cache and their own [Event Unit](https://github.com/pulp-platform/event_unit_flex) (dispatch FIFO, hardware barriers and mutex).
+
+The PULP cluster uses a bare-metal, two-level dispatch model. The cluster binary is compiled as a position-independent ELF (origin `0x0`), converted to a flat binary, and embedded in the CV32 ELF as a byte array in the `.pulp_binary` section (see `sw/kernel_pulp/`).
+
+**Main core → cluster core 0** (`sw/utils/cluster_utils.h`, `sw/utils/magia_pulp_utils.h`):
+
+1. `cluster_boot(binary_start)` — writes `PULP_BINARY`, sets `PULP_FETCH_EN`, polls `PULP_READY` until all cluster cores have booted.
+2. `cluster_arm_done_event()` — clears the CV32 Event Unit buffer and enables only EU bit 12 (cluster-done).
+3. `cluster_dispatch_task(task_addr)` — writes `PULP_TASKBIN`/`PULP_DATA` and rings `PULP_START`; returns once core 0 has taken the task.
+4. `cluster_wait_done_eu()` — the control core sleeps on a blocking Event Unit load (`cv.elw` on CV32E40P, `lw` on CV32E40X) until EU bit 12 fires.
+
+**Core 0 → the other cores** (`sw/utils/cluster_utils.h`): `pi_cl_team_fork(n, entry, arg)` runs `entry(arg)` on `n` cores through the cluster Event Unit and ends on a hardware barrier, as in the pulp-sdk API.
+
+Cluster task sources live under `sw/tests/<test>/pulp_task/`. A test directory containing a `pulp_task/` subdirectory automatically triggers the dual-binary build flow in the Makefile.
+
+### Collective Operations
 Beyond point-to-point traffic, the routers also implement **collective** operations in hardware: a single transaction can be replicated towards a whole row, column, or the entire mesh (multicast/broadcast), and many transactions can be aggregated on their way to a single destination (reduction, barrier).
 
 Two extra fields on the AXI `user` channel tag a transaction as collective:
@@ -258,63 +390,6 @@ column, both a broadcast. Reductions use the same mask: the
 router derives the set of contributors it must wait for and merges their flits as they
 converge on the destination.
 
-
-### Memory map
-This map reflects the RTL memory-mapped layout defined in `hw/tile/magia_tile_pkg.sv`.
-
-- `tile_base = mhartid * 0x0010_0000`
-
-Private map: the same range in every tile, each tile maps it to its own copy:
-
-| Region            | Range                     |
-|-------------------|---------------------------|
-| *RedMulE CTRL*    | `0x0000_0100-0x0000_01FF` |
-| *iDMA CTRL*       | `0x0000_0200-0x0000_05FF` |
-| *FractalSync CTRL*| `0x0000_0600-0x0000_06FF` |
-| *Ctrl-core Event Unit* | `0x0000_0700-0x0000_16FF` |
-| *Spatz CTRL*      | `0x0000_1700-0x0000_173F` |
-| *PULP CTRL*       | `0x0000_1740-0x0000_17BF` |
-| *HCI CTRL*        | `0x0000_17C0-0x0000_17FF` |
-| *Collective CTRL* | `0x0000_1800-0x0000_18FF` |
-| *Cluster Event Unit (direct)*   | `0x0000_1900-0x0000_28FF` |
-| *Cluster Event Unit (SoC-side)* | `0x0000_2900-0x0000_38FF` |
-| *Reserved*        | `0x0000_3900-0x0000_FFFF` |
-| *Stack*           | `0x0001_0000-0x0001_FFFF` |
-| *Spatz BootROM*   | `0x1000_0000-0x1000_00FF` |
-
-Shared/global map:
-
-| Region            | Range                     | Notes |
-|-------------------|---------------------------|-------|
-| *L1 SPM*          | `tile_base + 0x0002_0000 ... 0x000F_FFFF` | Reachable by every tile |
-| *L2*              | `0xC000_0000-0xFFFF_FFFF` | Global L2 window |
-| *Instructions*    | `0xCC00_0000-0xCC00_7FFF` | Instruction sub-region inside L2 |
-
-An access to an unmapped address of the peripheral window gets an OBI error, and in simulation it stops the test.
-
-Software/test utility addresses (used by SW runtime and testbench VIP):
-
-| Region            | Address                                    | Notes |
-|-------------------|--------------------------------------------|-------|
-| *Test End*        | `0xCCFF_0000`                              | Exit code location used by SW runtime/tests |
-| *String (utoa)*   | `0x0000_3900`                              | String scratch location (`RESERVED_START + STR_OFFSET`) |
-| *Print (stderr)*  | `0xFFFF_0000`                              | Memory-mapped stderr sink in simulation VIP |
-| *Print (stdio)*   | `0xFFFF_0004`                              | Memory-mapped stdio sink in simulation VIP |
-| *Synch.*          | `tile_base + 0x000F_F000`                  | Top 4 KiB of L1 (`L1_BASE + SYNC_OFFSET`) |
-
-## 🖥️ Programming model
-The flow is memory-mapped (MM): software configures and starts accelerators by writing control registers in each tile address space.
-
-- Execution model: SPMD over tiles, with `mhartid` selecting `tile_base = mhartid * 0x0010_0000`.
-- Control path: the control core (CV32E40P or CV32E40X) accesses RedMulE, iDMA, FractalSync, Event Unit, and Spatz control registers via MMIO.
-- Data path: iDMA moves data between L1 and external memory, while compute engines consume/produce data in L1.
-- Synchronization: Event Unit and FractalSync provide interrupt/event and barrier mechanisms for inter-tile coordination.
-
-Software APIs for MM control are under `sw/utils/` (for example `redmule_mm_utils.h`, `idma_mm_utils.h`, `fsync_mm_api.h`, `magia_spatz_utils.h` and `event_unit_utils.h`).
-For Spatz Core Complex programming flow (runtime handshake, task loading, and execution model), see [spatz/README.md](spatz/README.md).
-
-
-### Collective Operations
 MAGIA supports collectives on both the narrow and the wide FlooNoC channel, through two
 independent programming paths.
 
@@ -333,31 +408,18 @@ dma_wait(transfer_id_1);   // poll for completion
 #### Narrow channel
 The narrow channel can be used to issue barrier, reduce and multicast transactions. Before issuing a collective over the narrow channel two tile CRSs must be properly configured:
 
-| Register | Address | Meaning |
-|---|---|---|
-| `COLLECTIVE_MASK` | `tile_base + 0x0000_1800` | *Which* tiles take part |
-| `COLLECTIVE_OP`   | `tile_base + 0x0000_1804` | *What* the routers do with the flits |
+| Register | Meaning |
+|---|---|
+| `COLLECTIVE_MASK` | *Which* tiles take part |
+| `COLLECTIVE_OP`   | *What* the routers do with the flits |
 
-A store is then tagged collective if it is written at `COLLECTIVE_ADDR_OFFSET` (`0xB000_0000`). The APIs required to configure and use collective transactions over the narrow channel can be found in [magia_coll_utils.h](sw/utils/magia_coll_utils.h).
+A store is then tagged collective if it is written at `COLLECTIVE_ADDR_OFFSET`, the collective window. The APIs required to configure and use collective transactions over the narrow channel can be found in [magia_coll_utils.h](sw/utils/magia_coll_utils.h).
 
 **Programming flow**
 1. `set_collective_mask()` to set the `COLLECTIVE_MASK` register
 2. `set_collective_op()` to set the `COLLECTIVE_OP` register
-3. A store at address `0xB000_0000` is then interpreted as a collective transaction
+3. A store in the collective window is then interpreted as a collective transaction
 
-### PULP Cluster programming flow
-The PULP cluster uses a bare-metal, two-level dispatch model. The cluster binary is compiled as a position-independent ELF (origin `0x0`), converted to a flat binary, and embedded in the CV32 ELF as a byte array in the `.pulp_binary` section (see `sw/kernel_pulp/`).
-
-**Main core → cluster core 0** (`sw/utils/cluster_utils.h`, `sw/utils/magia_pulp_utils.h`):
-
-1. `cluster_boot(binary_start)` — writes `PULP_BINARY`, sets `PULP_FETCH_EN`, polls `PULP_READY` until all cluster cores have booted.
-2. `cluster_arm_done_event()` — clears the CV32 Event Unit buffer and enables only EU bit 12 (cluster-done).
-3. `cluster_dispatch_task(task_addr)` — writes `PULP_TASKBIN`/`PULP_DATA` and rings `PULP_START`; returns once core 0 has taken the task.
-4. `cluster_wait_done_eu()` — the control core sleeps on a blocking Event Unit load (`cv.elw` on CV32E40P, `lw` on CV32E40X) until EU bit 12 fires.
-
-**Core 0 → the other cores** (`sw/utils/cluster_utils.h`): `pi_cl_team_fork(n, entry, arg)` runs `entry(arg)` on `n` cores through the cluster Event Unit and ends on a hardware barrier, as in the pulp-sdk API.
-
-Cluster task sources live under `sw/tests/<test>/pulp_task/`. A test directory containing a `pulp_task/` subdirectory automatically triggers the dual-binary build flow in the Makefile.
 ## 🧰 Changing number of tiles
 **Supported Mesh Configurations**: `2x2`, `4x4`, `8x8`, `16x16`, `32x32`
 
