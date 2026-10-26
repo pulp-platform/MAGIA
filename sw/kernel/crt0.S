@@ -83,7 +83,7 @@ _start:
 
 skip_bss_clear:
 
-  /* Stack: top of slot 0 at _stack_start (0x1C000), the PULP harts take the 2 KB slots below */
+  /* Stack: top of slot 0 at _stack_start (0xA011C000), the PULP harts take the 2 KB slots below */
   la   x2, _stack_start
 
 .section .text
@@ -112,14 +112,14 @@ _fini:
 exit:
  csrr    a0, mhartid 
  andi    s0, s0, 0x7ff
- li      a1, 0xCCff0000
+ li      a1, 0xC0008000   /* TEST_END_ADDR */
  li      a2, 0x800
  xor     s0, s0, a2
  add     a1, a1, a0
  add     a1, a1, a0
  sh      s0, 0(a1)
 #ifdef CV32E40P
- li      a1, 0x00000738
+ li      a1, 0xA0000038   /* EU_CORE_EVENT_WAIT */
  cv.elw	 zero, 0(a1)
 #else
  wfi
