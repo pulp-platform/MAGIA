@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 50 1120 740" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="MAGIA address space seen by a core of tile k, with the TCDM of the tile split into a private and a global part, and the tile peripherals at fixed offsets">
+  <style>
+    text { fill: #8A8A8A; font-size: 13px; }
+    .t  { font-size: 17px; font-weight: 700; fill: #000000; }
+    .w  { fill: #ffffff; font-weight: 700; }
+    .wm { fill: #ffffff; font-family: Menlo, Consolas, monospace; font-size: 11px; }
+    .k  { font-weight: 700; }
+    .m  { font-family: Menlo, Consolas, monospace; font-size: 11px; fill: #333333; }
+    .n  { font-size: 11px; fill: #333333; }
+    .sm { font-size: 12px; }
+    .xs { font-size: 11px; }
+    .g  { font-family: Menlo, Consolas, monospace; font-size: 11px; fill: #8A8A8A; }
+    .mem  { fill: #1565C0; stroke: #0B3D7A; }
+    .memL { fill: #2F86D6; stroke: #1A4F8A; }
+    .net  { fill: #1E8A3A; stroke: #0F5A22; }
+    .per  { fill: #F0923A; stroke: #B5651D; }
+    .eu   { fill: #8B0A8B; stroke: #5A045A; }
+    .core { fill: #A52A2A; stroke: #6B1515; }
+    .un   { fill: #ffffff; stroke: #9AA0A6; stroke-dasharray: 4 3; }
+    .pv   { fill: #E3F0FB; stroke: #1565C0; stroke-dasharray: 4 3; }
+    .tile { fill: #F9DCC0; stroke: #000000; stroke-width: 2; }
+    .hl   { stroke: #000000; stroke-width: 3; }
+    .a    { stroke: #8A8A8A; stroke-width: 1.6; }
+    .ah   { fill: #8A8A8A; }
+  </style>
+  <defs>
+    <marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0 L8,4 L0,8 z"/></marker>
+  </defs>
+
+  <!-- outside the tile -->
+  <rect class="per" x="20" y="72" width="100" height="36" rx="2"/>
+  <text class="w sm" x="70" y="95" text-anchor="middle">Tiles 0 … k-1</text>
+  <rect class="per" x="20" y="180" width="100" height="36" rx="2"/>
+  <text class="w sm" x="70" y="203" text-anchor="middle">Tiles k+1 … N-1</text>
+  <rect class="per" x="20" y="452" width="100" height="36" rx="2"/>
+  <text class="w sm" x="70" y="475" text-anchor="middle">Tiles in mask</text>
+  <rect class="mem" x="20" y="520" width="100" height="36" rx="2"/>
+  <text class="w" x="70" y="543" text-anchor="middle">L2</text>
+
+  <rect class="net" x="160" y="70" width="40" height="488"/>
+  <text class="w" x="180" y="314" text-anchor="middle" dominant-baseline="central" transform="rotate(-90 180 314)">NoC</text>
+
+  <line class="a" x1="160" y1="90" x2="126" y2="90" marker-end="url(#ar)"/>
+  <line class="a" x1="160" y1="198" x2="126" y2="198" marker-end="url(#ar)"/>
+  <line class="a" x1="160" y1="470" x2="126" y2="470" marker-end="url(#ar)"/>
+  <line class="a" x1="160" y1="538" x2="126" y2="538" marker-end="url(#ar)"/>
+
+  <!-- address column -->
+
+  <rect class="memL" x="240" y="70" width="290" height="40"/>
+  <text class="w" x="252" y="95">L1 of tiles 0 … k-1 · global parts</text>
+
+  <rect class="un" x="240" y="110" width="290" height="28"/>
+  <text class="m" x="252" y="128">unmapped</text>
+
+  <rect class="mem hl" x="240" y="138" width="290" height="40"/>
+  <text class="w" x="252" y="163">L1 of tile k, global part · 896 KiB</text>
+
+  <rect class="memL" x="240" y="178" width="290" height="40"/>
+  <text class="w" x="252" y="203">L1 of tiles k+1 … N-1 · global parts</text>
+
+  <rect class="un" x="240" y="218" width="290" height="28"/>
+  <text class="m" x="252" y="236">unmapped</text>
+
+  <rect class="mem" x="240" y="246" width="290" height="40"/>
+  <text class="w" x="252" y="271">BootROM Spatz CC · 256 B</text>
+
+  <rect class="un" x="240" y="286" width="290" height="28"/>
+  <text class="m" x="252" y="304">unmapped</text>
+
+  <rect class="per" x="240" y="314" width="290" height="40"/>
+  <text class="w" x="252" y="339">tile peripherals · 20 KiB</text>
+
+  <rect class="un" x="240" y="354" width="290" height="28"/>
+  <text class="m" x="252" y="372">unmapped</text>
+
+  <rect class="mem hl" x="240" y="382" width="290" height="40"/>
+  <text class="w" x="252" y="407">L1 of tile k, private part · 128 KiB</text>
+
+  <rect class="un" x="240" y="422" width="290" height="28"/>
+  <text class="m" x="252" y="440">unmapped</text>
+
+  <rect class="per" x="240" y="450" width="290" height="40"/>
+  <text class="w" x="252" y="475">collective window</text>
+
+  <rect class="un" x="240" y="490" width="290" height="28"/>
+  <text class="m" x="252" y="508">unmapped</text>
+
+  <rect class="mem" x="240" y="518" width="290" height="40"/>
+  <text class="w" x="252" y="543">L2 · 1 GiB</text>
+
+  <line class="a" x1="240" y1="90" x2="206" y2="90" marker-end="url(#ar)"/>
+  <line class="a" x1="240" y1="198" x2="206" y2="198" marker-end="url(#ar)"/>
+  <line class="a" x1="240" y1="470" x2="206" y2="470" marker-end="url(#ar)"/>
+  <line class="a" x1="240" y1="538" x2="206" y2="538" marker-end="url(#ar)"/>
+
+  <!-- MAGIA tile k -->
+  <rect class="tile" x="580" y="60" width="520" height="508"/>
+
+  <rect class="mem" x="625" y="246" width="126" height="40"/>
+  <text class="w sm" x="688" y="270" text-anchor="middle">BootROM Spatz CC</text>
+  <rect class="per" x="625" y="314" width="126" height="40"/>
+  <text class="w sm" x="688" y="338" text-anchor="middle">CSRs + Event Unit</text>
+
+  <rect class="memL" x="866" y="80" width="222" height="362"/>
+  <text class="w" x="977" y="100" text-anchor="middle">TCDM · 1 MiB</text>
+  <rect class="mem" x="878" y="110" width="198" height="258"/>
+  <text class="w" x="977" y="217" text-anchor="middle">Global part</text>
+  <text class="wm" x="977" y="237" text-anchor="middle">896 KiB</text>
+  <line x1="884" y1="377" x2="1070" y2="377" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <rect class="mem" x="878" y="386" width="198" height="46"/>
+  <text class="w" x="977" y="405" text-anchor="middle">Private part</text>
+  <text class="wm" x="977" y="422" text-anchor="middle">128 KiB</text>
+
+  <line class="a" x1="530" y1="158" x2="872" y2="158" marker-end="url(#ar)"/>
+  <line class="a" x1="530" y1="402" x2="872" y2="402" marker-end="url(#ar)"/>
+  <line class="a" x1="530" y1="266" x2="619" y2="266" marker-end="url(#ar)"/>
+  <line class="a" x1="530" y1="334" x2="619" y2="334" marker-end="url(#ar)"/>
+
+  <text class="t" x="596" y="554">MAGIA Tile k</text>
+
+  <!-- peripherals -->
+  <text class="k" x="20" y="618">Tile peripherals</text>
+  <line class="a" x1="20" y1="648" x2="360" y2="648"/>
+  <line class="a" x1="20" y1="644" x2="20" y2="652"/>
+  <line class="a" x1="360" y1="644" x2="360" y2="652"/>
+  <text class="k" x="190" y="640" text-anchor="middle">fixed</text>
+  <line class="a" x1="360" y1="648" x2="915" y2="648"/>
+  <line class="a" x1="915" y1="644" x2="915" y2="652"/>
+  <text class="k" x="637" y="640" text-anchor="middle">optional</text>
+
+  <rect class="tile" x="14" y="658" width="907" height="62"/>
+  <rect class="eu"  x="20"  y="664" width="160" height="50"/><text class="w" x="100" y="694" text-anchor="middle">Event Unit</text>
+  <rect class="per" x="180" y="664" width="70"  height="50"/><text class="w sm" x="215" y="694" text-anchor="middle">iDMA</text>
+  <rect class="per" x="250" y="664" width="55"  height="50"/><text class="w sm" x="277" y="694" text-anchor="middle">HCI</text>
+  <rect class="un"  x="305" y="664" width="55"  height="50"/><text class="n" x="332" y="694" text-anchor="middle">free</text>
+  <rect class="per" x="360" y="664" width="65"  height="50"/><text class="w sm" x="392" y="694" text-anchor="middle">RedMulE</text>
+  <rect class="per" x="425" y="664" width="65"  height="50"/><text class="w sm" x="457" y="694" text-anchor="middle">FSync</text>
+  <rect class="per" x="490" y="664" width="65"  height="50"/><text class="w sm" x="522" y="694" text-anchor="middle">Spatz</text>
+  <rect class="per" x="555" y="664" width="65"  height="50"/><text class="w sm" x="587" y="694" text-anchor="middle">PULP</text>
+  <rect class="per" x="620" y="664" width="65"  height="50"/><text class="w sm" x="652" y="694" text-anchor="middle">Coll.</text>
+  <rect class="un"  x="685" y="664" width="50"  height="50"/><text class="n" x="710" y="694" text-anchor="middle">free</text>
+  <rect class="eu"  x="735" y="664" width="90"  height="50"/><text class="w sm" x="780" y="686" text-anchor="middle">Cluster EU</text><text class="w sm" x="780" y="703" text-anchor="middle">direct</text>
+  <rect class="eu"  x="825" y="664" width="90"  height="50"/><text class="w sm" x="870" y="686" text-anchor="middle">Cluster EU</text><text class="w sm" x="870" y="703" text-anchor="middle">SoC-side</text>
+
+  <rect class="eu"  x="20"  y="752" width="160" height="28"/><text class="w sm" x="100" y="771" text-anchor="middle">EU link</text>
+  <rect class="net" x="180" y="752" width="555" height="28"/><text class="w sm" x="457" y="771" text-anchor="middle">CTRL Demux</text>
+  <rect class="eu"  x="735" y="752" width="90"  height="28"/><text class="w xs" x="780" y="770" text-anchor="middle">Cluster EU link</text>
+  <rect class="net" x="825" y="752" width="90"  height="28"/><text class="w xs" x="870" y="770" text-anchor="middle">Cluster EU port</text>
+
+  <text class="g" x="100" y="736" text-anchor="middle">4 KiB</text>
+  <text class="g" x="215" y="736" text-anchor="middle">1 KiB</text>
+  <text class="g" x="277" y="736" text-anchor="middle">64 B</text>
+  <text class="g" x="392" y="736" text-anchor="middle">256 B</text>
+  <text class="g" x="457" y="736" text-anchor="middle">256 B</text>
+  <text class="g" x="522" y="736" text-anchor="middle">64 B</text>
+  <text class="g" x="587" y="736" text-anchor="middle">128 B</text>
+  <text class="g" x="652" y="736" text-anchor="middle">256 B</text>
+  <text class="g" x="780" y="736" text-anchor="middle">4 KiB</text>
+  <text class="g" x="870" y="736" text-anchor="middle">4 KiB</text>
+</svg>

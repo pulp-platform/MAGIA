@@ -31,18 +31,29 @@
 #define BITS_WORD    (32)
 #define BITS_BYTE    (8)
 
-#define REDMULE_BASE    (0x00000100)
-#define REDMULE_END     (0x000001FF)
-#define IDMA_BASE       (0x00000200)
-#define IDMA_END        (0x000005FF)
-#define FSYNC_BASE      (0x00000600)
-#define FSYNC_END       (0x000006FF)
-#define EVENT_UNIT_BASE (0x00000700)
-#define EVENT_UNIT_END  (0x000016FF)
-#define SPATZ_CTRL_BASE (0x00001700)
-#define SPATZ_CTRL_END  (0x0000173F)
-/* PULP Cluster Control registers (tile_csr + 0x40), bare-metal dispatch model */
-#define PULP_CTRL_BASE        (0x00001740)
+/* Tile peripherals: private, the same in every tile, laid out as in magia_tile_pkg */
+#define TILE_PERIPH_BASE (0xA0000000)
+#define EVENT_UNIT_BASE (TILE_PERIPH_BASE + 0x0000)
+#define EVENT_UNIT_END  (TILE_PERIPH_BASE + 0x0FFF)
+#define IDMA_BASE       (TILE_PERIPH_BASE + 0x1000)
+#define IDMA_END        (TILE_PERIPH_BASE + 0x13FF)
+// HCI arbiter control register
+#define HCI_ARB_CTRL_BASE     (TILE_PERIPH_BASE + 0x1400)
+#define HCI_ARB_CTRL          (HCI_ARB_CTRL_BASE + 0x00)
+#define HCI_ARB_CTRL_END      (TILE_PERIPH_BASE + 0x143F)
+#define HCI_ARB_CTRL_DEFAULT  (0x00000000u)  /* Denominator 0: default ratio of magia_hci_interconnect */
+#define HCI_ARB_INVERT_PRIO   (1u << 0)
+#define HCI_ARB_PRIO_NUM(n)   (((n) & 0xFFu) << 8)
+#define HCI_ARB_PRIO_DEN(n)   (((n) & 0xFFu) << 16)
+/* Optional units: an absent one answers with an error */
+#define REDMULE_BASE    (TILE_PERIPH_BASE + 0x2000)
+#define REDMULE_END     (TILE_PERIPH_BASE + 0x20FF)
+#define FSYNC_BASE      (TILE_PERIPH_BASE + 0x2100)
+#define FSYNC_END       (TILE_PERIPH_BASE + 0x21FF)
+#define SPATZ_CTRL_BASE (TILE_PERIPH_BASE + 0x2200)
+#define SPATZ_CTRL_END  (TILE_PERIPH_BASE + 0x223F)
+/* PULP Cluster Control registers, bare-metal dispatch model */
+#define PULP_CTRL_BASE        (TILE_PERIPH_BASE + 0x2300)
 #define PULP_FETCH_EN         (PULP_CTRL_BASE + 0x00)  /* R/W boot enable, sticky in the cores; every write resets READY */
 #define PULP_BINARY           (PULP_CTRL_BASE + 0x04)  /* R/W boot address of all cluster cores */
 #define PULP_DONE             (PULP_CTRL_BASE + 0x08)  /* W   core 0 signals completion, pulsing EU bit 12 on the CV32 */
@@ -52,32 +63,27 @@
 #define PULP_READY            (PULP_CTRL_BASE + 0x18)  /* R 1 once all cores booted, W each core posts 1 once armed */
 #define PULP_RETURN           (PULP_CTRL_BASE + 0x1C)  /* R/W task exit code, written by core 0 before PULP_DONE */
 #define PULP_RETURN_CRASHED_BIT (0x80000000u)  /* Set when core 0 trapped instead of returning */
-#define PULP_CTRL_END         (0x000017BF)
+#define PULP_CTRL_END         (TILE_PERIPH_BASE + 0x237F)
 #define PULP_CORE_COUNT       (8)
 #define PULP_HARTID_BASE      (32)
-// HCI arbiter control register (tile_csr + 0xC0)
-#define HCI_ARB_CTRL_BASE     (0x000017C0)
-#define HCI_ARB_CTRL          (HCI_ARB_CTRL_BASE + 0x00)
-#define HCI_ARB_CTRL_END      (0x000017FF)
-#define HCI_ARB_CTRL_DEFAULT  (0x00000000u)  /* Denominator 0: default ratio of magia_hci_interconnect */
-#define HCI_ARB_INVERT_PRIO   (1u << 0)
-#define HCI_ARB_PRIO_NUM(n)   (((n) & 0xFFu) << 8)
-#define HCI_ARB_PRIO_DEN(n)   (((n) & 0xFFu) << 16)
-#define COLL_CTRL_BASE  (0x00001800)
-#define COLL_CTRL_END   (0x000018FF)
-#define CLUSTER_EU_DIRECT_BASE (0x00001900)
-#define CLUSTER_EU_DIRECT_END  (0x000028FF)
-#define CLUSTER_EU_BASE       (0x00002900)
-#define CLUSTER_EU_END        (0x000038FF)
-#define RESERVED_START  (0x00003900)
-#define RESERVED_END    (0x0000FFFF)
-#define STACK_START     (0x00010000)
-#define STACK_END       (0x0001FFFF)
-#define L1_BASE         (0x00020000)
-#define L1_SIZE         (0x000E0000)
+#define COLL_CTRL_BASE  (TILE_PERIPH_BASE + 0x2400)
+#define COLL_CTRL_END   (TILE_PERIPH_BASE + 0x24FF)
+#define CLUSTER_EU_DIRECT_BASE (TILE_PERIPH_BASE + 0x3000)
+#define CLUSTER_EU_DIRECT_END  (TILE_PERIPH_BASE + 0x3FFF)
+#define CLUSTER_EU_BASE       (TILE_PERIPH_BASE + 0x4000)
+#define CLUSTER_EU_END        (TILE_PERIPH_BASE + 0x4FFF)
+/* L1 of tile k: private part at L1_PRIV_BASE, global part at k * L1_TILE_OFFSET + L1_PRIV_SIZE */
 #define L1_TILE_OFFSET  (0x00100000)
-#define L2_BASE         (0xCC000000)
-#define TEST_END_ADDR   (0xCCFF0000)
+#define L1_PRIV_BASE    (0xA0100000)
+#define L1_PRIV_SIZE    (0x00020000)  /* TileCfg.L1.PrivBytes */
+/* SW layout of the private part: scratch, then the stacks of the linker scripts */
+#define SCRATCH_BASE    (L1_PRIV_BASE + 0x00000)
+#define SCRATCH_END     (L1_PRIV_BASE + 0x177FF)  /* Up to the stacks of sw/kernel/link.ld */
+#define L1_BASE         (L1_PRIV_SIZE)  /* Global part of tile 0 */
+/* Global bytes per tile */
+#define L1_SIZE         (NUM_L1_BANKS * WORDS_BANK * (BITS_WORD / BITS_BYTE) - L1_PRIV_SIZE)
+#define L2_BASE         (0xC0000000)
+#define TEST_END_ADDR   (0xC0008000)  /* Must match sw/kernel/link.ld and the testbench VIPs */
 
 #define DEFAULT_EXIT_CODE (0xDEFC)
 #define PASS_EXIT_CODE    (0xAAAA)

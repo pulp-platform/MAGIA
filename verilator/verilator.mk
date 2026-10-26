@@ -61,6 +61,8 @@ endif
 VERILATOR_TRACE_STRUCTS ?= 0
 VERILATOR_TRACE_PARAMS  ?= 0
 VERILATOR_CFLAGS        ?= -march=native
+# No ccache by default: 3.7 skips hashing a just-written PCH and serves objects of an older model, which segfaults at time 0
+export OBJCACHE         ?=
 # Parent and child must agree on where simulated time lives, or they segfault
 # at time 0. Nothing sets VL_TIME_CONTEXT implicitly here, so force it on both.
 # MAGIA_THREADS must match --threads: magia_main.cpp sizes the pool with it.
@@ -242,7 +244,7 @@ $(VERILATOR_BUILD_DIR)/.config-check: | $(VERILATOR_BUILD_DIR)
 	  echo "ldflags=$(LDFLAGS)"; \
 	  echo "cxx_path=$$(command -v $(CXX) 2>/dev/null || echo $(CXX))"; \
 	  echo "cxx_version=$$($(CXX) --version 2>/dev/null | head -1)"; \
-	  echo "objcache=$$(if [ -n "$$OBJCACHE" ]; then printf '%s' "$$OBJCACHE"; else command -v ccache 2>/dev/null || echo none; fi)"; \
+	  echo "objcache=$(or $(OBJCACHE),none)"; \
 	  echo "dpi=$(VERILATOR_DPI)"; \
 	  echo "verilator_args=$(VERILATOR_ARGS)$(if $(filter 1,$(VERILATOR_HIER)), --hierarchical)"; \
 	  echo "control_sha256=$$(sha256sum $(VERILATOR_CONTROL) | cut -d' ' -f1)"; \

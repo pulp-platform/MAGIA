@@ -44,8 +44,8 @@
 #define Z_BASE_2 (L2_BASE + 0x00046000)
 #define Z_BASE_4 (L2_BASE + 0x0004A000)
 
-#define DMA_BUFFER_1 (L1_BASE + 0x00036048)
-#define DMA_BUFFER_2 (L1_BASE + 0x0003A048)
+#define DMA_BUFFER_1 (L1_BASE + 0x00002048)
+#define DMA_BUFFER_2 (L1_BASE + 0x00006048)
 
 #define M_SIZE (96)
 #define N_SIZE (64)
