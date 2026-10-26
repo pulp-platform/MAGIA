@@ -80,6 +80,15 @@ packages:
     - common_cells
     - fpnew
     - tech_cells_generic
+  cv32e40px:
+    revision: 3ef1c512624d3a931cd40e3db56865ce3f01b55c
+    version: null
+    source:
+      Git: https://github.com/FondazioneChipsIT/cv32e40px.git
+    dependencies:
+    - common_cells
+    - fpnew
+    - tech_cells_generic
   cv32e40x:
     revision: 8834f135214f8f25f710ebd77f48d9f03d9548e6
     version: null
@@ -119,12 +128,6 @@ packages:
       Git: https://github.com/pulp-platform/fpu_div_sqrt_mvp.git
     dependencies:
     - common_cells
-  fpu_ss:
-    revision: f31c77c7517c0a67f2c55a290fc8c6ff6019e362
-    version: null
-    source:
-      Git: https://github.com/pulp-platform/fpu_ss.git
-    dependencies: []
   fractal_sync:
     revision: df8e21b7e2b0e2d3198bf44a60b4ca67c334bcc2
     version: null

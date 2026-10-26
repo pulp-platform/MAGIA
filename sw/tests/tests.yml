@@ -21,7 +21,7 @@
 # Top-level keys are the folders of sw/tests/ (`general` is sw/tests/ itself); each test is named
 # as `make test=` expects it. Fields:
 #   testbench  mesh or tile
-#   cores      control cores the test runs on
+#   cores      control cores the test runs on (default: all)
 #   sims       simulators the test runs on: questa, verilator
 #   requires   defines the build must have (MAGIA_FSYNC: FractalSync on)
 #   fast_sim   false builds the HW without the fast optimization (default true)
@@ -31,44 +31,37 @@
 general:
   inter_l1_test:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   hello_mesh:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   hetero_mesh_test:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
-  # Atomics are enabled only by the CV32E40X toolchain
+  # Atomics need the A extension, which the CV32E40PX lacks
   amo_test:
     testbench: mesh
-    cores: [CV32E40X]
+    cores: []
     sims: [questa, verilator]
     requires: []
     fast_sim: false
   hello_world:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   fpu_test:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   boot_test:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   l1_test:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
 
@@ -76,33 +69,27 @@ general:
 mm_tests:
   mm_tests/mesh_test_mm:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
     timeout: 10800
   mm_tests/fsync_test_mm:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: [MAGIA_FSYNC]
   mm_tests/fsync_extended_test_mm:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: [MAGIA_FSYNC]
   mm_tests/tile_test_mm:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   mm_tests/redmule_test_mm:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   mm_tests/idma_test_mm:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
 
@@ -110,38 +97,31 @@ mm_tests:
 eu_tests:
   eu_tests/mesh_test_event_unit:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
     timeout: 10800
   eu_tests/fsync_test_event_unit:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: [MAGIA_FSYNC]
   eu_tests/fsync_extended_test_event_unit:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: [MAGIA_FSYNC]
   eu_tests/tile_test_event_unit:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   eu_tests/redmule_test_event_unit:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   eu_tests/event_unit_test:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   eu_tests/idma_test_event_unit:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
 
@@ -149,128 +129,116 @@ eu_tests:
 collective_tests:
   narrow_broadcast:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   narrow_multicast_row:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   narrow_multicast_column:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   narrow_sync_row:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   narrow_sync_column:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   narrow_sync_mesh:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   wide_broadcast:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   wide_multicast_row:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   wide_multicast_column:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   narrow_reduce_row:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
     fast_sim: false
   narrow_reduce_column:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
     fast_sim: false
   narrow_reduce_mesh:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
     fast_sim: false
 
-# Software barriers on atomics, only by the CV32E40X
+# Software barriers on atomics, which the CV32E40PX lacks
 nsync:
   nsync/nsync_single_test:
     testbench: mesh
-    cores: [CV32E40X]
+    cores: []
     sims: [questa, verilator]
     requires: []
   nsync/nsync_naive_test:
     testbench: mesh
-    cores: [CV32E40X]
+    cores: []
     sims: [questa, verilator]
     requires: []
   nsync/nsync_hneighbor_test:
     testbench: mesh
-    cores: [CV32E40X]
+    cores: []
     sims: [questa, verilator]
     requires: []
   nsync/nsync_vneighbor_test:
     testbench: mesh
-    cores: [CV32E40X]
+    cores: []
     sims: [questa, verilator]
     requires: []
   nsync/nsync_hring_test:
     testbench: mesh
-    cores: [CV32E40X]
+    cores: []
     sims: [questa, verilator]
     requires: []
   nsync/nsync_vring_test:
     testbench: mesh
-    cores: [CV32E40X]
+    cores: []
     sims: [questa, verilator]
     requires: []
   nsync/nsync_row_test:
     testbench: mesh
-    cores: [CV32E40X]
+    cores: []
     sims: [questa, verilator]
     requires: []
   nsync/nsync_col_test:
     testbench: mesh
-    cores: [CV32E40X]
+    cores: []
     sims: [questa, verilator]
     requires: []
   nsync/nsync_xy_test:
     testbench: mesh
-    cores: [CV32E40X]
+    cores: []
     sims: [questa, verilator]
     requires: []
   nsync/nsync_hyper_test:
     testbench: mesh
-    cores: [CV32E40X]
+    cores: []
     sims: [questa, verilator]
     requires: []
   nsync/nsync_row_hyper_test:
     testbench: mesh
-    cores: [CV32E40X]
+    cores: []
     sims: [questa, verilator]
     requires: []
   nsync/nsync_col_hyper_test:
     testbench: mesh
-    cores: [CV32E40X]
+    cores: []
     sims: [questa, verilator]
     requires: []
 
@@ -278,47 +246,38 @@ nsync:
 spatz_tests:
   hello_mesh_spatz_test:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   atomic_mesh_spatz_test:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   dotp_mesh_spatz_test:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   simple_spatz_test:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   dotp_spatz_test:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   gemm_spatz_test:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   gemv_spatz_test:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   matmul_compare_spatz_test:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   vecsum_spatz_test:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
 
@@ -326,41 +285,33 @@ spatz_tests:
 cluster_tests:
   hello_pulp_barrier:
     testbench: mesh
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   hello_pulp:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   fpu_cluster_test:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   hello_redmule_pulp:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   hello_spatz_pulp:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   parallel_groups:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   vector_add:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
   hci_arb_redmule_bench:
     testbench: tile
-    cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []

@@ -1,0 +1,576 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="20 0 2200 1095" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="MAGIA: a 4x4 mesh of tiles with the L2 on the west side, and the MAGIA tile with its CV32E40PX control core, the PULP cluster of CV32E40PX cores, Spatz CC, RedMulE, iDMA, FractalSync, the Tile Event Unit, the TCDM behind the HCI, and the AXI crossbar to the NoC">
+  <style>
+    text { fill: #000000; font-size: 13px; }
+    .w  { fill: #ffffff; font-weight: 700; font-size: 18px; }
+    .ws { font-weight: 700; fill: #ffffff; font-size: 14px; }
+    .wx { font-weight: 700; fill: #ffffff; font-size: 12px; }
+    .wt { font-weight: 700; fill: #ffffff; font-size: 9.5px; }
+    .k  { font-weight: 700; font-size: 18px; }
+    .t  { font-weight: 700; font-size: 24px; }
+    .tl { font-size: 26px; }
+    .lg { font-size: 15px; }
+    .bd { font-weight: 700; font-size: 13px; fill: #222222; }
+    .bx { font-weight: 700; font-size: 13px; fill: #0B3D7A; }
+    .bc { font-weight: 700; font-size: 13px; fill: #B5651D; }
+    .be { font-weight: 700; font-size: 13px; fill: #8B0A8B; }
+    .mem  { fill: #1565C0; stroke: #0B3D7A; }
+    .memL { fill: #2F86D6; stroke: #1A4F8A; }
+    .net  { fill: #1E8A3A; stroke: #0F5A22; }
+    .per  { fill: #F0923A; stroke: #B5651D; }
+    .perL { fill: #F6B26B; stroke: #B5651D; }
+    .eu   { fill: #8B0A8B; stroke: #5A045A; }
+    .core { fill: #A52A2A; stroke: #6B1515; }
+    .tile { fill: #F9DCC0; stroke: #000000; stroke-width: 2; }
+    .lgb  { fill: #FFFFFF; fill-opacity: 0.6; stroke: #9AA0A6; }
+    .mtile { fill: #F9DCC0; stroke: #000000; stroke-width: 1.5; }
+    .hlbox { fill: none; stroke: #000000; stroke-width: 3; }
+    .mt   { font-weight: 700; font-size: 18px; }
+    .d  { fill: none; stroke: #222222; stroke-width: 1.6; stroke-linejoin: round; }
+    .x  { fill: none; stroke: #1565C0; stroke-width: 3.2; stroke-linejoin: round; }
+    .c  { fill: none; stroke: #D9822B; stroke-width: 2; stroke-linejoin: round; }
+    .e  { fill: none; stroke: #8B0A8B; stroke-width: 1.6; stroke-dasharray: 6 3; stroke-linejoin: round; }
+    .g  { fill: none; stroke: #1E8A3A; stroke-width: 3; }
+    .jd { fill: #222222; } .jx { fill: #1565C0; } .jc { fill: #D9822B; } .je { fill: #8B0A8B; }
+    .z  { fill: none; stroke: #000000; stroke-width: 1.5; stroke-dasharray: 6 4; }
+    .cone { fill: #F9DCC0; stroke: none; }
+    /* Outside the tile the page shows through: a gray that reads on light and dark pages */
+    .out, .out text, .out polygon { fill: #8A8A8A; }
+    .out polyline, .out line, .z, .hlbox { stroke: #8A8A8A; }
+  </style>
+  <!-- mesh: L2 on the west side, 4x4 tiles, one router per tile -->
+  <text class="t out" x="30" y="213.4" text-anchor="start">MAGIA Mesh</text>
+  <polygon class="cone" points="557,359 600,2 600,950 557,472"/>
+  <rect class="mem" x="30" y="240" width="40" height="457" rx="0"/>
+  <text class="w" x="50" y="471.8" text-anchor="middle">L2</text>
+  <rect class="mtile" x="105" y="250" width="70" height="70"/>
+  <text class="mt" x="140.0" y="291.3" text-anchor="middle">Tile</text>
+  <line class="g" x1="175" y1="320" x2="183.0" y2="328.0"/>
+  <polygon class="net" points="191,320 207,336 191,352 175,336"/>
+  <text class="wt" x="191" y="339.3" text-anchor="middle">NoC</text>
+  <rect class="mtile" x="220" y="250" width="70" height="70"/>
+  <text class="mt" x="255.0" y="291.3" text-anchor="middle">Tile</text>
+  <line class="g" x1="290" y1="320" x2="298.0" y2="328.0"/>
+  <polygon class="net" points="306,320 322,336 306,352 290,336"/>
+  <text class="wt" x="306" y="339.3" text-anchor="middle">NoC</text>
+  <rect class="mtile" x="335" y="250" width="70" height="70"/>
+  <text class="mt" x="370.0" y="291.3" text-anchor="middle">Tile</text>
+  <line class="g" x1="405" y1="320" x2="413.0" y2="328.0"/>
+  <polygon class="net" points="421,320 437,336 421,352 405,336"/>
+  <text class="wt" x="421" y="339.3" text-anchor="middle">NoC</text>
+  <rect class="mtile" x="450" y="250" width="70" height="70"/>
+  <text class="mt" x="485.0" y="291.3" text-anchor="middle">Tile</text>
+  <line class="g" x1="520" y1="320" x2="528.0" y2="328.0"/>
+  <polygon class="net" points="536,320 552,336 536,352 520,336"/>
+  <text class="wt" x="536" y="339.3" text-anchor="middle">NoC</text>
+  <rect class="mtile" x="105" y="365" width="70" height="70"/>
+  <text class="mt" x="140.0" y="406.3" text-anchor="middle">Tile</text>
+  <line class="g" x1="175" y1="435" x2="183.0" y2="443.0"/>
+  <polygon class="net" points="191,435 207,451 191,467 175,451"/>
+  <text class="wt" x="191" y="454.3" text-anchor="middle">NoC</text>
+  <rect class="mtile" x="220" y="365" width="70" height="70"/>
+  <text class="mt" x="255.0" y="406.3" text-anchor="middle">Tile</text>
+  <line class="g" x1="290" y1="435" x2="298.0" y2="443.0"/>
+  <polygon class="net" points="306,435 322,451 306,467 290,451"/>
+  <text class="wt" x="306" y="454.3" text-anchor="middle">NoC</text>
+  <rect class="mtile" x="335" y="365" width="70" height="70"/>
+  <text class="mt" x="370.0" y="406.3" text-anchor="middle">Tile</text>
+  <line class="g" x1="405" y1="435" x2="413.0" y2="443.0"/>
+  <polygon class="net" points="421,435 437,451 421,467 405,451"/>
+  <text class="wt" x="421" y="454.3" text-anchor="middle">NoC</text>
+  <rect class="mtile" x="450" y="365" width="70" height="70"/>
+  <text class="mt" x="485.0" y="406.3" text-anchor="middle">Tile</text>
+  <line class="g" x1="520" y1="435" x2="528.0" y2="443.0"/>
+  <polygon class="net" points="536,435 552,451 536,467 520,451"/>
+  <text class="wt" x="536" y="454.3" text-anchor="middle">NoC</text>
+  <rect class="mtile" x="105" y="480" width="70" height="70"/>
+  <text class="mt" x="140.0" y="521.3" text-anchor="middle">Tile</text>
+  <line class="g" x1="175" y1="550" x2="183.0" y2="558.0"/>
+  <polygon class="net" points="191,550 207,566 191,582 175,566"/>
+  <text class="wt" x="191" y="569.3" text-anchor="middle">NoC</text>
+  <rect class="mtile" x="220" y="480" width="70" height="70"/>
+  <text class="mt" x="255.0" y="521.3" text-anchor="middle">Tile</text>
+  <line class="g" x1="290" y1="550" x2="298.0" y2="558.0"/>
+  <polygon class="net" points="306,550 322,566 306,582 290,566"/>
+  <text class="wt" x="306" y="569.3" text-anchor="middle">NoC</text>
+  <rect class="mtile" x="335" y="480" width="70" height="70"/>
+  <text class="mt" x="370.0" y="521.3" text-anchor="middle">Tile</text>
+  <line class="g" x1="405" y1="550" x2="413.0" y2="558.0"/>
+  <polygon class="net" points="421,550 437,566 421,582 405,566"/>
+  <text class="wt" x="421" y="569.3" text-anchor="middle">NoC</text>
+  <rect class="mtile" x="450" y="480" width="70" height="70"/>
+  <text class="mt" x="485.0" y="521.3" text-anchor="middle">Tile</text>
+  <line class="g" x1="520" y1="550" x2="528.0" y2="558.0"/>
+  <polygon class="net" points="536,550 552,566 536,582 520,566"/>
+  <text class="wt" x="536" y="569.3" text-anchor="middle">NoC</text>
+  <rect class="mtile" x="105" y="595" width="70" height="70"/>
+  <text class="mt" x="140.0" y="636.3" text-anchor="middle">Tile</text>
+  <line class="g" x1="175" y1="665" x2="183.0" y2="673.0"/>
+  <polygon class="net" points="191,665 207,681 191,697 175,681"/>
+  <text class="wt" x="191" y="684.3" text-anchor="middle">NoC</text>
+  <rect class="mtile" x="220" y="595" width="70" height="70"/>
+  <text class="mt" x="255.0" y="636.3" text-anchor="middle">Tile</text>
+  <line class="g" x1="290" y1="665" x2="298.0" y2="673.0"/>
+  <polygon class="net" points="306,665 322,681 306,697 290,681"/>
+  <text class="wt" x="306" y="684.3" text-anchor="middle">NoC</text>
+  <rect class="mtile" x="335" y="595" width="70" height="70"/>
+  <text class="mt" x="370.0" y="636.3" text-anchor="middle">Tile</text>
+  <line class="g" x1="405" y1="665" x2="413.0" y2="673.0"/>
+  <polygon class="net" points="421,665 437,681 421,697 405,681"/>
+  <text class="wt" x="421" y="684.3" text-anchor="middle">NoC</text>
+  <rect class="mtile" x="450" y="595" width="70" height="70"/>
+  <text class="mt" x="485.0" y="636.3" text-anchor="middle">Tile</text>
+  <line class="g" x1="520" y1="665" x2="528.0" y2="673.0"/>
+  <polygon class="net" points="536,665 552,681 536,697 520,681"/>
+  <text class="wt" x="536" y="684.3" text-anchor="middle">NoC</text>
+  <rect class="hlbox" x="444" y="359" width="113" height="113" rx="6"/>
+  <line class="z" x1="557" y1="359" x2="600" y2="2"/>
+  <line class="z" x1="557" y1="472" x2="600" y2="950"/>
+  <polygon fill="#1E8A3A" points="175,336 165.0,341.5 165.0,330.5"/>
+  <polygon fill="#1E8A3A" points="70,336 80.0,330.5 80.0,341.5"/>
+  <polyline class="g" points="79.0,336.0 166.0,336.0"/>
+  <polygon fill="#1E8A3A" points="290,336 280.0,341.5 280.0,330.5"/>
+  <polygon fill="#1E8A3A" points="207,336 217.0,330.5 217.0,341.5"/>
+  <polyline class="g" points="216.0,336.0 281.0,336.0"/>
+  <polygon fill="#1E8A3A" points="405,336 395.0,341.5 395.0,330.5"/>
+  <polygon fill="#1E8A3A" points="322,336 332.0,330.5 332.0,341.5"/>
+  <polyline class="g" points="331.0,336.0 396.0,336.0"/>
+  <polygon fill="#1E8A3A" points="520,336 510.0,341.5 510.0,330.5"/>
+  <polygon fill="#1E8A3A" points="437,336 447.0,330.5 447.0,341.5"/>
+  <polyline class="g" points="446.0,336.0 511.0,336.0"/>
+  <polygon fill="#1E8A3A" points="175,451 165.0,456.5 165.0,445.5"/>
+  <polygon fill="#1E8A3A" points="70,451 80.0,445.5 80.0,456.5"/>
+  <polyline class="g" points="79.0,451.0 166.0,451.0"/>
+  <polygon fill="#1E8A3A" points="191,435 185.5,425.0 196.5,425.0"/>
+  <polygon fill="#1E8A3A" points="191,352 196.5,362.0 185.5,362.0"/>
+  <polyline class="g" points="191.0,361.0 191.0,426.0"/>
+  <polygon fill="#1E8A3A" points="290,451 280.0,456.5 280.0,445.5"/>
+  <polygon fill="#1E8A3A" points="207,451 217.0,445.5 217.0,456.5"/>
+  <polyline class="g" points="216.0,451.0 281.0,451.0"/>
+  <polygon fill="#1E8A3A" points="306,435 300.5,425.0 311.5,425.0"/>
+  <polygon fill="#1E8A3A" points="306,352 311.5,362.0 300.5,362.0"/>
+  <polyline class="g" points="306.0,361.0 306.0,426.0"/>
+  <polygon fill="#1E8A3A" points="405,451 395.0,456.5 395.0,445.5"/>
+  <polygon fill="#1E8A3A" points="322,451 332.0,445.5 332.0,456.5"/>
+  <polyline class="g" points="331.0,451.0 396.0,451.0"/>
+  <polygon fill="#1E8A3A" points="421,435 415.5,425.0 426.5,425.0"/>
+  <polygon fill="#1E8A3A" points="421,352 426.5,362.0 415.5,362.0"/>
+  <polyline class="g" points="421.0,361.0 421.0,426.0"/>
+  <polygon fill="#1E8A3A" points="520,451 510.0,456.5 510.0,445.5"/>
+  <polygon fill="#1E8A3A" points="437,451 447.0,445.5 447.0,456.5"/>
+  <polyline class="g" points="446.0,451.0 511.0,451.0"/>
+  <polygon fill="#1E8A3A" points="536,435 530.5,425.0 541.5,425.0"/>
+  <polygon fill="#1E8A3A" points="536,352 541.5,362.0 530.5,362.0"/>
+  <polyline class="g" points="536.0,361.0 536.0,426.0"/>
+  <polygon fill="#1E8A3A" points="175,566 165.0,571.5 165.0,560.5"/>
+  <polygon fill="#1E8A3A" points="70,566 80.0,560.5 80.0,571.5"/>
+  <polyline class="g" points="79.0,566.0 166.0,566.0"/>
+  <polygon fill="#1E8A3A" points="191,550 185.5,540.0 196.5,540.0"/>
+  <polygon fill="#1E8A3A" points="191,467 196.5,477.0 185.5,477.0"/>
+  <polyline class="g" points="191.0,476.0 191.0,541.0"/>
+  <polygon fill="#1E8A3A" points="290,566 280.0,571.5 280.0,560.5"/>
+  <polygon fill="#1E8A3A" points="207,566 217.0,560.5 217.0,571.5"/>
+  <polyline class="g" points="216.0,566.0 281.0,566.0"/>
+  <polygon fill="#1E8A3A" points="306,550 300.5,540.0 311.5,540.0"/>
+  <polygon fill="#1E8A3A" points="306,467 311.5,477.0 300.5,477.0"/>
+  <polyline class="g" points="306.0,476.0 306.0,541.0"/>
+  <polygon fill="#1E8A3A" points="405,566 395.0,571.5 395.0,560.5"/>
+  <polygon fill="#1E8A3A" points="322,566 332.0,560.5 332.0,571.5"/>
+  <polyline class="g" points="331.0,566.0 396.0,566.0"/>
+  <polygon fill="#1E8A3A" points="421,550 415.5,540.0 426.5,540.0"/>
+  <polygon fill="#1E8A3A" points="421,467 426.5,477.0 415.5,477.0"/>
+  <polyline class="g" points="421.0,476.0 421.0,541.0"/>
+  <polygon fill="#1E8A3A" points="520,566 510.0,571.5 510.0,560.5"/>
+  <polygon fill="#1E8A3A" points="437,566 447.0,560.5 447.0,571.5"/>
+  <polyline class="g" points="446.0,566.0 511.0,566.0"/>
+  <polygon fill="#1E8A3A" points="536,550 530.5,540.0 541.5,540.0"/>
+  <polygon fill="#1E8A3A" points="536,467 541.5,477.0 530.5,477.0"/>
+  <polyline class="g" points="536.0,476.0 536.0,541.0"/>
+  <polygon fill="#1E8A3A" points="175,681 165.0,686.5 165.0,675.5"/>
+  <polygon fill="#1E8A3A" points="70,681 80.0,675.5 80.0,686.5"/>
+  <polyline class="g" points="79.0,681.0 166.0,681.0"/>
+  <polygon fill="#1E8A3A" points="191,665 185.5,655.0 196.5,655.0"/>
+  <polygon fill="#1E8A3A" points="191,582 196.5,592.0 185.5,592.0"/>
+  <polyline class="g" points="191.0,591.0 191.0,656.0"/>
+  <polygon fill="#1E8A3A" points="290,681 280.0,686.5 280.0,675.5"/>
+  <polygon fill="#1E8A3A" points="207,681 217.0,675.5 217.0,686.5"/>
+  <polyline class="g" points="216.0,681.0 281.0,681.0"/>
+  <polygon fill="#1E8A3A" points="306,665 300.5,655.0 311.5,655.0"/>
+  <polygon fill="#1E8A3A" points="306,582 311.5,592.0 300.5,592.0"/>
+  <polyline class="g" points="306.0,591.0 306.0,656.0"/>
+  <polygon fill="#1E8A3A" points="405,681 395.0,686.5 395.0,675.5"/>
+  <polygon fill="#1E8A3A" points="322,681 332.0,675.5 332.0,686.5"/>
+  <polyline class="g" points="331.0,681.0 396.0,681.0"/>
+  <polygon fill="#1E8A3A" points="421,665 415.5,655.0 426.5,655.0"/>
+  <polygon fill="#1E8A3A" points="421,582 426.5,592.0 415.5,592.0"/>
+  <polyline class="g" points="421.0,591.0 421.0,656.0"/>
+  <polygon fill="#1E8A3A" points="520,681 510.0,686.5 510.0,675.5"/>
+  <polygon fill="#1E8A3A" points="437,681 447.0,675.5 447.0,686.5"/>
+  <polyline class="g" points="446.0,681.0 511.0,681.0"/>
+  <polygon fill="#1E8A3A" points="536,665 530.5,655.0 541.5,655.0"/>
+  <polygon fill="#1E8A3A" points="536,582 541.5,592.0 530.5,592.0"/>
+  <polyline class="g" points="536.0,591.0 536.0,656.0"/>
+  <!-- MAGIA tile -->
+  <rect class="tile" x="600" y="2" width="1460" height="948" rx="0"/>
+  <text class="t" x="620" y="933.4" text-anchor="start">MAGIA Tile</text>
+  <rect class="memL" x="650" y="24" width="1390" height="94" rx="0"/>
+  <text class="k" x="1350" y="77.3" text-anchor="middle">TCDM</text>
+  <rect class="mem" x="666" y="38" width="166" height="66" rx="2"/>
+  <text class="w" x="749.0" y="77.3" text-anchor="middle">Bank 0</text>
+  <rect class="mem" x="850" y="38" width="166" height="66" rx="2"/>
+  <text class="w" x="933.0" y="77.3" text-anchor="middle">Bank 1</text>
+  <rect class="mem" x="1034" y="38" width="166" height="66" rx="2"/>
+  <text class="w" x="1117.0" y="77.3" text-anchor="middle">Bank 2</text>
+  <rect class="mem" x="1490" y="38" width="166" height="66" rx="2"/>
+  <text class="w" x="1573.0" y="77.3" text-anchor="middle">Bank 29</text>
+  <rect class="mem" x="1674" y="38" width="166" height="66" rx="2"/>
+  <text class="w" x="1757.0" y="77.3" text-anchor="middle">Bank 30</text>
+  <rect class="mem" x="1858" y="38" width="166" height="66" rx="2"/>
+  <text class="w" x="1941.0" y="77.3" text-anchor="middle">Bank 31</text>
+  <rect class="net" x="706" y="150" width="1334" height="32" rx="0"/>
+  <text class="w" x="1373.0" y="172.3" text-anchor="middle">Heterogeneous Cluster Interconnect (HCI)</text>
+  <rect class="per" x="650" y="150" width="56" height="32" rx="0"/>
+  <text class="wx" x="678.0" y="163.3" text-anchor="middle">HCI</text>
+  <text class="wx" x="678.0" y="177.1" text-anchor="middle">CSRs</text>
+  <text class="bc" x="1110" y="207.6" text-anchor="middle">32</text>
+  <rect class="core" x="630" y="260" width="130" height="80" rx="2"/>
+  <text class="w" x="695.0" y="306.3" text-anchor="middle">CV32E40PX</text>
+  <polygon class="net" points="785,272 815,258 815,352 785,338"/>
+  <text class="wx" x="800" y="309.2" text-anchor="middle" transform="rotate(-90 800 305)">Demux</text>
+  <rect class="mem" x="655" y="500" width="80" height="40" rx="2"/>
+  <text class="ws" x="695.0" y="516.9" text-anchor="middle">Instr.</text>
+  <text class="ws" x="695.0" y="532.9" text-anchor="middle">Cache</text>
+  <rect class="net" x="850" y="250" width="40" height="450" rx="0"/>
+  <text class="w" x="870" y="481.3" text-anchor="middle" transform="rotate(-90 870 475)">OBI Xbar</text>
+  <rect class="net" x="925" y="255" width="85" height="60" rx="2"/>
+  <text class="ws" x="967.5" y="281.8" text-anchor="middle">CTRL</text>
+  <text class="ws" x="967.5" y="297.9" text-anchor="middle">Demux</text>
+  <circle class="jc" cx="965" cy="215" r="3.5"/>
+  <circle class="jc" cx="940" cy="361" r="3.5"/>
+  <circle class="jc" cx="940" cy="448" r="3.5"/>
+  <rect class="per" x="968" y="345" width="82" height="32" rx="0"/>
+  <text class="wx" x="1009.0" y="365.2" text-anchor="middle">Spatz CSRs</text>
+  <rect class="per" x="968" y="432" width="82" height="32" rx="0"/>
+  <text class="wx" x="1009.0" y="452.2" text-anchor="middle">Cluster CSRs</text>
+  <rect class="per" x="968" y="500" width="82" height="32" rx="0"/>
+  <text class="wx" x="1009.0" y="520.2" text-anchor="middle">Coll CSRs</text>
+  <rect class="eu" x="925" y="640" width="120" height="100" rx="0"/>
+  <text class="w" x="985.0" y="675.6" text-anchor="middle">Tile</text>
+  <text class="w" x="985.0" y="696.3" text-anchor="middle">Event</text>
+  <text class="w" x="985.0" y="717.0" text-anchor="middle">Unit</text>
+  <rect class="per" x="1080" y="250" width="260" height="170" rx="0"/>
+  <text class="ws" x="1090" y="268.9" text-anchor="start">Spatz CC</text>
+  <rect class="core" x="1095" y="300" width="66" height="70" rx="2"/>
+  <text class="ws" x="1128.0" y="339.9" text-anchor="middle">Snitch</text>
+  <rect class="perL" x="1192" y="278" width="138" height="132" rx="0"/>
+  <text class="wx" x="1322" y="400.2" text-anchor="end">Spatz</text>
+  <rect class="per" x="1198" y="288" width="24" height="44" rx="0"/>
+  <text class="wt" x="1210.0" y="313.3" text-anchor="middle">FPU</text>
+  <rect class="per" x="1224" y="288" width="24" height="44" rx="0"/>
+  <text class="wt" x="1236.0" y="313.3" text-anchor="middle">FPU</text>
+  <rect class="per" x="1250" y="288" width="24" height="44" rx="0"/>
+  <text class="wt" x="1262.0" y="313.3" text-anchor="middle">FPU</text>
+  <rect class="per" x="1276" y="288" width="24" height="44" rx="0"/>
+  <text class="wt" x="1288.0" y="313.3" text-anchor="middle">FPU</text>
+  <rect class="per" x="1302" y="288" width="24" height="44" rx="0"/>
+  <text class="wt" x="1314.0" y="313.3" text-anchor="middle">IPU</text>
+  <rect class="mem" x="1198" y="344" width="128" height="16" rx="0"/>
+  <text class="wt" x="1262.0" y="355.3" text-anchor="middle">VRF</text>
+  <text class="bd" x="1176" y="326.6" text-anchor="middle">XIF</text>
+  <rect class="mem" x="1110" y="500" width="80" height="40" rx="2"/>
+  <text class="ws" x="1150.0" y="516.9" text-anchor="middle">Instr.</text>
+  <text class="ws" x="1150.0" y="532.9" text-anchor="middle">Cache</text>
+  <rect class="per" x="1370" y="250" width="330" height="170" rx="0"/>
+  <text class="ws" x="1380" y="268.9" text-anchor="start">PULP Cluster</text>
+  <rect class="eu" x="1378" y="280" width="52" height="128" rx="2"/>
+  <text class="wx" x="1404.0" y="334.4" text-anchor="middle">Cluster</text>
+  <text class="wx" x="1404.0" y="348.2" text-anchor="middle">Event</text>
+  <text class="wx" x="1404.0" y="362.0" text-anchor="middle">Unit</text>
+  <rect class="core" x="1437" y="284" width="62" height="54" rx="1"/>
+  <text class="wt" x="1468.0" y="308.9" text-anchor="middle">CV32E40PX</text>
+  <text class="wt" x="1468.0" y="319.8" text-anchor="middle">Core 0</text>
+  <rect class="core" x="1502" y="284" width="62" height="54" rx="1"/>
+  <text class="wt" x="1533.0" y="308.9" text-anchor="middle">CV32E40PX</text>
+  <text class="wt" x="1533.0" y="319.8" text-anchor="middle">Core 1</text>
+  <rect class="core" x="1567" y="284" width="62" height="54" rx="1"/>
+  <text class="wt" x="1598.0" y="308.9" text-anchor="middle">CV32E40PX</text>
+  <text class="wt" x="1598.0" y="319.8" text-anchor="middle">Core 2</text>
+  <rect class="core" x="1632" y="284" width="62" height="54" rx="1"/>
+  <text class="wt" x="1663.0" y="308.9" text-anchor="middle">CV32E40PX</text>
+  <text class="wt" x="1663.0" y="319.8" text-anchor="middle">Core 3</text>
+  <rect class="core" x="1437" y="348" width="62" height="54" rx="1"/>
+  <text class="wt" x="1468.0" y="372.9" text-anchor="middle">CV32E40PX</text>
+  <text class="wt" x="1468.0" y="383.8" text-anchor="middle">Core 4</text>
+  <rect class="core" x="1502" y="348" width="62" height="54" rx="1"/>
+  <text class="wt" x="1533.0" y="372.9" text-anchor="middle">CV32E40PX</text>
+  <text class="wt" x="1533.0" y="383.8" text-anchor="middle">Core 5</text>
+  <rect class="core" x="1567" y="348" width="62" height="54" rx="1"/>
+  <text class="wt" x="1598.0" y="372.9" text-anchor="middle">CV32E40PX</text>
+  <text class="wt" x="1598.0" y="383.8" text-anchor="middle">Core 6</text>
+  <rect class="core" x="1632" y="348" width="62" height="54" rx="1"/>
+  <text class="wt" x="1663.0" y="372.9" text-anchor="middle">CV32E40PX</text>
+  <text class="wt" x="1663.0" y="383.8" text-anchor="middle">Core 7</text>
+  <rect class="mem" x="1500" y="500" width="80" height="40" rx="2"/>
+  <text class="ws" x="1540.0" y="516.9" text-anchor="middle">Instr.</text>
+  <text class="ws" x="1540.0" y="532.9" text-anchor="middle">Cache</text>
+  <rect class="per" x="1725" y="250" width="95" height="170" rx="2"/>
+  <text class="w" x="1772.5" y="341.3" text-anchor="middle">RedMulE</text>
+  <circle class="jc" cx="1745" cy="215" r="3.5"/>
+  <rect class="eu" x="1840" y="250" width="105" height="170" rx="0"/>
+  <text class="w" x="1892" y="341.3" text-anchor="middle">iDMA</text>
+  <text class="wx" x="1865" y="266.2" text-anchor="middle">OBI R</text>
+  <text class="wx" x="1920" y="266.2" text-anchor="middle">OBI W</text>
+  <text class="wx" x="1865" y="412.2" text-anchor="middle">AXI W</text>
+  <text class="wx" x="1920" y="412.2" text-anchor="middle">AXI R</text>
+  <circle class="jc" cx="1892" cy="215" r="3.5"/>
+  <rect class="net" x="1855" y="478" width="95" height="32" rx="0"/>
+  <text class="wx" x="1902.5" y="498.2" text-anchor="middle">AXI RW Join</text>
+  <text class="bx" x="1892" y="450.6" text-anchor="middle">2x256</text>
+  <rect class="net" x="1965" y="250" width="70" height="36" rx="0"/>
+  <text class="wx" x="2000.0" y="265.3" text-anchor="middle">AXI RW</text>
+  <text class="wx" x="2000.0" y="279.1" text-anchor="middle">Split</text>
+  <text class="bx" x="2000" y="203.6" text-anchor="middle">2x256</text>
+  <rect class="net" x="1908" y="560" width="62" height="60" rx="0"/>
+  <text class="ws" x="1939.0" y="594.9" text-anchor="middle">Fsync</text>
+  <rect class="net" x="630" y="800" width="930" height="36" rx="0"/>
+  <text class="w" x="1095.0" y="824.3" text-anchor="middle">AXI Xbar</text>
+  <rect class="mem" x="930" y="872" width="200" height="32" rx="0"/>
+  <text class="ws" x="1030.0" y="892.9" text-anchor="middle">BootROM Spatz CC</text>
+  <rect class="per" x="1590" y="798" width="80" height="40" rx="0"/>
+  <text class="wx" x="1630.0" y="815.3" text-anchor="middle">Collectives</text>
+  <text class="wx" x="1630.0" y="829.1" text-anchor="middle">GEN</text>
+  <polygon class="net" points="1700,850 2010,850 1960,900 1700,900"/>
+  <text class="w" x="1820" y="881.3" text-anchor="middle">NI</text>
+  <polygon class="net" points="2100,940 2150,990 2100,1040 2050,990"/>
+  <text class="ws" x="2100" y="994.9" text-anchor="middle">Router</text>
+  <text class="k out" x="2110" y="908.3" text-anchor="start">N</text>
+  <text class="k out" x="2188" y="983.3" text-anchor="middle">E</text>
+  <text class="k out" x="2110" y="1084.3" text-anchor="start">S</text>
+  <text class="k out" x="2012" y="983.3" text-anchor="middle">W</text>
+  <line class="x" x1="2041" y1="903" x2="2041" y2="915"/>
+  <line class="x" x1="2019" y1="925" x2="2019" y2="937"/>
+  <text class="bx" x="1985" y="942.5" text-anchor="end">256+32 each</text>
+  <rect class="lgb" x="1170" y="846" width="300" height="100" rx="3"/>
+  <text class="lg" x="1248" y="865.2" text-anchor="start">32-bit data (OBI / AXI)</text>
+  <text class="lg" x="1248" y="884.2" text-anchor="start">256-bit wide data</text>
+  <text class="lg" x="1248" y="903.2" text-anchor="start">Control registers</text>
+  <text class="lg" x="1248" y="922.2" text-anchor="start">Events to the Tile Event Unit</text>
+  <text class="lg" x="1248" y="941.2" text-anchor="start">NoC links between routers</text>
+  <polygon fill="#222222" points="749,104 753.5,114.0 744.5,114.0"/>
+  <polyline class="d" points="749.0,150.0 749.0,113.0"/>
+  <line class="d" x1="744.0" y1="132.0" x2="754.0" y2="122.0"/>
+  <text class="bd" x="758.0" y="131.6" text-anchor="start">32</text>
+  <polygon fill="#222222" points="933,104 937.5,114.0 928.5,114.0"/>
+  <polyline class="d" points="933.0,150.0 933.0,113.0"/>
+  <line class="d" x1="928.0" y1="132.0" x2="938.0" y2="122.0"/>
+  <text class="bd" x="942.0" y="131.6" text-anchor="start">32</text>
+  <polygon fill="#222222" points="1117,104 1121.5,114.0 1112.5,114.0"/>
+  <polyline class="d" points="1117.0,150.0 1117.0,113.0"/>
+  <line class="d" x1="1112.0" y1="132.0" x2="1122.0" y2="122.0"/>
+  <text class="bd" x="1126.0" y="131.6" text-anchor="start">32</text>
+  <polygon fill="#222222" points="1573,104 1577.5,114.0 1568.5,114.0"/>
+  <polyline class="d" points="1573.0,150.0 1573.0,113.0"/>
+  <line class="d" x1="1568.0" y1="132.0" x2="1578.0" y2="122.0"/>
+  <text class="bd" x="1582.0" y="131.6" text-anchor="start">32</text>
+  <polygon fill="#222222" points="1757,104 1761.5,114.0 1752.5,114.0"/>
+  <polyline class="d" points="1757.0,150.0 1757.0,113.0"/>
+  <line class="d" x1="1752.0" y1="132.0" x2="1762.0" y2="122.0"/>
+  <text class="bd" x="1766.0" y="131.6" text-anchor="start">32</text>
+  <polygon fill="#222222" points="1941,104 1945.5,114.0 1936.5,114.0"/>
+  <polyline class="d" points="1941.0,150.0 1941.0,113.0"/>
+  <line class="d" x1="1936.0" y1="132.0" x2="1946.0" y2="122.0"/>
+  <text class="bd" x="1950.0" y="131.6" text-anchor="start">32</text>
+  <polygon fill="#D9822B" points="678,182 683.0,193.0 673.0,193.0"/>
+  <polyline class="c" points="965.0,215.0 678.0,215.0 678.0,192.0"/>
+  <polygon fill="#D9822B" points="1955,560 1950.0,549.0 1960.0,549.0"/>
+  <polyline class="c" points="965.0,215.0 1955.0,215.0 1955.0,550.0"/>
+  <polygon fill="#222222" points="785,305 775.0,309.5 775.0,300.5"/>
+  <polyline class="d" points="760.0,305.0 776.0,305.0"/>
+  <polygon fill="#222222" points="832,182 836.5,192.0 827.5,192.0"/>
+  <polyline class="d" points="815.0,275.0 832.0,275.0 832.0,191.0"/>
+  <line class="d" x1="827.0" y1="252.1" x2="837.0" y2="242.1"/>
+  <text class="bd" x="823.0" y="251.7" text-anchor="end">32</text>
+  <polygon fill="#222222" points="850,305 840.0,309.5 840.0,300.5"/>
+  <polyline class="d" points="815.0,305.0 841.0,305.0"/>
+  <polygon fill="#222222" points="925,725 915.0,729.5 915.0,720.5"/>
+  <polyline class="d" points="815.0,335.0 830.0,335.0 830.0,725.0 916.0,725.0"/>
+  <line class="d" x1="825.0" y1="535.0" x2="835.0" y2="525.0"/>
+  <text class="bd" x="821.0" y="534.5" text-anchor="end">32</text>
+  <polygon fill="#222222" points="695,500 690.5,490.0 699.5,490.0"/>
+  <polyline class="d" points="695.0,340.0 695.0,491.0"/>
+  <line class="d" x1="690.0" y1="425.0" x2="700.0" y2="415.0"/>
+  <text class="bd" x="704.0" y="424.6" text-anchor="start">32</text>
+  <polygon fill="#222222" points="695,800 690.5,790.0 699.5,790.0"/>
+  <polyline class="d" points="695.0,540.0 695.0,791.0"/>
+  <line class="d" x1="690.0" y1="675.0" x2="700.0" y2="665.0"/>
+  <text class="bd" x="704.0" y="674.5" text-anchor="start">32</text>
+  <polygon fill="#222222" points="870,182 874.5,192.0 865.5,192.0"/>
+  <polyline class="d" points="870.0,250.0 870.0,191.0"/>
+  <line class="d" x1="865.0" y1="234.6" x2="875.0" y2="224.6"/>
+  <text class="bd" x="879.0" y="234.2" text-anchor="start">32</text>
+  <polygon fill="#222222" points="925,285 915.0,289.5 915.0,280.5"/>
+  <polyline class="d" points="890.0,285.0 916.0,285.0"/>
+  <polygon fill="#222222" points="925,665 915.0,669.5 915.0,660.5"/>
+  <polyline class="d" points="890.0,665.0 916.0,665.0"/>
+  <line class="d" x1="902.0" y1="670.0" x2="912.0" y2="660.0"/>
+  <text class="bd" x="907.0" y="657.5" text-anchor="middle">32</text>
+  <polygon fill="#222222" points="880,800 875.5,790.0 884.5,790.0"/>
+  <polyline class="d" points="880.0,700.0 880.0,791.0"/>
+  <line class="d" x1="875.0" y1="765.0" x2="885.0" y2="755.0"/>
+  <text class="bd" x="889.0" y="764.5" text-anchor="start">32</text>
+  <polygon fill="#222222" points="860,700 864.5,710.0 855.5,710.0"/>
+  <polyline class="d" points="860.0,800.0 860.0,709.0"/>
+  <line class="d" x1="855.0" y1="765.0" x2="865.0" y2="755.0"/>
+  <text class="bd" x="851.0" y="764.5" text-anchor="end">32</text>
+  <polyline class="c" points="965.0,255.0 965.0,215.0"/>
+  <polygon fill="#D9822B" points="968,516 957.0,521.0 957.0,511.0"/>
+  <polyline class="c" points="940.0,315.0 940.0,516.0 958.0,516.0"/>
+  <polygon fill="#D9822B" points="968,361 957.0,366.0 957.0,356.0"/>
+  <polyline class="c" points="940.0,361.0 958.0,361.0"/>
+  <polygon fill="#D9822B" points="968,448 957.0,453.0 957.0,443.0"/>
+  <polyline class="c" points="940.0,448.0 958.0,448.0"/>
+  <polygon fill="#222222" points="1192,335 1182.0,339.5 1182.0,330.5"/>
+  <polygon fill="#222222" points="1161,335 1171.0,330.5 1171.0,339.5"/>
+  <polyline class="d" points="1170.0,335.0 1183.0,335.0"/>
+  <polygon fill="#D9822B" points="1080,361 1069.0,366.0 1069.0,356.0"/>
+  <polyline class="c" points="1050.0,361.0 1070.0,361.0"/>
+  <line class="c" x1="1056.0" y1="366.0" x2="1066.0" y2="356.0"/>
+  <text class="bc" x="1061.0" y="353.6" text-anchor="middle">1</text>
+  <polygon fill="#222222" points="890,330 900.0,325.5 900.0,334.5"/>
+  <polyline class="d" points="1080.0,330.0 1050.0,330.0 899.0,330.0"/>
+  <line class="d" x1="1060.0" y1="335.0" x2="1070.0" y2="325.0"/>
+  <text class="bd" x="1065.0" y="322.6" text-anchor="middle">32</text>
+  <polygon fill="#222222" points="1240,182 1244.5,192.0 1235.5,192.0"/>
+  <polyline class="d" points="1240.0,250.0 1240.0,191.0"/>
+  <line class="d" x1="1235.0" y1="234.6" x2="1245.0" y2="224.6"/>
+  <text class="bd" x="1249.0" y="234.2" text-anchor="start">5x32</text>
+  <polygon fill="#222222" points="1150,500 1145.5,490.0 1154.5,490.0"/>
+  <polyline class="d" points="1150.0,420.0 1150.0,491.0"/>
+  <line class="d" x1="1145.0" y1="445.0" x2="1155.0" y2="435.0"/>
+  <text class="bd" x="1141.0" y="444.6" text-anchor="end">32</text>
+  <polygon fill="#222222" points="1150,800 1145.5,790.0 1154.5,790.0"/>
+  <polyline class="d" points="1150.0,540.0 1150.0,791.0"/>
+  <line class="d" x1="1145.0" y1="766.0" x2="1155.0" y2="756.0"/>
+  <text class="bd" x="1141.0" y="765.5" text-anchor="end">32</text>
+  <polygon fill="#D9822B" points="1385,420 1390.0,431.0 1380.0,431.0"/>
+  <polyline class="c" points="1050.0,448.0 1385.0,448.0 1385.0,430.0"/>
+  <line class="c" x1="1296.25" y1="453.0" x2="1306.25" y2="443.0"/>
+  <text class="bc" x="1301.25" y="464.6" text-anchor="middle">1</text>
+  <polygon fill="#222222" points="890,480 900.0,475.5 900.0,484.5"/>
+  <polyline class="d" points="1410.0,420.0 1410.0,480.0 899.0,480.0"/>
+  <line class="d" x1="1249.0" y1="485.0" x2="1259.0" y2="475.0"/>
+  <text class="bd" x="1254.0" y="472.6" text-anchor="middle">8x32</text>
+  <polygon fill="#222222" points="1560,182 1564.5,192.0 1555.5,192.0"/>
+  <polyline class="d" points="1560.0,250.0 1560.0,191.0"/>
+  <line class="d" x1="1555.0" y1="234.6" x2="1565.0" y2="224.6"/>
+  <text class="bd" x="1569.0" y="234.2" text-anchor="start">8x32</text>
+  <polygon fill="#222222" points="1540,500 1535.5,490.0 1544.5,490.0"/>
+  <polyline class="d" points="1540.0,420.0 1540.0,491.0"/>
+  <line class="d" x1="1535.0" y1="445.0" x2="1545.0" y2="435.0"/>
+  <text class="bd" x="1549.0" y="444.6" text-anchor="start">8x32</text>
+  <polygon fill="#222222" points="1540,800 1535.5,790.0 1544.5,790.0"/>
+  <polyline class="d" points="1540.0,540.0 1540.0,791.0"/>
+  <line class="d" x1="1535.0" y1="766.0" x2="1545.0" y2="756.0"/>
+  <text class="bd" x="1549.0" y="765.5" text-anchor="start">32</text>
+  <polygon fill="#1565C0" points="1790,182 1797.0,197.0 1783.0,197.0"/>
+  <polyline class="x" points="1790.0,250.0 1790.0,196.0"/>
+  <line class="x" x1="1785.0" y1="234.6" x2="1795.0" y2="224.6"/>
+  <text class="bx" x="1799.0" y="234.2" text-anchor="start">256</text>
+  <polygon fill="#D9822B" points="1745,250 1740.0,239.0 1750.0,239.0"/>
+  <polyline class="c" points="1745.0,215.0 1745.0,240.0"/>
+  <polygon fill="#1565C0" points="1865,182 1872.0,197.0 1858.0,197.0"/>
+  <polyline class="x" points="1865.0,250.0 1865.0,196.0"/>
+  <line class="x" x1="1860.0" y1="234.6" x2="1870.0" y2="224.6"/>
+  <text class="bx" x="1856.0" y="234.2" text-anchor="end">256</text>
+  <polygon fill="#1565C0" points="1920,182 1927.0,197.0 1913.0,197.0"/>
+  <polyline class="x" points="1920.0,250.0 1920.0,196.0"/>
+  <line class="x" x1="1915.0" y1="234.6" x2="1925.0" y2="224.6"/>
+  <text class="bx" x="1929.0" y="234.2" text-anchor="start">256</text>
+  <polygon fill="#D9822B" points="1892,250 1887.0,239.0 1897.0,239.0"/>
+  <polyline class="c" points="1892.0,215.0 1892.0,240.0"/>
+  <polygon fill="#1565C0" points="1865,478 1858.0,463.0 1872.0,463.0"/>
+  <polyline class="x" points="1865.0,420.0 1865.0,464.0"/>
+  <polygon fill="#1565C0" points="1920,478 1913.0,463.0 1927.0,463.0"/>
+  <polyline class="x" points="1920.0,420.0 1920.0,464.0"/>
+  <polygon fill="#1565C0" points="1902,850 1895.0,835.0 1909.0,835.0"/>
+  <polyline class="x" points="1902.0,510.0 1902.0,836.0"/>
+  <line class="x" x1="1897.0" y1="753.0" x2="1907.0" y2="743.0"/>
+  <text class="bx" x="1893.0" y="752.5" text-anchor="end">256 R/W</text>
+  <polygon fill="#1565C0" points="1975,182 1982.0,197.0 1968.0,197.0"/>
+  <polyline class="x" points="1975.0,250.0 1975.0,196.0"/>
+  <polygon fill="#1565C0" points="2025,182 2032.0,197.0 2018.0,197.0"/>
+  <polyline class="x" points="2025.0,250.0 2025.0,196.0"/>
+  <polygon fill="#1565C0" points="1985,286 1992.0,301.0 1978.0,301.0"/>
+  <polyline class="x" points="1985.0,850.0 1985.0,300.0"/>
+  <line class="x" x1="1980.0" y1="770.4" x2="1990.0" y2="760.4"/>
+  <text class="bx" x="1976.0" y="769.9" text-anchor="end">256 R/W</text>
+  <polygon fill="#8B0A8B" points="1045,655 1055.0,650.5 1055.0,659.5"/>
+  <polyline class="e" points="1320.0,420.0 1320.0,655.0 1054.0,655.0"/>
+  <line class="e" x1="1315.0" y1="613.0" x2="1325.0" y2="603.0"/>
+  <text class="be" x="1329.0" y="612.5" text-anchor="start">2</text>
+  <polygon fill="#8B0A8B" points="1045,672 1055.0,667.5 1055.0,676.5"/>
+  <polyline class="e" points="1680.0,420.0 1680.0,672.0 1054.0,672.0"/>
+  <line class="e" x1="1675.0" y1="626.6" x2="1685.0" y2="616.6"/>
+  <text class="be" x="1689.0" y="626.1" text-anchor="start">1</text>
+  <polygon fill="#8B0A8B" points="1045,689 1055.0,684.5 1055.0,693.5"/>
+  <polyline class="e" points="1770.0,420.0 1770.0,689.0 1054.0,689.0"/>
+  <line class="e" x1="1765.0" y1="640.2" x2="1775.0" y2="630.2"/>
+  <text class="be" x="1779.0" y="639.8" text-anchor="start">3</text>
+  <polygon fill="#8B0A8B" points="1045,706 1055.0,701.5 1055.0,710.5"/>
+  <polyline class="e" points="1850.0,420.0 1850.0,706.0 1054.0,706.0"/>
+  <line class="e" x1="1845.0" y1="653.8" x2="1855.0" y2="643.8"/>
+  <text class="be" x="1859.0" y="653.3" text-anchor="start">8</text>
+  <polygon fill="#8B0A8B" points="1045,723 1055.0,718.5 1055.0,727.5"/>
+  <polyline class="e" points="1951.0,620.0 1951.0,723.0 1054.0,723.0"/>
+  <line class="e" x1="1946.0" y1="707.4" x2="1956.0" y2="697.4"/>
+  <text class="be" x="1960.0" y="706.9" text-anchor="start">2</text>
+  <polygon fill="#222222" points="1030,872 1025.5,862.0 1034.5,862.0"/>
+  <polyline class="d" points="1030.0,836.0 1030.0,863.0"/>
+  <line class="d" x1="1025.0" y1="859.0" x2="1035.0" y2="849.0"/>
+  <text class="bd" x="1039.0" y="858.5" text-anchor="start">32</text>
+  <polygon fill="#D9822B" points="1630,798 1625.0,787.0 1635.0,787.0"/>
+  <polyline class="c" points="1050.0,516.0 1070.0,516.0 1070.0,775.0 1630.0,775.0 1630.0,788.0"/>
+  <line class="c" x1="1457.0" y1="780.0" x2="1467.0" y2="770.0"/>
+  <text class="bc" x="1462.0" y="767.5" text-anchor="middle">32</text>
+  <polygon fill="#222222" points="1590,818 1580.0,822.5 1580.0,813.5"/>
+  <polyline class="d" points="1560.0,818.0 1581.0,818.0"/>
+  <polygon fill="#222222" points="1730,850 1725.5,840.0 1734.5,840.0"/>
+  <polyline class="d" points="1670.0,818.0 1730.0,818.0 1730.0,841.0"/>
+  <line class="d" x1="1695.0" y1="823.0" x2="1705.0" y2="813.0"/>
+  <text class="bd" x="1700.0" y="810.5" text-anchor="middle">32</text>
+  <polygon fill="#222222" points="1500,836 1504.5,846.0 1495.5,846.0"/>
+  <polyline class="d" points="1700.0,885.0 1500.0,885.0 1500.0,845.0"/>
+  <line class="d" x1="1595.0" y1="890.0" x2="1605.0" y2="880.0"/>
+  <text class="bd" x="1600.0" y="877.5" text-anchor="middle">32</text>
+  <polygon fill="#1E8A3A" points="2100,895 2105.5,905.0 2094.5,905.0"/>
+  <polygon fill="#1E8A3A" points="2100,940 2094.5,930.0 2105.5,930.0"/>
+  <polyline class="g" points="2100.0,931.0 2100.0,904.0"/>
+  <polygon fill="#1E8A3A" points="2195,990 2185.0,995.5 2185.0,984.5"/>
+  <polygon fill="#1E8A3A" points="2150,990 2160.0,984.5 2160.0,995.5"/>
+  <polyline class="g" points="2159.0,990.0 2186.0,990.0"/>
+  <polygon fill="#1E8A3A" points="2100,1085 2094.5,1075.0 2105.5,1075.0"/>
+  <polygon fill="#1E8A3A" points="2100,1040 2105.5,1050.0 2094.5,1050.0"/>
+  <polyline class="g" points="2100.0,1049.0 2100.0,1076.0"/>
+  <polygon fill="#1E8A3A" points="2005,990 2015.0,984.5 2015.0,995.5"/>
+  <polygon fill="#1E8A3A" points="2050,990 2040.0,995.5 2040.0,984.5"/>
+  <polyline class="g" points="2041.0,990.0 2014.0,990.0"/>
+  <polygon fill="#1565C0" points="2086,954 2070.4,948.3 2080.3,938.4"/>
+  <polyline class="x" points="1996.0,864.0 2076.1,944.1"/>
+  <polygon fill="#1565C0" points="1974,886 1989.6,891.7 1979.7,901.6"/>
+  <polyline class="x" points="2064.0,976.0 1983.9,895.9"/>
+  <polygon fill="#222222" points="1235,860 1225.0,864.5 1225.0,855.5"/>
+  <polyline class="d" points="1185.0,860.0 1226.0,860.0"/>
+  <polygon fill="#1565C0" points="1235,879 1220.0,886.0 1220.0,872.0"/>
+  <polyline class="x" points="1185.0,879.0 1221.0,879.0"/>
+  <polygon fill="#D9822B" points="1235,898 1224.0,903.0 1224.0,893.0"/>
+  <polyline class="c" points="1185.0,898.0 1225.0,898.0"/>
+  <polygon fill="#8B0A8B" points="1235,917 1225.0,921.5 1225.0,912.5"/>
+  <polyline class="e" points="1185.0,917.0 1226.0,917.0"/>
+  <polygon fill="#1E8A3A" points="1235,936 1225.0,941.5 1225.0,930.5"/>
+  <polyline class="g" points="1185.0,936.0 1226.0,936.0"/>
+  <g class="out">
+  <polygon fill="#222222" points="2085,578 2075.0,582.5 2075.0,573.5"/>
+  <polyline class="d" points="1970.0,578.0 2076.0,578.0"/>
+  <polygon fill="#222222" points="1970,602 1980.0,597.5 1980.0,606.5"/>
+  <polyline class="d" points="2085.0,602.0 1979.0,602.0"/>
+  </g>
+</svg>

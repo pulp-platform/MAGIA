@@ -17,15 +17,14 @@
  * Authors: Victor Isachi <victor.isachi@unibo.it>
  *          Luca Balboni <luca.balboni@chips.it>
  *
- * CV32E40X Core Data - OBI REQ Converter
- *
+ * Core Data - OBI REQ Converter
  */
 
-module cv32e40x_data2obi_req
+module data2obi_req
   import magia_tile_pkg::*;
 (
-  input  magia_tile_pkg::cv32e40x_core_data_req_t data_req_i,
-  output magia_tile_pkg::core_obi_data_req_t       obi_req_o
+  input  magia_tile_pkg::core_data_req_t     data_req_i,
+  output magia_tile_pkg::core_obi_data_req_t obi_req_o
 );
 
   assign obi_req_o.req                  = data_req_i.req;
@@ -38,9 +37,9 @@ module cv32e40x_data2obi_req
   assign obi_req_o.a.a_optional.wuser   = 'b0;
   assign obi_req_o.a.a_optional.mid     = 'b0;
   assign obi_req_o.a.a_optional.achk    = 'b0;
-  assign obi_req_o.a.a_optional.atop    = data_req_i.atop;
-  assign obi_req_o.a.a_optional.memtype = data_req_i.memtype;
-  assign obi_req_o.a.a_optional.prot    = data_req_i.prot;
-  assign obi_req_o.a.a_optional.dbg     = data_req_i.dbg;
+  assign obi_req_o.a.a_optional.atop    = 'b0;
+  assign obi_req_o.a.a_optional.memtype = 'b0;
+  assign obi_req_o.a.a_optional.prot    = 'b0;
+  assign obi_req_o.a.a_optional.dbg     = 'b0;
 
-endmodule: cv32e40x_data2obi_req
+endmodule: data2obi_req
