@@ -23,7 +23,7 @@
 #include "cluster_utils.h"
 
 #define HCI_STRESS_ITERS  (4096)
-#define HCI_STRESS_BASE   (L1_BASE + 0x00060000)
+#define HCI_STRESS_BASE   (L1_BASE + 0x00020000)
 #define HCI_STRESS_STRIDE (0x00000400)
 #define HCI_STRESS_WORDS  (HCI_STRESS_STRIDE / 4)
 

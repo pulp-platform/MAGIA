@@ -24,9 +24,9 @@
 
 #include "magia_tile_utils.h"
 
-// Print buffer in the tile-private reserved region
+// Print buffer in the private scratch of each tile
 #define STR_OFFSET  (0x00000000)
-#define STR_BASE    (RESERVED_START + STR_OFFSET)
+#define STR_BASE    (SCRATCH_BASE + STR_OFFSET)
 // Sync words in the top 4 KiB of L1, which every tile can reach
 #define SYNC_OFFSET (L1_SIZE - 0x00001000)
 #define SYNC_BASE   (L1_BASE + SYNC_OFFSET)

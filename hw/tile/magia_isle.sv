@@ -134,6 +134,8 @@ module magia_isle
   localparam int unsigned NumMemBanks  = TileCfg.L1.NumBanks;
   localparam int unsigned NumWordsBank = TileCfg.L1.NumWordsBank;
   localparam int unsigned L1BankAddrW  = $clog2(NumWordsBank * magia_tile_pkg::DW_LIC / magia_tile_pkg::BW_LIC);  // Byte address within a bank
+  localparam logic [magia_pkg::ADDR_W-1:0] L1Bytes     = magia_pkg::ADDR_W'(NumMemBanks) << L1BankAddrW;
+  localparam logic [magia_pkg::ADDR_W-1:0] L1PrivBytes = magia_pkg::ADDR_W'(TileCfg.L1.PrivBytes);
 
   localparam int unsigned NumHwpe = TileCfg.EnRedMule ? 1 : 0;  // 0 drops the RedMulE leaf of the HCI interconnect
   localparam int unsigned NumDma  = magia_tile_pkg::N_DMA;
@@ -210,23 +212,37 @@ module magia_isle
 /**             Tile Address Map Beginning            **/
 /*******************************************************/
 
-  // L1 is global: each tile owns the slot at mhartid*L1_TILE_OFFSET
+`ifndef SYNTHESIS
+  // The L1 offset is the address modulo L1_TILE_OFFSET, so the L1 must fit in a tile window
+  if (L1Bytes > magia_tile_pkg::L1_TILE_OFFSET) begin : gen_err_l1_size
+    $fatal(1, "magia_isle: the L1 does not fit in a tile window (L1_TILE_OFFSET)");
+  end
+  if (L1PrivBytes == '0 || L1PrivBytes >= L1Bytes) begin : gen_err_l1_priv_size
+    $fatal(1, "magia_isle: TileCfg.L1.PrivBytes must leave both a private and a global part of L1");
+  end
+  if (magia_tile_pkg::TILE_PERIPH_BASE % magia_tile_pkg::L1_TILE_OFFSET != 0) begin : gen_err_periph_base
+    $fatal(1, "magia_isle: TILE_PERIPH_BASE must be aligned to L1_TILE_OFFSET");
+  end
+`endif
+
+  // One address per L1 byte: below L1PrivBytes the private view, above it the tile window
+  logic[magia_pkg::ADDR_W-1:0] tile_window_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_l1_start_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_l1_end_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_event_unit_start_addr;
   logic[magia_pkg::ADDR_W-1:0] tile_event_unit_end_addr;
 
-  assign tile_l1_start_addr         = magia_tile_pkg::L1_ADDR_START       + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
-  assign tile_l1_end_addr           = magia_tile_pkg::L1_ADDR_END         + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
+  assign tile_window_addr           = magia_tile_pkg::L1_ADDR_START + mhartid_i*magia_tile_pkg::L1_TILE_OFFSET;
+  assign tile_l1_start_addr         = tile_window_addr + L1PrivBytes;
+  assign tile_l1_end_addr           = tile_window_addr + L1Bytes;
   assign tile_event_unit_start_addr = magia_tile_pkg::CTRL_EU_ADDR_START;
   assign tile_event_unit_end_addr   = magia_tile_pkg::CTRL_EU_ADDR_END;
 
   // TCDM ranges of core data, idx 0 of every core data demux
   magia_tile_pkg::obi_xbar_rule_t [magia_tile_pkg::NUM_TCDM_RULES-1:0] tcdm_rules;
 
-  // Reserved and stack are a private alias, the same in every tile, the L1 is shifted per tile
-  assign tcdm_rules[0] = '{idx: 0, start_addr: magia_tile_pkg::RESERVED_ADDR_START, end_addr: magia_tile_pkg::STACK_ADDR_END};
-  assign tcdm_rules[1] = '{idx: 0, start_addr: tile_l1_start_addr,                  end_addr: tile_l1_end_addr            };
+  assign tcdm_rules[0] = '{idx: 0, start_addr: magia_tile_pkg::L1_PRIV_ADDR_START, end_addr: magia_tile_pkg::L1_PRIV_ADDR_START + L1PrivBytes};
+  assign tcdm_rules[1] = '{idx: 0, start_addr: tile_l1_start_addr,                 end_addr: tile_l1_end_addr                              };
 
 /*******************************************************/
 /**                Tile Address Map End               **/
@@ -772,37 +788,29 @@ module magia_isle
   assign obi_xbar_slv_req[ObiMgr.ext]  = ext_obi_data_req;
   assign ext_obi_data_rsp              = obi_xbar_slv_rsp[ObiMgr.ext];
 
-  localparam int unsigned RuleL2    = 0;
-  localparam int unsigned RuleL1    = 1;
-  localparam int unsigned RuleRes   = 2;
-  localparam int unsigned RuleStack = 3;
+  localparam int unsigned RuleL2        = 0;
+  localparam int unsigned RuleL1        = 1;
+  localparam int unsigned RuleL1Priv    = 2;
+  localparam int unsigned RuleEu        = 3;
   localparam int unsigned RuleCtrl      = 4;
-  localparam int unsigned RuleEu        = 5;
-  localparam int unsigned RuleCtrlHi    = 6;
-  localparam int unsigned RuleClusterEu = 7;
+  localparam int unsigned RuleClusterEu = 5;
 
-  localparam logic [magia_pkg::ADDR_W-1:0] CtrlHiEnd = TileCfg.EnCluster ?
+  localparam logic [magia_pkg::ADDR_W-1:0] CtrlEnd = TileCfg.EnCluster ?
       magia_tile_pkg::CLUSTER_EU_ADDR_START : magia_tile_pkg::TILE_PERIPH_ADDR_END;
 
   magia_tile_pkg::obi_xbar_rule_t[ObiSbr.num_rules-1:0]                        obi_xbar_rule;
   logic[ObiMgr.num_mgr-1:0]                                                    obi_xbar_en_default_idx;
   logic[ObiMgr.num_mgr-1:0][magia_tile_pkg::gen_idx_width(ObiSbr.num_sbr)-1:0] obi_xbar_default_idx;
 
-  assign obi_xbar_rule[RuleL2]    = '{idx: ObiSbr.l2,   start_addr: magia_tile_pkg::L2_ADDR_START,       end_addr: magia_tile_pkg::L2_ADDR_END         };
-  assign obi_xbar_rule[RuleL1]    = '{idx: ObiSbr.l1,   start_addr: tile_l1_start_addr,                  end_addr: tile_l1_end_addr                    };
-  assign obi_xbar_rule[RuleRes]   = '{idx: ObiSbr.l1,   start_addr: magia_tile_pkg::RESERVED_ADDR_START, end_addr: magia_tile_pkg::RESERVED_ADDR_END   };
-  assign obi_xbar_rule[RuleStack] = '{idx: ObiSbr.l1,   start_addr: magia_tile_pkg::STACK_ADDR_START,    end_addr: magia_tile_pkg::STACK_ADDR_END      };
-  // The control window is split around the Event Units: every address matches one rule
-  assign obi_xbar_rule[RuleCtrl]   = '{idx: ObiSbr.ctrl, start_addr: magia_tile_pkg::TILE_PERIPH_BASE, end_addr: tile_event_unit_start_addr          };
-  assign obi_xbar_rule[RuleEu]     = '{idx: ObiSbr.eu,   start_addr: tile_event_unit_start_addr,     end_addr: tile_event_unit_end_addr            };
-  assign obi_xbar_rule[RuleCtrlHi] = '{idx: ObiSbr.ctrl, start_addr: tile_event_unit_end_addr,       end_addr: CtrlHiEnd                            };
+  assign obi_xbar_rule[RuleL2]     = '{idx: ObiSbr.l2,   start_addr: magia_tile_pkg::L2_ADDR_START,      end_addr: magia_tile_pkg::L2_ADDR_END};
+  assign obi_xbar_rule[RuleL1]     = '{idx: ObiSbr.l1,   start_addr: tcdm_rules[1].start_addr,           end_addr: tcdm_rules[1].end_addr     };
+  assign obi_xbar_rule[RuleL1Priv] = '{idx: ObiSbr.l1,   start_addr: tcdm_rules[0].start_addr,           end_addr: tcdm_rules[0].end_addr     };
+  // EU, control and cluster EU tile the peripheral window: its holes get the ctrl_demux error
+  assign obi_xbar_rule[RuleEu]     = '{idx: ObiSbr.eu,   start_addr: tile_event_unit_start_addr,         end_addr: tile_event_unit_end_addr   };
+  assign obi_xbar_rule[RuleCtrl]   = '{idx: ObiSbr.ctrl, start_addr: tile_event_unit_end_addr,           end_addr: CtrlEnd                    };
 
   if (TileCfg.EnCluster) begin: gen_cluster_eu_rule
     assign obi_xbar_rule[RuleClusterEu] = '{idx: ObiSbr.cluster_eu, start_addr: magia_tile_pkg::CLUSTER_EU_ADDR_START, end_addr: magia_tile_pkg::CLUSTER_EU_ADDR_END};
-    if (magia_tile_pkg::CLUSTER_EU_ADDR_END != magia_tile_pkg::TILE_PERIPH_ADDR_END)
-    begin: gen_err_cluster_eu_not_last
-      $fatal(1, "magia_isle: peripherals after the cluster EU need a control rule above it");
-    end
   end
 
   // Anything outside L1 and the peripheral window goes to the AXI crossbar
@@ -1132,7 +1140,7 @@ module magia_isle
 
   assign axi_xbar_mst_rsp[AxiMst.ext] = axi_narrow_mst_rsp_i;
 
-  // Remote accesses to this tile's L1 and reserved region reach the OBI crossbar
+  // Remote accesses to this tile's window reach the OBI crossbar
   logic[magia_tile_pkg::AID_WIDTH-1:0]   axi2obi_req_write_aid;
   logic[magia_tile_pkg::AUSER_WIDTH-1:0] axi2obi_req_write_auser;
   logic[magia_tile_pkg::WUSER_WIDTH-1:0] axi2obi_req_write_wuser;
@@ -1828,7 +1836,7 @@ module magia_isle
       .test_mode_i      ( test_mode_i          ),
 
       .hart_id_i        ( 32'(HartIdBase) + mhartid_i ),
-      .tcdm_addr_base_i ( tile_l1_start_addr   ),
+      .tcdm_addr_base_i ( tile_window_addr     ),  // Snitch needs an aligned TCDM base
 
       .irq_i            ( spatz_irq            ),
 

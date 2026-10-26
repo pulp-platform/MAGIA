@@ -21,12 +21,12 @@
  *
  */
 
-#define READY_ADDR        0x00001704
-#define START_ADDR        0x00001708
-#define TASKBIN_ADDR      0x0000170C
-#define DATA_ADDR         0x00001710
-#define RETURN_ADDR       0x00001714
-#define DONE_ADDR         0x00001718
+#define READY_ADDR        0xA0002204   // SPATZ_CTRL_BASE + 0x04
+#define START_ADDR        0xA0002208
+#define TASKBIN_ADDR      0xA000220C
+#define DATA_ADDR         0xA0002210
+#define RETURN_ADDR       0xA0002214
+#define DONE_ADDR         0xA0002218
 #define MSTATUS_VS        0x200        // Vector Status [9:8] = 01
 #define MSTATUS_MIE       0x8          // Machine Interrupt Enable
 #define MIE_MEIE          0x800        // External interrupt enable
@@ -36,7 +36,7 @@
 
 _start:
     /* Init stack pointer */
-    li      sp, 0x0001FFF8
+    li      sp, 0xA011FFF8   // _stack_start of spatz_program.ld
 
     /* Clear ALL integer registers */
     mv x1,  x0

@@ -30,7 +30,7 @@
 
 #define X_BASE (L1_BASE + 0x00012048)
 #define Y_BASE (L1_BASE + 0x00016048)
-#define Z_BASE (L2_BASE + 0x00042000)  /* offset safe: clear of instrram (0xCC000000..0xCC007FFF) and dataram header */
+#define Z_BASE (L2_BASE + 0x00042000)  /* offset safe: clear of instrram (0xC0000000..0xC0007FFF) and dataram header */
 #define W_BASE (L2_BASE + 0x00046000)
 
 #define M_SIZE (96)
