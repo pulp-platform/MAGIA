@@ -25,7 +25,7 @@
 #include <stdint.h>
 
 static inline void ccount_en(void){
-#if defined(CV32E40X) || defined(CV32E40P)
+#if defined(CV32E40PX)
     asm volatile("csrrci zero, 0x320, 0x1" ::);
 #else
     asm volatile("csrw 0x7E0, %0" :: "r"(0x1));
@@ -34,7 +34,7 @@ static inline void ccount_en(void){
 }
 
 static inline void ccount_dis(void){
-#if defined(CV32E40X) || defined(CV32E40P)
+#if defined(CV32E40PX)
     asm volatile("csrrsi zero, 0x320, 0x1" ::);
 #else
     asm volatile("csrw 0x7E1, %0" :: "r"(0x0));
@@ -65,7 +65,7 @@ static inline uint32_t perf_csr_instret(void){
 
 #define MHPMCTR_INHIBIT_MASK (0xFF8u)
 
-#if defined(CV32E40P)
+#if defined(CV32E40PX)
 
 static inline void hpmcount_ext_en(void){
     uint32_t mask = MHPMCTR_INHIBIT_MASK;

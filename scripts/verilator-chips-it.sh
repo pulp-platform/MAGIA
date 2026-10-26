@@ -4,8 +4,8 @@
 #
 # Usage: from MAGIA ROOT source: ./scripts/verilator-chips-it.sh
 # Then use make normally, for example:
-#   make verilate core=CV32E40P/X mesh_dv=1
-#   make verilate-run core=CV32E40P/X mesh_dv=1 test='name of test'
+#   make verilate core=CV32E40PX mesh_dv=1
+#   make verilate-run core=CV32E40PX mesh_dv=1 test='name of test'
 #
 # PLEASE NOTE THAT !!!!!!!!!
 # Requires the existing private lz4 installation in $HOME/opt/lz4.

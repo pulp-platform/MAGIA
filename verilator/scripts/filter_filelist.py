@@ -27,8 +27,7 @@ EXCLUDED = {
 
 # Dependency sources replaced by the patched copy of the same name in --vendor-dir
 VENDORED = {
-    "cv32e40x_rvfi_sim_trace.sv",
-    "cv32e40x_wrapper.sv",
+    "cv32e40px_tracer.sv",
 }
 
 

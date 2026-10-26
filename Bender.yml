@@ -26,8 +26,7 @@ package:
 
 dependencies:
   redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 2.2.0                                    }
-  cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: 8834f135214f8f25f710ebd77f48d9f03d9548e6 } # branch: lb/operand_forwarding
-  cv32e40p          : { git: "https://github.com/FondazioneChipsIT/cv32e40p.git"      , rev: 193270df33f76f2728a364bd2d9b1865e0b7e4f9 } # branch: lb/PulpClusterCV32OHWFPU-divsqrt
+  cv32e40px         : { git: "https://github.com/FondazioneChipsIT/cv32e40px.git"     , rev: 3ef1c512624d3a931cd40e3db56865ce3f01b55c } # branch: lb/magia_spatz_integration
   spatz             : { git: "https://github.com/pulp-platform/spatz.git"             , rev: 3228a9077cb33b4ee235029e8fcace52ed327334 } # branch: lb/magia-spatz_cc
   idma              : { git: "https://github.com/FondazioneChipsIT/iDMA.git"          , rev: 26ac2cd1c535851b14c9c508762203a180961cad } # branch: cc/mcast_magia
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
@@ -35,7 +34,6 @@ dependencies:
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , version: 2.6.1                                }
   cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , version: 0.2.0                                }
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
-  fpu_ss            : { git: "https://github.com/pulp-platform/fpu_ss.git"            , rev: f31c77c7517c0a67f2c55a290fc8c6ff6019e362 } # branch: lb/cv32e40x_fpu
   obi               : { git: "https://github.com/pulp-platform/obi.git"               , rev: 528dc65303d5ffb02fbc254324c6b53eac0dd6e5 } # branch: lb/fix_atop_resolver                       
   axi               : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: 0.4.7                                }
@@ -56,17 +54,14 @@ sources:
       - hw/mesh/magia_pkg.sv
       - hw/tile/magia_tile_pkg.sv
       # MAGIA Tile content
-      - hw/tile/converters/cv32e40p_data2obi.sv
-      - hw/tile/converters/cv32e40x_data2obi.sv
-      - hw/tile/converters/cv32e40p_obi2data.sv
-      - hw/tile/converters/cv32e40x_obi2data.sv
+      - hw/tile/converters/data2obi.sv
+      - hw/tile/converters/obi2data.sv
       - hw/tile/converters/instr2obi.sv
       - hw/tile/converters/obi2instr.sv
       - hw/tile/converters/instr2cache.sv
       - hw/tile/converters/cache2instr.sv
       - hw/tile/converters/obi2hci.sv
       - hw/tile/converters/hci2obi.sv
-      - hw/tile/converters/xif_if2struct.sv
       - hw/tile/converters/obi2hwpe_ctrl.sv
       - hw/tile/converters/tcdm2hci.sv
       - hw/tile/converters/tcdm2obi.sv
@@ -93,6 +88,7 @@ sources:
       - hw/tile/spatz_cc_wrapper.sv
       - hw/tile/core_data_demux.sv
       - hw/tile/eu_direct_cut.sv
+      - hw/tile/magia_cv32e40px_wrap.sv
       - hw/tile/magia_tile_icache_wrap.sv
       - hw/tile/magia_redmule_wrap.sv
       - hw/tile/collective_gen.sv
@@ -100,11 +96,6 @@ sources:
       - hw/tile/ctrl_demux.sv
       - hw/tile/magia_cluster_wrap.sv
       - hw/tile/magia_isle.sv
-
-  - target: all(cv32e40x_bhv, not(verilator))
-    files:
-      - target/verilator/src/cv32e40x_rvfi_sim_trace.sv
-      - target/verilator/src/cv32e40x_wrapper.sv
 
   # MAGIA standalone tile
   - target: all(magia_dv, standalone_tile)
