@@ -194,8 +194,8 @@ module magia_tile_vip
     irq          = '0;
     fetch_enable = 1'b0;
     boot_addr    = entry_addr;
-    i_l2_mem.i_l2_mem.mem[32'hCCFF_0000] = 8'h00;
-    i_l2_mem.i_l2_mem.mem[32'hCCFF_0001] = 8'h00;
+    i_l2_mem.i_l2_mem.mem[32'hC000_8000] = 8'h00;
+    i_l2_mem.i_l2_mem.mem[32'hC000_8001] = 8'h00;
     #1000;
   endtask: init
 
@@ -205,9 +205,9 @@ module magia_tile_vip
   endtask: elf_run
 
   task automatic wait_for_eoc(output bit[31:0] exit_code);
-    while ({i_l2_mem.i_l2_mem.mem[32'hCCFF_0001][3]} == 0)
+    while ({i_l2_mem.i_l2_mem.mem[32'hC000_8001][3]} == 0)
       #10000;
-    if({i_l2_mem.i_l2_mem.mem[32'hCCFF_0001], i_l2_mem.i_l2_mem.mem[32'hCCFF_0000]} != 16'h800)
+    if({i_l2_mem.i_l2_mem.mem[32'hC000_8001], i_l2_mem.i_l2_mem.mem[32'hC000_8000]} != 16'h800)
       exit_code = 32'd1;
     else
       exit_code = 32'd0;

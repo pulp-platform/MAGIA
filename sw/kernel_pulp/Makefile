@@ -59,7 +59,7 @@ ARCH_FLAGS = -march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XLEN)$(XABI)
 # -fno-jump-tables: switch statements otherwise compile to a jump table
 #     whose base address is referenced ABSOLUTELY (e.g. `li a4, 0x618`).
 #     Since this binary is linked at ORIGIN=0 but copied/relocated to
-#     0xCC00_xxxx at runtime without a dynamic loader, that absolute base
+#     0xC000_xxxx at runtime without a dynamic loader, that absolute base
 #     is never fixed up: the indirect jump lands in unmapped space and the
 #     cluster icache stalls forever on a fill that loops in the NoC.
 #     Forcing compare-chains keeps every branch PC-relative (PIC-safe).

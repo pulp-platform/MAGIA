@@ -20,7 +20,7 @@
 /*
  * hello_pulp — main core (CV32) binary.
  *
- * This ELF is linked at 0xCC000000 and executed by the CV32 main core
+ * This ELF is linked at 0xC0000000 and executed by the CV32 main core
  * of each tile (mhartid 0..NUM_CLUSTERS-1).
  *
  * Flow:

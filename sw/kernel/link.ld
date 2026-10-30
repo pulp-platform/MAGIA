@@ -20,14 +20,14 @@ __DYNAMIC  =  0;
 
 MEMORY
 {
-    instrram    : ORIGIN = 0xcc000000, LENGTH = 0x8000
-    dataram     : ORIGIN = 0xcc010000, LENGTH = 0xF00000  /* MAGIA: data at 0xCC010000 */
-    stack       : ORIGIN = 0x00010000, LENGTH = 0x0C000   /* CV32/PULP stacks below Spatz [0x1C000, 0x20000) */
+    instrram    : ORIGIN = 0xc0000000, LENGTH = 0x8000
+    dataram     : ORIGIN = 0xc0008800, LENGTH = 0xFF7800  /* After the exit codes at TEST_END_ADDR, up to 0xC0FFFFFF */
+    stack       : ORIGIN = 0xA0117800, LENGTH = 0x04800   /* CV32/PULP stacks, private L1, below Spatz [0xA011C000, 0xA0120000) */
 }
 
 /* Stack information variables.
- * Spatz owns [0x1C000, 0x20000) in the tile SPM (_stack_start = 0x1FFF8 in
- * spatz_program.ld); this region stops at 0x1C000 to avoid overlap.
+ * Spatz owns [0xA011C000, 0xA0120000) of the private L1 view (_stack_start = 0xA011FFF8 in
+ * spatz_program.ld); this region stops at 0xA011C000 to avoid overlap.
  * Each hart gets _stack_slice_size bytes; slot n starts at
  *   sp = stack - n * _stack_slice_size
  * Slot 0 = CV32 main core (crt0.S), slots 1..8 = PULP harts 0..7 (pulp_crt0.S). */
@@ -160,7 +160,7 @@ SECTIONS
         _bss_end = .;
     } > dataram :data
 
-    /* Stack placed at the TOP of the CV32/PULP region: stack = _stack_start = 0x1C000 */
+    /* Stack placed at the TOP of the CV32/PULP region: stack = _stack_start = 0xA011C000 */
     .stack ORIGIN(stack) + LENGTH(stack) - _min_stack (NOLOAD): {
         . = ALIGN(4);
         _stack_bottom = .;

@@ -46,66 +46,58 @@ package magia_tile_pkg;
 
   // Address map
 
-  // Bases of the tile peripherals and of the tile window, default '0
+  // Base of the tile peripherals and of the private L1 view, the same in every tile, 1 MiB aligned
 `ifdef MAGIA_TILE_PERIPH_BASE
   localparam logic [magia_pkg::ADDR_W-1:0] TILE_PERIPH_BASE        = `MAGIA_TILE_PERIPH_BASE;
 `else
-  localparam logic [magia_pkg::ADDR_W-1:0] TILE_PERIPH_BASE        = 32'h0000_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] TILE_PERIPH_BASE        = 32'hA000_0000;
 `endif
+  // Base of the tile windows, one per tile, each holding the whole L1 of its tile
 `ifdef MAGIA_TILE_WINDOW_BASE
   localparam logic [magia_pkg::ADDR_W-1:0] TILE_WINDOW_BASE        = `MAGIA_TILE_WINDOW_BASE;
 `else
   localparam logic [magia_pkg::ADDR_W-1:0] TILE_WINDOW_BASE        = 32'h0000_0000;
 `endif
 
-  // Peripherals (private): chained control registers
-  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START = TILE_PERIPH_BASE + 32'h0000_0100;
-  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_SIZE       = 32'h0000_0100;
-  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_END   = REDMULE_CTRL_ADDR_START + REDMULE_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_START    = REDMULE_CTRL_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_SIZE          = 32'h0000_0400;
-  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_END      = IDMA_CTRL_ADDR_START + IDMA_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_START   = IDMA_CTRL_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_SIZE         = 32'h0000_0100;
-  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_END     = FSYNC_CTRL_ADDR_START + FSYNC_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] CTRL_EU_ADDR_START      = FSYNC_CTRL_ADDR_END;
+  // Peripherals (private), at fixed offsets: units of every tile first, then the optional ones
+  localparam logic [magia_pkg::ADDR_W-1:0] CTRL_EU_ADDR_START      = TILE_PERIPH_BASE + 32'h0000_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] CTRL_EU_SIZE            = 32'h0000_1000;
   localparam logic [magia_pkg::ADDR_W-1:0] CTRL_EU_ADDR_END        = CTRL_EU_ADDR_START + CTRL_EU_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_ADDR_START   = CTRL_EU_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_SIZE         = 32'h0000_0040;
-  localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_ADDR_END     = SPATZ_CTRL_ADDR_START + SPATZ_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_CTRL_ADDR_START = SPATZ_CTRL_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_CTRL_SIZE       = 32'h0000_0080;
-  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_CTRL_ADDR_END   = CLUSTER_CTRL_ADDR_START + CLUSTER_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] HCI_CTRL_ADDR_START     = CLUSTER_CTRL_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_START    = TILE_PERIPH_BASE + 32'h0000_1000;
+  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_SIZE          = 32'h0000_0400;
+  localparam logic [magia_pkg::ADDR_W-1:0] IDMA_CTRL_ADDR_END      = IDMA_CTRL_ADDR_START + IDMA_CTRL_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] HCI_CTRL_ADDR_START     = TILE_PERIPH_BASE + 32'h0000_1400;
   localparam logic [magia_pkg::ADDR_W-1:0] HCI_CTRL_SIZE           = 32'h0000_0040;
   localparam logic [magia_pkg::ADDR_W-1:0] HCI_CTRL_ADDR_END       = HCI_CTRL_ADDR_START + HCI_CTRL_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_ADDR_START    = HCI_CTRL_ADDR_END;
+  // Optional units: the range of an absent one answers with an error
+  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START = TILE_PERIPH_BASE + 32'h0000_2000;
+  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_SIZE       = 32'h0000_0100;
+  localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_END   = REDMULE_CTRL_ADDR_START + REDMULE_CTRL_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_START   = TILE_PERIPH_BASE + 32'h0000_2100;
+  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_SIZE         = 32'h0000_0100;
+  localparam logic [magia_pkg::ADDR_W-1:0] FSYNC_CTRL_ADDR_END     = FSYNC_CTRL_ADDR_START + FSYNC_CTRL_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_ADDR_START   = TILE_PERIPH_BASE + 32'h0000_2200;
+  localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_SIZE         = 32'h0000_0040;
+  localparam logic [magia_pkg::ADDR_W-1:0] SPATZ_CTRL_ADDR_END     = SPATZ_CTRL_ADDR_START + SPATZ_CTRL_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_CTRL_ADDR_START = TILE_PERIPH_BASE + 32'h0000_2300;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_CTRL_SIZE       = 32'h0000_0080;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_CTRL_ADDR_END   = CLUSTER_CTRL_ADDR_START + CLUSTER_CTRL_SIZE;
+  localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_ADDR_START    = TILE_PERIPH_BASE + 32'h0000_2400;
   localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_SIZE          = 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] COLL_CTRL_ADDR_END      = COLL_CTRL_ADDR_START + COLL_CTRL_SIZE;
   // Cluster-private Event Unit: direct link of the cluster cores, and memory-mapped view on the OBI crossbar
-  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_DIRECT_START = COLL_CTRL_ADDR_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_DIRECT_START = TILE_PERIPH_BASE + 32'h0000_3000;
   localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_DIRECT_SIZE  = 32'h0000_1000;
   localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_DIRECT_END   = CLUSTER_EU_DIRECT_START + CLUSTER_EU_DIRECT_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_ADDR_START   = CLUSTER_EU_DIRECT_END;
+  localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_ADDR_START   = TILE_PERIPH_BASE + 32'h0000_4000;
   localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_SIZE         = 32'h0000_1000;
   localparam logic [magia_pkg::ADDR_W-1:0] CLUSTER_EU_ADDR_END     = CLUSTER_EU_ADDR_START + CLUSTER_EU_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] TILE_PERIPH_ADDR_END    = CLUSTER_EU_ADDR_END;
 
-  // Reserved (private): software scratch, such as the print buffer
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_START     = TILE_WINDOW_BASE + (TILE_PERIPH_ADDR_END - TILE_PERIPH_BASE);
-  localparam logic [magia_pkg::ADDR_W-1:0] RESERVED_ADDR_END       = TILE_WINDOW_BASE + 32'h0001_0000;
-
-  // Stack (private)
-  localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_START        = RESERVED_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] STACK_SIZE              = 32'h0001_0000;
-  localparam logic [magia_pkg::ADDR_W-1:0] STACK_ADDR_END          = STACK_ADDR_START + STACK_SIZE;
-
-  // L1 (shared)
-  localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_START           = STACK_ADDR_END;
-  localparam logic [magia_pkg::ADDR_W-1:0] L1_SIZE                 = 32'h000E_0000;
-  localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_END             = L1_ADDR_START + L1_SIZE;
-  localparam logic [magia_pkg::ADDR_W-1:0] L1_TILE_OFFSET          = 32'h0010_0000;
+  // L1 of each tile: the first TileCfg.L1.PrivBytes are private, the rest global
+  localparam logic [magia_pkg::ADDR_W-1:0] L1_TILE_OFFSET          = 32'h0010_0000;                     // Tile window size, tile k's at L1_ADDR_START + k*L1_TILE_OFFSET
+  localparam logic [magia_pkg::ADDR_W-1:0] L1_ADDR_START           = TILE_WINDOW_BASE;                  // Window of tile 0: the global part of each L1 is in its window
+  localparam logic [magia_pkg::ADDR_W-1:0] L1_PRIV_ADDR_START      = TILE_PERIPH_BASE + L1_TILE_OFFSET; // Private part of each L1, the same address in every tile
   localparam logic [magia_pkg::ADDR_W-1:0] TILES_ADDR_END          = TILE_WINDOW_BASE + magia_pkg::N_TILES*L1_TILE_OFFSET;  // End of all tile windows
 
   // Collectives and L2 (global)
@@ -116,7 +108,7 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_END             = L2_ADDR_START + L2_SIZE;
 
   // Instruction region for Spatz code (cacheable region)
-  localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_ADDR_START      = 32'hCC00_0000;
+  localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_ADDR_START      = L2_ADDR_START;
 
   localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_PMA_MASK        = 32'hFFFF_8000;
 
@@ -367,12 +359,12 @@ package magia_tile_pkg;
 
   typedef struct packed {
     int unsigned num_units;  // Number of units behind the control port (one address rule each)
-    int unsigned redmule;    // RedMulE control (valid iff EnRedMule)
     int unsigned idma;       // iDMA control
+    int unsigned hci;        // HCI arbiter control
+    int unsigned redmule;    // RedMulE control (valid iff EnRedMule)
     int unsigned fsync;      // FractalSync control (valid iff MAGIA_FSYNC)
     int unsigned spatz;      // Spatz CC control (valid iff EnSpatzCC)
     int unsigned cluster;    // PULP cluster control (valid iff EnCluster)
-    int unsigned hci;        // HCI arbiter control
     int unsigned coll;       // Collective control (valid iff EnCollective)
   } ctrl_map_t;
 
@@ -381,12 +373,14 @@ package magia_tile_pkg;
     int unsigned   idx;
     ret = '0;
     idx = 0;
+    ret.idma = idx;
+    idx = idx + 1;
+    ret.hci = idx;
+    idx = idx + 1;
     if (cfg.EnRedMule) begin
       ret.redmule = idx;
       idx = idx + 1;
     end
-    ret.idma = idx;
-    idx = idx + 1;
     if (magia_pkg::MagiaEnFractalSync) begin
       ret.fsync = idx;
       idx = idx + 1;
@@ -399,8 +393,6 @@ package magia_tile_pkg;
       ret.cluster = idx;
       idx = idx + 1;
     end
-    ret.hci = idx;
-    idx = idx + 1;
     if (cfg.EnCollective) begin
       ret.coll = idx;
       idx = idx + 1;
@@ -430,8 +422,8 @@ package magia_tile_pkg;
       ret.cluster_eu = 4;
     end
     ret.num_sbr = 4 + 32'(cfg.EnCluster);
-    // L2, L1, reserved, stack, EU and the control window around it, plus the cluster EU
-    ret.num_rules = 7 + 32'(cfg.EnCluster);
+    // L2, the global and the private part of L1, EU, control, plus the cluster EU
+    ret.num_rules = 5 + 32'(cfg.EnCluster);
     return ret;
   endfunction
 
@@ -522,7 +514,7 @@ package magia_tile_pkg;
   parameter int unsigned L0_LINE_COUNT  = 32;                                           // i$ L0 Cache Line Count
   parameter int unsigned LINE_WIDTH     = 128;                                          // i$ Cache Line Width; >= 64
   parameter int unsigned LINE_COUNT     = 32;                                           // i$ The number of cache lines per set. Power of two; >= 2.
-  parameter int unsigned WAY_COUNT      = 32;                                           // i$ The set associativity of the cache. Power of two; >= 1.
+  parameter int unsigned WAY_COUNT      = 4;                                            // i$ The set associativity of the cache. Power of two; >= 1.
   parameter int unsigned L0_PARITY_W    = 0;                                            // i$ Parity of the L0 cache
   parameter int unsigned FETCH_AW       = magia_pkg::ADDR_W;                            // i$ Fetch interface address width. Same as FETCH_AW; >= 1.
   parameter int unsigned FETCH_DW       = magia_pkg::DATA_W;                            // i$ Fetch interface data width. Power of two; >= 8.
@@ -566,7 +558,7 @@ package magia_tile_pkg;
     logic[magia_pkg::ADDR_W-1:0] end_addr;
   } obi_xbar_rule_t;
 
-  // TCDM ranges taken by the dedicated HCI ports: the private reserved and stack regions, the shared L1
+  // TCDM ranges taken by the dedicated HCI ports: the private and the global part of L1
   localparam int unsigned NUM_TCDM_RULES = 2;
 
   typedef obi_xbar_rule_t [CTRL_MAX_UNITS-1:0] ctrl_rules_t;
@@ -577,10 +569,11 @@ package magia_tile_pkg;
     ctrl_map_t   map;
     ret = '0;
     map = gen_ctrl_map(cfg);
+    ret[map.idma] = '{idx: map.idma, start_addr: IDMA_CTRL_ADDR_START, end_addr: IDMA_CTRL_ADDR_END};
+    ret[map.hci] = '{idx: map.hci, start_addr: HCI_CTRL_ADDR_START, end_addr: HCI_CTRL_ADDR_END};
     if (cfg.EnRedMule) begin
       ret[map.redmule] = '{idx: map.redmule, start_addr: REDMULE_CTRL_ADDR_START, end_addr: REDMULE_CTRL_ADDR_END};
     end
-    ret[map.idma] = '{idx: map.idma, start_addr: IDMA_CTRL_ADDR_START, end_addr: IDMA_CTRL_ADDR_END};
     if (magia_pkg::MagiaEnFractalSync) begin
       ret[map.fsync] = '{idx: map.fsync, start_addr: FSYNC_CTRL_ADDR_START, end_addr: FSYNC_CTRL_ADDR_END};
     end
@@ -590,7 +583,6 @@ package magia_tile_pkg;
     if (cfg.EnCluster) begin
       ret[map.cluster] = '{idx: map.cluster, start_addr: CLUSTER_CTRL_ADDR_START, end_addr: CLUSTER_CTRL_ADDR_END};
     end
-    ret[map.hci] = '{idx: map.hci, start_addr: HCI_CTRL_ADDR_START, end_addr: HCI_CTRL_ADDR_END};
     if (cfg.EnCollective) begin
       ret[map.coll] = '{idx: map.coll, start_addr: COLL_CTRL_ADDR_START, end_addr: COLL_CTRL_ADDR_END};
     end
@@ -689,14 +681,6 @@ package magia_tile_pkg;
     logic[NR_FETCH_PORTS-1:0][FETCH_DW-1:0] rdata;
     logic[NR_FETCH_PORTS-1:0]               rerror;
   } core_cache_instr_rsp_t;
-
-  typedef enum logic[2:0]{
-    AXI_XBAR_STACK_IDX    = 4,
-    AXI_XBAR_RESERVED_IDX = 3,
-    AXI_XBAR_L1SPM_IDX    = 2,
-    AXI_XBAR_BOOTROM_IDX  = 1, 
-    AXI_XBAR_L2_IDX       = 0
-  } axi_mem_array_idx_e;
 
   typedef enum logic[2:0]{
     AXI_SLV_CLUSTER_INSTR_IDX = 4,
