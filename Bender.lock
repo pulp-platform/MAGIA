@@ -86,6 +86,17 @@ packages:
     source:
       Git: https://github.com/pulp-platform/cv32e40x.git
     dependencies: []
+  data_cc:
+    revision: 76d5edf4f2a7c151d0be977652584b7b0d0ad46b
+    version: null
+    source:
+      Git: git@gitlab.chips.it:ngiuliani/data_cc.git
+    dependencies:
+    - axi
+    - common_cells
+    - common_verification
+    - obi
+    - tech_cells_generic
   event_unit_flex:
     revision: d0d2b0e664dbd8dab6960f1e0cd77adb884fa0eb
     version: null

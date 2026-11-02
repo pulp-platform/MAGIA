@@ -19,7 +19,7 @@
 # Run the MAGIA tests of sw/tests/tests.yml over several build configurations, one after the other.
 #
 # Usage: scripts/run_regression.py --sim SIM --core CORE --fsync on|off --test TEST [options]
-#   --sim/--core/--fsync take a value, a comma list or `all`; --test takes `all`, `mesh`, `tile`,
+#   --sim/--core/--fsync/--dcache take a value, a comma list or `all` (--dcache defaults to off); --test takes `all`, `mesh`, `tile`,
 #   a folder of sw/tests/ (`general` is sw/tests/ itself) or folder/test. See --help for the rest.
 #
 # Each configuration builds in its own worktree under .regression/, and its HW is rebuilt only when
@@ -69,6 +69,7 @@ TESTBENCHES = ('mesh', 'tile')
 SIMS = ('questa', 'verilator')
 CORES = ('CV32E40P', 'CV32E40X')
 FSYNC = ('on', 'off')
+DCACHE = ('off', 'on')
 
 print_lock = threading.Lock()
 git_lock = threading.Lock()  # git worktree add/remove cannot run concurrently
@@ -283,17 +284,20 @@ def unsupported(sim, core, fsync):
 
 
 class Config:
-    """A build configuration: simulator, control core and FractalSync on/off."""
+    """A build configuration: simulator, control core, FractalSync on/off and data cache on/off."""
 
-    def __init__(self, sim, core, fsync):
+    def __init__(self, sim, core, fsync, dcache='off'):
         self.sim = sim
         self.core = core
         self.fsync = fsync == 'on'
-        self.defines = {core} | ({'MAGIA_FSYNC'} if self.fsync else set())
-        self.name = f"{self.sim}_{core}_{'fsync' if self.fsync else 'nofsync'}"
+        self.dcache = dcache == 'on'
+        self.defines = ({core} | ({'MAGIA_FSYNC'} if self.fsync else set()) |
+                        ({'MAGIA_DCACHE'} if self.dcache else set()))
+        self.name = f"{self.sim}_{core}_{'fsync' if self.fsync else 'nofsync'}{'_dcache' if self.dcache else ''}"
 
     def make_args(self, mesh_dv, fast):
-        return f"core={self.core} fsync={int(self.fsync)} mesh_dv={mesh_dv} fast_sim={int(fast)}"
+        return (f"core={self.core} fsync={int(self.fsync)} dcache={int(self.dcache)} mesh_dv={mesh_dv} "
+                f"fast_sim={int(fast)}")
 
     def reject(self, test):
         """Why the test does not run in this configuration, or None if it does."""
@@ -440,7 +444,7 @@ def job_name(cfg, mesh_dv, fast):
 
 def job_label(cfg, mesh_dv, fast):
     return (f"{cfg.sim:9s} {cfg.core:8s} {'fsync' if cfg.fsync else 'nofsync':7s} "
-            f"{'mesh' if mesh_dv else 'tile'}{'' if fast else ' nofast'}")
+            f"{'dcache ' if cfg.dcache else ''}{'mesh' if mesh_dv else 'tile'}{'' if fast else ' nofast'}")
 
 
 def select_tests(tests, selectors):
@@ -470,7 +474,7 @@ def print_plan(jobs, skipped, verbose):
     if skipped:
         print(f"\nNot run")
         for cfg, why, names in skipped:
-            cfg_label = f"{cfg.sim} {cfg.core} {'fsync' if cfg.fsync else 'nofsync'}"
+            cfg_label = f"{cfg.sim} {cfg.core} {'fsync' if cfg.fsync else 'nofsync'}{' dcache' if cfg.dcache else ''}"
             print(f"  {cfg_label:32s} {len(names):3d} test(s): {why}")
             if verbose:
                 print(f"      {' '.join(names)}")
@@ -613,6 +617,7 @@ def main():
     ap.add_argument('--sim', required=True, help=f"{', '.join(SIMS)} or all (comma list)")
     ap.add_argument('--core', required=True, help=f"{', '.join(CORES)} or all (comma list)")
     ap.add_argument('--fsync', required=True, help=f"{', '.join(FSYNC)} or all (comma list)")
+    ap.add_argument('--dcache', default='off', help=f"{', '.join(DCACHE)} or all (comma list, default off)")
     ap.add_argument('--test', action='append', required=True,
                     help="all, mesh, tile, a folder of sw/tests/ ('general' = sw/tests/ itself) or "
                          "folder/test; repeatable, comma separated")
@@ -631,6 +636,7 @@ def main():
     sims, all_sims = parse_choice('--sim', args.sim, SIMS)
     cores, all_cores = parse_choice('--core', args.core, CORES)
     fsyncs, _ = parse_choice('--fsync', args.fsync, FSYNC)
+    dcaches, _ = parse_choice('--dcache', args.dcache, DCACHE)
     configs = []
     for sim in sims:
         for core in cores:
@@ -641,7 +647,8 @@ def main():
                 if why:
                     print(f"skipping {sim} {core} fsync={fsync}: {why}")
                 else:
-                    configs.append(Config(sim, core, fsync))
+                    for dcache in dcaches:
+                        configs.append(Config(sim, core, fsync, dcache))
 
     tests = load_tests(args.yml)
     tests = select_tests(tests, [v.strip('/') for arg in args.test for v in arg.split(',')])

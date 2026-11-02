@@ -71,6 +71,46 @@ general:
     cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
+  # Same results with and without the data cache (make dcache=0|1), only the cycles change
+  dcache_sum_test:
+    testbench: tile
+    cores: [CV32E40P, CV32E40X]
+    sims: [questa, verilator]
+    requires: []
+  # CoreMark (EEMBC) on the control core, data in the L2 through the cache by default (EXTRA_CFLAGS=-DCOREMARK_MEM=0|1|2)
+  coremark_test:
+    testbench: tile
+    cores: [CV32E40P]
+    sims: [questa, verilator]
+    requires: []
+  # Runtime cacheable region, CACHE_EN and WAY_EN (with dcache=0 only the data checks run)
+  dcache_runtime_test:
+    testbench: tile
+    cores: [CV32E40P, CV32E40X]
+    sims: [questa, verilator]
+    requires: []
+  # Regular kernel: L2 direct vs iDMA + SPM (double buffered) vs data cache
+  dcache_vs_idma_test:
+    testbench: tile
+    cores: [CV32E40P, CV32E40X]
+    sims: [questa, verilator]
+    requires: []
+  # Irregular lookups: L2 direct vs data cache vs iDMA of the whole table vs one iDMA per lookup
+  dcache_irregular_test:
+    testbench: tile
+    cores: [CV32E40P, CV32E40X]
+    sims: [questa, verilator]
+    requires: []
+  # AMOs next to the data cache: on a line not in the cache (checked) and on a dirty line (printed)
+  dcache_amo_test:
+    testbench: tile
+    cores: [CV32E40X]
+  # iDMA copy in the background while the core works through the cache: iDMA and core time, prefetch off/on
+  dcache_contention_test:
+    testbench: tile
+    cores: [CV32E40P, CV32E40X]
+    sims: [questa, verilator]
+    requires: []
 
 # RedMulE, iDMA and FractalSync through memory-mapped registers
 mm_tests:
@@ -324,6 +364,24 @@ spatz_tests:
 
 # PULP cluster
 cluster_tests:
+  # Same results with and without the data cache (make dcache=0|1), only the cycles change
+  dcache_cluster_test:
+    testbench: tile
+    cores: [CV32E40P, CV32E40X]
+    sims: [questa, verilator]
+    requires: []
+  # 8 cores missing at the same time on 128 KiB (stream, stride of one way, random): MSHR and set conflicts
+  dcache_mshr_test:
+    testbench: tile
+    cores: [CV32E40P, CV32E40X]
+    sims: [questa, verilator]
+    requires: []
+  # Order rules of the narrow hit port: several cores on the same lines, more lines per set than ways
+  dcache_order_test:
+    testbench: tile
+    cores: [CV32E40P, CV32E40X]
+    sims: [questa, verilator]
+    requires: []
   hello_pulp_barrier:
     testbench: mesh
     cores: [CV32E40P, CV32E40X]

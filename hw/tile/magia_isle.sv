@@ -22,6 +22,8 @@
 
 `include "hci_helpers.svh"
 `include "hwpe_ctrl_helpers.svh"
+`include "obi/assign.svh"
+`include "axi/assign.svh"
 
 // Observation port of the Verilator testbench, dropped by MAGIA_NO_OBSERVE
 `ifdef VERILATOR
@@ -138,7 +140,15 @@ module magia_isle
   localparam int unsigned NumHwpe = TileCfg.EnRedMule ? 1 : 0;  // 0 drops the RedMulE leaf of the HCI interconnect
   localparam int unsigned NumDma  = magia_tile_pkg::N_DMA;
   localparam int unsigned NumExt  = magia_tile_pkg::N_EXT;
-  localparam int unsigned TileIW  = NumHwpe + NumHciCore + NumDma + NumExt;
+
+  // Data cache: one HCI port, the managers of gen_dcache_mgr_cached() on its obi_mux
+  localparam int unsigned                 NumDcache         = TileCfg.EnDataCache ? 1 : 0;
+  localparam int unsigned                 NumDcacheMgr      = magia_tile_pkg::gen_dcache_num_mgr(TileCfg);
+  localparam int unsigned                 NumDcacheMuxPorts = (NumDcacheMgr > 0) ? NumDcacheMgr : 1;
+  localparam logic[magia_pkg::ADDR_W-1:0] DcacheTcdmBase    = magia_tile_pkg::gen_dcache_tcdm_base(TileCfg);
+  localparam int unsigned                 DcacheHitHciIdx   = NumHciCore - 2;  // just before the control core
+
+  localparam int unsigned TileIW  = NumHwpe + NumHciCore + NumDma + NumDcache + NumExt;
 
   localparam int unsigned RedmuleFpW   = 16;  // FP16
   localparam int unsigned RedmuleDataW = TileCfg.RedMule.Height * (TileCfg.RedMule.NumPipeRegs + 1) * RedmuleFpW;
@@ -751,7 +761,10 @@ module magia_isle
 /**               OBI Crossbar Beginning              **/
 /*******************************************************/
 
-  // Managers, indexed by ObiMgr: core, ext, spatz, cluster cores
+  // Managers as they leave core, ext, Spatz and cluster, indexed by ObiMgr
+  magia_tile_pkg::core_obi_data_req_t[ObiMgr.num_mgr-1:0] obi_mgr_req;
+  magia_tile_pkg::core_obi_data_rsp_t[ObiMgr.num_mgr-1:0] obi_mgr_rsp;
+  // Managers into the crossbar (after the data cache demux), indexed by ObiMgr: core, ext, spatz, cluster cores
   magia_tile_pkg::core_obi_data_req_t[ObiMgr.num_mgr-1:0] obi_xbar_slv_req;
   magia_tile_pkg::core_obi_data_rsp_t[ObiMgr.num_mgr-1:0] obi_xbar_slv_rsp;
   magia_tile_pkg::core_obi_data_req_t[ObiMgr.num_mgr-1:0] obi_xbar_slv_cut_req;
@@ -767,10 +780,69 @@ module magia_isle
   magia_tile_pkg::core_obi_data_req_t ext_obi_data_req;
   magia_tile_pkg::core_obi_data_rsp_t ext_obi_data_rsp;
 
-  assign obi_xbar_slv_req[ObiMgr.core] = core_obi_data_req;
-  assign core_obi_data_rsp             = obi_xbar_slv_rsp[ObiMgr.core];
-  assign obi_xbar_slv_req[ObiMgr.ext]  = ext_obi_data_req;
-  assign ext_obi_data_rsp              = obi_xbar_slv_rsp[ObiMgr.ext];
+  assign obi_mgr_req[ObiMgr.core] = core_obi_data_req;
+  assign core_obi_data_rsp        = obi_mgr_rsp[ObiMgr.core];
+  assign obi_mgr_req[ObiMgr.ext]  = ext_obi_data_req;
+  assign ext_obi_data_rsp         = obi_mgr_rsp[ObiMgr.ext];
+
+  // Cached managers towards the data cache obi_mux, indexed by gen_dcache_mux_port()
+  magia_tile_pkg::core_obi_data_req_t[NumDcacheMuxPorts-1:0] dcache_mgr_req;
+  magia_tile_pkg::core_obi_data_rsp_t[NumDcacheMuxPorts-1:0] dcache_mgr_rsp;
+
+  // Cacheable region and enable: the CACHE_EN, CACHED_START and CACHED_END registers of data_cc
+  logic                        dcache_en;
+  logic[magia_pkg::ADDR_W-1:0] dcache_cached_start;
+  logic[magia_pkg::ADDR_W-1:0] dcache_cached_end;
+
+  localparam int unsigned DcacheDemuxXbarIdx  = 0;
+  localparam int unsigned DcacheDemuxCacheIdx = 1;
+
+  // Before the crossbar and its cuts: the demux keeps the order of each manager between cache and crossbar
+  if (TileCfg.EnDataCache) begin: gen_dcache_demux
+    for (genvar i = 0; i < ObiMgr.num_mgr; i++) begin: gen_mgr
+      if (magia_tile_pkg::gen_dcache_mgr_cached(TileCfg, i)) begin: gen_cached
+        localparam int unsigned MuxPort = magia_tile_pkg::gen_dcache_mux_port(TileCfg, i);
+
+        logic                                    to_cache;
+        magia_tile_pkg::core_obi_data_req_t[1:0] demux_req;
+        magia_tile_pkg::core_obi_data_rsp_t[1:0] demux_rsp;
+
+        // AMOs never go to the cache: data_cc does not support them
+        assign to_cache = dcache_en                                      &&
+                          (obi_mgr_req[i].a.addr >= dcache_cached_start) &&
+                          (obi_mgr_req[i].a.addr <  dcache_cached_end)   &&
+                          (obi_mgr_req[i].a.a_optional.atop == '0);
+
+        obi_demux #(
+          .ObiCfg      ( magia_tile_pkg::obi_amo_cfg         ),
+          .obi_req_t   ( magia_tile_pkg::core_obi_data_req_t ),
+          .obi_rsp_t   ( magia_tile_pkg::core_obi_data_rsp_t ),
+          .NumMgrPorts ( 2                                   ),
+          .NumMaxTrans ( TileCfg.DataCache.MaxTxnPerMaster   )
+        ) i_dcache_demux (
+          .clk_i             ( sys_clk        ),
+          .rst_ni            ( rst_ni         ),
+          .sbr_port_select_i ( to_cache       ),
+          .sbr_port_req_i    ( obi_mgr_req[i] ),
+          .sbr_port_rsp_o    ( obi_mgr_rsp[i] ),
+          .mgr_ports_req_o   ( demux_req      ),
+          .mgr_ports_rsp_i   ( demux_rsp      )
+        );
+
+        assign obi_xbar_slv_req[i]            = demux_req[DcacheDemuxXbarIdx];
+        assign demux_rsp[DcacheDemuxXbarIdx]  = obi_xbar_slv_rsp[i];
+        assign dcache_mgr_req[MuxPort]        = demux_req[DcacheDemuxCacheIdx];
+        assign demux_rsp[DcacheDemuxCacheIdx] = dcache_mgr_rsp[MuxPort];
+      end else begin: gen_uncached
+        assign obi_xbar_slv_req[i] = obi_mgr_req[i];
+        assign obi_mgr_rsp[i]      = obi_xbar_slv_rsp[i];
+      end
+    end
+  end else begin: gen_no_dcache_demux
+    assign obi_xbar_slv_req = obi_mgr_req;
+    assign obi_mgr_rsp      = obi_xbar_slv_rsp;
+    assign dcache_mgr_req   = '0;
+  end
 
   localparam int unsigned RuleL2    = 0;
   localparam int unsigned RuleL1    = 1;
@@ -1212,7 +1284,8 @@ module magia_isle
   };
   `HCI_INTF_ARRAY(hci_tcdm_sram_if, sys_clk, 0:NumMemBanks-1);
 
-  // Core ports: [0] remote accesses from the OBI crossbar, then Spatz, cluster cores and the control core
+  // Core ports: [0] remote accesses from the OBI crossbar, then Spatz, cluster cores, the data cache hits
+  // (DataCache.NarrowHitPort) and the control core
   localparam hci_package::hci_size_parameter_t `HCI_SIZE_PARAM(hci_core_if) = '{
     DW:  magia_tile_pkg::DW_LIC,
     AW:  magia_tile_pkg::AWC,
@@ -1246,6 +1319,11 @@ module magia_isle
     EHW: hci_package::DEFAULT_EHW
   };
   `HCI_INTF_ARRAY(hci_dma_if, sys_clk, 0:NumDma-1);
+
+  // Data cache store, same geometry as the iDMA ports
+  localparam hci_package::hci_size_parameter_t `HCI_SIZE_PARAM(hci_dcache_if) = `HCI_SIZE_PARAM(hci_dma_if);
+  // One element even without the data cache: the tie-off drives it by name
+  `HCI_INTF_ARRAY(hci_dcache_if, sys_clk, 0:0);
 
   localparam hci_package::hci_size_parameter_t `HCI_SIZE_PARAM(hci_ext_if) = '{
     DW:  magia_tile_pkg::DW_LIC,
@@ -1325,6 +1403,7 @@ module magia_isle
   magia_hci_interconnect #(
     .NumHwpe         ( NumHwpe                           ),
     .NumDma          ( NumDma                            ),
+    .NumDcache       ( NumDcache                         ),
     .NumCore         ( NumHciCore                        ),
     .NumMem          ( NumMemBanks                       ),
     .RouterFifoDepth ( magia_tile_pkg::EXPFIFO           ),
@@ -1332,6 +1411,7 @@ module magia_isle
     .WaiveRq4Assert  ( 1'b1                              ),
     .HCI_SIZE_hwpe   ( `HCI_SIZE_PARAM(hci_redmule_if)   ),
     .HCI_SIZE_dma    ( `HCI_SIZE_PARAM(hci_dma_if)       ),
+    .HCI_SIZE_dcache ( `HCI_SIZE_PARAM(hci_dcache_if)    ),
     .HCI_SIZE_core   ( `HCI_SIZE_PARAM(hci_core_if)      ),
     .HCI_SIZE_mem    ( `HCI_SIZE_PARAM(hci_tcdm_sram_if) )
   ) i_magia_hci_interconnect (
@@ -1341,6 +1421,7 @@ module magia_isle
     .ctrl_i  ( hci_ctrl         ),
     .hwpe    ( hci_redmule_if   ),
     .dma     ( hci_dma_if       ),
+    .dcache  ( hci_dcache_if    ),
     .core    ( hci_core_if      ),
     .mem     ( hci_tcdm_sram_if )
   );
@@ -1426,6 +1507,10 @@ module magia_isle
     .irq_o2a_error_o (                        )
   );
 
+  // iDMA towards the wide NoC, shared with the data cache in the Data Cache section
+  magia_tile_pkg::idma_axi_req_t idma_axi_wide_req;
+  magia_tile_pkg::idma_axi_rsp_t idma_axi_wide_rsp;
+
   axi_rw_join #(
     .axi_req_t  ( magia_tile_pkg::idma_axi_req_t ),
     .axi_resp_t ( magia_tile_pkg::idma_axi_rsp_t )
@@ -1436,8 +1521,8 @@ module magia_isle
     .slv_read_resp_o  ( idma_axi_read_rsp_out  ),
     .slv_write_req_i  ( idma_axi_write_req_out ),
     .slv_write_resp_o ( idma_axi_write_rsp_out ),
-    .mst_req_o        ( axi_wide_mst_req_o     ),
-    .mst_resp_i       ( axi_wide_mst_rsp_i     )
+    .mst_req_o        ( idma_axi_wide_req      ),
+    .mst_resp_i       ( idma_axi_wide_rsp      )
   );
 
   magia_tile_pkg::idma_axi_req_t idma_axi_read_req_in;
@@ -1637,6 +1722,310 @@ module magia_isle
 /*******************************************************/
 /**                      iDMA End                     **/
 /*******************************************************/
+/**                Data Cache Beginning               **/
+/*******************************************************/
+
+  // Data store port towards HCI (only with the data cache)
+  `HCI_TYPEDEF_REQ_T(tile_dcache_hci_req_t, logic[magia_pkg::ADDR_W-1:0], logic[magia_pkg::WIDE_DATA_W-1:0], logic[magia_pkg::WIDE_STRB_W-1:0], logic[magia_tile_pkg::iDMA_UserWidth-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
+  `HCI_TYPEDEF_RSP_T(tile_dcache_hci_rsp_t, logic[magia_pkg::WIDE_DATA_W-1:0], logic[magia_tile_pkg::iDMA_UserWidth-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
+
+  if (TileCfg.EnDataCache) begin: gen_data_cache
+    magia_tile_pkg::dcache_obi_req_t      dcache_core_req;
+    magia_tile_pkg::dcache_obi_rsp_t      dcache_core_rsp;
+    magia_tile_pkg::dcache_tcdm_req_t     dcache_tcdm_req;
+    magia_tile_pkg::dcache_tcdm_rsp_t     dcache_tcdm_rsp;
+    magia_tile_pkg::dcache_hit_tcdm_req_t dcache_hit_tcdm_req;
+    magia_tile_pkg::dcache_hit_tcdm_rsp_t dcache_hit_tcdm_rsp;
+    tile_dcache_hci_req_t                 dcache_hci_req;
+    tile_dcache_hci_rsp_t                 dcache_hci_rsp;
+    magia_tile_pkg::dcache_axi_req_t      dcache_axi_req;
+    magia_tile_pkg::dcache_axi_rsp_t      dcache_axi_rsp;
+    // Observed by the testbench
+    data_cc_pkg::events_t                 dcache_events;
+    logic                                 dcache_busy;
+
+    // Cached managers: the obi_mux puts the manager index in the high bits of aid and routes back on rid
+    if (NumDcacheMgr > 1) begin: gen_dcache_mux
+      obi_mux #(
+        .SbrPortObiCfg      ( magia_tile_pkg::obi_amo_cfg                      ),
+        .MgrPortObiCfg      ( magia_tile_pkg::obi_dcache_cfg                   ),
+        .sbr_port_obi_req_t ( magia_tile_pkg::core_obi_data_req_t              ),
+        .sbr_port_a_chan_t  ( magia_tile_pkg::core_data_obi_a_chan_t           ),
+        .sbr_port_obi_rsp_t ( magia_tile_pkg::core_obi_data_rsp_t              ),
+        .sbr_port_r_chan_t  ( magia_tile_pkg::core_data_obi_r_chan_t           ),
+        .mgr_port_obi_req_t ( magia_tile_pkg::dcache_obi_req_t                 ),
+        .mgr_port_obi_rsp_t ( magia_tile_pkg::dcache_obi_rsp_t                 ),
+        .NumSbrPorts        ( NumDcacheMgr                                     ),
+        .NumMaxTrans        ( NumDcacheMgr * TileCfg.DataCache.MaxTxnPerMaster ),
+        .UseIdForRouting    ( 1'b1                                             )
+      ) i_dcache_mux (
+        .clk_i           ( sys_clk         ),
+        .rst_ni          ( rst_ni          ),
+        .testmode_i      ( test_mode_i     ),
+        .sbr_ports_req_i ( dcache_mgr_req  ),
+        .sbr_ports_rsp_o ( dcache_mgr_rsp  ),
+        .mgr_port_req_o  ( dcache_core_req ),
+        .mgr_port_rsp_i  ( dcache_core_rsp )
+      );
+    end else begin: gen_dcache_no_mux
+      // obi_mux needs two managers: a single one connects directly, aid zero-extended
+      always_comb begin
+        dcache_core_req     = '0;
+        dcache_core_req.req = dcache_mgr_req[0].req;
+        `OBI_SET_A_STRUCT(dcache_core_req.a, dcache_mgr_req[0].a)
+        dcache_core_req.a.aid = magia_tile_pkg::DCACHE_AID_WIDTH'(dcache_mgr_req[0].a.aid);
+      end
+
+      always_comb begin
+        dcache_mgr_rsp[0]        = '0;
+        dcache_mgr_rsp[0].gnt    = dcache_core_rsp.gnt;
+        dcache_mgr_rsp[0].rvalid = dcache_core_rsp.rvalid;
+        `OBI_SET_R_STRUCT(dcache_mgr_rsp[0].r, dcache_core_rsp.r)
+        dcache_mgr_rsp[0].r.rid  = magia_tile_pkg::RID_WIDTH'(dcache_core_rsp.r.rid);
+      end
+    end
+
+    data_cc_top #(
+      .NumWays             ( TileCfg.DataCache.NumWays             ),
+      .NumSets             ( TileCfg.DataCache.NumSets             ),
+      .LineBytes           ( TileCfg.DataCache.LineBytes           ),
+      .BlockBytes          ( TileCfg.DataCache.BlockBytes          ),
+      .TcdmDataWidth       ( magia_pkg::WIDE_DATA_W                ),
+      .CachedStart         ( TileCfg.DataCache.CachedStart         ),
+      .CachedEnd           ( TileCfg.DataCache.CachedEnd           ),
+      .TcdmCacheBase       ( DcacheTcdmBase                        ),
+      .NumMasters          ( NumDcacheMgr                          ),
+      .MaxTxnPerMaster     ( TileCfg.DataCache.MaxTxnPerMaster     ),
+      .OrderByAid          ( 1'b1                                  ),
+      .FrontendRegisterOut ( TileCfg.DataCache.FrontendRegisterOut ),
+      .RspBypass           ( TileCfg.DataCache.RspBypass           ),
+      .NarrowHitPort       ( TileCfg.DataCache.NarrowHitPort       ),
+      .NumMshr             ( TileCfg.DataCache.NumMshr             ),
+      .EnPrefetch          ( TileCfg.DataCache.EnPrefetch          ),
+      .PrefetchStreams     ( TileCfg.DataCache.PrefetchStreams     ),
+      .SetXorHash          ( TileCfg.DataCache.SetXorHash          ),
+      .PrefetchDistance    ( TileCfg.DataCache.PrefetchDistance    ),
+      .PrefetchMaxPending  ( TileCfg.DataCache.PrefetchMaxPending  ),
+      .TagStoreImpl        ( data_cc_pkg::TagMetaFF                ),
+      .ReplImpl            ( data_cc_pkg::ReplPlru                 ),
+      .core_req_t          ( magia_tile_pkg::dcache_obi_req_t      ),
+      .core_rsp_t          ( magia_tile_pkg::dcache_obi_rsp_t      ),
+      .cfg_req_t           ( magia_tile_pkg::core_obi_data_req_t   ),
+      .cfg_rsp_t           ( magia_tile_pkg::core_obi_data_rsp_t   ),
+      .tcdm_req_t          ( magia_tile_pkg::dcache_tcdm_req_t     ),
+      .tcdm_rsp_t          ( magia_tile_pkg::dcache_tcdm_rsp_t     ),
+      .hit_tcdm_req_t      ( magia_tile_pkg::dcache_hit_tcdm_req_t ),
+      .hit_tcdm_rsp_t      ( magia_tile_pkg::dcache_hit_tcdm_rsp_t ),
+      .axi_req_t           ( magia_tile_pkg::dcache_axi_req_t      ),
+      .axi_rsp_t           ( magia_tile_pkg::dcache_axi_rsp_t      )
+    ) i_data_cc (
+      .clk_i          ( sys_clk                  ),
+      .rst_ni         ( rst_ni                   ),
+      .test_mode_i    ( test_mode_i              ),
+      .core_req_i     ( dcache_core_req          ),
+      .core_rsp_o     ( dcache_core_rsp          ),
+      .cfg_req_i      ( ctrl_req[CtrlMap.dcache] ),
+      .cfg_rsp_o      ( ctrl_rsp[CtrlMap.dcache] ),
+      .tcdm_req_o     ( dcache_tcdm_req          ),
+      .tcdm_rsp_i     ( dcache_tcdm_rsp          ),
+      .hit_tcdm_req_o ( dcache_hit_tcdm_req      ),
+      .hit_tcdm_rsp_i ( dcache_hit_tcdm_rsp      ),
+      .axi_req_o      ( dcache_axi_req           ),
+      .axi_rsp_i      ( dcache_axi_rsp           ),
+      .events_o       ( dcache_events            ),
+      .busy_o         ( dcache_busy              ),
+      .cache_en_o     ( dcache_en                ),
+      .cached_start_o ( dcache_cached_start      ),
+      .cached_end_o   ( dcache_cached_end        )
+    );
+
+    // Data store: the HCI router gives one r_valid per granted access, writes included, at fixed latency
+    always_comb begin
+      dcache_hci_req          = '0;
+      dcache_hci_req.req      = dcache_tcdm_req.req;
+      dcache_hci_req.add      = dcache_tcdm_req.addr;
+      dcache_hci_req.wen      = ~dcache_tcdm_req.we;
+      dcache_hci_req.data     = dcache_tcdm_req.wdata;
+      dcache_hci_req.be       = dcache_tcdm_req.be;
+      dcache_hci_req.r_ready  = 1'b1;
+      dcache_hci_req.r_eready = '1;
+    end
+
+    always_comb begin
+      dcache_tcdm_rsp        = '0;
+      dcache_tcdm_rsp.gnt    = dcache_hci_rsp.gnt;
+      dcache_tcdm_rsp.rvalid = dcache_hci_rsp.r_valid;
+      dcache_tcdm_rsp.rdata  = dcache_hci_rsp.r_data;
+    end
+
+    `HCI_ASSIGN_TO_INTF(hci_dcache_if[0], dcache_hci_req, dcache_hci_rsp)
+
+    // Hits on a narrow core port: the log interconnect also gives one r_valid per granted write
+    if (TileCfg.DataCache.NarrowHitPort) begin: gen_dcache_hit_port
+      tile_hci_data_req_t dcache_hit_hci_req;
+      tile_hci_data_rsp_t dcache_hit_hci_rsp;
+
+      always_comb begin
+        dcache_hit_hci_req          = '0;
+        dcache_hit_hci_req.req      = dcache_hit_tcdm_req.req;
+        dcache_hit_hci_req.add      = dcache_hit_tcdm_req.addr;
+        dcache_hit_hci_req.wen      = ~dcache_hit_tcdm_req.we;
+        dcache_hit_hci_req.data     = dcache_hit_tcdm_req.wdata;
+        dcache_hit_hci_req.be       = dcache_hit_tcdm_req.be;
+        dcache_hit_hci_req.r_ready  = 1'b1;
+        dcache_hit_hci_req.r_eready = '1;
+      end
+
+      always_comb begin
+        dcache_hit_tcdm_rsp        = '0;
+        dcache_hit_tcdm_rsp.gnt    = dcache_hit_hci_rsp.gnt;
+        dcache_hit_tcdm_rsp.rvalid = dcache_hit_hci_rsp.r_valid;
+        dcache_hit_tcdm_rsp.rdata  = dcache_hit_hci_rsp.r_data;
+      end
+
+      `HCI_ASSIGN_TO_INTF(hci_core_if[DcacheHitHciIdx], dcache_hit_hci_req, dcache_hit_hci_rsp)
+    end else begin: gen_dcache_no_hit_port
+      assign dcache_hit_tcdm_rsp = '0;
+    end
+
+    // Refill and writeback share the wide NoC port with the iDMA: one ID bit each, axi_mux adds the port bit
+    magia_tile_pkg::dcache_axi_req_t [1:0] wide_mux_req;
+    magia_tile_pkg::dcache_axi_rsp_t [1:0] wide_mux_rsp;
+
+    localparam int unsigned WideMuxIdmaIdx   = 0;
+    localparam int unsigned WideMuxDcacheIdx = 1;
+
+    // The iDMA always issues ID 0: dropping its top ID bit loses nothing
+    `AXI_ASSIGN_REQ_STRUCT(wide_mux_req[WideMuxIdmaIdx], idma_axi_wide_req)
+    `AXI_ASSIGN_RESP_STRUCT(idma_axi_wide_rsp, wide_mux_rsp[WideMuxIdmaIdx])
+    assign wide_mux_req[WideMuxDcacheIdx] = dcache_axi_req;
+    assign dcache_axi_rsp                 = wide_mux_rsp[WideMuxDcacheIdx];
+
+`ifndef SYNTHESIS
+    assert property (@(posedge sys_clk) disable iff (!rst_ni)
+      !(idma_axi_wide_req.aw_valid && idma_axi_wide_req.aw.id[magia_tile_pkg::iDMA_AxiIdWidth-1]))
+      else $fatal(1, "magia_isle: iDMA AW ID 0x%0h does not fit the data cache axi_mux", idma_axi_wide_req.aw.id);
+    assert property (@(posedge sys_clk) disable iff (!rst_ni)
+      !(idma_axi_wide_req.ar_valid && idma_axi_wide_req.ar.id[magia_tile_pkg::iDMA_AxiIdWidth-1]))
+      else $fatal(1, "magia_isle: iDMA AR ID 0x%0h does not fit the data cache axi_mux", idma_axi_wide_req.ar.id);
+`endif
+
+    if (magia_tile_pkg::DCACHE_AXI_ID_W + 1 == magia_tile_pkg::iDMA_AxiIdWidth) begin: gen_wide_mux
+      axi_mux #(
+        .SlvAxiIDWidth ( magia_tile_pkg::DCACHE_AXI_ID_W      ),
+        .slv_aw_chan_t ( magia_tile_pkg::dcache_axi_aw_chan_t ),
+        .mst_aw_chan_t ( magia_tile_pkg::idma_axi_aw_chan_t   ),
+        .w_chan_t      ( magia_tile_pkg::idma_axi_w_chan_t    ),
+        .slv_b_chan_t  ( magia_tile_pkg::dcache_axi_b_chan_t  ),
+        .mst_b_chan_t  ( magia_tile_pkg::idma_axi_b_chan_t    ),
+        .slv_ar_chan_t ( magia_tile_pkg::dcache_axi_ar_chan_t ),
+        .mst_ar_chan_t ( magia_tile_pkg::idma_axi_ar_chan_t   ),
+        .slv_r_chan_t  ( magia_tile_pkg::dcache_axi_r_chan_t  ),
+        .mst_r_chan_t  ( magia_tile_pkg::idma_axi_r_chan_t    ),
+        .slv_req_t     ( magia_tile_pkg::dcache_axi_req_t     ),
+        .slv_resp_t    ( magia_tile_pkg::dcache_axi_rsp_t     ),
+        .mst_req_t     ( magia_tile_pkg::idma_axi_req_t       ),
+        .mst_resp_t    ( magia_tile_pkg::idma_axi_rsp_t       ),
+        .NoSlvPorts    ( 2                                    ),
+        .MaxWTrans     ( magia_tile_pkg::iDMA_NumAxInFlight   ),
+        .FallThrough   ( 1'b0                                 )
+      ) i_wide_axi_mux (
+        .clk_i       ( sys_clk            ),
+        .rst_ni      ( rst_ni             ),
+        .test_i      ( test_mode_i        ),
+        .slv_reqs_i  ( wide_mux_req       ),
+        .slv_resps_o ( wide_mux_rsp       ),
+        .mst_req_o   ( axi_wide_mst_req_o ),
+        .mst_resp_i  ( axi_wide_mst_rsp_i )
+      );
+    end else begin: gen_wide_mux_iw
+      // More than 4 MSHR: the mux output has one ID bit more than the NoC, the converter maps the IDs in use
+      // (the iDMA and one per MSHR) onto the NoC IDs
+      magia_tile_pkg::dcache_mux_axi_req_t wide_iw_req;
+      magia_tile_pkg::dcache_mux_axi_rsp_t wide_iw_rsp;
+
+      axi_mux #(
+        .SlvAxiIDWidth ( magia_tile_pkg::DCACHE_AXI_ID_W          ),
+        .slv_aw_chan_t ( magia_tile_pkg::dcache_axi_aw_chan_t     ),
+        .mst_aw_chan_t ( magia_tile_pkg::dcache_mux_axi_aw_chan_t ),
+        .w_chan_t      ( magia_tile_pkg::idma_axi_w_chan_t        ),
+        .slv_b_chan_t  ( magia_tile_pkg::dcache_axi_b_chan_t      ),
+        .mst_b_chan_t  ( magia_tile_pkg::dcache_mux_axi_b_chan_t  ),
+        .slv_ar_chan_t ( magia_tile_pkg::dcache_axi_ar_chan_t     ),
+        .mst_ar_chan_t ( magia_tile_pkg::dcache_mux_axi_ar_chan_t ),
+        .slv_r_chan_t  ( magia_tile_pkg::dcache_axi_r_chan_t      ),
+        .mst_r_chan_t  ( magia_tile_pkg::dcache_mux_axi_r_chan_t  ),
+        .slv_req_t     ( magia_tile_pkg::dcache_axi_req_t         ),
+        .slv_resp_t    ( magia_tile_pkg::dcache_axi_rsp_t         ),
+        .mst_req_t     ( magia_tile_pkg::dcache_mux_axi_req_t     ),
+        .mst_resp_t    ( magia_tile_pkg::dcache_mux_axi_rsp_t     ),
+        .NoSlvPorts    ( 2                                        ),
+        .MaxWTrans     ( magia_tile_pkg::iDMA_NumAxInFlight       ),
+        .FallThrough   ( 1'b0                                     )
+      ) i_wide_axi_mux (
+        .clk_i       ( sys_clk       ),
+        .rst_ni      ( rst_ni        ),
+        .test_i      ( test_mode_i   ),
+        .slv_reqs_i  ( wide_mux_req  ),
+        .slv_resps_o ( wide_mux_rsp  ),
+        .mst_req_o   ( wide_iw_req   ),
+        .mst_resp_i  ( wide_iw_rsp   )
+      );
+
+      axi_iw_converter #(
+        .AxiSlvPortIdWidth      ( magia_tile_pkg::DCACHE_AXI_ID_W + 1           ),
+        .AxiMstPortIdWidth      ( magia_tile_pkg::iDMA_AxiIdWidth               ),
+        .AxiSlvPortMaxUniqIds   ( 2 ** (magia_tile_pkg::DCACHE_AXI_ID_W + 1)    ),
+        .AxiSlvPortMaxTxnsPerId ( magia_tile_pkg::iDMA_NumAxInFlight            ),
+        .AxiSlvPortMaxTxns      ( 2 * magia_tile_pkg::iDMA_NumAxInFlight        ),
+        .AxiMstPortMaxUniqIds   ( 2 ** magia_tile_pkg::iDMA_AxiIdWidth          ),
+        .AxiMstPortMaxTxnsPerId ( magia_tile_pkg::iDMA_NumAxInFlight            ),
+        .AxiAddrWidth           ( magia_tile_pkg::iDMA_AddrWidth                ),
+        .AxiDataWidth           ( magia_tile_pkg::iDMA_DataWidth                ),
+        .AxiUserWidth           ( magia_tile_pkg::iDMA_UserWidth                ),
+        .slv_req_t              ( magia_tile_pkg::dcache_mux_axi_req_t          ),
+        .slv_resp_t             ( magia_tile_pkg::dcache_mux_axi_rsp_t          ),
+        .mst_req_t              ( magia_tile_pkg::idma_axi_req_t                ),
+        .mst_resp_t             ( magia_tile_pkg::idma_axi_rsp_t                )
+      ) i_wide_axi_iw (
+        .clk_i      ( sys_clk            ),
+        .rst_ni     ( rst_ni             ),
+        .slv_req_i  ( wide_iw_req        ),
+        .slv_resp_o ( wide_iw_rsp        ),
+        .mst_req_o  ( axi_wide_mst_req_o ),
+        .mst_resp_i ( axi_wide_mst_rsp_i )
+      );
+    end
+
+`ifndef SYNTHESIS
+    initial begin: p_dcache_checks
+      assert (TileCfg.DataCache.BlockBytes * magia_pkg::BYTE_W == magia_pkg::WIDE_DATA_W)
+        else $fatal(1, "magia_isle: the data cache block must be one HCI wide access");
+      assert (TileCfg.DataCache.CachedStart >= magia_pkg::ADDR_W'(magia_tile_pkg::INSTRRAM_ADDR_START + 32'h0001_0000))
+        else $fatal(1, "magia_isle: the cacheable region must not cover the instruction region");
+      assert (DcacheTcdmBase >= magia_pkg::ADDR_W'(magia_tile_pkg::L1_ADDR_START - magia_tile_pkg::TILE_WINDOW_BASE))
+        else $fatal(1, "magia_isle: the data cache store does not fit in L1");
+    end
+`endif
+  end else begin: gen_no_data_cache
+    tile_dcache_hci_req_t dcache_hci_req_quiet;
+    tile_dcache_hci_rsp_t dcache_hci_rsp_unused;
+
+    // The HCI interconnect keeps one dcache port even without the data cache
+    assign dcache_hci_req_quiet = '0;
+    `HCI_ASSIGN_TO_INTF(hci_dcache_if[0], dcache_hci_req_quiet, dcache_hci_rsp_unused)
+
+    assign dcache_en           = 1'b0;
+    assign dcache_cached_start = '0;
+    assign dcache_cached_end   = '0;
+
+    assign axi_wide_mst_req_o = idma_axi_wide_req;
+    assign idma_axi_wide_rsp  = axi_wide_mst_rsp_i;
+  end
+
+/*******************************************************/
+/**                  Data Cache End                   **/
+/*******************************************************/
 /**                 RedMulE Beginning                 **/
 /*******************************************************/
 
@@ -1780,8 +2169,8 @@ module magia_isle
     magia_tile_pkg::core_obi_data_req_t spatz_obi_req;
     magia_tile_pkg::core_obi_data_rsp_t spatz_obi_rsp;
 
-    assign obi_xbar_slv_req[ObiMgr.spatz] = spatz_obi_req;
-    assign spatz_obi_rsp                  = obi_xbar_slv_rsp[ObiMgr.spatz];
+    assign obi_mgr_req[ObiMgr.spatz] = spatz_obi_req;
+    assign spatz_obi_rsp             = obi_mgr_rsp[ObiMgr.spatz];
 
     tile_hci_data_req_t [NumSpatzHciPorts-1:0] spatz_hci_req;
     tile_hci_data_rsp_t [NumSpatzHciPorts-1:0] spatz_hci_rsp;
@@ -2014,8 +2403,8 @@ module magia_isle
     );
 
     for (genvar idx_core = 0; idx_core < NClusterCores; idx_core++) begin: gen_cluster_obi_port
-      assign obi_xbar_slv_req[ObiMgr.cluster_base + idx_core] = cluster_obi_data_req[idx_core];
-      assign cluster_obi_data_rsp[idx_core] = obi_xbar_slv_rsp[ObiMgr.cluster_base + idx_core];
+      assign obi_mgr_req[ObiMgr.cluster_base + idx_core] = cluster_obi_data_req[idx_core];
+      assign cluster_obi_data_rsp[idx_core] = obi_mgr_rsp[ObiMgr.cluster_base + idx_core];
     end
 
     for (genvar idx_core = 0; idx_core < NClusterCores; idx_core++) begin: gen_cluster_hci_assign

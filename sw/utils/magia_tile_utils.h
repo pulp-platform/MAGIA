@@ -31,6 +31,9 @@
 #define BITS_WORD    (32)
 #define BITS_BYTE    (8)
 
+/* Data cache registers (data_cc_cfg_regs), only with MAGIA_DCACHE */
+#define DCACHE_CTRL_BASE (0x00000080)
+#define DCACHE_CTRL_END  (0x000000BF)
 #define REDMULE_BASE    (0x00000100)
 #define REDMULE_END     (0x000001FF)
 #define IDMA_BASE       (0x00000200)
@@ -76,6 +79,22 @@
 #define L1_BASE         (0x00020000)
 #define L1_SIZE         (0x000E0000)
 #define L1_TILE_OFFSET  (0x00100000)
+/* Data cache store: top of L1, reserved while the cache is on (MAGIA_DCACHE). Same geometry as magia_pkg
+ * (make dc_ways=... dc_sets=...): 4 ways x 64 sets x 128 B = 32 KiB by default */
+#ifndef MAGIA_DCACHE_WAYS
+#define MAGIA_DCACHE_WAYS (4)
+#endif
+#ifndef MAGIA_DCACHE_SETS
+#define MAGIA_DCACHE_SETS (64)
+#endif
+#define L1_DCACHE_LINE  (128)
+#define L1_DCACHE_SIZE  (MAGIA_DCACHE_WAYS * MAGIA_DCACHE_SETS * L1_DCACHE_LINE)
+#define L1_DCACHE_BASE  (L1_BASE + L1_SIZE - L1_DCACHE_SIZE)
+#ifdef MAGIA_DCACHE
+#define L1_SPM_SIZE     (L1_SIZE - L1_DCACHE_SIZE)
+#else
+#define L1_SPM_SIZE     (L1_SIZE)
+#endif
 #define L2_BASE         (0xCC000000)
 #define TEST_END_ADDR   (0xCCFF0000)
 

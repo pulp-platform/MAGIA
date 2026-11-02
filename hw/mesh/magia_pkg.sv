@@ -53,6 +53,49 @@ package magia_pkg;
   localparam bit MagiaEnFractalSync = 1'b0;
 `endif
 
+  // Data cache (make dcache=1): MAGIA_DCACHE enables it in MagiaTileDefaultCfg
+`ifdef MAGIA_DCACHE
+  localparam bit MagiaEnDataCache = 1'b1;
+`else
+  localparam bit MagiaEnDataCache = 1'b0;
+`endif
+
+  // Data cache geometry (make dc_ways=... dc_sets=... dc_mshr=...): the software gets the same defines
+`ifdef MAGIA_DCACHE_WAYS
+  localparam int unsigned MagiaDataCacheWays = `MAGIA_DCACHE_WAYS;
+`else
+  localparam int unsigned MagiaDataCacheWays = 4;
+`endif
+`ifdef MAGIA_DCACHE_SETS
+  localparam int unsigned MagiaDataCacheSets = `MAGIA_DCACHE_SETS;
+`else
+  localparam int unsigned MagiaDataCacheSets = 64;
+`endif
+`ifdef MAGIA_DCACHE_MSHR
+  localparam int unsigned MagiaDataCacheMshr = `MAGIA_DCACHE_MSHR;
+`else
+  localparam int unsigned MagiaDataCacheMshr = 2;
+`endif
+
+  // Data cache set index XORed with the low tag bits (make dc_sethash=1)
+`ifdef MAGIA_DC_SETHASH
+  localparam bit MagiaDcSetXorHash = 1'b1;
+`else
+  localparam bit MagiaDcSetXorHash = 1'b0;
+`endif
+
+  // Data cache prefetch parameters (make dcache_defs="-D DCACHE_PF_DISTANCE=2 -D DCACHE_PF_PENDING=2")
+`ifdef DCACHE_PF_DISTANCE
+  localparam int unsigned MagiaDcachePfDistance = `DCACHE_PF_DISTANCE;
+`else
+  localparam int unsigned MagiaDcachePfDistance = 1;
+`endif
+`ifdef DCACHE_PF_PENDING
+  localparam int unsigned MagiaDcachePfPending = `DCACHE_PF_PENDING;
+`else
+  localparam int unsigned MagiaDcachePfPending = 1;
+`endif
+
   // Tile configuration
 
   typedef struct packed {
@@ -100,6 +143,26 @@ package magia_pkg;
   } cluster_cfg_t;
 
   typedef struct packed {
+    int unsigned NumWays;             // Ways
+    int unsigned NumSets;             // Sets
+    int unsigned LineBytes;           // Line size, in bytes
+    int unsigned BlockBytes;          // Data store access unit (one TCDM access, one AXI beat), in bytes
+    logic [31:0] CachedStart;         // Cacheable L2 region [CachedStart, CachedEnd) at reset
+    logic [31:0] CachedEnd;
+    int unsigned MaxTxnPerMaster;     // Transactions in flight per OBI manager
+    int unsigned NumMshr;             // Misses in flight (one miss unit each), at most 4 (AXI ID of the cache)
+    bit          EnPrefetch;          // Next-line prefetcher (PREFETCH_EN turns it on at runtime)
+    int unsigned PrefetchStreams;     // Streams followed by the prefetcher
+    int unsigned PrefetchDistance;    // Lines ahead of the request a stream asks for (1 = next line)
+    int unsigned PrefetchMaxPending;  // Prefetches waiting for the lookup
+    bit          FrontendRegisterOut; // Spill register after the OBI front-end (one cycle more on every request)
+    bit          RspBypass;           // A ready response leaves the ROB at once (one cycle less on a hit)
+    bit          NarrowHitPort;       // Hits on a narrow HCI core port (one bank), the dcache port only for misses
+    bit          CacheSpatz;          // Spatz OBI manager through the cache (ctrl core and cluster always)
+    bit          SetXorHash;          // Set index XORed with the low tag bits (strides of the way size spread over the sets)
+  } dcache_cfg_t;
+
+  typedef struct packed {
     l1_cfg_t        L1;        // L1 scratchpad (TCDM) geometry
     ctrl_core_cfg_t CtrlCore;  // Control core (cv32e40x) ISA extensions
     idma_cfg_t      IDma;      // iDMA parameters
@@ -107,9 +170,11 @@ package magia_pkg;
     bit             EnSpatzCC; // Spatz CC: core complex + bootrom + dedicated I$ + HCI/OBI master ports
     bit             EnCluster; // PULP cluster: cv32e40p cores + shared I$ + OBI master ports
     bit             EnCollective; // Narrow collectives: control registers + collective_gen on the narrow master port
+    bit             EnDataCache; // Data cache: data_cc + per-manager demux + HCI port + control registers
     redmule_cfg_t   RedMule;   // RedMulE parameters (valid iff EnRedMule)
     spatz_cfg_t     Spatz;     // Spatz CC parameters (valid iff EnSpatzCC)
     cluster_cfg_t   Cluster;   // PULP cluster parameters (valid iff EnCluster)
+    dcache_cfg_t    DataCache; // Data cache parameters (valid iff EnDataCache)
   } magia_tile_cfg_t;
 
   // Default parameter sets
@@ -195,6 +260,27 @@ package magia_pkg;
     IcacheLineWidth:        256
   };
 
+  // 4 ways x 64 sets x 128 B = 32 KiB by default; cacheable region = dataram of sw/kernel/link.ld
+  localparam dcache_cfg_t MagiaDataCacheDefaultCfg = '{
+    NumWays:             MagiaDataCacheWays,
+    NumSets:             MagiaDataCacheSets,
+    LineBytes:           128,
+    BlockBytes:          WIDE_DATA_W/BYTE_W,
+    CachedStart:         32'hCC01_0000,
+    CachedEnd:           32'hCCF1_0000,
+    MaxTxnPerMaster:     2,
+    NumMshr:             MagiaDataCacheMshr,
+    EnPrefetch:          1'b1,
+    PrefetchStreams:     2,
+    PrefetchDistance:    MagiaDcachePfDistance,
+    PrefetchMaxPending:  MagiaDcachePfPending,
+    FrontendRegisterOut: 1'b0,
+    RspBypass:           1'b1,
+    NarrowHitPort:       1'b1,
+    CacheSpatz:          1'b0,
+    SetXorHash:          MagiaDcSetXorHash
+  };
+
   // All accelerators enabled (full tile)
   localparam magia_tile_cfg_t MagiaTileDefaultCfg = '{
     L1:        MagiaL1DefaultCfg,
@@ -204,9 +290,11 @@ package magia_pkg;
     EnSpatzCC: 1'b1,
     EnCluster: 1'b1,
     EnCollective: 1'b1,
+    EnDataCache: MagiaEnDataCache,
     RedMule:   MagiaRedMuleDefaultCfg,
     Spatz:     MagiaSpatzDefaultCfg,
-    Cluster:   MagiaClusterDefaultCfg
+    Cluster:   MagiaClusterDefaultCfg,
+    DataCache: MagiaDataCacheDefaultCfg
   };
 
   // RedMulE-only tile
@@ -218,9 +306,11 @@ package magia_pkg;
     EnSpatzCC: 1'b0,
     EnCluster: 1'b0,
     EnCollective: 1'b1,
+    EnDataCache: 1'b0,
     RedMule:   MagiaRedMuleDefaultCfg,
     Spatz:     MagiaSpatzDefaultCfg,
-    Cluster:   MagiaClusterDefaultCfg
+    Cluster:   MagiaClusterDefaultCfg,
+    DataCache: MagiaDataCacheDefaultCfg
   };
 
    // SpatzCC-only tile
@@ -232,9 +322,11 @@ package magia_pkg;
     EnSpatzCC: 1'b1,
     EnCluster: 1'b0,
     EnCollective: 1'b1,
+    EnDataCache: 1'b0,
     RedMule:   MagiaRedMuleDefaultCfg,
     Spatz:     MagiaSpatzDefaultCfg,
-    Cluster:   MagiaClusterDefaultCfg
+    Cluster:   MagiaClusterDefaultCfg,
+    DataCache: MagiaDataCacheDefaultCfg
   };
 
   // PulpCluster-only tile
@@ -246,9 +338,11 @@ package magia_pkg;
     EnSpatzCC: 1'b0,
     EnCluster: 1'b1,
     EnCollective: 1'b1,
+    EnDataCache: 1'b0,
     RedMule:   MagiaRedMuleDefaultCfg,
     Spatz:     MagiaSpatzDefaultCfg,
-    Cluster:   MagiaClusterDefaultCfg
+    Cluster:   MagiaClusterDefaultCfg,
+    DataCache: MagiaDataCacheDefaultCfg
   };
 
   localparam magia_tile_cfg_t [N_TILES-1:0] HOMO_TILE_CFGS = '{

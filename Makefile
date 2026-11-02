@@ -45,6 +45,8 @@ zfinx         := 1
 cluster_zfinx := 1
 # FractalSync network in the mesh and in every tile
 fsync         ?= 1
+# Data cache (data_cc) in MagiaTileDefaultCfg; scripts, HW and SW must use the same value
+dcache        ?= 0
 
 PULP_XTEN_BASE := xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw
 
@@ -387,6 +389,40 @@ bender_defs += -D ZFINX_CLUSTER=$(cluster_zfinx)
 ifeq ($(fsync),1)
   bender_defs += -D MAGIA_FSYNC
   common_defs += -D MAGIA_FSYNC
+endif
+
+ifeq ($(dcache),1)
+  bender_defs += -D MAGIA_DCACHE
+  common_defs += -D MAGIA_DCACHE
+  FLAGS       += -DMAGIA_DCACHE
+  # data cache parameters overridden at build time, e.g. dcache_defs="-D DCACHE_PF_DISTANCE=2" (NumMshr: dc_mshr)
+  bender_defs += $(dcache_defs)
+endif
+
+# Data cache geometry (e.g. dc_ways=4 dc_sets=512 dc_mshr=2): the same defines for HW and SW, empty = magia_pkg defaults
+ifneq ($(dc_ways),)
+  bender_defs += -D MAGIA_DCACHE_WAYS=$(dc_ways)
+  common_defs += -D MAGIA_DCACHE_WAYS=$(dc_ways)
+  FLAGS       += -DMAGIA_DCACHE_WAYS=$(dc_ways)
+endif
+ifneq ($(dc_sets),)
+  bender_defs += -D MAGIA_DCACHE_SETS=$(dc_sets)
+  common_defs += -D MAGIA_DCACHE_SETS=$(dc_sets)
+  FLAGS       += -DMAGIA_DCACHE_SETS=$(dc_sets)
+endif
+ifneq ($(dc_mshr),)
+  bender_defs += -D MAGIA_DCACHE_MSHR=$(dc_mshr)
+  common_defs += -D MAGIA_DCACHE_MSHR=$(dc_mshr)
+  FLAGS       += -DMAGIA_DCACHE_MSHR=$(dc_mshr)
+endif
+
+# Extra flags for the test sources (e.g. EXTRA_CFLAGS="-DVEC_WORDS=65536")
+FLAGS += $(EXTRA_CFLAGS)
+
+# Data cache set index hash (make dc_sethash=1); default off
+ifeq ($(dc_sethash),1)
+  bender_defs += -D MAGIA_DC_SETHASH
+  common_defs += -D MAGIA_DC_SETHASH
 endif
 
 bender_targs += -t rtl

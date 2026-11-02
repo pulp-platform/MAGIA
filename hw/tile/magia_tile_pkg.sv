@@ -41,6 +41,7 @@ package magia_tile_pkg;
   `include "reqrsp_interface/typedef.svh"
   `include "tcdm_interface/typedef.svh"
   `include "floo_noc/typedef.svh"
+  `include "data_cc/typedef.svh"
 
   `include "../include/alias.svh"
 
@@ -59,6 +60,10 @@ package magia_tile_pkg;
 `endif
 
   // Peripherals (private): chained control registers
+  // Data cache registers in the free slot before RedMulE: no address moves without the cache
+  localparam logic [magia_pkg::ADDR_W-1:0] DCACHE_CTRL_ADDR_START  = TILE_PERIPH_BASE + 32'h0000_0080;
+  localparam logic [magia_pkg::ADDR_W-1:0] DCACHE_CTRL_SIZE        = 32'h0000_0040;
+  localparam logic [magia_pkg::ADDR_W-1:0] DCACHE_CTRL_ADDR_END    = DCACHE_CTRL_ADDR_START + DCACHE_CTRL_SIZE;
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_START = TILE_PERIPH_BASE + 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_SIZE       = 32'h0000_0100;
   localparam logic [magia_pkg::ADDR_W-1:0] REDMULE_CTRL_ADDR_END   = REDMULE_CTRL_ADDR_START + REDMULE_CTRL_SIZE;
@@ -160,7 +165,9 @@ package magia_tile_pkg;
 
   function automatic int unsigned gen_tile_num_hci_core(magia_tile_cfg_t cfg);
     // Remote L1 route from the xbar + ctrl core + Spatz TCDM ports + one port per cluster core
-    return 1 + 1 + gen_tile_spatz_hci_ports(cfg) + (cfg.EnCluster ? cfg.Cluster.NumCores : 0);
+    // + the data cache hits (iff EnDataCache and DataCache.NarrowHitPort)
+    return 1 + 1 + gen_tile_spatz_hci_ports(cfg) + (cfg.EnCluster ? cfg.Cluster.NumCores : 0) +
+           32'(cfg.EnDataCache && cfg.DataCache.NarrowHitPort);
   endfunction
   localparam int unsigned SPATZ_HCI_PORTS = gen_spatz_hci_ports(magia_pkg::MagiaSpatzDefaultCfg);
 
@@ -363,7 +370,7 @@ package magia_tile_pkg;
   endfunction
 
   // Control units share one crossbar port through ctrl_demux; the EU keeps its own, its responses wait
-  localparam int unsigned CTRL_MAX_UNITS = 7;
+  localparam int unsigned CTRL_MAX_UNITS = 8;
 
   typedef struct packed {
     int unsigned num_units;  // Number of units behind the control port (one address rule each)
@@ -374,6 +381,7 @@ package magia_tile_pkg;
     int unsigned cluster;    // PULP cluster control (valid iff EnCluster)
     int unsigned hci;        // HCI arbiter control
     int unsigned coll;       // Collective control (valid iff EnCollective)
+    int unsigned dcache;     // Data cache registers (valid iff EnDataCache)
   } ctrl_map_t;
 
   function automatic ctrl_map_t gen_ctrl_map(magia_tile_cfg_t cfg);
@@ -403,6 +411,10 @@ package magia_tile_pkg;
     idx = idx + 1;
     if (cfg.EnCollective) begin
       ret.coll = idx;
+      idx = idx + 1;
+    end
+    if (cfg.EnDataCache) begin
+      ret.dcache = idx;
       idx = idx + 1;
     end
     ret.num_units = idx;
@@ -593,6 +605,9 @@ package magia_tile_pkg;
     ret[map.hci] = '{idx: map.hci, start_addr: HCI_CTRL_ADDR_START, end_addr: HCI_CTRL_ADDR_END};
     if (cfg.EnCollective) begin
       ret[map.coll] = '{idx: map.coll, start_addr: COLL_CTRL_ADDR_START, end_addr: COLL_CTRL_ADDR_END};
+    end
+    if (cfg.EnDataCache) begin
+      ret[map.dcache] = '{idx: map.dcache, start_addr: DCACHE_CTRL_ADDR_START, end_addr: DCACHE_CTRL_ADDR_END};
     end
     return ret;
   endfunction
@@ -842,6 +857,70 @@ package magia_tile_pkg;
     ret.NoAddrRules        = gen_axi_xbar_num_rules(cfg);
     return ret;
   endfunction
+
+  /*******************************************************************/
+  /*                          Data cache                             */
+  /*******************************************************************/
+
+  // OBI managers through the data cache: ctrl core, cluster cores and, if enabled, Spatz. Never ext.
+  function automatic bit gen_dcache_mgr_cached(magia_tile_cfg_t cfg, int unsigned obi_mgr_idx);
+    obi_mgr_map_t map;
+    map = gen_obi_mgr_map(cfg);
+    if (!cfg.EnDataCache)
+      return 1'b0;
+    if (obi_mgr_idx == map.core)
+      return 1'b1;
+    if (cfg.EnSpatzCC && cfg.DataCache.CacheSpatz && (obi_mgr_idx == map.spatz))
+      return 1'b1;
+    if (cfg.EnCluster && (obi_mgr_idx >= map.cluster_base) &&
+        (obi_mgr_idx < map.cluster_base + cfg.Cluster.NumCores))
+      return 1'b1;
+    return 1'b0;
+  endfunction
+
+  // Port of the cache obi_mux taken by OBI manager obi_mgr_idx: cached managers in ObiMgr order
+  function automatic int unsigned gen_dcache_mux_port(magia_tile_cfg_t cfg, int unsigned obi_mgr_idx);
+    int unsigned port;
+    port = 0;
+    for (int unsigned i = 0; i < obi_mgr_idx; i++) begin
+      if (gen_dcache_mgr_cached(cfg, i))
+        port = port + 1;
+    end
+    return port;
+  endfunction
+
+  function automatic int unsigned gen_dcache_num_mgr(magia_tile_cfg_t cfg);
+    obi_mgr_map_t map;
+    map = gen_obi_mgr_map(cfg);
+    return gen_dcache_mux_port(cfg, map.num_mgr);
+  endfunction
+
+  // Data store at the top of the TCDM, as a byte offset in the TCDM (the HCI routers drop the tile base)
+  function automatic logic [magia_pkg::ADDR_W-1:0] gen_dcache_tcdm_base(magia_tile_cfg_t cfg);
+    return cfg.L1.NumBanks * cfg.L1.NumWordsBank * (magia_pkg::DATA_W/magia_pkg::BYTE_W) -
+           cfg.DataCache.NumWays * cfg.DataCache.NumSets * cfg.DataCache.LineBytes;
+  endfunction
+
+  // Core-side OBI of the cache: aid widened for the largest obi_mux (ctrl core, Spatz, cluster cores)
+  localparam int unsigned DCACHE_MAX_MGR   = 2 + N_CLUSTER_CORES;
+  localparam int unsigned DCACHE_AID_WIDTH = AID_WIDTH + gen_idx_width(DCACHE_MAX_MGR);
+  localparam obi_pkg::obi_cfg_t obi_dcache_cfg = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, DCACHE_AID_WIDTH, obi_amo_optional_cfg);
+
+  `OBI_TYPEDEF_A_CHAN_T(dcache_obi_a_chan_t, magia_pkg::ADDR_W, magia_pkg::DATA_W, DCACHE_AID_WIDTH, core_data_obi_a_optional_t)
+  `OBI_TYPEDEF_R_CHAN_T(dcache_obi_r_chan_t, magia_pkg::DATA_W, DCACHE_AID_WIDTH, core_data_obi_r_optional_t)
+  `OBI_TYPEDEF_DEFAULT_REQ_T(dcache_obi_req_t, dcache_obi_a_chan_t)
+  `OBI_TYPEDEF_RSP_T(dcache_obi_rsp_t, dcache_obi_r_chan_t)
+
+  // Data store ports (TCDM): one 256-bit block per access, one word per access for the hits (NarrowHitPort)
+  `DATA_CC_TCDM_TYPEDEF_ALL(dcache_tcdm, magia_pkg::ADDR_W, magia_pkg::WIDE_DATA_W)
+  `DATA_CC_TCDM_TYPEDEF_ALL(dcache_hit_tcdm, magia_pkg::ADDR_W, magia_pkg::DATA_W)
+
+  // Refill / writeback port: one ID bit less than the iDMA, the axi_mux in front of the NoC adds it back.
+  // More than 4 MSHR (one AXI ID each) need a wider ID: then an axi_iw_converter after the axi_mux narrows it again.
+  localparam int unsigned DCACHE_MSHR_ID_W = (magia_pkg::MagiaDataCacheMshr > 1) ? $clog2(magia_pkg::MagiaDataCacheMshr) : 1;
+  localparam int unsigned DCACHE_AXI_ID_W  = (DCACHE_MSHR_ID_W > iDMA_AxiIdWidth - 1) ? DCACHE_MSHR_ID_W : iDMA_AxiIdWidth - 1;
+  `AXI_TYPEDEF_ALL_CT(dcache_axi, dcache_axi_req_t, dcache_axi_rsp_t, logic[iDMA_AddrWidth-1:0], logic[DCACHE_AXI_ID_W-1:0], logic[iDMA_DataWidth-1:0], logic[iDMA_StrbWidth-1:0], logic[iDMA_UserWidth-1:0])
+  `AXI_TYPEDEF_ALL_CT(dcache_mux_axi, dcache_mux_axi_req_t, dcache_mux_axi_rsp_t, logic[iDMA_AddrWidth-1:0], logic[DCACHE_AXI_ID_W:0], logic[iDMA_DataWidth-1:0], logic[iDMA_StrbWidth-1:0], logic[iDMA_UserWidth-1:0])
 
   `FSYNC_TYPEDEF_ALL(ht_tile_fsync, logic[FSYNC_AGGR_W-1:0], logic[FSYNC_LVL_W-1:0], logic[FSYNC_ID_W-1:0])
   `FSYNC_TYPEDEF_ALL(vt_tile_fsync, logic[FSYNC_AGGR_W-1:0], logic[FSYNC_LVL_W-1:0], logic[FSYNC_ID_W-1:0])

@@ -31,7 +31,8 @@
 
 // Defining the actual number of words per bank
 // to be checked in order to avoid overwriting the stack
-#define ACTIVE_WORDS ((L1_SIZE/(BITS_WORD/BITS_BYTE))/NUM_L1_BANKS)
+// (and the data cache store at the top of L1, with MAGIA_DCACHE)
+#define ACTIVE_WORDS ((L1_SPM_SIZE/(BITS_WORD/BITS_BYTE))/NUM_L1_BANKS)
 
 int main(void) {
   uint32_t exit_code;

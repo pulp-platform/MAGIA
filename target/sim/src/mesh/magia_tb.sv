@@ -28,6 +28,40 @@ module magia_tb;
 
   magia_fixture fixture();
 
+  // Data cache monitors (events, order rules of the hit port, wait in the cache obi_mux), printed at the end of
+  // every perf window and of the simulation; without the data cache there is no data_cc_top to bind to, and vopt
+  // rejects the bind
+`ifdef MAGIA_DCACHE
+  bind data_cc_top magia_dcache_monitor #(
+    .cfg_req_t ( cfg_req_t ),
+    .cfg_rsp_t ( cfg_rsp_t )
+  ) i_magia_dcache_monitor (
+    .clk_i            ( clk_i               ),
+    .rst_ni           ( rst_ni              ),
+    .events_i         ( events_o            ),
+    .cfg_req_i        ( cfg_req_i           ),
+    .cfg_rsp_i        ( cfg_rsp_o           ),
+    .miss_req_valid_i ( miss_data_req_valid ),
+    .miss_hold_i      ( miss_hold           ),
+    .refill_valid_i   ( refill_valid        ),
+    .refill_allowed_i ( refill_allowed      )
+  );
+  bind magia_isle magia_dcache_mux_monitor #(
+    .NumPorts  ( NumDcacheMuxPorts                    ),
+    .req_t     ( magia_tile_pkg::core_obi_data_req_t ),
+    .rsp_t     ( magia_tile_pkg::core_obi_data_rsp_t ),
+    .cfg_req_t ( magia_tile_pkg::core_obi_data_req_t ),
+    .cfg_rsp_t ( magia_tile_pkg::core_obi_data_rsp_t )
+  ) i_magia_dcache_mux_monitor (
+    .clk_i     ( sys_clk                  ),
+    .rst_ni    ( rst_ni                   ),
+    .req_i     ( dcache_mgr_req           ),
+    .rsp_i     ( dcache_mgr_rsp           ),
+    .cfg_req_i ( ctrl_req[CtrlMap.dcache] ),
+    .cfg_rsp_i ( ctrl_rsp[CtrlMap.dcache] )
+  );
+`endif
+
 `ifdef VERILATOR
   // When running under Verilator this testbench prints nothing until the first
   // tile output, so emit a heartbeat to tell a slow run from a stalled one.

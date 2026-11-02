@@ -27,6 +27,7 @@ module magia_hci_interconnect
 #(
   parameter int unsigned         NumHwpe              = magia_tile_pkg::N_HWPE,
   parameter int unsigned         NumDma               = magia_tile_pkg::N_DMA,
+  parameter int unsigned         NumDcache            = 0,
   parameter int unsigned         NumCore              = magia_tile_pkg::N_CORE,
   parameter int unsigned         NumMem               = magia_pkg::N_MEM_BANKS,
   parameter int unsigned         RouterFifoDepth      = magia_tile_pkg::EXPFIFO,
@@ -34,10 +35,12 @@ module magia_hci_interconnect
   parameter bit                  WaiveRq4Assert       = 1'b0,
   parameter hci_size_parameter_t `HCI_SIZE_PARAM(hwpe) = '0,
   parameter hci_size_parameter_t `HCI_SIZE_PARAM(dma)  = '0,
+  parameter hci_size_parameter_t `HCI_SIZE_PARAM(dcache) = '0,
   parameter hci_size_parameter_t `HCI_SIZE_PARAM(core) = '0,
   parameter hci_size_parameter_t `HCI_SIZE_PARAM(mem)  = '0,
   // Interface arrays cannot be zero-sized
-  localparam int unsigned        NumHwpePort          = (NumHwpe > 0) ? NumHwpe : 1
+  localparam int unsigned        NumHwpePort          = (NumHwpe > 0) ? NumHwpe : 1,
+  localparam int unsigned        NumDcachePort        = (NumDcache > 0) ? NumDcache : 1
 ) (
   input logic                                clk_i,
   input logic                                rst_ni,
@@ -47,6 +50,7 @@ module magia_hci_interconnect
 
   hci_core_intf.target                       hwpe[NumHwpePort],
   hci_core_intf.target                       dma [NumDma],
+  hci_core_intf.target                       dcache[NumDcachePort],
   hci_core_intf.target                       core[NumCore],
   hci_core_intf.initiator                    mem [NumMem]
 );
@@ -55,7 +59,7 @@ module magia_hci_interconnect
 /**   Parameter and Interface Definitions Beginning   **/
 /*******************************************************/
 
-  localparam int unsigned NumWide = NumHwpe + NumDma;
+  localparam int unsigned NumWide = NumHwpe + NumDma + NumDcache;
 
   // Bank address width of the narrow LIC, in words
   localparam int unsigned LicBankAddrW = `HCI_SIZE_GET_AW(mem) -
@@ -175,6 +179,18 @@ module magia_hci_interconnect
     assign hwpe[0].r_evalid = '0;
   end
 
+  // Without the data cache no router drives the placeholder dcache[0] port
+  if (NumDcache == 0) begin : gen_dcache_port_unused
+    assign dcache[0].gnt      = 1'b0;
+    assign dcache[0].r_valid  = 1'b0;
+    assign dcache[0].r_data   = '0;
+    assign dcache[0].r_user   = '0;
+    assign dcache[0].r_id     = '0;
+    assign dcache[0].r_opc    = 1'b0;
+    assign dcache[0].egnt     = '1;
+    assign dcache[0].r_evalid = '0;
+  end
+
   if (NumWide > 0) begin : gen_wide_branch
     // ARB_CTRL steers only the wide-vs-narrow arbiter: the tree nodes keep the default ratio
     localparam hci_package::hci_interconnect_ctrl_t TreeCtrl = '{
@@ -215,7 +231,7 @@ module magia_hci_interconnect
       .clk ( clk_i )
     );
 
-    // DMA channels take the first NumDma groups of wide_mem, RedMulE the following ones
+    // DMA channels take the first NumDma groups of wide_mem, then the data cache, RedMulE the last ones
     for (genvar j = 0; j < NumDma; j++) begin : gen_dma_req2mem
       hci_router #(
         .FIFO_DEPTH            ( RouterFifoDepth           ),
@@ -231,6 +247,23 @@ module magia_hci_interconnect
       );
     end
 
+    // Data cache store: writes keep their r_valid, data_cc expects one r_valid per granted access
+    for (genvar i = 0; i < NumDcache; i++) begin : gen_dcache_req2mem
+      hci_router #(
+        .FIFO_DEPTH            ( RouterFifoDepth           ),
+        .NB_OUT_CHAN           ( NumMem                    ),
+        .FILTER_WRITE_R_VALID  ( 0                         ),
+        .`HCI_SIZE_PARAM(in)   ( `HCI_SIZE_PARAM(dcache)   ),
+        .`HCI_SIZE_PARAM(out)  ( `HCI_SIZE_PARAM(wide_mem) )
+      ) i_dcache_router (
+        .clk_i   ( clk_i                                             ),
+        .rst_ni  ( rst_ni                                            ),
+        .clear_i ( clear_i                                           ),
+        .in      ( dcache[i]                                         ),
+        .out     ( wide_mem[(NumDma+i)*NumMem:(NumDma+i+1)*NumMem-1] )
+      );
+    end
+
     // Last leaf, so RedMulE alone faces the DMA pair at the tree root
     for (genvar i = 0; i < NumHwpe; i++) begin : gen_hwpe_req2mem
       hci_router #(
@@ -239,11 +272,11 @@ module magia_hci_interconnect
         .`HCI_SIZE_PARAM(in)   ( `HCI_SIZE_PARAM(hwpe)     ),
         .`HCI_SIZE_PARAM(out)  ( `HCI_SIZE_PARAM(wide_mem) )
       ) i_hwpe_router (
-        .clk_i   ( clk_i                                             ),
-        .rst_ni  ( rst_ni                                            ),
-        .clear_i ( clear_i                                           ),
-        .in      ( hwpe[i]                                           ),
-        .out     ( wide_mem[(NumDma+i)*NumMem:(NumDma+i+1)*NumMem-1] )
+        .clk_i   ( clk_i                                                                   ),
+        .rst_ni  ( rst_ni                                                                  ),
+        .clear_i ( clear_i                                                                 ),
+        .in      ( hwpe[i]                                                                 ),
+        .out     ( wide_mem[(NumDma+NumDcache+i)*NumMem:(NumDma+NumDcache+i+1)*NumMem-1] )
       );
     end
 
