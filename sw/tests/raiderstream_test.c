@@ -16,29 +16,34 @@
  *
  * Authors: Niccolò Giuliani <niccolo.giuliani@chips.it>
  *
- * RaiderSTREAM (github.com/michael-beebe/RaiderSTREAM) on the control core: the STREAM kernels (copy, scale,
- * add, triad) in the sequential, gather, scatter and scatter-gather variants, on uint32 instead of double (no
- * FPU) with the STREAM scalar 3. The index arrays are random permutations (Fisher-Yates, as RaiderSTREAM).
- * Three ways to run each group of four kernels, as dcache_vs_idma_test:
- *   direct : data in L2, cache off (the no-cache baseline)
- *   idma   : the sequential streams staged in the L1 SPM by the iDMA, double buffered; gather and scatter keep
- *            their irregular array in L2 (cache off): the iDMA cannot gather, this is the best it can do
- *   cache  : data in L2 through the cache, same L1 budget as the iDMA buffers (WAY_EN), prefetch on and off
- * The scatter-gather group has no iDMA version: every access is irregular.
- * Checks: a permutation preserves the sum of an array, so after each group sum(a) = 15 S, sum(b) = 3 S,
- * sum(c) = 4 S with S the sum of the initial a; the sequential group is also checked element by element.
+ * RaiderSTREAM on the control core: the 16 kernels of sw/tests/raiderstream_kernels.h, each run through the
+ * three transports under comparison.
+ *
+ *   direct : the arrays stay in the L2 and the cache is off. The no-cache baseline
+ *   idma   : what the iDMA can stage is staged in the L1 scratchpad, double buffered, within the budget;
+ *            what is reached through an index stays in the L2 (the cache is off there too: an iDMA cannot
+ *            gather, and leaving the cache on would make this variant secretly cache assisted)
+ *   cache  : the same code as `direct`, but the region is cacheable and the cache gets a budget of ways
+ *            equal to the iDMA buffers (WAY_EN). Prefetch off and on
+ *
+ * `direct` and `cache` run the very same loop: only the configuration around it changes.
+ * The eight-core counterpart is cluster_tests/raiderstream_cluster_test/, built on the same kernels, with
+ * the same variants and the same RES lines, so the two compare kernel by kernel.
+ *
+ * Checks: the index arrays are permutations, so a group of four operations always leaves
+ * sum(a) = 15 S, sum(b) = 3 S, sum(c) = 4 S with S the sum of the initial a. One check covers 16 kernels.
+ *
  * Needs the cache (make dcache=1). Sizes and variants are defines, overridable with EXTRA_CFLAGS.
  */
 
 #include "magia_tile_utils.h"
 #include "magia_dcache_utils.h"
-#include "idma_mm_utils.h"
+#include "bench_utils.h"
+#include "raiderstream_kernels.h"
 
 // GCC 14 crashes ("could not split insn", doloop_begin_i) on the cv32e40p hardware loop of the big loops
 #pragma GCC optimize("no-branch-count-reg")
-// Aligned, not inlined: every variant runs the same aligned loop
 #pragma GCC optimize("align-loops=4")
-#define KERNEL __attribute__((noinline, aligned(4)))
 
 ////////////////
 // Parameters //
@@ -57,124 +62,102 @@
 #define RUN_IDMA     (1)
 #endif
 #ifndef CACHE_PF
-#define CACHE_PF     (3)                      /* bit 0: cache with prefetch off, bit 1: with prefetch on */
+#define CACHE_PF     (3)                      /* bit 0: prefetch off, bit 1: prefetch on */
 #endif
-
-#define G_SEQ        (1 << 0)
-#define G_GATHER     (1 << 1)
-#define G_SCATTER    (1 << 2)
-#define G_SG         (1 << 3)
 #ifndef GROUPS
-#define GROUPS       (G_SEQ | G_GATHER | G_SCATTER | G_SG)
+#define GROUPS       (0xF)                    /* bit g: run group g (G_SEQ, G_GATHER, G_SCATTER, G_SG) */
+#endif
+/* STREAM_OFFSET is the OFFSET of STREAM: without it the arrays are a multiple of the way size apart and
+ * a[j], b[j], c[j] fight for the same set. SetXorHash makes it unnecessary (see CACHE_VS_SCRATCHPAD.md). */
+#ifndef STREAM_OFFSET
+#define STREAM_OFFSET (128)
+#endif
+#ifndef ARENA_STRIDE
+#define ARENA_STRIDE (0x00080000)             /* L2 arena per tile: the six arrays fit with room to spare */
 #endif
 
-#define N            (STREAM_WORDS)
-#define SCALAR       (3u)
-#define DMA_CHUNK    (32 * 1024)              /* one iDMA transfer: the length is 16 bits */
+#define N (STREAM_WORDS)
 
 /////////////////////
 // Memory and data //
 /////////////////////
 
-/* L2 arena above .data/.bss (inside the cacheable region at reset). STREAM_OFFSET is the OFFSET of STREAM:
- * without it the arrays are a multiple of the way size apart and a[j], b[j], c[j] fight for the same set. */
-#ifndef STREAM_OFFSET
-#define STREAM_OFFSET (128)
-#endif
-#define ARENA        (0xCC100000)
-#define ALIGN_UP(a)  (((a) + 0xFFF) & ~0xFFF)
+/* L2 arena, one per tile. On a mesh the tiles must not share the arrays: there is no coherence between
+ * tiles, and the program image is one copy for all of them. */
 #define ARR_BYTES    (N * 4 + STREAM_OFFSET)
-#define A_ADDR       (ARENA)
-#define B_ADDR       (A_ADDR + ARR_BYTES)
-#define C_ADDR       (B_ADDR + ARR_BYTES)
-#define IDX1_ADDR    (C_ADDR + ARR_BYTES)
-#define IDX2_ADDR    (IDX1_ADDR + ARR_BYTES)
-#define IDX3_ADDR    (IDX2_ADDR + ARR_BYTES)
-#define ARENA_END    ALIGN_UP(IDX3_ADDR + N * 4)
+#define A_OFF        (0)
+#define B_OFF        (A_OFF + ARR_BYTES)
+#define C_OFF        (B_OFF + ARR_BYTES)
+#define I1_OFF       (C_OFF + ARR_BYTES)
+#define I2_OFF       (I1_OFF + ARR_BYTES)
+#define I3_OFF       (I2_OFF + ARR_BYTES)
+#define ARENA_BYTES  (I3_OFF + N * 4)
+#define ARENA        (0xCC200000u + magia_tile_id() * ARENA_STRIDE)
 
-#define a_arr        ((volatile uint32_t *)A_ADDR)
-#define b_arr        ((volatile uint32_t *)B_ADDR)
-#define c_arr        ((volatile uint32_t *)C_ADDR)
-#define idx1_arr     ((volatile uint32_t *)IDX1_ADDR)
-#define idx2_arr     ((volatile uint32_t *)IDX2_ADDR)
-#define idx3_arr     ((volatile uint32_t *)IDX3_ADDR)
-
-/* Pattern for the iDMA fill of a: PAT[j] = j, at the top of the SPM (below the cache store), out of the
- * budgets. Chunk c of a fill starts at PAT[8 c] and reads 8192 words: the margin covers the last chunk. */
+/* L1. The core reads and writes through the global view, the iDMA through the local one: same memory, two
+ * addresses (see L1_LOCAL / L1_GLOBAL in magia_tile_utils.h). */
+#define STATE_OFF    (0x800)                  /* the state of this core: see below */
+#define SPM_OFF      (0x1000)                 /* iDMA buffers, and the permutation scratch before the runs */
 #define PAT_WORDS    (8 * 1024 + 8 * (N / 8192))
-#define PAT          (L1_BASE + L1_SPM_SIZE - PAT_WORDS * 4)
-#define SPM          (L1_BASE)                /* iDMA buffers and the index scratch, from the start of the L1 */
+#define PAT_OFF      (L1_SPM_SIZE - PAT_WORDS * 4)   /* the fill pattern, top of the SPM, out of the budgets */
 
-#define O_A          (0)                      /* fill offset of a (see val) */
+#define STATE        L1_GLOBAL(STATE_OFF)
+#define SPM          L1_GLOBAL(SPM_OFF)
+#define SPM_LOC      L1_LOCAL(SPM_OFF)
+#define PAT          L1_GLOBAL(PAT_OFF)
+#define PAT_LOC      L1_LOCAL(PAT_OFF)
+
+/* No mutable globals: .data and .bss live in the L2 and the program image is one copy for the whole mesh,
+ * so a global would be shared by every tile. */
+#define errors       (*(volatile uint32_t *)(STATE + 0))
+#define lcg_state    (*(volatile uint32_t *)(STATE + 4))
 
 extern char _bss_end;
 
 static const uint32_t budgets_kib[] = {BUDGETS_KIB};
-static uint32_t errors = 0;
 
-static inline uint32_t read_mcycle(void) {
-  uint32_t cycles;
-  asm volatile("csrr %0, mcycle" : "=r"(cycles));
-  return cycles;
+/* ARENA reads mhartid, so this must never be called inside a timed loop: ask for the six addresses once,
+ * before the measurement, with role_addrs(). */
+static inline uint32_t role_addr(uint32_t r) {
+  static const uint32_t off[R_NUM] = {A_OFF, B_OFF, C_OFF, I1_OFF, I2_OFF, I3_OFF};
+  return ARENA + off[r];
 }
 
+static void role_addrs(uint32_t *out) {
+  uint32_t arena = ARENA;
+  static const uint32_t off[R_NUM] = {A_OFF, B_OFF, C_OFF, I1_OFF, I2_OFF, I3_OFF};
+  for (int r = 0; r < R_NUM; r++)
+    out[r] = arena + off[r];
+}
+
+/* a[i] = val(i, 0). With N <= 8192 this is just a[i] = i; the rest of the formula is what keeps the values
+ * going up when fill() has to copy the pattern in several pieces (see fill). */
 static inline uint32_t val(uint32_t i, uint32_t o) {
   return (i & 8191) + 8 * (i >> 13) + o;
 }
 
-static void check(const char *what, uint32_t got, uint32_t expected) {
-  if (got != expected) {
-    printf("[FAIL] %s: got 0x%x, expected 0x%x\n", what, (unsigned)got, (unsigned)expected);
-    errors++;
-  }
-}
-
-static void check2(const char *variant, const char *what, uint32_t got, uint32_t expected) {
+static void check(const char *variant, const char *what, uint32_t got, uint32_t expected) {
   if (got != expected) {
     printf("[FAIL] %s %s: got 0x%x, expected 0x%x\n", variant, what, (unsigned)got, (unsigned)expected);
-    errors++;
+    errors = errors + 1;
   }
 }
 
-//////////
-// iDMA //
-//////////
+/////////////////////////
+// Data, written by DMA //
+/////////////////////////
 
-/* The done id of each direction grows in order: wait until it reaches id */
-static inline void wait_in(uint32_t id) {
-  while ((int32_t)(idma_mm_get_done_id_dir(0, 0) - id) < 0);
-}
-
-static inline void wait_out(uint32_t id) {
-  while ((int32_t)(idma_mm_get_done_id_dir(1, 0) - id) < 0);
-}
-
-static uint32_t dma_in(uint32_t l2, uint32_t l1, uint32_t bytes) {
-  uint32_t id = 0;
-  for (uint32_t off = 0; off < bytes; off += DMA_CHUNK) {
-    uint32_t len = (bytes - off < DMA_CHUNK) ? bytes - off : DMA_CHUNK;
-    id = idma_L2ToL1(l2 + off, l1 + off, len);
-  }
-  return id;
-}
-
-static uint32_t dma_out(uint32_t l1, uint32_t l2, uint32_t bytes) {
-  uint32_t id = 0;
-  for (uint32_t off = 0; off < bytes; off += DMA_CHUNK) {
-    uint32_t len = (bytes - off < DMA_CHUNK) ? bytes - off : DMA_CHUNK;
-    id = idma_L1ToL2(l1 + off, l2 + off, len);
-  }
-  return id;
-}
-
-/* Array of words in L2 with the values val(i, o), written by the iDMA from the pattern */
+/* The arrays are written by the iDMA from a pattern in the SPM, never by the core: a store from the core
+ * would go through the cache, leave the data dirty there instead of in the L2, and count on the performance
+ * counters. The pattern is copied in pieces of 8192 words; piece c starts at PAT[8 c] so that the values
+ * keep going up across pieces, which is what val() describes. */
 static void fill(uint32_t l2, uint32_t words, uint32_t o) {
   uint32_t id = 0;
   for (uint32_t c = 0; c * 8192 < words; c++) {
     uint32_t n = (words - c * 8192 < 8192) ? words - c * 8192 : 8192;
-    id = idma_L1ToL2(PAT + (o + 8 * c) * 4, l2 + c * 8192 * 4, n * 4);
+    id = idma_L1ToL2(PAT_LOC + (o + 8 * c) * 4, l2 + c * 8192 * 4, n * 4);
   }
-  wait_out(id);
+  idma_wait_out(id);
 }
 
 static uint32_t golden_sum(uint32_t words, uint32_t o) {
@@ -186,263 +169,33 @@ static uint32_t golden_sum(uint32_t words, uint32_t o) {
   return s;
 }
 
-/////////////
-// Kernels //
-/////////////
-// RaiderSTREAM RS_OMP_IMPL.c, one loop each; src and dst can be L2 arrays or L1 tiles.
+/* A random permutation of 0 .. N-1 (Fisher-Yates, as RaiderSTREAM initRandomIdxArray), built in the SPM and
+ * sent to the L2 by the iDMA. A permutation and not random indices: with repetitions two j would write the
+ * same cell and the sums below would not hold. */
+static void make_permutation(uint32_t l2) {
+  volatile uint32_t *scratch = (volatile uint32_t *)SPM;   /* read once, outside the loops below */
 
-KERNEL static void seq_copy(volatile uint32_t *av, volatile uint32_t *cv, int n) {
-  for (int j = 0; j < n; j++)
-    cv[j] = av[j];
+  for (uint32_t i = 0; i < N; i++)
+    scratch[i] = i;
+  for (uint32_t i = N - 1; i > 0; i--) {
+    lcg_state = lcg_state * 1664525u + 1013904223u;
+    uint32_t j = lcg_state % (i + 1);
+    uint32_t tmp = scratch[i];
+    scratch[i] = scratch[j];
+    scratch[j] = tmp;
+  }
+  idma_wait_out(idma_out(SPM_LOC, l2, N * 4));
 }
 
-KERNEL static void seq_scale(volatile uint32_t *cv, volatile uint32_t *bv, int n) {
-  for (int j = 0; j < n; j++)
-    bv[j] = SCALAR * cv[j];
-}
+////////////////////////////
+// The three transports   //
+////////////////////////////
 
-KERNEL static void seq_add(volatile uint32_t *av, volatile uint32_t *bv, volatile uint32_t *cv, int n) {
-  for (int j = 0; j < n; j++)
-    cv[j] = av[j] + bv[j];
-}
-
-KERNEL static void seq_triad(volatile uint32_t *bv, volatile uint32_t *cv, volatile uint32_t *av, int n) {
-  for (int j = 0; j < n; j++)
-    av[j] = bv[j] + SCALAR * cv[j];
-}
-
-KERNEL static void gather_copy(volatile uint32_t *av, volatile uint32_t *i1, volatile uint32_t *cv, int n) {
-  for (int j = 0; j < n; j++)
-    cv[j] = av[i1[j]];
-}
-
-KERNEL static void gather_scale(volatile uint32_t *cv, volatile uint32_t *i1, volatile uint32_t *bv, int n) {
-  for (int j = 0; j < n; j++)
-    bv[j] = SCALAR * cv[i1[j]];
-}
-
-KERNEL static void gather_add(volatile uint32_t *av, volatile uint32_t *bv, volatile uint32_t *i1,
-                              volatile uint32_t *i2, volatile uint32_t *cv, int n) {
-  for (int j = 0; j < n; j++)
-    cv[j] = av[i1[j]] + bv[i2[j]];
-}
-
-KERNEL static void gather_triad(volatile uint32_t *bv, volatile uint32_t *cv, volatile uint32_t *i1,
-                                volatile uint32_t *i2, volatile uint32_t *av, int n) {
-  for (int j = 0; j < n; j++)
-    av[j] = bv[i1[j]] + SCALAR * cv[i2[j]];
-}
-
-KERNEL static void scatter_copy(volatile uint32_t *av, volatile uint32_t *i1, volatile uint32_t *cv, int n) {
-  for (int j = 0; j < n; j++)
-    cv[i1[j]] = av[j];
-}
-
-KERNEL static void scatter_scale(volatile uint32_t *cv, volatile uint32_t *i1, volatile uint32_t *bv, int n) {
-  for (int j = 0; j < n; j++)
-    bv[i1[j]] = SCALAR * cv[j];
-}
-
-KERNEL static void scatter_add(volatile uint32_t *av, volatile uint32_t *bv, volatile uint32_t *i1,
-                               volatile uint32_t *cv, int n) {
-  for (int j = 0; j < n; j++)
-    cv[i1[j]] = av[j] + bv[j];
-}
-
-KERNEL static void scatter_triad(volatile uint32_t *bv, volatile uint32_t *cv, volatile uint32_t *i1,
-                                 volatile uint32_t *av, int n) {
-  for (int j = 0; j < n; j++)
-    av[i1[j]] = bv[j] + SCALAR * cv[j];
-}
-
-KERNEL static void sg_copy(volatile uint32_t *av, volatile uint32_t *i1, volatile uint32_t *i2,
-                           volatile uint32_t *cv, int n) {
-  for (int j = 0; j < n; j++)
-    cv[i1[j]] = av[i2[j]];
-}
-
-KERNEL static void sg_scale(volatile uint32_t *cv, volatile uint32_t *i1, volatile uint32_t *i2,
-                            volatile uint32_t *bv, int n) {
-  for (int j = 0; j < n; j++)
-    bv[i2[j]] = SCALAR * cv[i1[j]];
-}
-
-KERNEL static void sg_add(volatile uint32_t *av, volatile uint32_t *bv, volatile uint32_t *i1,
-                          volatile uint32_t *i2, volatile uint32_t *i3, volatile uint32_t *cv, int n) {
-  for (int j = 0; j < n; j++)
-    cv[i1[j]] = av[i2[j]] + bv[i3[j]];
-}
-
-KERNEL static void sg_triad(volatile uint32_t *bv, volatile uint32_t *cv, volatile uint32_t *i1,
-                            volatile uint32_t *i2, volatile uint32_t *i3, volatile uint32_t *av, int n) {
-  for (int j = 0; j < n; j++)
-    av[i1[j]] = bv[i2[j]] + SCALAR * cv[i3[j]];
-}
-
-KERNEL static uint32_t sum_arr(volatile uint32_t *p, int n) {
+RS_KERNEL static uint32_t sum_arr(volatile uint32_t *p, uint32_t n) {
   uint32_t s = 0;
-  for (int j = 0; j < n; j++)
+  for (uint32_t j = 0; j < n; j++)
     s += p[j];
   return s;
-}
-
-//////////////////////////////////////////
-// Kernel table: one row per kernel run //
-//////////////////////////////////////////
-// in0/in1 are the sequential operands, out the sequential result (0 = none, the kernel scatters to L2),
-// irr0/irr1 the arrays indexed by idx (they stay in L2 in the idma variant), ni the index arrays used.
-
-enum { OP_COPY, OP_SCALE, OP_ADD, OP_TRIAD };
-
-typedef struct {
-  const char *name;
-  uint32_t    in0, in1;   /* sequential inputs (L2 address, 0 = none) */
-  uint32_t    out;        /* sequential output (0 = the kernel writes through idx) */
-  uint32_t    irr0, irr1; /* irregular arrays (always L2, 0 = none) */
-  uint32_t    ni;         /* index arrays used (staged in the idma variant) */
-} krow_t;
-
-static const krow_t seq_rows[4] = {
-  {"seq_copy",   A_ADDR, 0,      C_ADDR, 0,      0,      0},
-  {"seq_scale",  C_ADDR, 0,      B_ADDR, 0,      0,      0},
-  {"seq_add",    A_ADDR, B_ADDR, C_ADDR, 0,      0,      0},
-  {"seq_triad",  B_ADDR, C_ADDR, A_ADDR, 0,      0,      0},
-};
-
-static const krow_t gather_rows[4] = {
-  {"gather_copy",  0, 0, C_ADDR, A_ADDR, 0,      1},
-  {"gather_scale", 0, 0, B_ADDR, C_ADDR, 0,      1},
-  {"gather_add",   0, 0, C_ADDR, A_ADDR, B_ADDR, 2},
-  {"gather_triad", 0, 0, A_ADDR, B_ADDR, C_ADDR, 2},
-};
-
-static const krow_t scatter_rows[4] = {
-  {"scatter_copy",  A_ADDR, 0,      0, C_ADDR, 0, 1},
-  {"scatter_scale", C_ADDR, 0,      0, B_ADDR, 0, 1},
-  {"scatter_add",   A_ADDR, B_ADDR, 0, C_ADDR, 0, 1},
-  {"scatter_triad", B_ADDR, C_ADDR, 0, A_ADDR, 0, 1},
-};
-
-static const krow_t sg_rows[4] = {
-  {"sg_copy",  0, 0, 0, A_ADDR, C_ADDR, 2},
-  {"sg_scale", 0, 0, 0, C_ADDR, B_ADDR, 2},
-  {"sg_add",   0, 0, 0, A_ADDR, B_ADDR, 3},   /* and C_ADDR through idx1 */
-  {"sg_triad", 0, 0, 0, B_ADDR, C_ADDR, 3},   /* and A_ADDR through idx1 */
-};
-
-/* The kernel of group g (G_*) and op on the full L2 arrays */
-static void run_l2(uint32_t g, int op) {
-  if (g == G_SEQ) {
-    if (op == OP_COPY)  seq_copy(a_arr, c_arr, N);
-    if (op == OP_SCALE) seq_scale(c_arr, b_arr, N);
-    if (op == OP_ADD)   seq_add(a_arr, b_arr, c_arr, N);
-    if (op == OP_TRIAD) seq_triad(b_arr, c_arr, a_arr, N);
-  } else if (g == G_GATHER) {
-    if (op == OP_COPY)  gather_copy(a_arr, idx1_arr, c_arr, N);
-    if (op == OP_SCALE) gather_scale(c_arr, idx1_arr, b_arr, N);
-    if (op == OP_ADD)   gather_add(a_arr, b_arr, idx1_arr, idx2_arr, c_arr, N);
-    if (op == OP_TRIAD) gather_triad(b_arr, c_arr, idx1_arr, idx2_arr, a_arr, N);
-  } else if (g == G_SCATTER) {
-    if (op == OP_COPY)  scatter_copy(a_arr, idx1_arr, c_arr, N);
-    if (op == OP_SCALE) scatter_scale(c_arr, idx1_arr, b_arr, N);
-    if (op == OP_ADD)   scatter_add(a_arr, b_arr, idx1_arr, c_arr, N);
-    if (op == OP_TRIAD) scatter_triad(b_arr, c_arr, idx1_arr, a_arr, N);
-  } else {
-    if (op == OP_COPY)  sg_copy(a_arr, idx1_arr, idx2_arr, c_arr, N);
-    if (op == OP_SCALE) sg_scale(c_arr, idx1_arr, idx2_arr, b_arr, N);
-    if (op == OP_ADD)   sg_add(a_arr, b_arr, idx1_arr, idx2_arr, idx3_arr, c_arr, N);
-    if (op == OP_TRIAD) sg_triad(b_arr, c_arr, idx1_arr, idx2_arr, idx3_arr, a_arr, N);
-  }
-}
-
-////////////////////////////////////
-// iDMA versions, double buffered //
-////////////////////////////////////
-
-/* One kernel of the row, tiled: the sequential streams (in0, in1, idx used, out) live in L1 tiles,
- * the irregular arrays stay in L2. Buffers: ns streams x 2 tiles within the budget. */
-static void run_idma_row(uint32_t g, int op, const krow_t *r, uint32_t budget) {
-  uint32_t ins[4];
-  uint32_t nin = 0;
-  if (r->in0) { ins[nin] = r->in0; nin++; }
-  if (r->in1) { ins[nin] = r->in1; nin++; }
-  if (r->ni >= 1) { ins[nin] = IDX1_ADDR; nin++; }
-  if (r->ni >= 2) { ins[nin] = IDX2_ADDR; nin++; }
-  if (r->ni >= 3) { ins[nin] = IDX3_ADDR; nin++; }
-  uint32_t ns = nin + (r->out ? 1 : 0);
-
-  /* The largest power-of-two tile so that ns streams x 2 tiles fit in the budget */
-  uint32_t tile_words = 1;
-  while (2 * tile_words * ns * 2 * 4 <= budget && 2 * tile_words <= N)
-    tile_words *= 2;
-  uint32_t tile_bytes = tile_words * 4;
-  int      tiles      = N / tile_words;
-  uint32_t buf[4 + 1][2];
-  for (uint32_t s = 0; s < ns; s++) {
-    buf[s][0] = SPM + (2 * s) * tile_bytes;
-    buf[s][1] = SPM + (2 * s + 1) * tile_bytes;
-  }
-  uint32_t in_id[2] = {0, 0}, out_id[2] = {0, 0};
-
-  for (uint32_t s = 0; s < nin; s++)
-    in_id[0] = dma_in(ins[s], buf[s][0], tile_bytes);
-  for (int t = 0; t < tiles; t++) {
-    int b = t & 1, nx = b ^ 1;
-    if (t + 1 < tiles) {
-      if (r->out && t >= 1)
-        wait_out(out_id[nx]);
-      for (uint32_t s = 0; s < nin; s++)
-        in_id[nx] = dma_in(ins[s] + (t + 1) * tile_bytes, buf[s][nx], tile_bytes);
-    }
-    wait_in(in_id[b]);
-
-    /* The staged tiles in kernel-argument order; the irregular arrays as full L2 arrays */
-    volatile uint32_t *s0 = (volatile uint32_t *)buf[0][b];
-    volatile uint32_t *s1 = (volatile uint32_t *)buf[1][b];
-    volatile uint32_t *s2 = (volatile uint32_t *)buf[2][b];
-    volatile uint32_t *ob = (volatile uint32_t *)buf[ns - 1][b];
-    int n = tile_words;
-    if (g == G_SEQ) {
-      if (op == OP_COPY)  seq_copy(s0, ob, n);
-      if (op == OP_SCALE) seq_scale(s0, ob, n);
-      if (op == OP_ADD)   seq_add(s0, s1, ob, n);
-      if (op == OP_TRIAD) seq_triad(s0, s1, ob, n);
-    } else if (g == G_GATHER) {
-      /* idx tiles staged, the gathered array in L2, the result tile in L1 */
-      if (op == OP_COPY)  gather_copy((volatile uint32_t *)r->irr0, s0, ob, n);
-      if (op == OP_SCALE) gather_scale((volatile uint32_t *)r->irr0, s0, ob, n);
-      if (op == OP_ADD)   gather_add((volatile uint32_t *)r->irr0, (volatile uint32_t *)r->irr1, s0, s1, ob, n);
-      if (op == OP_TRIAD) gather_triad((volatile uint32_t *)r->irr0, (volatile uint32_t *)r->irr1, s0, s1, ob, n);
-    } else {
-      /* sequential operands and idx staged, the scattered array in L2 */
-      if (op == OP_COPY)  scatter_copy(s0, s1, (volatile uint32_t *)r->irr0, n);
-      if (op == OP_SCALE) scatter_scale(s0, s1, (volatile uint32_t *)r->irr0, n);
-      if (op == OP_ADD)   scatter_add(s0, s1, s2, (volatile uint32_t *)r->irr0, n);
-      if (op == OP_TRIAD) scatter_triad(s0, s1, s2, (volatile uint32_t *)r->irr0, n);
-    }
-    if (r->out)
-      out_id[b] = dma_out(buf[ns - 1][b], r->out + t * tile_bytes, tile_bytes);
-  }
-  if (r->out)
-    wait_out(out_id[(tiles - 1) & 1]);
-}
-
-//////////
-// Runs //
-//////////
-
-static const krow_t *group_rows(uint32_t g) {
-  if (g == G_SEQ)     return seq_rows;
-  if (g == G_GATHER)  return gather_rows;
-  if (g == G_SCATTER) return scatter_rows;
-  return sg_rows;
-}
-
-static const char *group_name(uint32_t g) {
-  if (g == G_SEQ)     return "seq";
-  if (g == G_GATHER)  return "gather";
-  if (g == G_SCATTER) return "scatter";
-  return "sg";
 }
 
 static void print_res(const char *variant, uint32_t budget, const char *kernel, uint32_t cycles,
@@ -452,90 +205,165 @@ static void print_res(const char *variant, uint32_t budget, const char *kernel, 
          (int)perf->hit_w, (int)perf->miss_w, (int)perf->refill, (int)perf->writeback);
 }
 
-/* Before a group: write back what the cache holds, a again from the pattern (b and c are fully overwritten) */
+/* Before a group: write back what the cache holds, a again from the pattern. b and c need no reset, copy
+ * and scale overwrite them completely. */
 static void init_group(void) {
   dcache_flush();
-  fill(A_ADDR, N, O_A);
+  fill(role_addr(R_A), N, 0);
 }
 
-/* After a group: the three sums; a permutation preserves them, so they hold for every group */
-static void check_group(const char *what, uint32_t g) {
-  uint32_t s = golden_sum(N, O_A);
-  dcache_flush();
-  check2(what, "sum(a)", sum_arr(a_arr, N), 15 * s);
-  check2(what, "sum(b)", sum_arr(b_arr, N), 3 * s);
-  check2(what, "sum(c)", sum_arr(c_arr, N), 4 * s);
+/* After a group, the three sums. The four operations in order give, whatever the group, sum(a) = 15 S,
+ * sum(b) = 3 S, sum(c) = 4 S: copy puts S in c, scale 3S in b, add 4S in c, triad 15S in a. An index array
+ * is a permutation, so it only moves the values around and the sums are the same for all four groups. */
+static void check_group(const char *variant, uint32_t g) {
+  volatile uint32_t *a = (volatile uint32_t *)role_addr(R_A);
+  volatile uint32_t *b = (volatile uint32_t *)role_addr(R_B);
+  volatile uint32_t *c = (volatile uint32_t *)role_addr(R_C);
+  uint32_t s = golden_sum(N, 0);
+
+  dcache_flush();                             /* without this we would read the L2 while the results are
+                                               * still dirty in the cache */
+  check(variant, "sum(a)", sum_arr(a, N), 15 * s);
+  check(variant, "sum(b)", sum_arr(b, N), 3 * s);
+  check(variant, "sum(c)", sum_arr(c, N), 4 * s);
   if (g == G_SEQ) {
+    /* A sum does not notice two swapped elements. Where the positions are predictable, check them too. */
     for (uint32_t i = 0; i < N; i += 61) {
-      check("seq a[i]", a_arr[i], 15 * val(i, O_A));
-      check("seq b[i]", b_arr[i], 3 * val(i, O_A));
-      check("seq c[i]", c_arr[i], 4 * val(i, O_A));
+      check(variant, "seq a[i]", a[i], 15 * val(i, 0));
+      check(variant, "seq b[i]", b[i], 3 * val(i, 0));
+      check(variant, "seq c[i]", c[i], 4 * val(i, 0));
     }
   }
 }
 
-/* direct: cache off during the kernels */
+/* The kernel on the whole L2 arrays. `direct` and `cache` both call this one. */
+static void run_whole_arrays(uint32_t g, uint32_t op) {
+  volatile uint32_t *p[R_NUM];
+  uint32_t addr[R_NUM];
+
+  role_addrs(addr);
+  for (int r = 0; r < R_NUM; r++)
+    p[r] = (volatile uint32_t *)addr[r];
+  rs_kernel(g, op, p, 0, N);
+}
+
+/* The iDMA variant: the streams the plan allows, in tiles, double buffered. While the core works on half b
+ * the iDMA fills half nx; the irregular arrays are reached where they are, in the L2. */
+static void run_tiled(uint32_t g, uint32_t op, uint32_t budget) {
+  rs_plan_t pl;
+  uint32_t  addr[R_NUM];
+  uint32_t  spm = SPM;                        /* SPM is L1_GLOBAL, so it reads mhartid: read it once */
+  uint32_t  in_id[2] = {0, 0}, out_id[2] = {0, 0};
+
+  if (!rs_plan(g, op, &pl))
+    return;
+  role_addrs(addr);
+  uint32_t tile_words = rs_tile_words(pl.n_streams, budget, N, 1);
+  uint32_t tile_bytes = tile_words * 4;
+  uint32_t tiles      = N / tile_words;
+
+  /* The buffers sit one after the other from the start of the SPM, two halves each. The offset is the same
+   * for both views of the L1: the core adds SPM, the iDMA adds SPM_LOC. */
+  #define BUF_OFF(s, d) (((2 * (s)) + (d)) * tile_bytes)
+
+  /* Where each role lives, once per half, before the measurement: a staged role points into its buffer and
+   * is indexed from 0, an irregular one keeps its L2 address. Doing this per tile costs a couple of percent
+   * on the short kernels, which is the order of the effects we are measuring. */
+  volatile uint32_t *p[2][R_NUM];
+  for (int d = 0; d < 2; d++)
+    for (int r = 0; r < R_NUM; r++)
+      p[d][r] = (volatile uint32_t *)((pl.role_buf[r] >= 0) ? spm + BUF_OFF(pl.role_buf[r], d) : addr[r]);
+
+  for (uint32_t s = 0; s < pl.n_in; s++)
+    in_id[0] = idma_in(addr[pl.in_role[s]], SPM_LOC + BUF_OFF(s, 0), tile_bytes);
+  for (uint32_t t = 0; t < tiles; t++) {
+    int b = t & 1, nx = b ^ 1;
+
+    if (t + 1 < tiles) {
+      /* Half nx still holds the result tile of t-1 until the iDMA has taken it away */
+      if (pl.out_role >= 0 && t >= 1)
+        idma_wait_out(out_id[nx]);
+      for (uint32_t s = 0; s < pl.n_in; s++)
+        in_id[nx] = idma_in(addr[pl.in_role[s]] + (t + 1) * tile_bytes,
+                            SPM_LOC + BUF_OFF(s, nx), tile_bytes);
+    }
+    idma_wait_in(in_id[b]);
+    rs_kernel(g, op, p[b], 0, tile_words);
+
+    if (pl.out_role >= 0)
+      out_id[b] = idma_out(SPM_LOC + BUF_OFF(pl.n_in, b),
+                           addr[pl.out_role] + t * tile_bytes, tile_bytes);
+  }
+  if (pl.out_role >= 0)
+    idma_wait_out(out_id[(tiles - 1) & 1]);
+  #undef BUF_OFF
+}
+
+//////////
+// Runs //
+//////////
+
+/* One group of four operations with the cache off: the arrays are reached straight in the L2 */
 static void run_direct(uint32_t g) {
   dcache_perf_t none = {0};
-  const krow_t *rows = group_rows(g);
-  uint32_t      start, t;
 
   init_group();
-  for (int op = 0; op < 4; op++) {
+  for (uint32_t op = 0; op < OP_NUM; op++) {
+    uint32_t t;
     dcache_enable(0);
-    start = read_mcycle(); run_l2(g, op); t = read_mcycle() - start;
-    dcache_enable(1);
-    print_res("direct", 0, rows[op].name, t, &none);
+    t = read_mcycle(); run_whole_arrays(g, op); t = read_mcycle() - t;
+    dcache_enable(1);                         /* back on: check_group needs to flush */
+    print_res("direct", 0, rs_rows[g][op].name, t, &none);
   }
   check_group("direct", g);
 }
 
-/* idma: sequential streams staged in the budget; gather and scatter touch L2 with the cache off */
+/* One group with the iDMA. On the irregular groups the cache is switched off, otherwise the array reached
+ * through an index would be served by it and this would not be an iDMA variant any more. */
 static void run_idma(uint32_t g, uint32_t budget) {
   dcache_perf_t none = {0};
-  const krow_t *rows = group_rows(g);
-  uint32_t      start, t;
 
   if (g == G_SG)
-    return;                                   /* every access irregular: nothing to stage */
+    return;                                   /* irregular at both ends: nothing to stage */
   init_group();
-  for (int op = 0; op < 4; op++) {
+  for (uint32_t op = 0; op < OP_NUM; op++) {
+    uint32_t t;
     if (g != G_SEQ)
       dcache_enable(0);
-    start = read_mcycle(); run_idma_row(g, op, &rows[op], budget); t = read_mcycle() - start;
+    t = read_mcycle(); run_tiled(g, op, budget); t = read_mcycle() - t;
     if (g != G_SEQ)
       dcache_enable(1);
-    print_res("idma", budget, rows[op].name, t, &none);
+    print_res("idma", budget, rs_rows[g][op].name, t, &none);
   }
   check_group("idma", g);
 }
 
-/* cache with the budget in ways; the final flush is its own RES line (the cost of getting results to L2) */
+/* One group through the cache, with the budget given as a number of ways. The final flush gets a RES line of
+ * its own: getting the results to the L2 is a cost of this variant, and hiding it inside triad would be
+ * flattering. */
 static void run_cache(uint32_t g, uint32_t budget, uint32_t prefetch) {
   const char   *variant = prefetch ? "cache_pf1" : "cache_pf0";
-  const krow_t *rows = group_rows(g);
   uint32_t      way_bytes = L1_DCACHE_SIZE / dcache_num_ways();
   uint32_t      ways = budget / way_bytes;
-  uint32_t      spm_base, spm_size, start, t;
-  dcache_perf_t perf;
+  uint32_t      spm_base, spm_size, t;
+  dcache_perf_t perf, none = {0};
 
   if (ways == 0 || ways > dcache_num_ways() || ways * way_bytes != budget) {
-    printf("cache %d KiB: not a number of ways, skipped\n", (int)(budget / 1024));
+    printf("cache %d KiB: not a whole number of ways, skipped\n", (int)(budget / 1024));
     return;
   }
   dcache_set_ways(ways, &spm_base, &spm_size);
   dcache_set_prefetch(prefetch);
 
   init_group();
-  for (int op = 0; op < 4; op++) {
+  for (uint32_t op = 0; op < OP_NUM; op++) {
     dcache_perf_start();
-    start = read_mcycle(); run_l2(g, op); t = read_mcycle() - start;
+    t = read_mcycle(); run_whole_arrays(g, op); t = read_mcycle() - t;
     dcache_perf_stop();
     dcache_perf_read(&perf);
-    print_res(variant, budget, rows[op].name, t, &perf);
+    print_res(variant, budget, rs_rows[g][op].name, t, &perf);
   }
-  dcache_perf_t none = {0};
-  start = read_mcycle(); dcache_flush(); t = read_mcycle() - start;
+  t = read_mcycle(); dcache_flush(); t = read_mcycle() - t;
   print_res(variant, budget, "flush", t, &none);
   check_group(variant, g);
 
@@ -543,54 +371,34 @@ static void run_cache(uint32_t g, uint32_t budget, uint32_t prefetch) {
   dcache_set_ways(dcache_num_ways(), &spm_base, &spm_size);
 }
 
-/////////////////////
-// Index arrays    //
-/////////////////////
-
-/* A random permutation of 0 .. N-1 (Fisher-Yates, as RaiderSTREAM initRandomIdxArray), built in the SPM
- * and written to L2 by the iDMA */
-static uint32_t lcg_state = 0x2026u;
-
-static uint32_t lcg_next(void) {
-  lcg_state = lcg_state * 1664525u + 1013904223u;
-  return lcg_state;
-}
-
-static void make_permutation(uint32_t l2) {
-  volatile uint32_t *scratch = (volatile uint32_t *)SPM;
-  for (uint32_t i = 0; i < N; i++)
-    scratch[i] = i;
-  for (uint32_t i = N - 1; i > 0; i--) {
-    uint32_t j = lcg_next() % (i + 1);
-    uint32_t tmp = scratch[i];
-    scratch[i] = scratch[j];
-    scratch[j] = tmp;
-  }
-  wait_out(dma_out(SPM, l2, N * 4));
-}
-
 int main(void) {
-  asm volatile("csrw mcountinhibit, zero");
+  asm volatile("csrw mcountinhibit, zero");    /* without this mcycle does not run */
+  errors    = 0;
+  lcg_state = 0x2026u;
 
   printf("raiderstream: %d words per array, dcache %d ways x %d sets (%d KiB), geometry %s\n",
          N, (int)dcache_num_ways(), MAGIA_DCACHE_SETS, L1_DCACHE_SIZE / 1024,
          dcache_geometry_ok() ? "ok" : "MISMATCH");
-  if (!dcache_geometry_ok() || (uint32_t)&_bss_end > ARENA || ARENA_END > 0xCCF00000 ||
-      N % 32 != 0 || STREAM_OFFSET % 128 != 0) {
+  if (!dcache_geometry_ok()                    /* the ELF was built for another geometry */
+      || (uint32_t)&_bss_end > ARENA           /* the program data reaches into the arena */
+      || ARENA + ARENA_BYTES > 0xCCF00000      /* the arena reaches past the cacheable region */
+      || N % 32 != 0                           /* not a whole number of cache lines */
+      || STREAM_OFFSET % 128 != 0) {           /* the offset between arrays is not a whole line */
     printf("[FAIL] geometry, arena or alignment\n");
     return 1;
   }
 
-  // Pattern in the SPM, the index permutations, then every group on every variant
+  /* The pattern and the index arrays, written by the iDMA so that nothing of this touches the cache */
+  uint32_t pat = PAT;                          /* L1_GLOBAL reads mhartid: not inside the loop */
   for (uint32_t j = 0; j < PAT_WORDS; j++)
-    mmio32(PAT + j * 4) = j;
-  make_permutation(IDX1_ADDR);
-  make_permutation(IDX2_ADDR);
-  make_permutation(IDX3_ADDR);
-  dcache_flush();
+    mmio32(pat + j * 4) = j;
+  make_permutation(role_addr(R_I1));
+  make_permutation(role_addr(R_I2));
+  make_permutation(role_addr(R_I3));
+  dcache_flush();                              /* the first measurement must start from a cold cache */
 
-  for (uint32_t g = G_SEQ; g <= G_SG; g <<= 1) {
-    if (!(GROUPS & g))
+  for (uint32_t g = 0; g < G_NUM; g++) {
+    if (!(GROUPS & (1u << g)))
       continue;
     if (RUN_DIRECT)
       run_direct(g);

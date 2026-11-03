@@ -32,6 +32,7 @@
 #include "magia_tile_utils.h"
 #include "magia_dcache_utils.h"
 #include "idma_mm_utils.h"
+#include "bench_utils.h"
 
 // GCC 14 crashes ("could not split insn", doloop_begin_i) on the cv32e40p hardware loop of the big loops
 #pragma GCC optimize("no-branch-count-reg")
@@ -92,12 +93,6 @@ extern char _bss_end;
 static const uint32_t budgets_kib[] = {BUDGETS_KIB};
 static uint32_t errors = 0;
 
-static inline uint32_t read_mcycle(void) {
-  uint32_t cycles;
-  asm volatile("csrr %0, mcycle" : "=r"(cycles));
-  return cycles;
-}
-
 static void check(const char *what, uint32_t got, uint32_t expected) {
   if (got != expected) {
     printf("[FAIL] %s: got 0x%x, expected 0x%x\n", what, (unsigned)got, (unsigned)expected);
@@ -108,14 +103,6 @@ static void check(const char *what, uint32_t got, uint32_t expected) {
 //////////
 // iDMA //
 //////////
-
-static inline void wait_in(uint32_t id) {
-  while ((int32_t)(idma_mm_get_done_id_dir(0, 0) - id) < 0);
-}
-
-static inline void wait_out(uint32_t id) {
-  while ((int32_t)(idma_mm_get_done_id_dir(1, 0) - id) < 0);
-}
 
 static uint32_t dma_in(uint32_t l2, uint32_t l1, uint32_t bytes) {
   uint32_t id = 0;
@@ -384,14 +371,14 @@ static void run_idma(uint32_t budget) {
     int b = t & 1, nx = b ^ 1;
     if (t + 1 < tiles) {
       if (t >= 1)
-        wait_out(out_id[nx]);
+        idma_wait_out(out_id[nx]);
       in_id[nx] = dma_in(PT_ADDR + (t + 1) * tile_bytes, SPM + nx * tile_bytes, tile_bytes);
     }
-    wait_in(in_id[b]);
+    idma_wait_in(in_id[b]);
     aes_encrypt((const uint8_t *)(SPM + b * tile_bytes), (uint8_t *)(SPM + (2 + b) * tile_bytes), tile_blocks);
     out_id[b] = dma_out(SPM + (2 + b) * tile_bytes, CT_ADDR + t * tile_bytes, tile_bytes);
   }
-  wait_out(out_id[(tiles - 1) & 1]);
+  idma_wait_out(out_id[(tiles - 1) & 1]);
   uint32_t t = read_mcycle() - start;
   check("idma checksum", ct_checksum(), golden_checksum);
   print_res("idma", budget, t, &none);

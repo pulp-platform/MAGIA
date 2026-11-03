@@ -42,6 +42,7 @@
 #include "magia_tile_utils.h"
 #include "magia_dcache_utils.h"
 #include "idma_mm_utils.h"
+#include "bench_utils.h"
 
 // GCC 14 crashes ("could not split insn", doloop_begin_i) on the cv32e40p hardware loop of the big loops
 #pragma GCC optimize("no-branch-count-reg")
@@ -113,12 +114,6 @@ static volatile uint32_t *const zeros_of = (volatile uint32_t *)(SCRATCH + 0x880
 static const uint32_t budgets_kib[] = {BUDGETS_KIB};
 static uint32_t errors = 0;
 
-static inline uint32_t read_mcycle(void) {
-    uint32_t cycles;
-    asm volatile("csrr %0, mcycle" : "=r"(cycles));
-    return cycles;
-}
-
 static void check(const char *what, uint32_t got, uint32_t expected) {
     if (got != expected) {
         printf("[FAIL] %s: got 0x%x, expected 0x%x\n", what, (unsigned)got, (unsigned)expected);
@@ -129,14 +124,6 @@ static void check(const char *what, uint32_t got, uint32_t expected) {
 //////////
 // iDMA //
 //////////
-
-static inline void wait_in(uint32_t id) {
-    while ((int32_t)(idma_mm_get_done_id_dir(0, 0) - id) < 0);
-}
-
-static inline void wait_out(uint32_t id) {
-    while ((int32_t)(idma_mm_get_done_id_dir(1, 0) - id) < 0);
-}
 
 static uint32_t dma_in(uint32_t l2, uint32_t l1, uint32_t bytes) {
     uint32_t id = 0;
@@ -430,10 +417,10 @@ static uint32_t compress_idma(uint32_t budget, uint32_t *bits_out) {
         int d = t & 1, n = d ^ 1;
         if (t + 1 < tiles) {
             if (t >= 1)
-                wait_out(out_id[n]);
+                idma_wait_out(out_id[n]);
             in_id[n] = dma_in(IN_ADDR + (t + 1) * tile_bytes, in_buf[n], tile_bytes);
         }
-        wait_in(in_id[d]);
+        idma_wait_in(in_id[d]);
         uint32_t tw = 0;
         for (uint32_t k = 0; k < tile_intervals; k++) {
             tw += compress_interval((volatile uint32_t *)(in_buf[d] + k * INTERVAL_WORDS * 4),
@@ -444,7 +431,7 @@ static uint32_t compress_idma(uint32_t budget, uint32_t *bits_out) {
         out_id[d] = dma_out(out_buf[d], OUT_ADDR + words * 4, tw * 4);
         words += tw;
     }
-    wait_out(out_id[(tiles - 1) & 1]);
+    idma_wait_out(out_id[(tiles - 1) & 1]);
     *bits_out = bits;
     return words;
 }
@@ -540,7 +527,7 @@ int main(void) {
     /* Reference run (not timed) */
     golden_words = compress_l2(&golden_bits);
     golden_sum = out_checksum(golden_words);
-    printf("stream di riferimento: %d bit, %d parole (%d%% dell'ingresso)\n", (int)golden_bits,
+    printf("reference stream: %d bits, %d words (%d%% of the input)\n", (int)golden_bits,
            (int)golden_words, (int)(100 * golden_words / CCSDS_SAMPLES));
 
     if (RUN_DIRECT)
