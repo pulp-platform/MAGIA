@@ -83,6 +83,25 @@
 #define L1_SIZE         (0x000E0000)
 #endif
 #define L1_TILE_OFFSET  (0x00100000)
+
+/* The L1 is global (hw/tile/magia_isle.sv: tile_l1_start_addr = L1_ADDR_START + mhartid*L1_TILE_OFFSET).
+ * L1_BASE on its own is the L1 of tile 0: from any other tile the access leaves on the NoC and lands there.
+ * The same memory therefore has two addresses, and which one to use depends on who issues the access:
+ *   - the core goes through its demux, which routes locally only its own window: it needs L1_GLOBAL;
+ *   - the iDMA port is wired to the TCDM of its own tile: it needs L1_LOCAL.
+ * On a single tile the two coincide, which is why a test can look correct and still break on a mesh.
+ * A cluster core reads its cluster index in mhartid, not the tile index: in a pulp_task use the addresses
+ * the control core puts in the parameter block, or L1_TILE_VIEW(cluster_tile_id(), off). */
+#define L1_LOCAL(off)         (L1_BASE + (off))                             /* iDMA view */
+#define L1_TILE_VIEW(t, off)  (L1_BASE + (t) * L1_TILE_OFFSET + (off))      /* core view of tile t */
+#define L1_GLOBAL(off)        L1_TILE_VIEW(magia_tile_id(), (off))          /* core view, this tile */
+
+/* Index of this tile, from the control core. See L1_GLOBAL for what a cluster core reads instead. */
+static inline uint32_t magia_tile_id(void) {
+  uint32_t id;
+  asm volatile("csrr %0, mhartid" : "=r"(id));
+  return id;
+}
 /* Data cache store: top of L1, reserved while the cache is on (MAGIA_DCACHE). Same geometry as magia_pkg
  * (make dc_ways=... dc_sets=...): 4 ways x 64 sets x 128 B = 32 KiB by default */
 #ifndef MAGIA_DCACHE_WAYS
