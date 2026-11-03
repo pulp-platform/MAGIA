@@ -1800,6 +1800,7 @@ module magia_isle
       .FrontendRegisterOut ( TileCfg.DataCache.FrontendRegisterOut ),
       .RspBypass           ( TileCfg.DataCache.RspBypass           ),
       .NarrowHitPort       ( TileCfg.DataCache.NarrowHitPort       ),
+      .WayPredict          ( TileCfg.DataCache.WayPredict          ),
       .NumMshr             ( TileCfg.DataCache.NumMshr             ),
       .EnPrefetch          ( TileCfg.DataCache.EnPrefetch          ),
       .PrefetchStreams     ( TileCfg.DataCache.PrefetchStreams     ),

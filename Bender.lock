@@ -87,7 +87,7 @@ packages:
       Git: https://github.com/pulp-platform/cv32e40x.git
     dependencies: []
   data_cc:
-    revision: 76d5edf4f2a7c151d0be977652584b7b0d0ad46b
+    revision: 738a01c0c97d504ca5235528e49a1ebc1d3e3a89
     version: null
     source:
       Git: git@gitlab.chips.it:ngiuliani/data_cc.git

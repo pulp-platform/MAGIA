@@ -84,6 +84,13 @@ package magia_pkg;
   localparam bit MagiaDcSetXorHash = 1'b0;
 `endif
 
+  // Data cache way prediction: a read hit answers in 2 cycles instead of 3 (make dc_waypred=1)
+`ifdef MAGIA_DC_WAYPRED
+  localparam bit MagiaDcWayPredict = 1'b1;
+`else
+  localparam bit MagiaDcWayPredict = 1'b0;
+`endif
+
   // Data cache prefetch parameters (make dcache_defs="-D DCACHE_PF_DISTANCE=2 -D DCACHE_PF_PENDING=2")
 `ifdef DCACHE_PF_DISTANCE
   localparam int unsigned MagiaDcachePfDistance = `DCACHE_PF_DISTANCE;
@@ -158,6 +165,7 @@ package magia_pkg;
     bit          FrontendRegisterOut; // Spill register after the OBI front-end (one cycle more on every request)
     bit          RspBypass;           // A ready response leaves the ROB at once (one cycle less on a hit)
     bit          NarrowHitPort;       // Hits on a narrow HCI core port (one bank), the dcache port only for misses
+    bit          WayPredict;          // Read hits answered in 2 cycles with the way of the last hit of the set
     bit          CacheSpatz;          // Spatz OBI manager through the cache (ctrl core and cluster always)
     bit          SetXorHash;          // Set index XORed with the low tag bits (strides of the way size spread over the sets)
   } dcache_cfg_t;
@@ -277,6 +285,7 @@ package magia_pkg;
     FrontendRegisterOut: 1'b0,
     RspBypass:           1'b1,
     NarrowHitPort:       1'b1,
+    WayPredict:          MagiaDcWayPredict,
     CacheSpatz:          1'b0,
     SetXorHash:          MagiaDcSetXorHash
   };

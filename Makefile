@@ -425,6 +425,12 @@ ifeq ($(dc_sethash),1)
   common_defs += -D MAGIA_DC_SETHASH
 endif
 
+# Data cache way prediction, read hits in 2 cycles (make dc_waypred=1); default off
+ifeq ($(dc_waypred),1)
+  bender_defs += -D MAGIA_DC_WAYPRED
+  common_defs += -D MAGIA_DC_WAYPRED
+endif
+
 bender_targs += -t rtl
 bender_targs += -t test
 bender_targs += -t cv32e40p_include_tracer
