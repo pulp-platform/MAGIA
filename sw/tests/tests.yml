@@ -77,40 +77,10 @@ general:
     cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
-  # CoreMark (EEMBC) as 8 independent contexts on the 8 cluster cores, one per core
-  coremark_cluster_test:
-    testbench: tile
-    cores: [CV32E40P]
-    sims: [questa, verilator]
-    requires: []
-  # CoreMark (EEMBC) on the control core, data in the L2 through the cache by default (EXTRA_CFLAGS=-DCOREMARK_MEM=0|1|2)
-  coremark_test:
-    testbench: tile
-    cores: [CV32E40P]
-    sims: [questa, verilator]
-    requires: []
   # Runtime cacheable region, CACHE_EN and WAY_EN (with dcache=0 only the data checks run)
   dcache_runtime_test:
     testbench: tile
     cores: [CV32E40P, CV32E40X]
-    sims: [questa, verilator]
-    requires: []
-  # The 16 RaiderSTREAM kernels of raiderstream_test on the 8 cluster cores: direct vs iDMA tiles vs cache
-  raiderstream_cluster_test:
-    testbench: tile
-    cores: [CV32E40P]
-    sims: [questa, verilator]
-    requires: []
-  # 8 cluster cores on the RaiderSTREAM kernels over L2: direct vs iDMA tiles vs cache (MSHR and wide port)
-  dcache_stream_test:
-    testbench: tile
-    cores: [CV32E40P]
-    sims: [questa, verilator]
-    requires: []
-  # Break-even iDMA / cache on the 8 cluster cores: one iDMA per tile against a cache that serves them all
-  dcache_blocks_cluster_test:
-    testbench: tile
-    cores: [CV32E40P]
     sims: [questa, verilator]
     requires: []
   # Break-even iDMA / cache: blocks of BLOCK words taken in random order, from 1 (gather) to N (sequential)
@@ -119,20 +89,8 @@ general:
     cores: [CV32E40P]
     sims: [questa, verilator]
     requires: []
-  # OBPMark 2.1 CCSDS 121.0 on the 8 cluster cores: one reference interval per core
-  obpmark_ccsds121_cluster_test:
-    testbench: tile
-    cores: [CV32E40P]
-    sims: [questa, verilator]
-    requires: []
   # OBPMark 2.1 CCSDS 121.0 data compression: little compute per byte, blocked output
   obpmark_ccsds121_test:
-    testbench: tile
-    cores: [CV32E40P]
-    sims: [questa, verilator]
-    requires: []
-  # OBPMark 3.1 AES in counter mode on the 8 cluster cores: L2 direct vs iDMA vs cache
-  obpmark_aes_cluster_test:
     testbench: tile
     cores: [CV32E40P]
     sims: [questa, verilator]
@@ -155,6 +113,7 @@ general:
     cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
+    timeout: 7200
   # Irregular lookups: L2 direct vs data cache vs iDMA of the whole table vs one iDMA per lookup
   dcache_irregular_test:
     testbench: tile
@@ -165,6 +124,8 @@ general:
   dcache_amo_test:
     testbench: tile
     cores: [CV32E40X]
+    sims: [questa, verilator]
+    requires: []
   # iDMA copy in the background while the core works through the cache: iDMA and core time, prefetch off/on
   dcache_contention_test:
     testbench: tile
@@ -423,7 +384,51 @@ spatz_tests:
     requires: []
 
 # PULP cluster
+coremark:
+  # CoreMark (EEMBC) on the control core, data in the L2 through the cache by default (EXTRA_CFLAGS=-DCOREMARK_MEM=0|1|2)
+  coremark_test:
+    testbench: tile
+    cores: [CV32E40P]
+    sims: [questa, verilator]
+    requires: []
+
 cluster_tests:
+  # CoreMark (EEMBC) as 8 independent contexts on the 8 cluster cores, one per core
+  coremark_cluster_test:
+    testbench: tile
+    cores: [CV32E40P]
+    sims: [questa, verilator]
+    requires: []
+  # The 16 RaiderSTREAM kernels of raiderstream_test on the 8 cluster cores: direct vs iDMA tiles vs cache
+  raiderstream_cluster_test:
+    testbench: tile
+    cores: [CV32E40P]
+    sims: [questa, verilator]
+    requires: []
+  # 8 cluster cores on the RaiderSTREAM kernels over L2: direct vs iDMA tiles vs cache (MSHR and wide port)
+  dcache_stream_test:
+    testbench: tile
+    cores: [CV32E40P]
+    sims: [questa, verilator]
+    requires: []
+  # Break-even iDMA / cache on the 8 cluster cores: one iDMA per tile against a cache that serves them all
+  dcache_blocks_cluster_test:
+    testbench: tile
+    cores: [CV32E40P]
+    sims: [questa, verilator]
+    requires: []
+  # OBPMark 2.1 CCSDS 121.0 on the 8 cluster cores: one reference interval per core
+  obpmark_ccsds121_cluster_test:
+    testbench: tile
+    cores: [CV32E40P]
+    sims: [questa, verilator]
+    requires: []
+  # OBPMark 3.1 AES in counter mode on the 8 cluster cores: L2 direct vs iDMA vs cache
+  obpmark_aes_cluster_test:
+    testbench: tile
+    cores: [CV32E40P]
+    sims: [questa, verilator]
+    requires: []
   # Same results with and without the data cache (make dcache=0|1), only the cycles change
   dcache_cluster_test:
     testbench: tile

@@ -398,8 +398,19 @@ def copy_changes(wt):
     for f in filter(None, untracked):
         if f.startswith('.regression'):
             continue
-        os.makedirs(os.path.dirname(os.path.join(wt, f)) or wt, exist_ok=True)
-        shutil.copy2(os.path.join(ROOT, f), os.path.join(wt, f))
+        src = os.path.join(ROOT, f)
+        dst = os.path.join(wt, f.rstrip('/'))
+        # git collapses a directory with nothing tracked in it into a single entry, so an untracked
+        # directory arrives here as one name and copy2 would fail on it
+        if os.path.isdir(src):
+            # a nested repository (a clone left inside the tree) is not a change of this working tree,
+            # and copying its read-only objects fails anyway
+            if os.path.exists(os.path.join(src, '.git')):
+                continue
+            shutil.copytree(src, dst, dirs_exist_ok=True)
+        else:
+            os.makedirs(os.path.dirname(dst) or wt, exist_ok=True)
+            shutil.copy2(src, dst)
 
 
 def make_worktree(wt):
