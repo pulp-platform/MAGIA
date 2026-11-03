@@ -77,7 +77,11 @@
 #define STACK_START     (0x00010000)
 #define STACK_END       (0x0001FFFF)
 #define L1_BASE         (0x00020000)
+#ifndef L1_SIZE
+/* TCDM minus the 128 KiB below L1_BASE (peripherals, reserved, stacks). Overridable so that the tests can be
+ * built for a smaller TCDM: with 32 banks the size follows the words per bank. */
 #define L1_SIZE         (0x000E0000)
+#endif
 #define L1_TILE_OFFSET  (0x00100000)
 /* Data cache store: top of L1, reserved while the cache is on (MAGIA_DCACHE). Same geometry as magia_pkg
  * (make dc_ways=... dc_sets=...): 4 ways x 64 sets x 128 B = 32 KiB by default */

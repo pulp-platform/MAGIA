@@ -94,8 +94,21 @@
 // Memory and data //
 /////////////////////
 
-/* L2 arena above .data/.bss (inside the cacheable region at reset) */
-#define ARENA        (0xCC100000)
+static inline uint32_t tile_id(void) {
+  uint32_t id;
+  asm volatile("csrr %0, mhartid" : "=r"(id));
+  return id;
+}
+
+/* L2 arena above .data/.bss (inside the cacheable region at reset). On a mesh every tile takes its own
+ * slice, so the tiles do not write on each other: the point of a mesh run is the contention on the L2 and
+ * on the NoC, not a data race. */
+#ifndef ARENA_STRIDE
+#define ARENA_STRIDE (0x00020000)             /* 128 KiB per tile */
+#endif
+/* Computed from the hart id every time it is used, on purpose: a static would live in .bss, which on a mesh
+ * is one shared L2 location for every tile, so the tiles would all end up on the same arena. */
+#define ARENA        (0xCC100000u + tile_id() * ARENA_STRIDE)
 #define ALIGN_UP(a)  (((a) + 0xFFF) & ~0xFFF)
 #define X_ADDR       (ARENA)
 #define Y_ADDR       ALIGN_UP(X_ADDR + VEC_WORDS * 4)
@@ -354,8 +367,8 @@ static void check_matvec(const char *what, uint32_t rows) {
 
 static void print_res(const char *variant, uint32_t budget, const char *kernel, uint32_t cycles, uint32_t flush,
                       const dcache_perf_t *perf) {
-  printf("RES variant=%s budget=%d kernel=%s cycles=%d flush=%d hit_r=%d miss_r=%d hit_w=%d miss_w=%d refill=%d "
-         "wb=%d\n", variant, (int)(budget / 1024), kernel, (int)cycles, (int)flush, (int)perf->hit_r,
+  printf("RES tile=%d variant=%s budget=%d kernel=%s cycles=%d flush=%d hit_r=%d miss_r=%d hit_w=%d miss_w=%d refill=%d "
+         "wb=%d\n", (int)tile_id(), variant, (int)(budget / 1024), kernel, (int)cycles, (int)flush, (int)perf->hit_r,
          (int)perf->miss_r, (int)perf->hit_w, (int)perf->miss_w, (int)perf->refill, (int)perf->writeback);
 }
 
