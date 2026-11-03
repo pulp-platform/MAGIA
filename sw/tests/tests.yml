@@ -77,6 +77,12 @@ general:
     cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
+  # CoreMark (EEMBC) as 8 independent contexts on the 8 cluster cores, one per core
+  coremark_cluster_test:
+    testbench: tile
+    cores: [CV32E40P]
+    sims: [questa, verilator]
+    requires: []
   # CoreMark (EEMBC) on the control core, data in the L2 through the cache by default (EXTRA_CFLAGS=-DCOREMARK_MEM=0|1|2)
   coremark_test:
     testbench: tile
@@ -89,20 +95,44 @@ general:
     cores: [CV32E40P, CV32E40X]
     sims: [questa, verilator]
     requires: []
+  # The 16 RaiderSTREAM kernels of raiderstream_test on the 8 cluster cores: direct vs iDMA tiles vs cache
+  raiderstream_cluster_test:
+    testbench: tile
+    cores: [CV32E40P]
+    sims: [questa, verilator]
+    requires: []
   # 8 cluster cores on the RaiderSTREAM kernels over L2: direct vs iDMA tiles vs cache (MSHR and wide port)
   dcache_stream_test:
     testbench: tile
     cores: [CV32E40P]
     sims: [questa, verilator]
     requires: []
-  # Break-even iDMA / cache: blocchi di BLOCK parole presi in ordine casuale, da 1 (gather) a N (sequenziale)
+  # Break-even iDMA / cache on the 8 cluster cores: one iDMA per tile against a cache that serves them all
+  dcache_blocks_cluster_test:
+    testbench: tile
+    cores: [CV32E40P]
+    sims: [questa, verilator]
+    requires: []
+  # Break-even iDMA / cache: blocks of BLOCK words taken in random order, from 1 (gather) to N (sequential)
   dcache_blocks_test:
     testbench: tile
     cores: [CV32E40P]
     sims: [questa, verilator]
     requires: []
-  # OBPMark 2.1 CCSDS 121.0 data compression: poco calcolo per byte, blocchi
+  # OBPMark 2.1 CCSDS 121.0 on the 8 cluster cores: one reference interval per core
+  obpmark_ccsds121_cluster_test:
+    testbench: tile
+    cores: [CV32E40P]
+    sims: [questa, verilator]
+    requires: []
+  # OBPMark 2.1 CCSDS 121.0 data compression: little compute per byte, blocked output
   obpmark_ccsds121_test:
+    testbench: tile
+    cores: [CV32E40P]
+    sims: [questa, verilator]
+    requires: []
+  # OBPMark 3.1 AES in counter mode on the 8 cluster cores: L2 direct vs iDMA vs cache
+  obpmark_aes_cluster_test:
     testbench: tile
     cores: [CV32E40P]
     sims: [questa, verilator]
