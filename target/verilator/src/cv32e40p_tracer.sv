@@ -9,8 +9,9 @@
 //
 // It is picked up because the flow's makefile puts target/verilator/src on the
 // include path ahead of the cv32e40p checkout's bhv/, and cv32e40p_wrapper.sv
-// pulls the tracer in as `include "cv32e40p_tracer.sv"`. Both changes are
-// marked "MAGIA verilator:" below. Re-vendorize on any cv32e40p bump.
+// pulls the tracer in as `include "cv32e40p_tracer.sv"`. All changes are
+// marked "MAGIA verilator:" below; the trace class is vendorized next to it
+// (cv32e40p_instr_trace.svh). Re-vendorize both on any cv32e40p bump.
 // ---------------------------------------------------------------------------
 
 // Copyright 2018 ETH Zurich and University of Bologna.
@@ -269,6 +270,30 @@ module cv32e40p_tracer
     instr_trace_t trace;
 
     trace = new();
+    // MAGIA verilator: hand this instance's state to the object, see cv32e40p_instr_trace.svh
+    trace.f                = f;
+    trace.rd               = rd;
+    trace.rs1              = rs1;
+    trace.rs2              = rs2;
+    trace.rs3              = rs3;
+    trace.rs4              = rs4;
+    trace.rs1_value        = rs1_value;
+    trace.rs2_value        = rs2_value;
+    trace.rs2_value_vec    = rs2_value_vec;
+    trace.rs3_value        = rs3_value;
+    trace.imm_u_type       = imm_u_type;
+    trace.imm_uj_type      = imm_uj_type;
+    trace.imm_i_type       = imm_i_type;
+    trace.imm_iz_type      = imm_iz_type;
+    trace.imm_z_type       = imm_z_type;
+    trace.imm_s_type       = imm_s_type;
+    trace.imm_sb_type      = imm_sb_type;
+    trace.imm_s2_type      = imm_s2_type;
+    trace.imm_s3_type      = imm_s3_type;
+    trace.imm_vs_type      = imm_vs_type;
+    trace.imm_vu_type      = imm_vu_type;
+    trace.imm_shuffle_type = imm_shuffle_type;
+    trace.imm_clip_type    = imm_clip_type;
     trace.init(.cycles(cycles), .pc(pc), .compressed(compressed), .instr(instr));
 
     return trace;

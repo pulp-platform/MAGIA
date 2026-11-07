@@ -24,10 +24,12 @@
 
 #include "magia_tile_utils.h"
 
+// Print buffer in the tile-private reserved region
 #define STR_OFFSET  (0x00000000)
 #define STR_BASE    (RESERVED_START + STR_OFFSET)
-#define SYNC_OFFSET (0x0000D800)
-#define SYNC_BASE   (RESERVED_START + SYNC_OFFSET)
+// Sync words in the top 4 KiB of L1, which every tile can reach
+#define SYNC_OFFSET (L1_SIZE - 0x00001000)
+#define SYNC_BASE   (L1_BASE + SYNC_OFFSET)
 #define SYNC_EN     (SYNC_BASE + 0x4)
 
 #define MESH_Y_TILES (4)
@@ -83,24 +85,15 @@ char* utoa(unsigned int value, unsigned int base, char* result) {
 }
 
 char* bs(uint32_t x) {
-    uint32_t hartid = get_hartid();
-    char *address = (char *)(uintptr_t)(STR_BASE + L1_TILE_OFFSET * hartid);
-
-    return utoa(x, 2, address);
+    return utoa(x, 2, (char *)(uintptr_t)(STR_BASE));
 }
 
 char* ds(uint32_t x) {
-    uint32_t hartid = get_hartid();
-    char *address = (char *)(uintptr_t)(STR_BASE + L1_TILE_OFFSET * hartid);
-
-    return utoa(x, 10, address);
+    return utoa(x, 10, (char *)(uintptr_t)(STR_BASE));
 }
 
 char* hs(uint32_t x) {
-    uint32_t hartid = get_hartid();
-    char *address = (char *)(uintptr_t)(STR_BASE + L1_TILE_OFFSET * hartid);
-
-    return utoa(x, 16, address);
+    return utoa(x, 16, (char *)(uintptr_t)(STR_BASE));
 }
 
 void h_psprint(uint32_t hartid, const char* string){

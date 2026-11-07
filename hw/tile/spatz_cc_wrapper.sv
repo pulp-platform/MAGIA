@@ -5,10 +5,10 @@
  * (the "License"); you may not use this file except in compliance 
  * with the License. You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://solderpad.org/licenses/SHL-0.51
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * Unless required by applicable law or agreed to in writing, software, hardware
+ * and materials distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -29,6 +29,8 @@ module spatz_cc_wrapper
   import obi_pkg::*;
   import fpnew_pkg::*;
 #(
+  // Cacheable instruction regions
+  parameter snitch_pma_pkg::snitch_pma_t SnitchPMACfg = magia_tile_pkg::SPATZ_SNITCH_PMA_CFG,
   // Spatz Core Complex Parameters
   parameter int unsigned AddrWidth                = magia_pkg::ADDR_W,
   parameter int unsigned DataWidth                = magia_tile_pkg::SPATZ_TCDM_DATA_WIDTH,
@@ -49,7 +51,9 @@ module spatz_cc_wrapper
   parameter logic [31:0] BootAddr                 = magia_tile_pkg::SPATZ_BOOT_ADDR,
   
   parameter fpnew_pkg::fpu_implementation_t FPUImplementation = magia_tile_pkg::SPATZ_FPUImplementation,
-  
+  parameter type hci_req_t = magia_tile_pkg::core_hci_data_req_t,
+  parameter type hci_rsp_t = magia_tile_pkg::core_hci_data_rsp_t,
+
   // Derived parameters - calcolo dinamico basato su N_IPU e N_FPU configurabili
   localparam int unsigned NumSpatzFUs         = (NumSpatzFPUs > NumSpatzIPUs) ? NumSpatzFPUs : NumSpatzIPUs,
   localparam int unsigned NumMemPortsPerSpatz = NumSpatzFUs,
@@ -68,8 +72,8 @@ module spatz_cc_wrapper
   input  snitch_pkg::interrupts_t                 irq_i,
   
   // HCI Master Interface(s) - Connect to MAGIA HCI Interconnect for L1 SPM access
-  output magia_tile_pkg::core_hci_data_req_t [HCIMasterPorts-1:0] hci_master_req_o,
-  input  magia_tile_pkg::core_hci_data_rsp_t [HCIMasterPorts-1:0] hci_master_rsp_i,
+  output hci_req_t [HCIMasterPorts-1:0] hci_master_req_o,
+  input  hci_rsp_t [HCIMasterPorts-1:0] hci_master_rsp_i,
   
   // OBI Master Interface - Single port for Snitch core
   output magia_tile_pkg::core_obi_data_req_t      obi_master_req_o,
@@ -168,161 +172,157 @@ module spatz_cc_wrapper
   hive_rsp_t                                  hive_rsp;
   
   // Conditional signal declarations based on RVD parameter
-  generate
-    if (RVD) begin : gen_signals
-      // RVD=1: 64-bit signal types
-      magia_tile_pkg::spatz_reqrsp64_req_t        data_req;
-      magia_tile_pkg::spatz_reqrsp64_rsp_t        data_rsp;
-      magia_tile_pkg::spatz_tcdm64_req_t [TCDMPorts-1:0] tcdm_req;
-      magia_tile_pkg::spatz_tcdm64_rsp_t [TCDMPorts-1:0] tcdm_rsp;
-    end else begin : gen_signals
-      // RVD=0: 32-bit signal types
-      magia_tile_pkg::spatz_reqrsp_req_t          data_req;
-      magia_tile_pkg::spatz_reqrsp_rsp_t          data_rsp;
-      magia_tile_pkg::spatz_tcdm_req_t [TCDMPorts-1:0] tcdm_req;
-      magia_tile_pkg::spatz_tcdm_rsp_t [TCDMPorts-1:0] tcdm_rsp;
-    end
-  endgenerate
+  if (RVD) begin : gen_signals
+    // RVD=1: 64-bit signal types
+    magia_tile_pkg::spatz_reqrsp64_req_t        data_req;
+    magia_tile_pkg::spatz_reqrsp64_rsp_t        data_rsp;
+    magia_tile_pkg::spatz_tcdm64_req_t [TCDMPorts-1:0] tcdm_req;
+    magia_tile_pkg::spatz_tcdm64_rsp_t [TCDMPorts-1:0] tcdm_rsp;
+  end else begin : gen_signals
+    // RVD=0: 32-bit signal types
+    magia_tile_pkg::spatz_reqrsp_req_t          data_req;
+    magia_tile_pkg::spatz_reqrsp_rsp_t          data_rsp;
+    magia_tile_pkg::spatz_tcdm_req_t [TCDMPorts-1:0] tcdm_req;
+    magia_tile_pkg::spatz_tcdm_rsp_t [TCDMPorts-1:0] tcdm_rsp;
+  end
   
   /*******************************************************************/
   /*                     Spatz Core Complex Instance                 */
   /*******************************************************************/
   
-  generate
-    if (RVD) begin : gen_spatz_cc_rvd
-      // RVD=1: 64-bit configuration
-      spatz_cc #(
-        .AddrWidth                ( AddrWidth                 ),
-        .DataWidth                ( DataWidth                 ),  // 64-bit
-        .TCDMAddrWidth            ( TCDMAddrWidth             ),
-        .dreq_t                   ( magia_tile_pkg::spatz_reqrsp64_req_t     ),
-        .drsp_t                   ( magia_tile_pkg::spatz_reqrsp64_rsp_t     ),
-        .tcdm_req_t               ( magia_tile_pkg::spatz_tcdm64_req_t       ),
-        .tcdm_req_chan_t          ( magia_tile_pkg::spatz_tcdm64_payload_t   ),
-        .tcdm_rsp_t               ( magia_tile_pkg::spatz_tcdm64_rsp_t       ),
-        .tcdm_rsp_chan_t          ( magia_tile_pkg::spatz_tcdm64_rsp_chan_t  ),
-        .axi_req_t                ( magia_tile_pkg::idma_axi_req_t        ),
-        .axi_ar_chan_t            ( magia_tile_pkg::idma_axi_ar_chan_t    ),
-        .axi_aw_chan_t            ( magia_tile_pkg::idma_axi_aw_chan_t    ),
-        .axi_rsp_t                ( magia_tile_pkg::idma_axi_rsp_t        ),
-        .hive_req_t               ( hive_req_t                ),
-        .hive_rsp_t               ( hive_rsp_t                ),
-        .acc_issue_req_t          ( acc_issue_req_t           ),
-        .acc_issue_rsp_t          ( acc_issue_rsp_t           ),
-        .acc_rsp_t                ( acc_rsp_t                 ),
-        .dma_events_t             ( dma_events_t                          ),
-        .dma_perf_t               ( logic                                 ),        
-        .SnitchPMACfg             ( magia_tile_pkg::SPATZ_SNITCH_PMA_CFG  ),        
-        .FPUImplementation        ( FPUImplementation         ),
-        .BootAddr                 ( BootAddr                  ),
-        .RVE                      ( 1'b0                      ),
-        .RVF                      ( RVF                       ),
-        .RVD                      ( 1'b1                      ),
-        .XDivSqrt                 ( XDivSqrt                  ),
-        .XF8                      ( 1'b1                      ),
-        .XF16                     ( 1'b1                      ),
-        .XF16ALT                  ( 1'b1                      ),
-        .XF8ALT                   ( 1'b1                      ),
-        .Xdma                     ( Xdma                      ),
-        .NumIntOutstandingLoads   ( NumIntOutstandingLoads    ),
-        .NumIntOutstandingMem     ( NumIntOutstandingMem      ),
-        .NumSpatzOutstandingLoads ( NumSpatzOutstandingLoads  ),
-        .RVV                      ( RVV                       ),
-        .NumSpatzFPUs             ( NumSpatzFPUs              ),
-        .NumSpatzIPUs             ( NumSpatzIPUs              ),
-        .IsoCrossing              ( 1'b0                      ),
-        .RegisterOffloadRsp       ( RegisterOffloadRsp        ),
-        .RegisterCoreReq          ( RegisterCoreReq           ),
-        .RegisterCoreRsp          ( RegisterCoreRsp           )
-      ) i_spatz_cc (
-        .clk_i                    ( clk_i                     ),
-        .clk_d2_i                 ( clk_i                     ),
-        .rst_ni                   ( rst_ni                    ),
-        .testmode_i               ( test_mode_i               ),
-        .hart_id_i                ( hart_id_i                 ),
-        .irq_i                    ( irq_i                     ),
-        .tcdm_addr_base_i         ( tcdm_addr_base_i          ),
-        .hive_req_o               ( hive_req                  ),
-        .hive_rsp_i               ( hive_rsp                  ),
-        .data_req_o               ( gen_signals.data_req      ),
-        .data_rsp_i               ( gen_signals.data_rsp      ),
-        .tcdm_req_o               ( gen_signals.tcdm_req      ),
-        .tcdm_rsp_i               ( gen_signals.tcdm_rsp      ),
-        .axi_dma_req_o            ( /* DMA disabled */        ),
-        .axi_dma_res_i            ( '0                        ),
-        .axi_dma_busy_o           ( /* DMA disabled */        ),
-        .axi_dma_perf_o           ( /* DMA disabled */        ),
-        .axi_dma_events_o         ( /* DMA disabled */        ),
-        .core_events_o            ( core_events_o             )
-      );
-    end else begin : gen_spatz_cc_no_rvd
-      // RVD=0: 32-bit configuration
-      spatz_cc #(
-        .AddrWidth                ( AddrWidth                 ),
-        .DataWidth                ( DataWidth                 ),  // 32-bit
-        .TCDMAddrWidth            ( TCDMAddrWidth             ),
-        .dreq_t                   ( magia_tile_pkg::spatz_reqrsp_req_t     ),
-        .drsp_t                   ( magia_tile_pkg::spatz_reqrsp_rsp_t     ),
-        .tcdm_req_t               ( magia_tile_pkg::spatz_tcdm_req_t       ),
-        .tcdm_req_chan_t          ( magia_tile_pkg::spatz_tcdm_req_chan_t  ),
-        .tcdm_rsp_t               ( magia_tile_pkg::spatz_tcdm_rsp_t       ),
-        .tcdm_rsp_chan_t          ( magia_tile_pkg::spatz_tcdm_rsp_chan_t  ),
-        .axi_req_t                ( magia_tile_pkg::idma_axi_req_t        ),
-        .axi_ar_chan_t            ( magia_tile_pkg::idma_axi_ar_chan_t    ),
-        .axi_aw_chan_t            ( magia_tile_pkg::idma_axi_aw_chan_t    ),
-        .axi_rsp_t                ( magia_tile_pkg::idma_axi_rsp_t        ),
-        .hive_req_t               ( hive_req_t                ),
-        .hive_rsp_t               ( hive_rsp_t                ),
-        .acc_issue_req_t          ( acc_issue_req_t           ),
-        .acc_issue_rsp_t          ( acc_issue_rsp_t           ),
-        .acc_rsp_t                ( acc_rsp_t                 ),
-        .dma_events_t             ( dma_events_t                          ),
-        .dma_perf_t               ( logic                                 ),
-        .SnitchPMACfg             ( magia_tile_pkg::SPATZ_SNITCH_PMA_CFG  ),
-        .FPUImplementation        ( FPUImplementation         ),
-        .BootAddr                 ( BootAddr                  ),
-        .RVE                      ( 1'b0                      ),
-        .RVF                      ( RVF                       ),
-        .RVD                      ( 1'b0                      ),
-        .XDivSqrt                 ( XDivSqrt                  ),
-        .XF8                      ( 1'b1                      ),
-        .XF16                     ( 1'b1                      ),
-        .XF16ALT                  ( 1'b1                      ),
-        .XF8ALT                   ( 1'b1                      ),
-        .Xdma                     ( Xdma                      ),
-        .NumIntOutstandingLoads   ( NumIntOutstandingLoads    ),
-        .NumIntOutstandingMem     ( NumIntOutstandingMem      ),
-        .NumSpatzOutstandingLoads ( NumSpatzOutstandingLoads  ),
-        .RVV                      ( RVV                       ),
-        .NumSpatzFPUs             ( NumSpatzFPUs              ),
-        .NumSpatzIPUs             ( NumSpatzIPUs              ),
-        .IsoCrossing              ( 1'b0                      ),
-        .RegisterOffloadRsp       ( RegisterOffloadRsp        ),
-        .RegisterCoreReq          ( RegisterCoreReq           ),
-        .RegisterCoreRsp          ( RegisterCoreRsp           )
-      ) i_spatz_cc (
-        .clk_i                    ( clk_i                     ),
-        .clk_d2_i                 ( clk_i                     ),
-        .rst_ni                   ( rst_ni                    ),
-        .testmode_i               ( test_mode_i               ),
-        .hart_id_i                ( hart_id_i                 ),
-        .irq_i                    ( irq_i                     ),
-        .tcdm_addr_base_i         ( tcdm_addr_base_i          ),
-        .hive_req_o               ( hive_req                  ),
-        .hive_rsp_i               ( hive_rsp                  ),
-        .data_req_o               ( gen_signals.data_req      ),
-        .data_rsp_i               ( gen_signals.data_rsp      ),
-        .tcdm_req_o               ( gen_signals.tcdm_req      ),
-        .tcdm_rsp_i               ( gen_signals.tcdm_rsp      ),
-        .axi_dma_req_o            ( /* DMA disabled */        ),
-        .axi_dma_res_i            ( '0                        ),
-        .axi_dma_busy_o           ( /* DMA disabled */        ),
-        .axi_dma_perf_o           ( /* DMA disabled */        ),
-        .axi_dma_events_o         ( /* DMA disabled */        ),
-        .core_events_o            ( core_events_o             )
-      );
-    end
-  endgenerate
+  if (RVD) begin : gen_spatz_cc_rvd
+    // RVD=1: 64-bit configuration
+    spatz_cc #(
+      .AddrWidth                ( AddrWidth                 ),
+      .DataWidth                ( DataWidth                 ),  // 64-bit
+      .TCDMAddrWidth            ( TCDMAddrWidth             ),
+      .dreq_t                   ( magia_tile_pkg::spatz_reqrsp64_req_t     ),
+      .drsp_t                   ( magia_tile_pkg::spatz_reqrsp64_rsp_t     ),
+      .tcdm_req_t               ( magia_tile_pkg::spatz_tcdm64_req_t       ),
+      .tcdm_req_chan_t          ( magia_tile_pkg::spatz_tcdm64_payload_t   ),
+      .tcdm_rsp_t               ( magia_tile_pkg::spatz_tcdm64_rsp_t       ),
+      .tcdm_rsp_chan_t          ( magia_tile_pkg::spatz_tcdm64_rsp_chan_t  ),
+      .axi_req_t                ( magia_tile_pkg::idma_axi_req_t        ),
+      .axi_ar_chan_t            ( magia_tile_pkg::idma_axi_ar_chan_t    ),
+      .axi_aw_chan_t            ( magia_tile_pkg::idma_axi_aw_chan_t    ),
+      .axi_rsp_t                ( magia_tile_pkg::idma_axi_rsp_t        ),
+      .hive_req_t               ( hive_req_t                ),
+      .hive_rsp_t               ( hive_rsp_t                ),
+      .acc_issue_req_t          ( acc_issue_req_t           ),
+      .acc_issue_rsp_t          ( acc_issue_rsp_t           ),
+      .acc_rsp_t                ( acc_rsp_t                 ),
+      .dma_events_t             ( dma_events_t                          ),
+      .dma_perf_t               ( logic                                 ),        
+      .SnitchPMACfg             ( SnitchPMACfg                          ),        
+      .FPUImplementation        ( FPUImplementation         ),
+      .BootAddr                 ( BootAddr                  ),
+      .RVE                      ( 1'b0                      ),
+      .RVF                      ( RVF                       ),
+      .RVD                      ( 1'b1                      ),
+      .XDivSqrt                 ( XDivSqrt                  ),
+      .XF8                      ( 1'b1                      ),
+      .XF16                     ( 1'b1                      ),
+      .XF16ALT                  ( 1'b1                      ),
+      .XF8ALT                   ( 1'b1                      ),
+      .Xdma                     ( Xdma                      ),
+      .NumIntOutstandingLoads   ( NumIntOutstandingLoads    ),
+      .NumIntOutstandingMem     ( NumIntOutstandingMem      ),
+      .NumSpatzOutstandingLoads ( NumSpatzOutstandingLoads  ),
+      .RVV                      ( RVV                       ),
+      .NumSpatzFPUs             ( NumSpatzFPUs              ),
+      .NumSpatzIPUs             ( NumSpatzIPUs              ),
+      .IsoCrossing              ( 1'b0                      ),
+      .RegisterOffloadRsp       ( RegisterOffloadRsp        ),
+      .RegisterCoreReq          ( RegisterCoreReq           ),
+      .RegisterCoreRsp          ( RegisterCoreRsp           )
+    ) i_spatz_cc (
+      .clk_i                    ( clk_i                     ),
+      .clk_d2_i                 ( clk_i                     ),
+      .rst_ni                   ( rst_ni                    ),
+      .testmode_i               ( test_mode_i               ),
+      .hart_id_i                ( hart_id_i                 ),
+      .irq_i                    ( irq_i                     ),
+      .tcdm_addr_base_i         ( tcdm_addr_base_i          ),
+      .hive_req_o               ( hive_req                  ),
+      .hive_rsp_i               ( hive_rsp                  ),
+      .data_req_o               ( gen_signals.data_req      ),
+      .data_rsp_i               ( gen_signals.data_rsp      ),
+      .tcdm_req_o               ( gen_signals.tcdm_req      ),
+      .tcdm_rsp_i               ( gen_signals.tcdm_rsp      ),
+      .axi_dma_req_o            ( /* DMA disabled */        ),
+      .axi_dma_res_i            ( '0                        ),
+      .axi_dma_busy_o           ( /* DMA disabled */        ),
+      .axi_dma_perf_o           ( /* DMA disabled */        ),
+      .axi_dma_events_o         ( /* DMA disabled */        ),
+      .core_events_o            ( core_events_o             )
+    );
+  end else begin : gen_spatz_cc_no_rvd
+    // RVD=0: 32-bit configuration
+    spatz_cc #(
+      .AddrWidth                ( AddrWidth                 ),
+      .DataWidth                ( DataWidth                 ),  // 32-bit
+      .TCDMAddrWidth            ( TCDMAddrWidth             ),
+      .dreq_t                   ( magia_tile_pkg::spatz_reqrsp_req_t     ),
+      .drsp_t                   ( magia_tile_pkg::spatz_reqrsp_rsp_t     ),
+      .tcdm_req_t               ( magia_tile_pkg::spatz_tcdm_req_t       ),
+      .tcdm_req_chan_t          ( magia_tile_pkg::spatz_tcdm_req_chan_t  ),
+      .tcdm_rsp_t               ( magia_tile_pkg::spatz_tcdm_rsp_t       ),
+      .tcdm_rsp_chan_t          ( magia_tile_pkg::spatz_tcdm_rsp_chan_t  ),
+      .axi_req_t                ( magia_tile_pkg::idma_axi_req_t        ),
+      .axi_ar_chan_t            ( magia_tile_pkg::idma_axi_ar_chan_t    ),
+      .axi_aw_chan_t            ( magia_tile_pkg::idma_axi_aw_chan_t    ),
+      .axi_rsp_t                ( magia_tile_pkg::idma_axi_rsp_t        ),
+      .hive_req_t               ( hive_req_t                ),
+      .hive_rsp_t               ( hive_rsp_t                ),
+      .acc_issue_req_t          ( acc_issue_req_t           ),
+      .acc_issue_rsp_t          ( acc_issue_rsp_t           ),
+      .acc_rsp_t                ( acc_rsp_t                 ),
+      .dma_events_t             ( dma_events_t                          ),
+      .dma_perf_t               ( logic                                 ),
+      .SnitchPMACfg             ( SnitchPMACfg                          ),
+      .FPUImplementation        ( FPUImplementation         ),
+      .BootAddr                 ( BootAddr                  ),
+      .RVE                      ( 1'b0                      ),
+      .RVF                      ( RVF                       ),
+      .RVD                      ( 1'b0                      ),
+      .XDivSqrt                 ( XDivSqrt                  ),
+      .XF8                      ( 1'b1                      ),
+      .XF16                     ( 1'b1                      ),
+      .XF16ALT                  ( 1'b1                      ),
+      .XF8ALT                   ( 1'b1                      ),
+      .Xdma                     ( Xdma                      ),
+      .NumIntOutstandingLoads   ( NumIntOutstandingLoads    ),
+      .NumIntOutstandingMem     ( NumIntOutstandingMem      ),
+      .NumSpatzOutstandingLoads ( NumSpatzOutstandingLoads  ),
+      .RVV                      ( RVV                       ),
+      .NumSpatzFPUs             ( NumSpatzFPUs              ),
+      .NumSpatzIPUs             ( NumSpatzIPUs              ),
+      .IsoCrossing              ( 1'b0                      ),
+      .RegisterOffloadRsp       ( RegisterOffloadRsp        ),
+      .RegisterCoreReq          ( RegisterCoreReq           ),
+      .RegisterCoreRsp          ( RegisterCoreRsp           )
+    ) i_spatz_cc (
+      .clk_i                    ( clk_i                     ),
+      .clk_d2_i                 ( clk_i                     ),
+      .rst_ni                   ( rst_ni                    ),
+      .testmode_i               ( test_mode_i               ),
+      .hart_id_i                ( hart_id_i                 ),
+      .irq_i                    ( irq_i                     ),
+      .tcdm_addr_base_i         ( tcdm_addr_base_i          ),
+      .hive_req_o               ( hive_req                  ),
+      .hive_rsp_i               ( hive_rsp                  ),
+      .data_req_o               ( gen_signals.data_req      ),
+      .data_rsp_i               ( gen_signals.data_rsp      ),
+      .tcdm_req_o               ( gen_signals.tcdm_req      ),
+      .tcdm_rsp_i               ( gen_signals.tcdm_rsp      ),
+      .axi_dma_req_o            ( /* DMA disabled */        ),
+      .axi_dma_res_i            ( '0                        ),
+      .axi_dma_busy_o           ( /* DMA disabled */        ),
+      .axi_dma_perf_o           ( /* DMA disabled */        ),
+      .axi_dma_events_o         ( /* DMA disabled */        ),
+      .core_events_o            ( core_events_o             )
+    );
+  end
   
   /*******************************************************************/
   /*          Instruction Cache Interface (Hive) Connection         */
@@ -347,143 +347,123 @@ module spatz_cc_wrapper
   /*         Protocol Conversion: reqrsp (Snitch) → OBI32           */
   /*******************************************************************/
   
-  generate
-    if (RVD) begin : gen_reqrsp64_to_obi32
-      // RVD=1: Snitch data port 64-bit reqrsp → 32-bit OBI (for L2/peripherals)
-      reqrsp64_to_obi32 #(
-        .ObiCfg       ( magia_tile_pkg::obi_amo_cfg              ),
-        .reqrsp_req_t ( magia_tile_pkg::spatz_reqrsp64_req_t    ),
-        .reqrsp_rsp_t ( magia_tile_pkg::spatz_reqrsp64_rsp_t    ),
-        .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t      ),
-        .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t      )
-      ) i_snitch_reqrsp_to_obi32 (
-        .clk_i        ( clk_i                              ),
-        .rst_ni       ( rst_ni                             ),
-        .reqrsp_req_i ( gen_signals.data_req               ),
-        .reqrsp_rsp_o ( gen_signals.data_rsp               ),
-        .obi_req_o    ( obi_master_req_o                   ),
-        .obi_rsp_i    ( obi_master_rsp_i                   )
-      );
-    end else begin : gen_reqrsp32_to_obi32
-      // RVD=0: Snitch data port 32-bit reqrsp → 32-bit OBI (for L2/peripherals)
-      reqrsp2obi #(
-        .ObiCfg       ( magia_tile_pkg::obi_amo_cfg             ),
-        .reqrsp_req_t ( magia_tile_pkg::spatz_reqrsp_req_t     ),
-        .reqrsp_rsp_t ( magia_tile_pkg::spatz_reqrsp_rsp_t     ),
-        .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t     ),
-        .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t     )
-      ) i_snitch_reqrsp_to_obi32 (
-        .clk_i        ( clk_i                              ),
-        .rst_ni       ( rst_ni                             ),
-        .reqrsp_req_i ( gen_signals.data_req               ),
-        .reqrsp_rsp_o ( gen_signals.data_rsp               ),
-        .obi_req_o    ( obi_master_req_o                   ),
-        .obi_rsp_i    ( obi_master_rsp_i                   )
-      );
-    end
-  endgenerate
+  if (RVD) begin : gen_reqrsp64_to_obi32
+    // RVD=1: Snitch data port 64-bit reqrsp → 32-bit OBI (for L2/peripherals)
+    reqrsp64_to_obi32 #(
+      .reqrsp_req_t ( magia_tile_pkg::spatz_reqrsp64_req_t ),
+      .reqrsp_rsp_t ( magia_tile_pkg::spatz_reqrsp64_rsp_t ),
+      .ObiCfg       ( magia_tile_pkg::obi_amo_cfg          )
+    ) i_snitch_reqrsp_to_obi32 (
+      .clk_i        ( clk_i                              ),
+      .rst_ni       ( rst_ni                             ),
+      .reqrsp_req_i ( gen_signals.data_req               ),
+      .reqrsp_rsp_o ( gen_signals.data_rsp               ),
+      .obi_req_o    ( obi_master_req_o                   ),
+      .obi_rsp_i    ( obi_master_rsp_i                   )
+    );
+  end else begin : gen_reqrsp32_to_obi32
+    // RVD=0: Snitch data port 32-bit reqrsp → 32-bit OBI (for L2/peripherals)
+    reqrsp2obi #(
+      .ObiCfg ( magia_tile_pkg::obi_amo_cfg )
+    ) i_snitch_reqrsp_to_obi32 (
+      .clk_i        ( clk_i                              ),
+      .rst_ni       ( rst_ni                             ),
+      .reqrsp_req_i ( gen_signals.data_req               ),
+      .reqrsp_rsp_o ( gen_signals.data_rsp               ),
+      .obi_req_o    ( obi_master_req_o                   ),
+      .obi_rsp_i    ( obi_master_rsp_i                   )
+    );
+  end
   
   /*******************************************************************/
   /*        Protocol Conversion: TCDM (Spatz) → HCI32               */
   /*******************************************************************/
   
-  generate
-    if (RVD) begin : gen_tcdm64_to_hci
-      // RVD=1: Each 64-bit TCDM port splits into 2×32-bit HCI ports
-      
-      // Ports 0-3: Spatz vector memory ports (64-bit TCDM → 2×32-bit HCI)
-      for (genvar i = 0; i < NumMemPortsPerSpatz; i++) begin : gen_tcdm64_to_dual_hci32_spatz
-        tcdm64_to_dual_hci32 #(
-          .tcdm64_req_t  ( magia_tile_pkg::spatz_tcdm64_req_t  ),
-          .tcdm64_rsp_t  ( magia_tile_pkg::spatz_tcdm64_rsp_t  ),
-          .tcdm32_req_t  ( magia_tile_pkg::spatz_tcdm32_req_t  ),
-          .tcdm32_rsp_t  ( magia_tile_pkg::spatz_tcdm32_rsp_t  ),
-          .hci_req_t     ( magia_tile_pkg::core_hci_data_req_t ),
-          .hci_rsp_t     ( magia_tile_pkg::core_hci_data_rsp_t )
-        ) i_tcdm64_to_dual_hci32_spatz (
-          .clk_i         ( clk_i                              ),
-          .rst_ni        ( rst_ni                             ),
-          .tcdm_req_i    ( gen_signals.tcdm_req[i]            ),
-          .tcdm_rsp_o    ( gen_signals.tcdm_rsp[i]            ),
-          .hci_req_lo_o  ( hci_master_req_o[i*2]              ),
-          .hci_rsp_lo_i  ( hci_master_rsp_i[i*2]              ),
-          .hci_req_hi_o  ( hci_master_req_o[i*2+1]            ),
-          .hci_rsp_hi_i  ( hci_master_rsp_i[i*2+1]            )
-        );
-      end
-      
-      // Port 4: Snitch RV64 TCDM (with AMO) → Dual HCI32 (ports 8-9)
-      tcdm64_to_dual_hci32_atomic #(
-        .tcdm64_req_t         ( magia_tile_pkg::spatz_tcdm64_req_t         ),
-        .tcdm64_rsp_t         ( magia_tile_pkg::spatz_tcdm64_rsp_t         ),
-        .tcdm32_req_t         ( magia_tile_pkg::spatz_tcdm32_req_t         ),
-        .tcdm32_rsp_t         ( magia_tile_pkg::spatz_tcdm32_rsp_t         ),
-        .obi32_req_t          ( magia_tile_pkg::spatz_obi32_req_t          ),
-        .obi32_rsp_t          ( magia_tile_pkg::spatz_obi32_rsp_t          ),
-        .obi32_a_chan_t       ( magia_tile_pkg::spatz_obi32_a_chan_t       ),
-        .obi32_r_chan_t       ( magia_tile_pkg::spatz_obi32_r_chan_t       ),
-        .hci_req_t            ( magia_tile_pkg::core_hci_data_req_t        ),
-        .hci_rsp_t            ( magia_tile_pkg::core_hci_data_rsp_t        ),
-        .obi32_a_optional_t   ( magia_tile_pkg::spatz_obi32_a_optional_t  ),
-        .obi32_r_optional_t   ( magia_tile_pkg::spatz_obi32_r_optional_t  ),
-        .SbrPortObiCfg        ( magia_tile_pkg::obi_amo_cfg                ),
-        .MgrPortObiCfg        ( magia_tile_pkg::obi_no_amo_cfg             ),
-        .BypassCut            ( 1'b0                                       )
-      ) i_tcdm64_to_dual_hci32_atomic_snitch (
-        .clk_i         ( clk_i                                      ),
-        .rst_ni        ( rst_ni                                     ),
-        .tcdm_req_i    ( gen_signals.tcdm_req[NumMemPortsPerSpatz]  ),
-        .tcdm_rsp_o    ( gen_signals.tcdm_rsp[NumMemPortsPerSpatz]  ),
-        .hci_req_lo_o  ( hci_master_req_o[NumMemPortsPerSpatz*2]        ),
-        .hci_rsp_lo_i  ( hci_master_rsp_i[NumMemPortsPerSpatz*2]        ),
-        .hci_req_hi_o  ( hci_master_req_o[NumMemPortsPerSpatz*2+1]      ),
-        .hci_rsp_hi_i  ( hci_master_rsp_i[NumMemPortsPerSpatz*2+1]      )
-      );
-      
-    end else begin : gen_tcdm32_to_hci
-      // RVD=0: Each 32-bit TCDM port maps directly to 1×32-bit HCI port
-      
-      // Ports 0-3: Spatz vector memory ports (32-bit TCDM → 32-bit HCI)
-      for (genvar i = 0; i < NumMemPortsPerSpatz; i++) begin : gen_tcdm32_to_hci32_spatz
-        tcdm2hci #(
-          .tcdm_req_t  ( magia_tile_pkg::spatz_tcdm_req_t     ),
-          .tcdm_rsp_t  ( magia_tile_pkg::spatz_tcdm_rsp_t     ),
-          .hci_req_t   ( magia_tile_pkg::core_hci_data_req_t  ),
-          .hci_rsp_t   ( magia_tile_pkg::core_hci_data_rsp_t  )
-        ) i_tcdm32_to_hci32_spatz (
-          .clk_i       ( clk_i                            ),
-          .rst_ni      ( rst_ni                           ),
-          .tcdm_req_i  ( gen_signals.tcdm_req[i]          ),
-          .tcdm_rsp_o  ( gen_signals.tcdm_rsp[i]          ),
-          .hci_req_o   ( hci_master_req_o[i]              ),
-          .hci_rsp_i   ( hci_master_rsp_i[i]              )
-        );
-      end
-      
-      // Port 4: Snitch RV32 TCDM (with AMO) → HCI32
-      tcdm2hci_atomic #(
-        .tcdm_req_t         ( magia_tile_pkg::spatz_tcdm_req_t         ),
-        .tcdm_rsp_t         ( magia_tile_pkg::spatz_tcdm_rsp_t         ),
-        .obi_req_t          ( magia_tile_pkg::core_obi_data_req_t      ),
-        .obi_rsp_t          ( magia_tile_pkg::core_obi_data_rsp_t      ),
-        .obi_a_chan_t       ( magia_tile_pkg::core_data_obi_a_chan_t   ),
-        .obi_r_chan_t       ( magia_tile_pkg::core_data_obi_r_chan_t   ),
-        .hci_req_t          ( magia_tile_pkg::core_hci_data_req_t      ),
-        .hci_rsp_t          ( magia_tile_pkg::core_hci_data_rsp_t      ),
-        .obi_a_optional_t   ( magia_tile_pkg::core_data_obi_a_optional_t ),
-        .obi_r_optional_t   ( magia_tile_pkg::core_data_obi_r_optional_t ),
-        .SbrPortObiCfg      ( magia_tile_pkg::obi_amo_cfg              ),
-        .MgrPortObiCfg      ( magia_tile_pkg::obi_no_amo_cfg           ),
-        .BypassCut          ( 1'b0                                     )
-      ) i_tcdm32_to_hci32_atomic_snitch (
-        .clk_i       ( clk_i                                      ),
-        .rst_ni      ( rst_ni                                     ),
-        .tcdm_req_i  ( gen_signals.tcdm_req[NumMemPortsPerSpatz]  ),
-        .tcdm_rsp_o  ( gen_signals.tcdm_rsp[NumMemPortsPerSpatz]  ),
-        .hci_req_o   ( hci_master_req_o[NumMemPortsPerSpatz]             ),
-        .hci_rsp_i   ( hci_master_rsp_i[NumMemPortsPerSpatz]             )
+  if (RVD) begin : gen_tcdm64_to_hci
+    // RVD=1: Each 64-bit TCDM port splits into 2×32-bit HCI ports
+    
+    // Ports 0-3: Spatz vector memory ports (64-bit TCDM → 2×32-bit HCI)
+    for (genvar i = 0; i < NumMemPortsPerSpatz; i++) begin : gen_tcdm64_to_dual_hci32_spatz
+      tcdm64_to_dual_hci32 #(
+        .tcdm64_req_t ( magia_tile_pkg::spatz_tcdm64_req_t ),
+        .tcdm64_rsp_t ( magia_tile_pkg::spatz_tcdm64_rsp_t ),
+        .hci_req_t     ( hci_req_t ),
+        .hci_rsp_t     ( hci_rsp_t )
+      ) i_tcdm64_to_dual_hci32_spatz (
+        .clk_i         ( clk_i                              ),
+        .rst_ni        ( rst_ni                             ),
+        .tcdm_req_i    ( gen_signals.tcdm_req[i]            ),
+        .tcdm_rsp_o    ( gen_signals.tcdm_rsp[i]            ),
+        .hci_req_lo_o  ( hci_master_req_o[i*2]              ),
+        .hci_rsp_lo_i  ( hci_master_rsp_i[i*2]              ),
+        .hci_req_hi_o  ( hci_master_req_o[i*2+1]            ),
+        .hci_rsp_hi_i  ( hci_master_rsp_i[i*2+1]            )
       );
     end
-  endgenerate
+    
+    // Port 4: Snitch RV64 TCDM (with AMO) → Dual HCI32 (ports 8-9)
+    tcdm64_to_dual_hci32_atomic #(
+      .tcdm64_req_t ( magia_tile_pkg::spatz_tcdm64_req_t ),
+      .tcdm64_rsp_t ( magia_tile_pkg::spatz_tcdm64_rsp_t ),
+      .hci_req_t            ( hci_req_t        ),
+      .hci_rsp_t            ( hci_rsp_t        ),
+      .SbrPortObiCfg        ( magia_tile_pkg::obi_amo_cfg                ),
+      .MgrPortObiCfg        ( magia_tile_pkg::obi_no_amo_cfg             ),
+      .BypassCut            ( 1'b0                                       )
+    ) i_tcdm64_to_dual_hci32_atomic_snitch (
+      .clk_i         ( clk_i                                      ),
+      .rst_ni        ( rst_ni                                     ),
+      .tcdm_req_i    ( gen_signals.tcdm_req[NumMemPortsPerSpatz]  ),
+      .tcdm_rsp_o    ( gen_signals.tcdm_rsp[NumMemPortsPerSpatz]  ),
+      .hci_req_lo_o  ( hci_master_req_o[NumMemPortsPerSpatz*2]        ),
+      .hci_rsp_lo_i  ( hci_master_rsp_i[NumMemPortsPerSpatz*2]        ),
+      .hci_req_hi_o  ( hci_master_req_o[NumMemPortsPerSpatz*2+1]      ),
+      .hci_rsp_hi_i  ( hci_master_rsp_i[NumMemPortsPerSpatz*2+1]      )
+    );
+    
+  end else begin : gen_tcdm32_to_hci
+    // RVD=0: Each 32-bit TCDM port maps directly to 1×32-bit HCI port
+    
+    // Ports 0-3: Spatz vector memory ports (32-bit TCDM → 32-bit HCI)
+    for (genvar i = 0; i < NumMemPortsPerSpatz; i++) begin : gen_tcdm32_to_hci32_spatz
+      tcdm2hci #(
+        .tcdm_req_t  ( magia_tile_pkg::spatz_tcdm_req_t     ),
+        .tcdm_rsp_t  ( magia_tile_pkg::spatz_tcdm_rsp_t     ),
+        .hci_req_t   ( hci_req_t  ),
+        .hci_rsp_t   ( hci_rsp_t  )
+      ) i_tcdm32_to_hci32_spatz (
+        .clk_i       ( clk_i                            ),
+        .rst_ni      ( rst_ni                           ),
+        .tcdm_req_i  ( gen_signals.tcdm_req[i]          ),
+        .tcdm_rsp_o  ( gen_signals.tcdm_rsp[i]          ),
+        .hci_req_o   ( hci_master_req_o[i]              ),
+        .hci_rsp_i   ( hci_master_rsp_i[i]              )
+      );
+    end
+    
+    // Port 4: Snitch RV32 TCDM (with AMO) → HCI32
+    tcdm2hci_atomic #(
+      .tcdm_req_t         ( magia_tile_pkg::spatz_tcdm_req_t         ),
+      .tcdm_rsp_t         ( magia_tile_pkg::spatz_tcdm_rsp_t         ),
+      .obi_req_t          ( magia_tile_pkg::core_obi_data_req_t      ),
+      .obi_rsp_t          ( magia_tile_pkg::core_obi_data_rsp_t      ),
+      .obi_a_chan_t       ( magia_tile_pkg::core_data_obi_a_chan_t   ),
+      .obi_r_chan_t       ( magia_tile_pkg::core_data_obi_r_chan_t   ),
+      .hci_req_t          ( hci_req_t      ),
+      .hci_rsp_t          ( hci_rsp_t      ),
+      .obi_a_optional_t   ( magia_tile_pkg::core_data_obi_a_optional_t ),
+      .obi_r_optional_t   ( magia_tile_pkg::core_data_obi_r_optional_t ),
+      .SbrPortObiCfg      ( magia_tile_pkg::obi_amo_cfg              ),
+      .MgrPortObiCfg      ( magia_tile_pkg::obi_no_amo_cfg           ),
+      .BypassCut          ( 1'b0                                     )
+    ) i_tcdm32_to_hci32_atomic_snitch (
+      .clk_i       ( clk_i                                      ),
+      .rst_ni      ( rst_ni                                     ),
+      .tcdm_req_i  ( gen_signals.tcdm_req[NumMemPortsPerSpatz]  ),
+      .tcdm_rsp_o  ( gen_signals.tcdm_rsp[NumMemPortsPerSpatz]  ),
+      .hci_req_o   ( hci_master_req_o[NumMemPortsPerSpatz]             ),
+      .hci_rsp_i   ( hci_master_rsp_i[NumMemPortsPerSpatz]             )
+    );
+  end
 
 endmodule : spatz_cc_wrapper

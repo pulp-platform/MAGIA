@@ -1,8 +1,8 @@
 # Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
 #
-# Licensed under the Solderpad Hardware License, Version 0.51 
-# (the "License"); you may not use this file except in compliance 
-# with the License. You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# SPDX-License-Identifier: SHL-0.51
+# SPDX-License-Identifier: Apache-2.0
 #
 # Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
 # Spatz Programs Makefile for MAGIA Tile
@@ -106,7 +106,8 @@ TASK_SRCS    = $(addprefix $(TESTS_DIR)/,$(addsuffix .c,$(task)))
 
 # Source and output files
 CRT0         = $(KERNEL_DIR)/spatz_crt0.S
-CRT0_OBJ     = $(BIN_DIR)/spatz_crt0.o
+# Per test, so tests can build in parallel
+CRT0_OBJ     = $(BIN_DIR)/$(TEST_NAME)_spatz_crt0.o
 ELF          = $(BIN_DIR)/$(BINARY_NAME).elf
 BIN          = $(BIN_DIR)/$(BINARY_NAME).bin
 DUMP         = $(BIN_DIR)/$(BINARY_NAME).dump
@@ -115,7 +116,7 @@ HEADER       = $(HEADER_DIR)/$(HEADER_NAME).h
 # Python script for bin2header conversion
 BIN2HEADER   = ../../scripts/bin2header.py
 
-.PHONY: all clean bin header dirs
+.PHONY: all clean clean-test bin header dirs
 
 # Complete build: compile binary and generate header
 # Force header regeneration when TASKS changes (always delete and rebuild)
@@ -152,10 +153,10 @@ $(ELF): $(CRT0_OBJ) $(TASK_SRCS) $(KERNEL_DIR)/spatz_program.ld
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(CRT0_OBJ) $(TASK_SRCS) \
 		-Wl,--defsym,__first_task=$${FIRST_TASK}
 
-# Generate binary from ELF
+# Generate binary from ELF; .bss goes in the blob, or crt0 zeroes the code linked right after it
 $(BIN): $(ELF)
 	@echo "[SPATZ] Generating binary..."
-	$(OBJCOPY) -O binary $< $@
+	$(OBJCOPY) -O binary --set-section-flags .bss=alloc,load,contents $< $@
 
 # Generate disassembly
 $(DUMP): $(ELF)

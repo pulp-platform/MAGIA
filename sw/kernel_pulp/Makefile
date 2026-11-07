@@ -1,8 +1,8 @@
 # Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
 #
-# Licensed under the Solderpad Hardware License, Version 0.51
-# (the "License"); you may not use this file except in compliance
-# with the License. You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# SPDX-License-Identifier: SHL-0.51
+# SPDX-License-Identifier: Apache-2.0
 #
 # PULP cluster task Makefile for MAGIA.
 #
@@ -107,7 +107,7 @@ HEADER    = $(HEADER_DIR)/$(HEADER_NAME).h
 
 BIN2HEADER = ../../scripts/bin2header.py
 
-.PHONY: all clean dirs bin header
+.PHONY: all clean clean-test dirs bin header
 
 all: bin
 	@rm -f $(HEADER)
@@ -131,9 +131,10 @@ $(ELF): $(CRT0_OBJ) $(TASK_SRCS) $(KERNEL_DIR)/pulp_program.ld $(KERNEL_DIR)/Mak
 	@echo "[PULP] Building ELF (tasks: $(task))"
 	$(CC) $(CFLAGS) $(LDFLAGS) $(TASK_UNDEF_FLAGS) -o $@ $(CRT0_OBJ) $(TASK_SRCS)
 
+# .bss goes in the blob, or crt0 zeroes whatever the CV32 links right after it
 $(BIN): $(ELF)
 	@echo "[PULP] Generating flat binary..."
-	$(OBJCOPY) -O binary $< $@
+	$(OBJCOPY) -O binary --set-section-flags .bss=alloc,load,contents $< $@
 
 $(DUMP): $(ELF)
 	@echo "[PULP] Generating disassembly..."
@@ -166,5 +167,9 @@ $(HEADER): $(BIN) $(ELF)
 
 clean:
 	rm -rf $(BIN_DIR) $(HEADER_DIR)
+
+# Clean only the current test artifacts, so other tests can build in parallel
+clean-test:
+	rm -f $(ELF) $(BIN) $(DUMP) $(CRT0_OBJ) $(HEADER)
 
 .PRECIOUS: $(ELF) $(BIN)

@@ -5,10 +5,10 @@
  * (the "License"); you may not use this file except in compliance 
  * with the License. You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://solderpad.org/licenses/SHL-0.51
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * Unless required by applicable law or agreed to in writing, software, hardware
+ * and materials distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -56,15 +56,8 @@ module magia_redmule_wrap
   parameter int unsigned  XifNumHarts            = 1,
   parameter int unsigned  XifIdWidth             = 1,
   parameter int unsigned  XifIssueRegisterSplit  = 0,
-  parameter type          x_issue_req_t          = logic,
-  parameter type          x_issue_resp_t         = logic,
-  parameter type          x_register_t           = logic,
-  parameter type          x_commit_t             = logic,
-  parameter type          x_result_t             = logic,
   parameter type          redmule_data_req_t     = magia_tile_pkg::redmule_data_req_t,
   parameter type          redmule_data_rsp_t     = magia_tile_pkg::redmule_data_rsp_t,
-  parameter type          redmule_ctrl_req_t     = magia_tile_pkg::redmule_ctrl_req_t,
-  parameter type          redmule_ctrl_rsp_t     = magia_tile_pkg::redmule_ctrl_rsp_t,
   parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '{
     DW:  DataW,
     AW:  magia_pkg::ADDR_W,
@@ -81,24 +74,24 @@ module magia_redmule_wrap
   output logic                    busy_o,
   output logic                    evt_o,
   // XIF ports (unused if CtrlIntfConfig = HWPE_TARGET)
-  input  x_issue_req_t            x_issue_req_i,
-  output x_issue_resp_t           x_issue_resp_o,
+  input  logic                    x_issue_req_i,
+  output logic                    x_issue_resp_o,
   input  logic                    x_issue_valid_i,
   output logic                    x_issue_ready_o,
-  input  x_register_t             x_register_i,
+  input  logic                    x_register_i,
   input  logic                    x_register_valid_i,
   output logic                    x_register_ready_o,
-  input  x_commit_t               x_commit_i,
+  input  logic                    x_commit_i,
   input  logic                    x_commit_valid_i,
-  output x_result_t               x_result_o,
+  output logic                    x_result_o,
   output logic                    x_result_valid_o,
   input  logic                    x_result_ready_i,
   // Struct-based HCI data ports
   output redmule_data_req_t       data_req_o,
   input  redmule_data_rsp_t       data_rsp_i,
   // Struct-based HWPE-ctrl ports
-  input  redmule_ctrl_req_t       ctrl_req_i,
-  output redmule_ctrl_rsp_t       ctrl_rsp_o
+  input  magia_tile_pkg::redmule_ctrl_req_t ctrl_req_i,
+  output magia_tile_pkg::redmule_ctrl_rsp_t ctrl_rsp_o
 );
 
   localparam hci_size_parameter_t `HCI_SIZE_PARAM(tcdm_filtered) = `HCI_SIZE_PARAM(tcdm);
@@ -192,11 +185,11 @@ module magia_redmule_wrap
     .XifNumHarts            ( XifNumHarts          ),
     .XifIdWidth             ( XifIdWidth           ),
     .XifIssueRegisterSplit  ( XifIssueRegisterSplit),
-    .x_issue_req_t          ( x_issue_req_t        ),
-    .x_issue_resp_t         ( x_issue_resp_t       ),
-    .x_register_t           ( x_register_t         ),
-    .x_commit_t             ( x_commit_t           ),
-    .x_result_t             ( x_result_t           ),
+    .x_issue_req_t          ( logic                ),
+    .x_issue_resp_t         ( logic                ),
+    .x_register_t           ( logic                ),
+    .x_commit_t             ( logic                ),
+    .x_result_t             ( logic                ),
     .`HCI_SIZE_PARAM(tcdm)  ( `HCI_SIZE_PARAM(tcdm))
   ) i_redmule_top (
     .clk_i               ( clk_i               ),

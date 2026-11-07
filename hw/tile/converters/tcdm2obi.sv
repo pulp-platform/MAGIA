@@ -5,10 +5,10 @@
  * (the "License"); you may not use this file except in compliance 
  * with the License. You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://solderpad.org/licenses/SHL-0.51
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * Unless required by applicable law or agreed to in writing, software, hardware
+ * and materials distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -23,10 +23,10 @@
 module tcdm2obi
   import reqrsp_pkg::*;
 #(
-  parameter type tcdm_req_t = logic,
-  parameter type tcdm_rsp_t = logic,
-  parameter type obi_req_t  = logic,
-  parameter type obi_rsp_t  = logic
+  parameter type tcdm_req_t = magia_tile_pkg::spatz_tcdm_req_t,
+  parameter type tcdm_rsp_t = magia_tile_pkg::spatz_tcdm_rsp_t,
+  parameter type obi_req_t  = magia_tile_pkg::core_obi_data_req_t,
+  parameter type obi_rsp_t  = magia_tile_pkg::core_obi_data_rsp_t
 )(
   input  logic       clk_i,
   input  logic       rst_ni,
@@ -40,7 +40,7 @@ module tcdm2obi
 
   // Convert TCDM AMO to OBI ATOP encoding
   function automatic logic [5:0] amo_to_atop(reqrsp_pkg::amo_op_e amo);
-    case (amo)
+    unique case (amo)
       reqrsp_pkg::AMONone:  return 6'h00;  // ATOPNONE
       reqrsp_pkg::AMOSwap:  return 6'h21;  // AMOSWAP
       reqrsp_pkg::AMOAdd:   return 6'h20;  // AMOADD
@@ -57,13 +57,15 @@ module tcdm2obi
     endcase
   endfunction
 
+  localparam int unsigned ObiAddW = $bits(obi_req_o.a.addr);
+
   logic amo_detected;
   assign amo_detected = (tcdm_req_i.q.amo != reqrsp_pkg::AMONone);
 
   // TCDM → OBI Request (combinatorial)
   assign obi_req_o.req                  = tcdm_req_i.q_valid;
-  assign obi_req_o.a.addr               = tcdm_req_i.q.addr;
-  assign obi_req_o.a.we                 = tcdm_req_i.q.write || amo_detected;
+  assign obi_req_o.a.addr               = ObiAddW'(tcdm_req_i.q.addr);  // TCDM offset, zero extended
+  assign obi_req_o.a.we                 = tcdm_req_i.q.write | amo_detected;
   assign obi_req_o.a.wdata              = tcdm_req_i.q.data;
   assign obi_req_o.a.be                 = tcdm_req_i.q.strb;
   assign obi_req_o.a.aid                = '0;

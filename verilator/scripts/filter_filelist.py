@@ -25,9 +25,17 @@ EXCLUDED = {
 }
 
 
+# Dependency sources replaced by the patched copy of the same name in --vendor-dir
+VENDORED = {
+    "cv32e40x_rvfi_sim_trace.sv",
+    "cv32e40x_wrapper.sv",
+}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--vendor-dir", type=Path)
     args = parser.parse_args()
 
     seen_sources = set()
@@ -39,6 +47,8 @@ def main():
             continue
         if Path(stripped).name in EXCLUDED:
             continue
+        if args.vendor_dir and Path(stripped).name in VENDORED:
+            stripped = str(args.vendor_dir / Path(stripped).name)
         if not stripped.startswith(("+", "-")):
             normalized = str(Path(stripped).resolve())
             if normalized in seen_sources:

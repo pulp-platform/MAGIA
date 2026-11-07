@@ -15,7 +15,7 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Authors: Victor Isachi <victor.isachi@unibo.it>
- *          Luca Balboni  <luca.balboni@chips.it>
+ *          Luca Balboni, Fondazione Chips-IT
  *
  * MAGIA Tile FPU Test
  *
