@@ -75,6 +75,7 @@ package magia_pkg;
     int unsigned Height;       // Systolic array height
     int unsigned Width;        // Systolic array width
     int unsigned NumPipeRegs;  // Pipeline registers in the systolic array
+    bit          MisalignedAccess;  // TCDM accesses off the bank word, at the cost of one more bank on the HCI port
   } redmule_cfg_t;
 
   typedef struct packed {
@@ -131,9 +132,10 @@ package magia_pkg;
   };
 
   localparam redmule_cfg_t MagiaRedMuleDefaultCfg = '{
-    Height:      8,
-    Width:       8,
-    NumPipeRegs: 1
+    Height:           8,
+    Width:            8,
+    NumPipeRegs:      1,
+    MisalignedAccess: 1'b1
   };
 
  // Derived from the MAGIA Makefile (Reflects on spatz_pkg.sv in spatz_cluster dep)
