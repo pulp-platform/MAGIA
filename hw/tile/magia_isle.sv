@@ -143,8 +143,10 @@ module magia_isle
   localparam int unsigned RedmuleFpW   = 16;  // FP16
   localparam int unsigned RedmuleDataW = TileCfg.RedMule.Height * (TileCfg.RedMule.NumPipeRegs + 1) * RedmuleFpW;
 
-  `HCI_TYPEDEF_REQ_T(tile_redmule_data_req_t, logic[magia_tile_pkg::AWC-1:0], logic[RedmuleDataW-1:0], logic[RedmuleDataW/magia_tile_pkg::BWH-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
-  `HCI_TYPEDEF_RSP_T(tile_redmule_data_rsp_t, logic[RedmuleDataW-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
+  localparam int unsigned RedmuleHciW  = RedmuleDataW + (TileCfg.RedMule.MisalignedAccess ? magia_tile_pkg::DW_LIC : 0);
+
+  `HCI_TYPEDEF_REQ_T(tile_redmule_data_req_t, logic[magia_tile_pkg::AWC-1:0], logic[RedmuleHciW-1:0], logic[RedmuleHciW/magia_tile_pkg::BWH-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
+  `HCI_TYPEDEF_RSP_T(tile_redmule_data_rsp_t, logic[RedmuleHciW-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
 
   `HCI_TYPEDEF_REQ_T(tile_hci_data_req_t, logic[magia_tile_pkg::AWC-1:0], logic[magia_tile_pkg::DW_LIC-1:0], logic[magia_tile_pkg::SW_LIC-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
   `HCI_TYPEDEF_RSP_T(tile_hci_data_rsp_t, logic[magia_tile_pkg::DW_LIC-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
@@ -1225,7 +1227,7 @@ module magia_isle
   `HCI_INTF_ARRAY(hci_core_if, sys_clk, 0:NumHciCore-1);
 
   localparam hci_package::hci_size_parameter_t `HCI_SIZE_PARAM(hci_redmule_if) = '{
-    DW:  RedmuleDataW,
+    DW:  RedmuleHciW,
     AW:  magia_tile_pkg::AWH,
     BW:  hci_package::DEFAULT_BW,
     UW:  magia_tile_pkg::REDMULE_UW,
@@ -1662,14 +1664,15 @@ module magia_isle
     `HCI_ASSIGN_TO_INTF(hci_redmule_if[0], redmule_data_req, redmule_data_rsp)
 
     magia_redmule_wrap #(
-      .CtrlIntfConfig     ( redmule_pkg::HWPE_TARGET    ),
-      .DataW              ( RedmuleDataW                ),
-      .Height             ( TileCfg.RedMule.Height      ),
-      .Width              ( TileCfg.RedMule.Width       ),
-      .NumPipeRegs        ( TileCfg.RedMule.NumPipeRegs ),
-      .redmule_data_req_t ( tile_redmule_data_req_t     ),
-      .redmule_data_rsp_t ( tile_redmule_data_rsp_t     ),
-      .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(hci_redmule_if) )
+      .CtrlIntfConfig          ( redmule_pkg::HWPE_TARGET              ),
+      .DataW                   ( RedmuleDataW                          ),
+      .MisalignedAccessSupport ( int'(TileCfg.RedMule.MisalignedAccess) ),
+      .Height                  ( TileCfg.RedMule.Height                ),
+      .Width                   ( TileCfg.RedMule.Width                 ),
+      .NumPipeRegs             ( TileCfg.RedMule.NumPipeRegs           ),
+      .redmule_data_req_t      ( tile_redmule_data_req_t               ),
+      .redmule_data_rsp_t      ( tile_redmule_data_rsp_t               ),
+      .`HCI_SIZE_PARAM(tcdm)   ( `HCI_SIZE_PARAM(hci_redmule_if)       )
     ) i_redmule_wrap (
       .clk_i              ( sys_clk               ),
       .rst_ni             ( rst_ni                ),
