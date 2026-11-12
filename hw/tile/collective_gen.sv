@@ -56,6 +56,17 @@ assign data_req_o.aw.prot = data_req_i.aw.prot;
 assign data_req_o.aw.qos = data_req_i.aw.qos;
 assign data_req_o.aw.region = data_req_i.aw.region;
 assign data_req_o.aw.atop = data_req_i.aw.atop;
-assign data_req_o.aw.user = (data_req_i.aw.addr[31:28] == 4'hb) ? {collective_mask_i, collective_op_i} : '0;
+
+logic [magia_pkg::USR_W-1:0] aw_user;
+
+always_comb begin
+  aw_user = '0;
+  aw_user[magia_pkg::USR_W-1 -: magia_pkg::SRC_ID_W] = data_req_i.aw.user[magia_pkg::USR_W-1 -: magia_pkg::SRC_ID_W];
+  if (data_req_i.aw.addr[31:28] == 4'hb) begin
+    aw_user[magia_pkg::COLL_USR_W-1:0] = {collective_mask_i, collective_op_i};
+  end
+end
+
+assign data_req_o.aw.user = aw_user;
 
 endmodule: collective_gen

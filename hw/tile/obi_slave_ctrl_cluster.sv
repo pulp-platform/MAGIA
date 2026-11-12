@@ -29,8 +29,8 @@ module obi_slave_ctrl_cluster
   input  logic                                             rst_ni,
 
   // OBI interface
-  input  core_obi_data_req_t                               obi_req_i,
-  output core_obi_data_rsp_t                               obi_rsp_o,
+  input  obi_sbr_req_t                                     obi_req_i,
+  output obi_sbr_rsp_t                                     obi_rsp_o,
 
   // Control outputs to PULP cluster cores
   output logic [31:0]         boot_addr_o [NumCores-1:0],
@@ -87,13 +87,16 @@ logic                start_irq_q, start_irq_d;
 
 // Response pipeline
 logic        rvalid_q, rvalid_d;
+logic        err_q,    err_d;
 logic [31:0] rdata_q,  rdata_d;
+logic [magia_tile_pkg::SBR_AID_WIDTH-1:0] rid_q;
 
-assign obi_rsp_o.gnt          = obi_req_i.req & addr_valid;
+assign obi_rsp_o.gnt          = obi_req_i.req;
+assign err_d                  = obi_req_i.req & ~addr_valid;
 assign obi_rsp_o.rvalid       = rvalid_q;
 assign obi_rsp_o.r.rdata      = rdata_q;
-assign obi_rsp_o.r.rid        = '0;
-assign obi_rsp_o.r.err        = 1'b0;
+assign obi_rsp_o.r.rid        = rid_q;
+assign obi_rsp_o.r.err        = err_q;
 assign obi_rsp_o.r.r_optional = '0;
 
 // ============================================
@@ -172,7 +175,9 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
     nb_recv_ready_reqs_q <= '0;
     start_irq_q          <= 1'b0;
     rvalid_q             <= 1'b0;
+    err_q                <= 1'b0;
     rdata_q              <= 32'h0;
+    rid_q                <= '0;
   end else begin
     fetch_en_q           <= fetch_en_d;
     entry_point_q        <= entry_point_d;
@@ -184,7 +189,9 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
     nb_recv_ready_reqs_q <= nb_recv_ready_reqs_d;
     start_irq_q          <= start_irq_d;
     rvalid_q             <= rvalid_d;
+    err_q                <= err_d;
     rdata_q              <= rdata_d;
+    rid_q                <= obi_req_i.a.aid;
   end
 end
 
@@ -196,7 +203,7 @@ assign ready_reg_val = (nb_recv_ready_reqs_q == NumCoresCnt);
 
 always_comb begin
   rdata_d  = 32'h0;
-  rvalid_d = obi_req_i.req & addr_valid;
+  rvalid_d = obi_req_i.req;
 
   if (obi_req_i.req && addr_valid && !obi_req_i.a.we) begin
     unique case (addr_offset)

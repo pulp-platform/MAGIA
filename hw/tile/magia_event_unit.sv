@@ -78,8 +78,8 @@ import magia_tile_pkg::*;
   input  logic [EVNT_WIDTH-1:0]     soc_periph_evt_data_i,
 
    // OBI slave connection
-  input  core_obi_data_req_t        obi_req_i,
-  output core_obi_data_rsp_t        obi_rsp_o
+  input  obi_sbr_req_t              obi_req_i,
+  output obi_sbr_rsp_t              obi_rsp_o
 );
 
   // Create internal interface instances
@@ -118,12 +118,25 @@ import magia_tile_pkg::*;
   assign speriph_slave.be    = obi_req_i.a.be;
   assign speriph_slave.id    = '0;                   
 
+  logic                    rid_en;
+  logic [SBR_AID_WIDTH-1:0] rid_q;
+
+  assign rid_en = speriph_slave.req & speriph_slave.gnt;
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      rid_q <= '0;
+    end else if (rid_en) begin
+      rid_q <= obi_req_i.a.aid;
+    end
+  end
+
   // Direct response mapping - no mux needed
   assign obi_rsp_o.gnt         = speriph_slave.gnt;
   assign obi_rsp_o.rvalid      = speriph_slave.r_valid;
   assign obi_rsp_o.r.rdata     = speriph_slave.r_rdata;
   assign obi_rsp_o.r.err       = speriph_slave.r_opc;  // r_opc: 0=OK, 1=ERROR
-  assign obi_rsp_o.r.rid       = '0;   // No ID tracking for event unit
+  assign obi_rsp_o.r.rid       = rid_q;
   assign obi_rsp_o.r.r_optional = '0;  // Optional fields set to zero to prevent X
   
 

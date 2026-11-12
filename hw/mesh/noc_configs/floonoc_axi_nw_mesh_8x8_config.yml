@@ -1,6 +1,7 @@
 name: axi_nw_mesh_8x8
 description: "Configuration file for a 8x8 MAGIA Mesh NoC"
 network_type: "narrow-wide"
+network_ordering: "row_major"
 
 routing:
   route_algo: "XY"
@@ -19,6 +20,7 @@ protocols:
     addr_width: 32
     id_width: 3
     user_width:
+      src_id: 7
       collective_mask: 32
       collective_op: 4
   - name: "narrow_data_slv"
@@ -28,6 +30,7 @@ protocols:
     addr_width: 32
     id_width: 6
     user_width:
+      src_id: 7
       collective_mask: 32
       collective_op: 4
   - name: "wide_data_mst"
@@ -37,6 +40,7 @@ protocols:
     addr_width: 32
     id_width: 2
     user_width:
+      src_id: 7
       collective_mask: 32
       collective_op: 4
   - name: "wide_data_slv"
@@ -46,6 +50,7 @@ protocols:
     addr_width: 32
     id_width: 2
     user_width:
+      src_id: 7
       collective_mask: 32
       collective_op: 4
 

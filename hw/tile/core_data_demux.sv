@@ -30,8 +30,8 @@ module core_data_demux
   parameter int unsigned       DefaultSlv = NumSlv-1,      // Unmapped addresses and atomics
   parameter logic [NumSlv-1:0] SerialSlv  = '0,            // Slaves whose accesses block later ones
   parameter logic [NumSlv-1:0] BypassSlv  = '0,            // Slaves that skip the AMO resolver
-  parameter type               req_t      = magia_tile_pkg::core_obi_data_req_t,
-  parameter type               rsp_t      = magia_tile_pkg::core_obi_data_rsp_t,
+  parameter type               req_t      = magia_tile_pkg::obi_mgr_req_t,
+  parameter type               rsp_t      = magia_tile_pkg::obi_mgr_rsp_t,
   localparam int unsigned      SelW       = magia_tile_pkg::gen_idx_width(NumSlv)
 )(
   input  logic clk_i,

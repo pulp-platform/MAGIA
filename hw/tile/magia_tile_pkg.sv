@@ -298,15 +298,18 @@ package magia_tile_pkg;
   parameter int unsigned ACHK_WIDTH   = 1;                                              // Width of the achk  signal (see OBI documentation)
   parameter int unsigned RUSER_WIDTH  = 1;                                              // Width of the ruser signal (see OBI documentation)
   parameter int unsigned RCHK_WIDTH   = 1;                                              // Width of the rchk  signal (see OBI documentation)
-  parameter int unsigned AID_WIDTH    = 1;                                              // Width of the aid   signal (address channel identifier, see OBI documentation)
-  parameter int unsigned RID_WIDTH    = 1;                                              // Width of the rid   signal (response channel identifier, see OBI documentation)
+  parameter int unsigned AID_WIDTH    = magia_pkg::SRC_ID_W;                            // Width of the aid   signal (address channel identifier, see OBI documentation)
+  parameter int unsigned RID_WIDTH    = AID_WIDTH;                                      // Width of the rid   signal (response channel identifier, see OBI documentation)
   parameter int unsigned MID_WIDTH    = 1;                                              // Width of the mid   signal (manager identifier, see OBI documentation)
-  parameter int unsigned OBI_ID_WIDTH = 1;
+  // WARNING: subordinates rely on one transaction in flight each; check them before raising it
   parameter int unsigned N_MAX_TRAN   = 1;                                              // Number of maximum outstanding transactions
 
   function automatic int unsigned gen_idx_width(int unsigned num);
     return (num > 1) ? $clog2(num) : 1;
   endfunction
+
+  localparam int unsigned OBI_XBAR_MAX_MGR = 3 + N_CLUSTER_CORES;
+  parameter int unsigned SBR_AID_WIDTH = AID_WIDTH + gen_idx_width(OBI_XBAR_MAX_MGR);  // aid past the OBI xbar: {manager port, source ID}
 
   function automatic logic [5:0] amo_to_atop(reqrsp_pkg::amo_op_e amo);
     unique case (amo)
@@ -645,20 +648,24 @@ package magia_tile_pkg;
   `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic[DWH-1:0], logic[UWH-1:0],  logic[IW-1:0], logic[0:0], logic[0:0])
 
   localparam obi_pkg::obi_optional_cfg_t obi_amo_optional_cfg = obi_pkg::obi_all_optional_config(AUSER_WIDTH, WUSER_WIDTH, RUSER_WIDTH, MID_WIDTH, ACHK_WIDTH, RCHK_WIDTH);
-  localparam obi_pkg::obi_optional_cfg_t obi_no_amo_optional_cfg = '{UseAtop: 1'b0, UseMemtype: 1'b0, UseProt: 1'b0, UseDbg: 1'b0, AUserWidth: AUSER_WIDTH, WUserWidth: WUSER_WIDTH, RUserWidth: RUSER_WIDTH, MidWidth: MID_WIDTH, AChkWidth: ACHK_WIDTH, RChkWidth: RCHK_WIDTH};
   
-  // OBI full configurations - 32-bit (default)
-  localparam obi_pkg::obi_cfg_t obi_amo_cfg = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, OBI_ID_WIDTH, obi_amo_optional_cfg);
-  localparam obi_pkg::obi_cfg_t obi_no_amo_cfg = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, OBI_ID_WIDTH, obi_no_amo_optional_cfg);
+  // OBI configurations before (mgr) and after (sbr) the tile OBI xbar
+  localparam obi_pkg::obi_cfg_t obi_sbr_cfg = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, SBR_AID_WIDTH, obi_amo_optional_cfg);
+  localparam obi_pkg::obi_cfg_t obi_mgr_cfg = obi_pkg::obi_default_cfg(magia_pkg::ADDR_W, magia_pkg::DATA_W, AID_WIDTH, obi_amo_optional_cfg);
   
   localparam bit                         RegisterAmo          = 1;
   
-  `OBI_TYPEDEF_ALL_A_OPTIONAL(core_data_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
-  `OBI_TYPEDEF_ALL_R_OPTIONAL(core_data_obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
-  `OBI_TYPEDEF_A_CHAN_T(core_data_obi_a_chan_t, magia_pkg::ADDR_W, magia_pkg::DATA_W, AID_WIDTH, core_data_obi_a_optional_t)
-  `OBI_TYPEDEF_R_CHAN_T(core_data_obi_r_chan_t, magia_pkg::DATA_W, RID_WIDTH, core_data_obi_r_optional_t)
-  `OBI_TYPEDEF_DEFAULT_REQ_T(core_obi_data_req_t, core_data_obi_a_chan_t)
-  `OBI_TYPEDEF_RSP_T(core_obi_data_rsp_t, core_data_obi_r_chan_t)
+  `OBI_TYPEDEF_ALL_A_OPTIONAL(obi_data_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
+  `OBI_TYPEDEF_ALL_R_OPTIONAL(obi_data_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
+  `OBI_TYPEDEF_A_CHAN_T(obi_sbr_a_chan_t, magia_pkg::ADDR_W, magia_pkg::DATA_W, SBR_AID_WIDTH, obi_data_a_optional_t)
+  `OBI_TYPEDEF_R_CHAN_T(obi_sbr_r_chan_t, magia_pkg::DATA_W, SBR_AID_WIDTH, obi_data_r_optional_t)
+  `OBI_TYPEDEF_DEFAULT_REQ_T(obi_sbr_req_t, obi_sbr_a_chan_t)
+  `OBI_TYPEDEF_RSP_T(obi_sbr_rsp_t, obi_sbr_r_chan_t)
+
+  `OBI_TYPEDEF_A_CHAN_T(obi_mgr_a_chan_t, magia_pkg::ADDR_W, magia_pkg::DATA_W, AID_WIDTH, obi_data_a_optional_t)
+  `OBI_TYPEDEF_R_CHAN_T(obi_mgr_r_chan_t, magia_pkg::DATA_W, AID_WIDTH, obi_data_r_optional_t)
+  `OBI_TYPEDEF_DEFAULT_REQ_T(obi_mgr_req_t, obi_mgr_a_chan_t)
+  `OBI_TYPEDEF_RSP_T(obi_mgr_rsp_t, obi_mgr_r_chan_t)
 
   `OBI_TYPEDEF_ALL_A_OPTIONAL(core_instr_obi_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
   `OBI_TYPEDEF_ALL_R_OPTIONAL(core_instr_obi_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
@@ -676,7 +683,7 @@ package magia_tile_pkg;
   `REG_BUS_TYPEDEF_ALL(reg_dma, logic[magia_pkg::ADDR_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0])
   `REG_BUS_TYPEDEF_ALL(idma_fe_reg, logic[magia_pkg::ADDR_W-1:0], logic[magia_pkg::DATA_W-1:0], logic[magia_pkg::STRB_W-1:0])
 
-  `IDMA_TYPEDEF_FULL_REQ_T(idma_be_req_t, logic[iDMA_AxiIdWidth-1:0], idma_addr_t, logic[iDMA_TFLenWidth-1:0], logic[35:0])
+  `IDMA_TYPEDEF_FULL_REQ_T(idma_be_req_t, logic[iDMA_AxiIdWidth-1:0], idma_addr_t, logic[iDMA_TFLenWidth-1:0], logic[magia_pkg::COLL_USR_W-1:0])
   `IDMA_TYPEDEF_FULL_RSP_T(idma_be_rsp_t, idma_addr_t)
   `IDMA_TYPEDEF_FULL_ND_REQ_T(idma_nd_req_t, idma_be_req_t, logic[iDMA_RepWidth-1:0], logic[iDMA_StrideWidth-1:0])
 

@@ -30,8 +30,8 @@ module obi_slave_ctrl_coll
   input  logic              rst_ni,
   
   // OBI slave interface
-  input  core_obi_data_req_t    obi_req_i,
-  output core_obi_data_rsp_t    obi_rsp_o,
+  input  obi_sbr_req_t          obi_req_i,
+  output obi_sbr_rsp_t          obi_rsp_o,
   
   // Control outputs
   output logic[31:0]              collective_mask_o,
@@ -48,7 +48,9 @@ module obi_slave_ctrl_coll
   
   // Response pipeline
   logic        rvalid_q, rvalid_d;
+  logic        err_q, err_d;
   logic [31:0] rdata_q, rdata_d;
+  logic [magia_tile_pkg::SBR_AID_WIDTH-1:0] rid_q;
   
   // Address decode (offset from base)
   logic [4:0]  addr_offset;
@@ -60,9 +62,8 @@ module obi_slave_ctrl_coll
   assign addr_valid = (obi_req_i.a.addr >= BaseAddr) & 
                       (obi_req_i.a.addr < (BaseAddr + 8));  // 2 registers * 4 bytes
   
-  // Grant only if address is valid
-  assign obi_rsp_o.gnt = obi_req_i.req & addr_valid;
-  assign obi_rsp_o.r.err = 1'b0;
+  assign obi_rsp_o.gnt = obi_req_i.req;
+  assign err_d         = obi_req_i.req & ~addr_valid;
   
   // ============================================
   // Register write logic (combinational)
@@ -103,7 +104,7 @@ module obi_slave_ctrl_coll
   // ============================================
   always_comb begin
     rdata_d  = 32'h0;
-    rvalid_d = obi_req_i.req & addr_valid;
+    rvalid_d = obi_req_i.req;
     
     if (obi_req_i.req && !obi_req_i.a.we && addr_valid) begin
       unique case (addr_offset)
@@ -120,17 +121,22 @@ module obi_slave_ctrl_coll
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
       rvalid_q <= 1'b0;
+      err_q    <= 1'b0;
       rdata_q  <= 32'h0;
+      rid_q    <= '0;
     end else begin
       rvalid_q <= rvalid_d;
+      err_q    <= err_d;
       rdata_q  <= rdata_d;
+      rid_q    <= obi_req_i.a.aid;
     end
   end
-  
+
   // Output assignments
   assign obi_rsp_o.rvalid = rvalid_q;
+  assign obi_rsp_o.r.err  = err_q;
   assign obi_rsp_o.r.rdata  = rdata_q;
-  assign obi_rsp_o.r.rid = obi_req_i.a.aid;
+  assign obi_rsp_o.r.rid = rid_q;
   assign obi_rsp_o.r.r_optional = '0;
 
   assign collective_mask_o = collective_mask_q;

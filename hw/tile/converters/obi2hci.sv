@@ -20,7 +20,7 @@
  */
 
 module obi2hci_req #(
-  parameter type obi_req_t = magia_tile_pkg::core_obi_data_req_t,
+  parameter type obi_req_t = magia_tile_pkg::obi_sbr_req_t,
   parameter type hci_req_t = magia_tile_pkg::core_hci_data_req_t
 )(
   input  obi_req_t obi_req_i,

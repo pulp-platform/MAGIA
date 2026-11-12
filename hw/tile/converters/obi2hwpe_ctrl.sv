@@ -24,9 +24,12 @@
 module obi2hwpe_ctrl
   import magia_tile_pkg::*;
 (
+  input  logic               clk_i,
+  input  logic               rst_ni,
+
   //OBI side
-  input  core_obi_data_req_t obi_req_i,
-  output core_obi_data_rsp_t obi_rsp_o,
+  input  obi_sbr_req_t obi_req_i,
+  output obi_sbr_rsp_t obi_rsp_o,
 
   //HWPE-ctrl (RedMulE) side
   output redmule_ctrl_req_t  ctrl_req_o,
@@ -43,7 +46,20 @@ module obi2hwpe_ctrl
   assign ctrl_req_o.data   = obi_req_i.a.wdata;
   assign ctrl_req_o.be     = obi_req_i.a.be;
   assign ctrl_req_o.wen    = ~obi_req_i.a.we; // inversione semantica
-  assign ctrl_req_o.id     = '0; // OBI doesn't have ID in this config
+  assign ctrl_req_o.id     = '0;
+
+  logic                    rid_en;
+  logic [SBR_AID_WIDTH-1:0] rid_q;
+
+  assign rid_en = obi_req_i.req & ctrl_rsp_i.gnt;
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      rid_q <= '0;
+    end else if (rid_en) begin
+      rid_q <= obi_req_i.a.aid;
+    end
+  end
 
   // ------------------------
   // Response channel mapping  
@@ -52,7 +68,7 @@ module obi2hwpe_ctrl
 
   assign obi_rsp_o.r.rdata  = ctrl_rsp_i.r_data;
   assign obi_rsp_o.r.err    = 1'b0; // RedMulE ctrl no errors
-  assign obi_rsp_o.r.rid    = '0;   // No ID tracking for this converter
+  assign obi_rsp_o.r.rid    = rid_q;
   
   // Optional response fields set to zero to prevent X propagation (not used by RedMulE ctrl)
   assign obi_rsp_o.r.r_optional.ruser  = '0;

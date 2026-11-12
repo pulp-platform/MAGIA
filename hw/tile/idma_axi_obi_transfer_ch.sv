@@ -106,7 +106,7 @@ module idma_axi_obi_transfer_ch
     .dma_req_t      ( magia_tile_pkg::idma_nd_req_t       ),
     .cnt_width_t    ( /*DO NOT OVERRIDE*/                 ),
     .stream_t       ( /*DO NOT OVERRIDE*/                 ),
-    .UserWidth      ( magia_tile_pkg::iDMA_UserWidth      )
+    .UserWidth      ( magia_pkg::COLL_USR_W               )
   ) i_idma_frontend (
     .clk_i                             ,
     .rst_ni                            ,

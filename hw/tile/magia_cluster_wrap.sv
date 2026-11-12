@@ -52,12 +52,12 @@ module magia_cluster_wrap
   input  logic                     cluster_start_i,         // 1-cycle pulse injected into cluster Event Unit as EU_OTHER_CLUSTER_START
 
   // Memory-mapped (speriph) port of the cluster-private Event Unit, on the tile OBI xbar
-  input  magia_tile_pkg::core_obi_data_req_t cluster_eu_obi_req_i,
-  output magia_tile_pkg::core_obi_data_rsp_t cluster_eu_obi_rsp_o,
+  input  magia_tile_pkg::obi_sbr_req_t cluster_eu_obi_req_i,
+  output magia_tile_pkg::obi_sbr_rsp_t cluster_eu_obi_rsp_o,
 
   // Per-core OBI data manager ports (peripheral path -> tile OBI crossbar)
-  output magia_tile_pkg::core_obi_data_req_t [NClusterCores-1:0] cluster_obi_data_req_o,
-  input  magia_tile_pkg::core_obi_data_rsp_t [NClusterCores-1:0] cluster_obi_data_rsp_i,
+  output magia_tile_pkg::obi_mgr_req_t [NClusterCores-1:0] cluster_obi_data_req_o,
+  input  magia_tile_pkg::obi_mgr_rsp_t [NClusterCores-1:0] cluster_obi_data_rsp_i,
 
   // Per-core HCI data manager ports (L1/TCDM path -> tile HCI interconnect)
   output hci_req_t [NClusterCores-1:0] cluster_hci_data_req_o,
@@ -80,12 +80,12 @@ module magia_cluster_wrap
   logic [NClusterCores-1:0] cluster_core_sleep;
 
   // Cluster core data interface
-  magia_tile_pkg::core_obi_data_req_t [NClusterCores-1:0] cluster_data_req;
-  magia_tile_pkg::core_obi_data_rsp_t [NClusterCores-1:0] cluster_data_rsp;
+  magia_tile_pkg::obi_mgr_req_t [NClusterCores-1:0] cluster_data_req;
+  magia_tile_pkg::obi_mgr_rsp_t [NClusterCores-1:0] cluster_data_rsp;
 
   // Per-core demux downstream ports ([i][TCDM], [i][OBI]).
-  magia_tile_pkg::core_obi_data_req_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_req;
-  magia_tile_pkg::core_obi_data_rsp_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_rsp;
+  magia_tile_pkg::obi_mgr_req_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_req;
+  magia_tile_pkg::obi_mgr_rsp_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_rsp;
 
   // Per-core 32-bit interrupt vector
   logic [NClusterCores-1:0][31:0]                                  cluster_irq_vec;
@@ -194,8 +194,8 @@ module magia_cluster_wrap
       .NumRules   ( magia_tile_pkg::NUM_TCDM_RULES + 1                ),
       .DefaultSlv ( CLUSTER_DATA_DEMUX_OBI_IDX                        ),
       .SerialSlv  ( CLUSTER_DATA_DEMUX_N_SLV'(1 << CLUSTER_DATA_DEMUX_EU_IDX) ),
-      .req_t      ( magia_tile_pkg::core_obi_data_req_t               ),
-      .rsp_t      ( magia_tile_pkg::core_obi_data_rsp_t               )
+      .req_t      ( magia_tile_pkg::obi_mgr_req_t                     ),
+      .rsp_t      ( magia_tile_pkg::obi_mgr_rsp_t                     )
     ) i_cluster_data_demux (
       .clk_i              ( clk_i                     ),
       .rst_ni             ( rst_ni                    ),
@@ -220,7 +220,7 @@ module magia_cluster_wrap
 
     // --- TCDM (L1) path: OBI -> HCI dedicated interconnect port ---
     obi2hci_req #(
-      .obi_req_t ( magia_tile_pkg::core_obi_data_req_t ),
+      .obi_req_t ( magia_tile_pkg::obi_mgr_req_t ),
       .hci_req_t ( hci_req_t )
     ) i_cluster_tcdm_obi2hci_req (
       .obi_req_i ( cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_TCDM_IDX] ),
@@ -229,7 +229,7 @@ module magia_cluster_wrap
 
     hci2obi_rsp #(
       .hci_rsp_t ( hci_rsp_t ),
-      .obi_rsp_t ( magia_tile_pkg::core_obi_data_rsp_t )
+      .obi_rsp_t ( magia_tile_pkg::obi_mgr_rsp_t )
     ) i_cluster_tcdm_hci2obi_rsp (
       .hci_rsp_i ( cluster_hci_data_rsp_i[i]                            ),
       .obi_rsp_o ( cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_TCDM_IDX] )

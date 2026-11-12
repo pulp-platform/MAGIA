@@ -166,6 +166,7 @@ package magia_noc_pkg;
     typedef logic[STRB_W-1:0] axi_narrow_data_mst_strb_t;
     typedef logic[L2_ID_W-1:0] axi_narrow_data_mst_id_t;
     typedef struct packed {
+        logic [SRC_ID_W-1:0] src_id;
         logic [ADDR_W-1:0] collective_mask;
         logic [COLLECTIVE_OP_W-1:0] collective_op;
     } axi_narrow_data_mst_user_t;
@@ -176,6 +177,7 @@ package magia_noc_pkg;
     typedef logic[STRB_W-1:0] axi_narrow_data_slv_strb_t;
     typedef logic[AXI_NOC_ID_W-1:0] axi_narrow_data_slv_id_t;
     typedef struct packed {
+        logic [SRC_ID_W-1:0] src_id;
         logic [ADDR_W-1:0] collective_mask;
         logic [COLLECTIVE_OP_W-1:0] collective_op;
     } axi_narrow_data_slv_user_t;
@@ -186,6 +188,7 @@ package magia_noc_pkg;
     typedef logic[WIDE_STRB_W-1:0] axi_wide_data_mst_strb_t;
     typedef logic[iDMA_AxiIdWidth-1:0] axi_wide_data_mst_id_t;
     typedef struct packed {
+        logic [SRC_ID_W-1:0] src_id;
         logic [ADDR_W-1:0] collective_mask;
         logic [COLLECTIVE_OP_W-1:0] collective_op;
     } axi_wide_data_mst_user_t;
@@ -196,6 +199,7 @@ package magia_noc_pkg;
     typedef logic[WIDE_STRB_W-1:0] axi_wide_data_slv_strb_t;
     typedef logic[iDMA_AxiIdWidth-1:0] axi_wide_data_slv_id_t;
     typedef struct packed {
+        logic [SRC_ID_W-1:0] src_id;
         logic [ADDR_W-1:0] collective_mask;
         logic [COLLECTIVE_OP_W-1:0] collective_op;
     } axi_wide_data_slv_user_t;
@@ -207,14 +211,14 @@ package magia_noc_pkg;
     localparam axi_cfg_t AxiCfgN = '{
         AddrWidth:  ADDR_W,
         DataWidth:  DATA_W,
-        UserWidth:  ADDR_W + COLLECTIVE_OP_W,
+        UserWidth:  USR_W,
         InIdWidth:  AXI_NOC_ID_W,
         OutIdWidth: L2_ID_W
     };
     localparam axi_cfg_t AxiCfgW = '{
         AddrWidth:  ADDR_W,
         DataWidth:  WIDE_DATA_W,
-        UserWidth:  ADDR_W + COLLECTIVE_OP_W,
+        UserWidth:  USR_W,
         InIdWidth:  iDMA_AxiIdWidth,
         OutIdWidth: iDMA_AxiIdWidth
     };
