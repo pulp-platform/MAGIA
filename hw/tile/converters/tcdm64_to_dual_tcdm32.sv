@@ -109,7 +109,8 @@ module tcdm64_to_dual_tcdm32 #(
   
   assign strb_is_zero = (tcdm_req_int.q.strb == 8'h00);
   assign is_load = ~tcdm_req_int.q.write;
-  assign access_lo = |tcdm_req_int.q.strb[3:0] | (strb_is_zero & is_load);
+  // A fully masked store still goes to the low bank, with no byte enabled: its issuer waits for the ack
+  assign access_lo = |tcdm_req_int.q.strb[3:0] | strb_is_zero;
   assign access_hi = |tcdm_req_int.q.strb[7:4] | (strb_is_zero & is_load);
   
   // FIFO signals
@@ -254,8 +255,6 @@ module tcdm64_to_dual_tcdm32 #(
       tcdm_rsp_int.q_ready = tcdm_rsp_lo_i.q_ready;
     end else if (access_hi) begin
       tcdm_rsp_int.q_ready = tcdm_rsp_hi_i.q_ready;
-    end else if (strb_is_zero && !is_load) begin
-      tcdm_rsp_int.q_ready = 1'b1;
     end
   end
 

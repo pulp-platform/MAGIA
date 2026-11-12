@@ -381,7 +381,7 @@ int instructions_sweep_simple_task(void) {
     // Move/Slide
     asm volatile("vfmv.v.f v8, %0" ::"f"(scalar_f)); printf("  VFMV.V.F (e32)\n");
     asm volatile("vfmv.s.f v8, %0" ::"f"(scalar_f)); printf("  VFMV.S.F (e32)\n");
-    asm volatile("vfmv.f.s %0, v0" :"=f"(result_f)); printf("  VFMV.F.S (e32)\n");
+    printf("  [SKIPPED] VFMV.F.S: the CV32E40PX takes XIF results only into integer registers\n");
     
     // Reload fresh data for slide operations
     asm volatile("vle32.v v0, (%0)" ::"r"(vec_a));

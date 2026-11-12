@@ -38,7 +38,6 @@ package magia_tile_pkg;
   `include "register_interface/typedef.svh"
   `include "idma/typedef.svh"
   `include "fractal_sync/typedef.svh"
-  `include "reqrsp_interface/typedef.svh"
   `include "tcdm_interface/typedef.svh"
   `include "floo_noc/typedef.svh"
 
@@ -107,73 +106,33 @@ package magia_tile_pkg;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_SIZE                 = 32'h4000_0000;
   localparam logic [magia_pkg::ADDR_W-1:0] L2_ADDR_END             = L2_ADDR_START + L2_SIZE;
 
-  // Instruction region for Spatz code (cacheable region)
   localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_ADDR_START      = L2_ADDR_START;
 
-  localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_PMA_MASK        = 32'hFFFF_8000;
+  // Spatz: the vector unit configuration comes from spatz_pkg, generated inside spatz_vpu
 
-  // Snitch PMA with one cacheable instruction region
-  function automatic snitch_pma_pkg::snitch_pma_t gen_spatz_pma_cfg(logic [magia_pkg::ADDR_W-1:0] base,
-                                                                   logic [magia_pkg::ADDR_W-1:0] mask);
-    snitch_pma_pkg::snitch_pma_t cfg;
-    cfg                     = '0;
-    cfg.NrCachedRegionRules = 1;
-    cfg.CachedRegion[0]     = '{base: 48'(base), mask: 48'(mask)};  // Snitch PMA rules are 48 bit
-    return cfg;
-  endfunction
-
-  localparam snitch_pma_pkg::snitch_pma_t SPATZ_SNITCH_PMA_CFG = gen_spatz_pma_cfg(INSTRRAM_ADDR_START, INSTRRAM_PMA_MASK);
-
-  // Spatz parameters 
-
-  localparam bit          SPATZ_RVD_PARAM      = magia_pkg::MagiaSpatzRVD;
-  localparam int unsigned SPATZ_NUM_IPU        = magia_pkg::MagiaSpatzNumIPU;
-  localparam int unsigned SPATZ_NUM_FPU        = magia_pkg::MagiaSpatzNumFPU;
-  localparam bit          SPATZ_XDIVSQRT_PARAM = magia_pkg::MagiaSpatzXDivSqrt;
-  localparam bit          SPATZ_XDMA_PARAM     = magia_pkg::MagiaSpatzXDMA;
-  localparam bit          SPATZ_RVF_PARAM      = magia_pkg::MagiaSpatzRVF;
-  localparam bit          SPATZ_RVV_PARAM      = magia_pkg::MagiaSpatzRVV;
-  
-  function automatic int unsigned gen_spatz_num_fu(magia_pkg::spatz_cfg_t cfg);
-    return (cfg.NumFPU > cfg.NumIPU) ? cfg.NumFPU : cfg.NumIPU;
-  endfunction
-
-  function automatic int unsigned gen_spatz_tcdm_ports(magia_pkg::spatz_cfg_t cfg);
-    return cfg.RVV ? (gen_spatz_num_fu(cfg) + 1) : 1;
-  endfunction
-
-  function automatic int unsigned gen_spatz_hci_ports(magia_pkg::spatz_cfg_t cfg);
-    return cfg.RVD ? (gen_spatz_tcdm_ports(cfg) * 2) : gen_spatz_tcdm_ports(cfg);
+  // Scalar L1 port plus the VLSU ports, each split into 32-bit HCI ports
+  function automatic int unsigned gen_spatz_hci_ports();
+    return 1 + spatz_pkg::N_FU * (spatz_pkg::ELEN / 32);
   endfunction
 
   function automatic int unsigned gen_tile_spatz_hci_ports(magia_tile_cfg_t cfg);
-    return cfg.EnSpatzCC ? gen_spatz_hci_ports(cfg.Spatz) : 0;
+    return cfg.EnSpatzCC ? gen_spatz_hci_ports() : 0;
   endfunction
 
   function automatic int unsigned gen_tile_num_hci_core(magia_tile_cfg_t cfg);
-    // Remote L1 route from the xbar + ctrl core + Spatz TCDM ports + one port per cluster core
+    // Remote L1 route from the xbar + ctrl core + Spatz ports + one port per cluster core
     return 1 + 1 + gen_tile_spatz_hci_ports(cfg) + (cfg.EnCluster ? cfg.Cluster.NumCores : 0);
   endfunction
-  localparam int unsigned SPATZ_HCI_PORTS = gen_spatz_hci_ports(magia_pkg::MagiaSpatzDefaultCfg);
+  localparam int unsigned SPATZ_HCI_PORTS = gen_spatz_hci_ports();
 
-  // Spatz CC outstanding transactions and timing parameters
-  parameter int unsigned SPATZ_NUM_INT_OUTSTANDING_LOADS   = 1;   // Snitch core outstanding loads
-  parameter int unsigned SPATZ_NUM_INT_OUTSTANDING_MEM     = 4;   // Snitch core outstanding memory ops
   parameter int unsigned SPATZ_NUM_SPATZ_OUTSTANDING_LOADS = 4;   // Spatz vector unit outstanding loads
-  parameter bit          SPATZ_XDIVSQRT                    = SPATZ_XDIVSQRT_PARAM; // From Makefile define (0=disabled, 1=enabled)
-  parameter bit          SPATZ_XDMA                        = SPATZ_XDMA_PARAM;     // From Makefile define (0=disabled, 1=enabled)
-  parameter bit          SPATZ_RVF                         = SPATZ_RVF_PARAM;      // From Makefile define (single-precision FP)
-  parameter bit          SPATZ_RVV                         = SPATZ_RVV_PARAM;      // From Makefile define (vector extension)
-  parameter bit          SPATZ_REGISTER_OFFLOAD_RSP        = 1'b0; // Pipeline register on offload response
-  parameter bit          SPATZ_REGISTER_CORE_REQ           = 1'b1; // Pipeline register on core request
-  parameter bit          SPATZ_REGISTER_CORE_RSP           = 1'b1; // Pipeline register on core response
   
   // Spatz FPU implementation configuration
   localparam fpnew_pkg::fpu_implementation_t SPATZ_FPUImplementation = '{
     PipeRegs: // FMA Block
               '{
                 '{  3,                           // FP32 FMA
-                    SPATZ_RVD_PARAM ? 3 : 0,     // FP64 FMA
+                    spatz_pkg::RVD ? 3 : 0,     // FP64 FMA
                     3,                           // FP16
                     3,                           // FP8
                     3,                           // FP16alt
@@ -185,7 +144,7 @@ package magia_tile_pkg;
                 '{5, 5, 5, 5, 5, 5}              // DOTP
                 },
   UnitTypes: '{'{ fpnew_pkg::MERGED,
-                  SPATZ_RVD_PARAM ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
+                  spatz_pkg::RVD ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
                   fpnew_pkg::MERGED,
                   fpnew_pkg::MERGED,
                   fpnew_pkg::MERGED,
@@ -197,19 +156,19 @@ package magia_tile_pkg;
                   fpnew_pkg::DISABLED,
                   fpnew_pkg::DISABLED},          // DIVSQRT 
                 '{fpnew_pkg::PARALLEL,
-                  SPATZ_RVD_PARAM ? fpnew_pkg::PARALLEL : fpnew_pkg::DISABLED,
+                  spatz_pkg::RVD ? fpnew_pkg::PARALLEL : fpnew_pkg::DISABLED,
                   fpnew_pkg::PARALLEL,
                   fpnew_pkg::PARALLEL,
                   fpnew_pkg::PARALLEL,
                   fpnew_pkg::PARALLEL},          // NONCOMP 
                 '{fpnew_pkg::MERGED,
-                  SPATZ_RVD_PARAM ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
+                  spatz_pkg::RVD ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
                   fpnew_pkg::MERGED,
                   fpnew_pkg::MERGED,
                   fpnew_pkg::MERGED,
                   fpnew_pkg::MERGED},            // CONV 
                 '{fpnew_pkg::MERGED,
-                  SPATZ_RVD_PARAM ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
+                  spatz_pkg::RVD ? fpnew_pkg::MERGED : fpnew_pkg::DISABLED,
                   fpnew_pkg::MERGED,
                   fpnew_pkg::MERGED,
                   fpnew_pkg::MERGED,
@@ -217,18 +176,8 @@ package magia_tile_pkg;
     PipeConfig: fpnew_pkg::BEFORE 
   };
 
-  // Spatz bootrom parameters
-`ifdef MAGIA_SPATZ_BOOT_ADDR
-  parameter logic [31:0] SPATZ_BOOT_ADDR          = `MAGIA_SPATZ_BOOT_ADDR;  // Spatz bootrom base address
-`else
-  parameter logic [31:0] SPATZ_BOOT_ADDR          = 32'h1000_0000;  // Spatz bootrom base address
-`endif
-  parameter logic [31:0] SPATZ_BOOTROM_SIZE       = 32'h0000_0100;
-  
   // Spatz TCDM parameters
-  parameter int unsigned SPATZ_TCDM_ADDR_WIDTH = $clog2(magia_pkg::N_MEM_BANKS * magia_pkg::N_WORDS_BANK * magia_pkg::DATA_W / 8);  
-  parameter int unsigned SPATZ_TCDM_DATA_WIDTH = SPATZ_RVD_PARAM ? 64 : 32;                  // Spatz TCDM data width
-  parameter int unsigned SPATZ_TCDM_STRB_WIDTH = SPATZ_RVD_PARAM ? 8 : 4;                    // Spatz TCDM strobe width
+  parameter int unsigned SPATZ_TCDM_ADDR_WIDTH = $clog2(magia_pkg::N_MEM_BANKS * magia_pkg::N_WORDS_BANK * magia_pkg::DATA_W / 8);
 
 
   // Parameters used by the HCI
@@ -418,7 +367,6 @@ package magia_tile_pkg;
 
   localparam int unsigned EU_OTHER_CLUSTER_DONE  = 12;
   localparam int unsigned EU_OTHER_CLUSTER_START = 13;
-  localparam int unsigned EU_OTHER_SPATZ_START   = 23;
   localparam int unsigned EU_OTHER_FSYNC_DONE    = 24;
   localparam int unsigned EU_OTHER_A2O_START     = 28;
   localparam int unsigned EU_OTHER_O2A_START     = 29;
@@ -620,8 +568,7 @@ package magia_tile_pkg;
   
   typedef enum logic[1:0]{
     AXI_MST_EXT_IDX     = 0,
-    AXI_MST_OBI_IDX     = 1,
-    AXI_MST_BOOTROM_IDX = 2
+    AXI_MST_OBI_IDX     = 1
   } axi_xbar_mst_idx_e;
 
 
@@ -720,7 +667,6 @@ package magia_tile_pkg;
     int unsigned num_mst;   // Number of AXI xbar master ports
     int unsigned ext;       // to NoC          (always, index 0)
     int unsigned obi;       // to internal OBI (always, index 1)
-    int unsigned bootrom;   // to Spatz bootrom (valid iff EnSpatzCC)
   } axi_xbar_mst_map_t;
 
   function automatic axi_xbar_mst_map_t gen_axi_xbar_mst_map(magia_tile_cfg_t cfg);
@@ -732,16 +678,12 @@ package magia_tile_pkg;
     idx = idx + 1;
     ret.obi = idx;
     idx = idx + 1;
-    if (cfg.EnSpatzCC) begin
-      ret.bootrom = idx;
-      idx = idx + 1;
-    end
     ret.num_mst = idx;
     return ret;
   endfunction
 
   function automatic int unsigned gen_axi_xbar_num_rules(magia_tile_cfg_t cfg);
-    return 1 + 32'(cfg.EnSpatzCC);
+    return 1;
   endfunction
 
   function automatic axi_pkg::xbar_cfg_t gen_axi_xbar_cfg(magia_tile_cfg_t cfg);
@@ -776,50 +718,25 @@ package magia_tile_pkg;
 `endif
 
   /*******************************************************************/
-  /*              Spatz Core Complex Wrapper Types                   */
+  /*                      Spatz VLSU TCDM Types                      */
   /*******************************************************************/
-  
-  // Base types for Spatz TCDM and reqrsp
-  typedef logic [magia_pkg::ADDR_W-1:0]    spatz_addr_t;
+
   typedef logic [magia_pkg::DATA_W-1:0]    spatz_data_t;
   typedef logic [magia_pkg::DATA_W/8-1:0]  spatz_strb_t;
   typedef logic                            spatz_tcdm_user_t;
   typedef logic [magia_tile_pkg::SPATZ_TCDM_ADDR_WIDTH-1:0] spatz_tcdm_addr_t;
-  
-  // 64-bit types for TCDM and reqrsp interfaces when RVD=1
-  typedef logic [SPATZ_TCDM_DATA_WIDTH-1:0]     spatz_data64_t;
-  typedef logic [SPATZ_TCDM_STRB_WIDTH-1:0]     spatz_strb64_t;
-  
+
   `TCDM_TYPEDEF_ALL(spatz_tcdm, spatz_tcdm_addr_t, spatz_data_t, spatz_strb_t, spatz_tcdm_user_t)
-  `REQRSP_TYPEDEF_ALL(spatz_reqrsp, spatz_addr_t, spatz_data_t, spatz_strb_t)        // 32-bit for Snitch data port (RVD=0, DataWidth=32)
-  `REQRSP_TYPEDEF_ALL(spatz_reqrsp64, spatz_addr_t, spatz_data64_t, spatz_strb64_t)  // 64-bit for Snitch data port (RVD=1, DataWidth=64)
 
-  // TCDM64 types with AMO support (using TCDM_TYPEDEF_ALL macro which includes amo field)
   typedef logic [magia_pkg::ADDR_W-1:0]        spatz_tcdm64_addr_t;
-  typedef logic [SPATZ_TCDM_DATA_WIDTH-1:0]    spatz_tcdm64_data_t;
-  typedef logic [SPATZ_TCDM_STRB_WIDTH-1:0]    spatz_tcdm64_strb_t;
-  typedef logic                                 spatz_tcdm64_user_t;
-  
-  `TCDM_TYPEDEF_ALL(spatz_tcdm64, spatz_tcdm64_addr_t, spatz_tcdm64_data_t, spatz_tcdm64_strb_t, spatz_tcdm64_user_t)
-  
-  // Alias for backward compatibility with spatz_cc instantiation
-  typedef spatz_tcdm64_req_chan_t spatz_tcdm64_payload_t;
 
-  // TCDM32 types with AMO support (for modular atomic resolver architecture)
+  // 32-bit halves of a 64-bit VLSU port
   typedef logic [magia_pkg::ADDR_W-1:0]        spatz_tcdm32_addr_t;
   typedef logic [31:0]                          spatz_tcdm32_data_t;
   typedef logic [3:0]                           spatz_tcdm32_strb_t;
   typedef logic                                 spatz_tcdm32_user_t;
-  
+
   `TCDM_TYPEDEF_ALL(spatz_tcdm32, spatz_tcdm32_addr_t, spatz_tcdm32_data_t, spatz_tcdm32_strb_t, spatz_tcdm32_user_t)
-  
-  // OBI 32-bit types for modular atomic architecture  
-  `OBI_TYPEDEF_ALL_A_OPTIONAL(spatz_obi32_a_optional_t, AUSER_WIDTH, WUSER_WIDTH, MID_WIDTH, ACHK_WIDTH)
-  `OBI_TYPEDEF_ALL_R_OPTIONAL(spatz_obi32_r_optional_t, RUSER_WIDTH, RCHK_WIDTH)
-  `OBI_TYPEDEF_A_CHAN_T(spatz_obi32_a_chan_t, magia_pkg::ADDR_W, 32, AID_WIDTH, spatz_obi32_a_optional_t)
-  `OBI_TYPEDEF_R_CHAN_T(spatz_obi32_r_chan_t, 32, RID_WIDTH, spatz_obi32_r_optional_t)
-  `OBI_TYPEDEF_DEFAULT_REQ_T(spatz_obi32_req_t, spatz_obi32_a_chan_t)
-  `OBI_TYPEDEF_RSP_T(spatz_obi32_rsp_t, spatz_obi32_r_chan_t)
 
 
   // Router reduction types for magia_tile, dropped by MAGIA_NO_NOC_TYPES

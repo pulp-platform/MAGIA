@@ -14,23 +14,10 @@
  * limitations under the License.
  * SPDX-License-Identifier: Apache-2.0
  *
- * 
- * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- *  
- * All initialization (stack, regs, vector, BSS) done in spatz_crt0.S  
- * Minimal Boot ROM - only read TASKBIN_ADDR and jump
+ * Author: Luca Balboni, Fondazione Chips-IT
+ *
+ * One spatz_vpu riscvTest (RVV_TEST_SRC, set by spatz/sw/Makefile) as a Spatz task: its exit code is the failed count
  */
 
-#define TASKBIN_ADDR 0xA000220C  // OBI slave ctrl exchange register (SPATZ_CTRL_BASE + 0x0C)
-
-  .section .text.bootrom
-  .global _start
-  .option norvc
-
-_start:
-  // Read dispatcher loop address from TASKBIN_ADDR (set by CV32)
-  li      t0, TASKBIN_ADDR
-  lw      t1, 0(t0)
-  
-  // Jump to _start in spatz binary (does all init)
-  jr      t1
+#define main riscv_test_task
+#include RVV_TEST_SRC

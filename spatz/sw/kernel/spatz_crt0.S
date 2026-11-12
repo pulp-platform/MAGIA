@@ -16,162 +16,111 @@
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
  *
- * Spatz Runtime
- * Entry: Bootrom should jumps here
- *
+ * Spatz CRT0: boot, then serve the CV32 mailbox like core 0 of the PULP cluster (pulp_crt0.S), sleeping in WFI
  */
 
-#define READY_ADDR        0xA0002204   // SPATZ_CTRL_BASE + 0x04
-#define START_ADDR        0xA0002208
-#define TASKBIN_ADDR      0xA000220C
-#define DATA_ADDR         0xA0002210
-#define RETURN_ADDR       0xA0002214
-#define DONE_ADDR         0xA0002218
-#define MSTATUS_VS        0x200        // Vector Status [9:8] = 01
-#define MSTATUS_MIE       0x8          // Machine Interrupt Enable
-#define MIE_MEIE          0x800        // External interrupt enable
+#define SPATZ_DONE_ADDR     0xA0002208   /* SPATZ_CTRL_BASE + 0x08 */
+#define SPATZ_TASKBIN_ADDR  0xA000220C
+#define SPATZ_DATA_ADDR     0xA0002210
+#define SPATZ_START_ADDR    0xA0002214
+#define SPATZ_READY_ADDR    0xA0002218
+#define SPATZ_RETURN_ADDR   0xA000221C
+
+#define MSTATUS_FS_VS_INIT  0x2200       /* FS and VS = Initial */
+#define MIE_MEIE            0x800        /* START drives the machine external interrupt */
+#define RETURN_CRASHED      0x80000000   /* Tags mcause in RETURN: a real exit code never sets it */
+
+/* Top of the Spatz stack, above the CV32 and PULP slots of sw/kernel/link.ld */
+#define STACK_TOP           0xA0120000
 
 .section .text.start, "ax"
 .global _start
-
 _start:
-    /* Init stack pointer */
-    li      sp, 0xA011FFF8   // _stack_start of spatz_program.ld
+    /* PIC binary: MMIO and stack addresses are absolute, so they are loaded with li, not la */
+    li      sp, STACK_TOP
 
-    /* Clear ALL integer registers */
-    mv x1,  x0
-    // x2 = sp just initialized
-    mv x3,  x0
-    mv x4,  x0
-    mv x5,  x0
-    mv x6,  x0
-    mv x7,  x0
-    mv x8,  x0
-    mv x9,  x0
-    mv x10, x0
-    mv x11, x0
-    mv x12, x0
-    mv x13, x0
-    mv x14, x0
-    mv x15, x0
-    mv x16, x0
-    mv x17, x0
-    mv x18, x0
-    mv x19, x0
-    mv x20, x0
-    mv x21, x0
-    mv x22, x0
-    mv x23, x0
-    mv x24, x0
-    mv x25, x0
-    mv x26, x0
-    mv x27, x0
-    mv x28, x0
-    mv x29, x0
-    mv x30, x0
-    mv x31, x0
-
-    /* Enable vector extension (VS=Initial for Spatz) */
-    li      t0, MSTATUS_VS
-    csrs    mstatus, t0
-
-    /* Initialize ALL 32 Vector Registers (VRF) to zero */
-
-    vsetvli t0, zero, e32, m8, ta, ma   // LMUL=8 → each vmv.v.i writes 8 registers
-    vmv.v.i v0,  0    // Initialize v0-v7   (register group 0)
-    vmv.v.i v8,  0    // Initialize v8-v15  (register group 1)
-    vmv.v.i v16, 0    // Initialize v16-v23 (register group 2)
-    vmv.v.i v24, 0    // Initialize v24-v31 (register group 3)
-
-    /* Clear BSS section */
-    la      a0, __bss_start
-    la      a1, __bss_end
-1:  bgeu    a0, a1, 2f
-    sw      zero, 0(a0)
-    addi    a0, a0, 4
+    /* norelax keeps la PC-relative in this PIC binary */
+    .option push
+    .option norelax
+    la      t0, __bss_start
+    la      t1, __bss_end
+    .option pop
+1:  bgeu    t0, t1, 2f
+    sw      zero, 0(t0)
+    addi    t0, t0, 4
     j       1b
 2:
-    /* Setup trap handler for interrupt */
-    la      t0, _trap_handler
+    /* Direct mode: mtvec[7:2] is hardwired to 0, hence the 256-byte alignment of trap_handler */
+    .option push
+    .option norelax
+    la      t0, trap_handler
+    .option pop
     csrw    mtvec, t0
-    
-    /* Enable external interrupts (MEIE) */
+
+    li      t0, MSTATUS_FS_VS_INIT
+    csrs    mstatus, t0
+
+    /* Zero the VRF: LMUL=8 clears eight registers per vmv */
+    vsetvli t0, zero, e32, m8, ta, ma
+    vmv.v.i v0,  0
+    vmv.v.i v8,  0
+    vmv.v.i v16, 0
+    vmv.v.i v24, 0
+
+    /* WFI wakes on START with mstatus.MIE still 0, so no trap is taken */
     li      t0, MIE_MEIE
     csrs    mie, t0
-    
-    /* Enable global interrupts (MIE bit in mstatus) */
-    li      t0, MSTATUS_MIE
-    csrs    mstatus, t0
-    
-    /* Signal ready to CV32 - now ready to receive interrupts */
-    li      t0, READY_ADDR
+
+    /* Armed: the CV32 polls READY */
+    li      t0, SPATZ_READY_ADDR
     li      t1, 1
     sw      t1, 0(t0)
 
-    /* First WFI - after this we deassert READY */
-    wfi
-    
-    /* Deassert READY after first wakeup (only once) */
-    li      t0, READY_ADDR
-    sw      zero, 0(t0)
-    
-    /* Fall through to main dispatcher loop */
-
+/*--------------------------------------------------------------------------
+ * Dispatcher loop: sleep until START, run the task, signal DONE
+ *--------------------------------------------------------------------------*/
 dispatcher_loop:
-    /* Wait for interrupt from CV32 */
     wfi
-    
-    /* After wakeup from interrupt, task has been executed */
-    /* Loop back */
+    li      t0, SPATZ_START_ADDR
+    lw      t1, 0(t0)
+    beqz    t1, dispatcher_loop     /* Woken by the previous ACK still settling */
+
+    /* a0 = *DATA (first argument to the task) */
+    li      t0, SPATZ_DATA_ADDR
+    lw      a0, 0(t0)
+
+    li      t0, SPATZ_TASKBIN_ADDR
+    lw      t1, 0(t0)
+
+    /* ACK before the task runs: unblocks the CV32 dispatch poll and drops the interrupt */
+    li      t0, SPATZ_START_ADDR
+    sw      zero, 0(t0)
+
+    jalr    ra, 0(t1)
+
+    /* The scalar stores wait in hardware for the task's vector stores to land */
+    li      t0, SPATZ_RETURN_ADDR
+    sw      a0, 0(t0)
+
+    li      t0, SPATZ_DONE_ADDR
+    li      t1, 1
+    sw      t1, 0(t0)
+
     j       dispatcher_loop
 
-/* Trap handler - distinguishes interrupts from exceptions */
-_trap_handler:
+/*--------------------------------------------------------------------------
+ * Only exceptions get here: report the tagged mcause in RETURN, signal DONE and park
+ *--------------------------------------------------------------------------*/
+.balign 256
+.global trap_handler
+trap_handler:
     csrr    t0, mcause
-    bltz    t0, _handle_interrupt   // mcause[31]=1 → interrupt
-    
-    /* EXCEPTION: Write error code to RETURN_ADDR, signal DONE, halt */
-_handle_exception:
-    csrr    t1, mcause      // Read full mcause
-    andi    t1, t1, 0xFF    // Extract exception code [7:0]
-    ori     t1, t1, 0x100   // Set bit 8 to distinguish from task errors
-    li      t0, RETURN_ADDR
-    sw      t1, 0(t0)
-    
-    li      t0, DONE_ADDR
-    li      t1, 1
-    sw      t1, 0(t0)
-    
-    /* Halt */
-1:  wfi
-    j       1b
-
-_handle_interrupt:
-    /* Check if external interrupt */
-    andi    t0, t0, 0x7FF
-    li      t1, 11
-    bne     t0, t1, _trap_ret
-    
-    /* Read task address from TASKBIN_ADDR and save it in t1 */
-    li      t0, TASKBIN_ADDR
-    lw      t1, 0(t0)
-    beqz    t1, _trap_ret
-    
-    /* Clear START */
-    li      t0, START_ADDR
-    sw      zero, 0(t0)
-    
-    /* Jump to saved task address */
-    jalr    ra, 0(t1)
-    
-    /* Task completed - write exit code 0 (success, no exceptions) */
-    li      t0, RETURN_ADDR
-    sw      zero, 0(t0)
-    
-    /* Signal done */
-    li      t0, DONE_ADDR
-    li      t1, 1
-    sw      t1, 0(t0)
-
-_trap_ret:
-    mret
+    li      t2, RETURN_CRASHED
+    or      t0, t0, t2
+    li      t1, SPATZ_RETURN_ADDR
+    sw      t0, 0(t1)
+    li      t1, SPATZ_DONE_ADDR
+    li      t2, 1
+    sw      t2, 0(t1)
+trap_halt:
+    j       trap_halt

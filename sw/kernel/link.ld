@@ -26,8 +26,8 @@ MEMORY
 }
 
 /* Stack information variables.
- * Spatz owns [0xA011C000, 0xA0120000) of the private L1 view (_stack_start = 0xA011FFF8 in
- * spatz_program.ld); this region stops at 0xA011C000 to avoid overlap.
+ * Spatz owns [0xA011C000, 0xA0120000) of the private L1 view (STACK_TOP in
+ * spatz_crt0.S); this region stops at 0xA011C000 to avoid overlap.
  * Each hart gets _stack_slice_size bytes; slot n starts at
  *   sp = stack - n * _stack_slice_size
  * Slot 0 = CV32 main core (crt0.S), slots 1..8 = PULP harts 0..7 (pulp_crt0.S). */
@@ -75,17 +75,14 @@ SECTIONS
         _endtext = .;
     }  > instrram :text
 
-    /* Spatz embedded binary - inlined from header file */
-    /* Positioned right after CV32 .text in instrram */
-
-    . = ALIGN(4);
-    _spatz_binary_start = .;
-
-    .spatz_binary : {
+    /* Spatz embedded binary - inlined from header file, right after CV32 .text.
+       Aligned like .pulp_binary: spatz_crt0.S puts its trap base 256 bytes in. */
+    .spatz_binary ALIGN(256) : {
+        _spatz_binary_start = .;
         KEEP(*(.spatz_binary))
+        _spatz_binary_end = .;
     } > instrram :text
 
-    _spatz_binary_end = .;
     _spatz_binary_size = _spatz_binary_end - _spatz_binary_start;
 
     /* PULP embedded binary - inlined from header file (magia-sdk flow).

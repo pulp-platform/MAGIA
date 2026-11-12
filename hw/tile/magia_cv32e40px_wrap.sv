@@ -16,10 +16,13 @@
  *
  * Author: Luca Balboni, Fondazione Chips-IT
  *
- * CV32E40PX core with its eXtension Interface tied off, plus the instruction tracer under CORE_TRACES
+ * CV32E40PX core with its eXtension Interface, plus the instruction tracer under CORE_TRACES
  */
 
-module magia_cv32e40px_wrap #(
+module magia_cv32e40px_wrap
+  import cv32e40px_core_v_xif_pkg::*;
+#(
+  parameter bit          COREV_X_IF       = 1'b0,  // Offload unknown instructions on the eXtension Interface
   parameter bit          COREV_PULP       = 1'b0,  // PULP ISA extensions (custom CSRs, hardware loops)
   parameter bit          COREV_CLUSTER    = 1'b0,  // PULP cluster interface (cv.elw)
   parameter bit          FPU              = 1'b0,
@@ -65,11 +68,32 @@ module magia_cv32e40px_wrap #(
   output logic        debug_halted_o,
 
   input  logic        fetch_enable_i,
-  output logic        core_sleep_o
+  output logic        core_sleep_o,
+
+  // CORE-V-XIF, read only with COREV_X_IF
+  output logic               x_compressed_valid_o,
+  input  logic               x_compressed_ready_i,
+  output x_compressed_req_t  x_compressed_req_o,
+  input  x_compressed_resp_t x_compressed_resp_i,
+  output logic               x_issue_valid_o,
+  input  logic               x_issue_ready_i,
+  output x_issue_req_t       x_issue_req_o,
+  input  x_issue_resp_t      x_issue_resp_i,
+  output logic               x_commit_valid_o,
+  output x_commit_t          x_commit_o,
+  input  logic               x_mem_valid_i,
+  output logic               x_mem_ready_o,
+  input  x_mem_req_t         x_mem_req_i,
+  output x_mem_resp_t        x_mem_resp_o,
+  output logic               x_mem_result_valid_o,
+  output x_mem_result_t      x_mem_result_o,
+  input  logic               x_result_valid_i,
+  output logic               x_result_ready_o,
+  input  x_result_t          x_result_i
 );
 
   cv32e40px_top #(
-    .COREV_X_IF       ( 0                ),
+    .COREV_X_IF       ( COREV_X_IF       ),
     .COREV_PULP       ( COREV_PULP       ),
     .COREV_CLUSTER    ( COREV_CLUSTER    ),
     .FPU              ( FPU              ),
@@ -103,27 +127,28 @@ module magia_cv32e40px_wrap #(
     .data_be_o            ( data_be_o           ),
     .data_addr_o          ( data_addr_o         ),
     .data_wdata_o         ( data_wdata_o        ),
+    .data_atop_o          (                     ),  // A_EXTENSION stays 0
     .data_rdata_i         ( data_rdata_i        ),
 
-    .x_compressed_valid_o (                     ),
-    .x_compressed_ready_i ( 1'b0                ),
-    .x_compressed_req_o   (                     ),
-    .x_compressed_resp_i  ( '0                  ),
-    .x_issue_valid_o      (                     ),
-    .x_issue_ready_i      ( 1'b0                ),
-    .x_issue_req_o        (                     ),
-    .x_issue_resp_i       ( '0                  ),
-    .x_commit_valid_o     (                     ),
-    .x_commit_o           (                     ),
-    .x_mem_valid_i        ( 1'b0                ),
-    .x_mem_ready_o        (                     ),
-    .x_mem_req_i          ( '0                  ),
-    .x_mem_resp_o         (                     ),
-    .x_mem_result_valid_o (                     ),
-    .x_mem_result_o       (                     ),
-    .x_result_valid_i     ( 1'b0                ),
-    .x_result_ready_o     (                     ),
-    .x_result_i           ( '0                  ),
+    .x_compressed_valid_o ( x_compressed_valid_o ),
+    .x_compressed_ready_i ( x_compressed_ready_i ),
+    .x_compressed_req_o   ( x_compressed_req_o   ),
+    .x_compressed_resp_i  ( x_compressed_resp_i  ),
+    .x_issue_valid_o      ( x_issue_valid_o      ),
+    .x_issue_ready_i      ( x_issue_ready_i      ),
+    .x_issue_req_o        ( x_issue_req_o        ),
+    .x_issue_resp_i       ( x_issue_resp_i       ),
+    .x_commit_valid_o     ( x_commit_valid_o     ),
+    .x_commit_o           ( x_commit_o           ),
+    .x_mem_valid_i        ( x_mem_valid_i        ),
+    .x_mem_ready_o        ( x_mem_ready_o        ),
+    .x_mem_req_i          ( x_mem_req_i          ),
+    .x_mem_resp_o         ( x_mem_resp_o         ),
+    .x_mem_result_valid_o ( x_mem_result_valid_o ),
+    .x_mem_result_o       ( x_mem_result_o       ),
+    .x_result_valid_i     ( x_result_valid_i     ),
+    .x_result_ready_o     ( x_result_ready_o     ),
+    .x_result_i           ( x_result_i           ),
 
     .irq_i                ( irq_i               ),
     .irq_ack_o            ( irq_ack_o           ),

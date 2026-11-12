@@ -2,7 +2,7 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE.APACHE)
 [![SHL-0.51 license](https://img.shields.io/badge/license-SHL--0.51-green)](LICENSE.SHL)
 
-This repo contains MAGIA (**M**esh **A**rchitecture for **G**enerative **I**ntelligence **A**cceleration), an open-source large-scale accelerator designed for Generative Artificial Intelligence (GenAI). MAGIA is a network of tiles that have at their heart [RedMulE](https://github.com/pulp-platform/redmule) for General Matrix Multiply (GeMM) acceleration, [iDMA](https://github.com/pulp-platform/iDMA) for fast and efficient data movement, [Spatz Core Complex (Spatz CC)](https://github.com/pulp-platform/spatz) for vector workloads acceleration, a [PULP cluster](https://github.com/FondazioneChipsIT/cv32e40px) of 8 RISC-V cores for data-parallel workloads, and an L1 scratchpad memory (SPM). Tiles are connected to a mesh Network-on-Chip (NoC) - [FlooNoC](https://github.com/pulp-platform/FlooNoC) - used for communication, and a dedicated network for synchronization - [FractalSync](https://github.com/VictorIsachi/fractal_sync). Each tile is equipped with an [Event Unit](https://github.com/pulp-platform/event_unit_flex) for tile synchronization and event aggregation. MAGIA is designed to support matrices of sizes that vary by orders of magnitude, and also sparse matrix multiplication.
+This repo contains MAGIA (**M**esh **A**rchitecture for **G**enerative **I**ntelligence **A**cceleration), an open-source large-scale accelerator designed for Generative Artificial Intelligence (GenAI). MAGIA is a network of tiles that have at their heart [RedMulE](https://github.com/pulp-platform/redmule) for General Matrix Multiply (GeMM) acceleration, [iDMA](https://github.com/pulp-platform/iDMA) for fast and efficient data movement, a [CV32E40PX](https://github.com/FondazioneChipsIT/cv32e40px) core with the [Spatz](https://github.com/FondazioneChipsIT/spatz_vpu) vector unit for vector workloads acceleration, a [PULP cluster](https://github.com/FondazioneChipsIT/cv32e40px) of 8 RISC-V cores for data-parallel workloads, and an L1 scratchpad memory (SPM). Tiles are connected to a mesh Network-on-Chip (NoC) - [FlooNoC](https://github.com/pulp-platform/FlooNoC) - used for communication, and a dedicated network for synchronization - [FractalSync](https://github.com/VictorIsachi/fractal_sync). Each tile is equipped with an [Event Unit](https://github.com/pulp-platform/event_unit_flex) for tile synchronization and event aggregation. MAGIA is designed to support matrices of sizes that vary by orders of magnitude, and also sparse matrix multiplication.
 
 MAGIA is developed as part of the [PULP (Parallel Ultra-Low Power)](https://pulp-platform.org/) project, a joint effort between ETH Zurich and the University of Bologna.
 
@@ -186,7 +186,7 @@ To change the thread count, re-run `make verilate` with the new value.
 ### Tile
 The central piece of the architecture is the MAGIA tile containing a GeMM accelerator, a Vector Processor, a DMA engine, a PULP cluster of RISC-V cores, a multi-banked L1 SPM, an Event Unit, and a lightweight control core. The L1 features interleaved memory banks that compose the Tightly-Coupled Data Memory (TCDM). Each tile has access to the global L2 and to a subset of other tiles' L1, accessing the latter via on-chip remote direct memory access (RDMA). Inter-tile and global communication is carried out through AXI-based narrow (32-bit) and wide (256-bit) NoC channels in [FlooNoC](https://github.com/pulp-platform/FlooNoC). External tiles access the L1 through an OpenBus Interface ([OBI](https://github.com/pulp-platform/obi)) XBAR, the control core through its own HCI port.
 
-Each tile is controlled by a [CV32E40PX](https://github.com/FondazioneChipsIT/cv32e40px) main core. Control of iDMA, RedMulE, FractalSync, Spatz CC, and the PULP cluster follows a memory-mapped model, with the Event Unit handling event aggregation for system control.
+Each tile is controlled by a [CV32E40PX](https://github.com/FondazioneChipsIT/cv32e40px) main core. Control of iDMA, RedMulE, FractalSync, Spatz, and the PULP cluster follows a memory-mapped model, with the Event Unit handling event aggregation for system control.
 
 `magia_tile` wraps `magia_isle` (cores, accelerators, L1, crossbars and Event Unit) with the FlooNoC network interface and router. What a tile contains is set by its `TileCfg` (`magia_tile_cfg_t` in `hw/mesh/magia_pkg.sv`).
 
@@ -197,7 +197,7 @@ Memories of a tile with the default `TileCfg`:
 | L1 (TCDM) | 1 MiB: 128 KiB private + 896 KiB global | 32 banks x 8192 words x 32 bit |
 | PULP cluster I$ | 8 KiB, shared by the 8 cores | 4 ways x 64 lines x 256 bit |
 | Control-core I$ | 2 KiB | 4 ways x 32 lines x 128 bit |
-| Spatz CC I$ | 2 KiB | 2 ways x 32 lines x 256 bit |
+| Spatz I$ | 2 KiB | 2 ways x 32 lines x 256 bit |
 
 ### Mesh
 Replicating the MAGIA tile, we scale up to a two-dimensional (2D) mesh of compute tiles. Each tile takes its `TileCfg` from the `TILE_CFGS` parameter of `magia` (`HOMO_TILE_CFGS` by default). The NoC allows access to the global west-side L2 through row-side interfaces, while tiles exchange traffic through FlooNoC router. The mesh uses XY routing and carries both AXI narrow channels (32-bit) and AXI wide channels (256-bit), with protocol conversion handled by per-tile Network Interfaces (NIs).
@@ -220,9 +220,7 @@ Address space seen by tile k, with N tiles (up to 16x16) and tile j from 0 to N-
 |---------------------------------|-------------------------------------|--------|
 | `j * 0x0010_0000`               | `j * 0x0010_0000 + 0x0001_FFFF`     | Unmapped |
 | `j * 0x0010_0000 + 0x0002_0000` | `j * 0x0010_0000 + 0x000F_FFFF`     | L1 of tile j, global part (896 KiB) |
-| `N * 0x0010_0000`               | `0x0FFF_FFFF`                       | Unmapped |
-| `0x1000_0000`                   | `0x1000_00FF`                       | Spatz CC BootROM |
-| `0x1000_0100`                   | `0x9FFF_FFFF`                       | Unmapped |
+| `N * 0x0010_0000`               | `0x9FFF_FFFF`                       | Unmapped |
 | `0xA000_0000`                   | `0xA000_4FFF`                       | Tile peripherals (below) |
 | `0xA000_5000`                   | `0xA00F_FFFF`                       | Unmapped |
 | `0xA010_0000`                   | `0xA011_FFFF`                       | L1 of tile k, private part (128 KiB) |
@@ -306,10 +304,10 @@ GeMM engine on operands in L1 (`redmule_mm_utils.h`): `hwpe_acquire_job()` reser
 `redmule_cfg(..)` sets addresses, sizes and format, `hwpe_trigger_job()` starts it and
 `hwpe_wait_for_completion()` waits for the end.
 
-#### Spatz CC
-Vector core complex running tasks from the Spatz binary embedded in the CV32 ELF
-(`magia_spatz_utils.h`): `spatz_init(..)` boots it, `spatz_run_task(..)` starts a task and
-`eu_wait_spatz_polling(..)` waits for it. See [spatz/README.md](spatz/README.md).
+#### Spatz
+CV32E40PX with the Spatz vector unit on its eXtension Interface, dispatched like a one-core PULP cluster
+with tasks from the Spatz binary embedded in the CV32 ELF (`magia_spatz_utils.h`): `spatz_init(..)` boots it,
+`spatz_run_task(..)` starts a task and `eu_wait_spatz_wfe(..)` waits for it. See [spatz/README.md](spatz/README.md).
 
 #### PULP Cluster
 Each tile embeds a cluster of `TileCfg.Cluster.NumCores` (8 by default) [CV32E40PX](https://github.com/FondazioneChipsIT/cv32e40px) cores with a shared instruction cache and their own [Event Unit](https://github.com/pulp-platform/event_unit_flex) (dispatch FIFO, hardware barriers and mutex).

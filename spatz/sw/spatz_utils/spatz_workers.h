@@ -106,7 +106,10 @@ static inline float fdotp_v32b(const float *a, const float *b, unsigned int avl)
   // Reduce and return
   asm volatile("vsetvli zero, %0, e32, m8, ta, ma" ::"r"(orig_avl));
   asm volatile("vfredusum.vs v0, v24, v0");
-  asm volatile("vfmv.f.s %0, v0" : "=f"(red));
+  // vmv.x.s, not vfmv.f.s: the CV32E40PX takes XIF results only into integer registers
+  uint32_t red_bits;
+  asm volatile("vmv.x.s %0, v0" : "=r"(red_bits));
+  __builtin_memcpy(&red, &red_bits, sizeof(red));
   return red;
 }
 
@@ -144,7 +147,10 @@ static inline float16_t fdotp_v16b(const float16_t *a, const float16_t *b, unsig
   // Reduce and return
   asm volatile("vsetvli zero, %0, e16, m8, ta, ma" ::"r"(orig_avl));
   asm volatile("vfredusum.vs v0, v24, v0");
-  asm volatile("vfmv.f.s %0, v0" : "=f"(red));
+  // vmv.x.s, not vfmv.f.s: the CV32E40PX takes XIF results only into integer registers
+  uint16_t red_bits;
+  asm volatile("vmv.x.s %0, v0" : "=r"(red_bits));
+  __builtin_memcpy(&red, &red_bits, sizeof(red));
   return red;
 }
 

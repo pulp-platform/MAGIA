@@ -15,8 +15,8 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
- * 
- *  Spatz Utility Functions
+ *
+ * Spatz control from the CV32: boot the CV32E40PX+Spatz core once, then dispatch tasks like to a one-core cluster
  */
 #ifndef MAGIA_SPATZ_UTILS_H
 #define MAGIA_SPATZ_UTILS_H
@@ -24,65 +24,48 @@
 #include <stdint.h>
 #include "magia_tile_utils.h"
 
-#define SPATZ_CLK_EN   (SPATZ_CTRL_BASE + 0x00)
-#define SPATZ_READY    (SPATZ_CTRL_BASE + 0x04)
-#define SPATZ_START    (SPATZ_CTRL_BASE + 0x08)
-#define SPATZ_TASKBIN  (SPATZ_CTRL_BASE + 0x0C)
-#define SPATZ_DATA     (SPATZ_CTRL_BASE + 0x10)
-#define SPATZ_RETURN   (SPATZ_CTRL_BASE + 0x14)
-#define SPATZ_DONE     (SPATZ_CTRL_BASE + 0x18)
+// Same register map as PULP_CTRL (obi_slave_ctrl_cluster)
+#define SPATZ_FETCH_EN (SPATZ_CTRL_BASE + 0x00)  // R/W boot enable, sticky in the core; every write resets READY
+#define SPATZ_BINARY   (SPATZ_CTRL_BASE + 0x04)  // R/W boot address
+#define SPATZ_DONE     (SPATZ_CTRL_BASE + 0x08)  // W   Spatz signals completion, raising EU_SPATZ_DONE on the CV32
+#define SPATZ_TASKBIN  (SPATZ_CTRL_BASE + 0x0C)  // R/W task function address
+#define SPATZ_DATA     (SPATZ_CTRL_BASE + 0x10)  // R/W task argument (a0)
+#define SPATZ_START    (SPATZ_CTRL_BASE + 0x14)  // R/W CV32 rings Spatz (its MEI), Spatz writes 0 to ACK
+#define SPATZ_READY    (SPATZ_CTRL_BASE + 0x18)  // R 1 once Spatz booted, W Spatz posts 1 once armed
+#define SPATZ_RETURN   (SPATZ_CTRL_BASE + 0x1C)  // R/W task exit code, written by Spatz before DONE
+#define SPATZ_RETURN_CRASHED_BIT (0x80000000u)  // Set when Spatz trapped instead of returning; low bits are mcause
 
 #define mmio32(x) (*(volatile uint32_t *)(x))
 
-static inline void spatz_clk_en(void) {
-    mmio32(SPATZ_CLK_EN) = 1;
-}
-
-static inline void spatz_clk_dis(void) {
-    mmio32(SPATZ_CLK_EN) = 0;
-}
-
 static inline void spatz_set_func(uint32_t addr) {
     mmio32(SPATZ_TASKBIN) = addr;
-}
-
-static inline void spatz_trigger_en_irq(void) {
-    mmio32(SPATZ_START) = 1;
-}
-
-static inline void spatz_trigger_dis_irq(void) {
-    mmio32(SPATZ_START) = 0;
-}
-
-static inline void spatz_done(void) {
-    mmio32(SPATZ_DONE) = 1;
-}
-
-static inline uint32_t spatz_get_exit_code(void) {
-    return mmio32(SPATZ_RETURN);
-}
-
-static inline void spatz_run_task(uint32_t spatz_task_addr) {
-    spatz_set_func(spatz_task_addr);
-    spatz_trigger_en_irq();
-    while(mmio32(SPATZ_START) != 0);
 }
 
 static inline void spatz_pass_params(uint32_t params_ptr) {
     mmio32(SPATZ_DATA) = params_ptr;
 }
 
+static inline uint32_t spatz_get_exit_code(void) {
+    return mmio32(SPATZ_RETURN);
+}
+
+// Boot once after reset: FETCH_EN is sticky in the core, so a second boot does nothing
+static inline void spatz_init(uint32_t binary_start) {
+    mmio32(SPATZ_BINARY) = binary_start;
+    mmio32(SPATZ_FETCH_EN) = 1;
+    while ((mmio32(SPATZ_READY) & 1u) == 0u) { }
+}
+
+// Returns once Spatz has taken the task; completion comes as EU_SPATZ_DONE
+static inline void spatz_run_task(uint32_t spatz_task_addr) {
+    spatz_set_func(spatz_task_addr);
+    mmio32(SPATZ_START) = 1;
+    while (mmio32(SPATZ_START) != 0u) { }
+}
+
 static inline void spatz_run_task_with_params(uint32_t spatz_task_addr, uint32_t params_ptr) {
     spatz_pass_params(params_ptr);
     spatz_run_task(spatz_task_addr);
-}
-
-static inline void spatz_init(uint32_t spatz_start_addr) {
-    spatz_set_func(spatz_start_addr);
-    spatz_clk_en();
-    while (mmio32(SPATZ_READY) == 0){
-        printf("Waiting for Spatz to be ready...\n");
-    };
 }
 
 #endif

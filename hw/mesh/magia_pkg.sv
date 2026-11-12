@@ -72,14 +72,8 @@ package magia_pkg;
     bit          MisalignedAccess;  // TCDM accesses off the bank word, at the cost of one more bank on the HCI port
   } redmule_cfg_t;
 
+  // The vector unit itself is configured by spatz_pkg inside spatz_vpu
   typedef struct packed {
-    bit          RVD;       // Double-precision vector support (drives 64-bit TCDM)
-    bit          RVF;       // Single-precision FP support
-    bit          RVV;       // Vector extension support
-    int unsigned NumIPU;    // Number of integer processing units
-    int unsigned NumFPU;    // Number of FP processing units
-    bit          XDivSqrt;  // FP division/sqrt enable
-    bit          XDMA;      // DMA inside the Spatz CC
     int unsigned ICacheL0LineCount; // private L0 tier lines, per core
     int unsigned ICacheLineWidth;   // cache line width in bits (both tiers)
     int unsigned ICacheLineCount;   // shared-tier set count
@@ -98,11 +92,11 @@ package magia_pkg;
     l1_cfg_t        L1;        // L1 scratchpad (TCDM) geometry
     idma_cfg_t      IDma;      // iDMA parameters
     bit             EnRedMule; // RedMulE HWPE: engine + HCI HWPE port + OBI control port
-    bit             EnSpatzCC; // Spatz CC: core complex + bootrom + dedicated I$ + HCI/OBI master ports
+    bit             EnSpatzCC; // Spatz: CV32E40PX + Spatz vector unit + dedicated I$ + HCI/OBI master ports
     bit             EnCluster; // PULP cluster: cv32e40px cores + shared I$ + OBI master ports
     bit             EnCollective; // Narrow collectives: control registers + collective_gen on the narrow master port
     redmule_cfg_t   RedMule;   // RedMulE parameters (valid iff EnRedMule)
-    spatz_cfg_t     Spatz;     // Spatz CC parameters (valid iff EnSpatzCC)
+    spatz_cfg_t     Spatz;     // Spatz parameters (valid iff EnSpatzCC)
     cluster_cfg_t   Cluster;   // PULP cluster parameters (valid iff EnCluster)
   } magia_tile_cfg_t;
 
@@ -125,51 +119,7 @@ package magia_pkg;
     MisalignedAccess: 1'b1
   };
 
- // Derived from the MAGIA Makefile (Reflects on spatz_pkg.sv in spatz_cluster dep)
-`ifdef SPATZ_RVD
-  localparam bit          MagiaSpatzRVD      = `SPATZ_RVD;
-`else
-  localparam bit          MagiaSpatzRVD      = 1'b0;
-`endif
-`ifdef SPATZ_RVF
-  localparam bit          MagiaSpatzRVF      = `SPATZ_RVF;
-`else
-  localparam bit          MagiaSpatzRVF      = 1'b1;
-`endif
-`ifdef SPATZ_RVV
-  localparam bit          MagiaSpatzRVV      = `SPATZ_RVV;
-`else
-  localparam bit          MagiaSpatzRVV      = 1'b1;
-`endif
-`ifdef SPATZ_N_IPU
-  localparam int unsigned MagiaSpatzNumIPU   = `SPATZ_N_IPU;
-`else
-  localparam int unsigned MagiaSpatzNumIPU   = 1;
-`endif
-`ifdef SPATZ_N_FPU
-  localparam int unsigned MagiaSpatzNumFPU   = `SPATZ_N_FPU;
-`else
-  localparam int unsigned MagiaSpatzNumFPU   = 4;
-`endif
-`ifdef SPATZ_XDIVSQRT
-  localparam bit          MagiaSpatzXDivSqrt = `SPATZ_XDIVSQRT;
-`else
-  localparam bit          MagiaSpatzXDivSqrt = 1'b0;
-`endif
-`ifdef SPATZ_XDMA
-  localparam bit          MagiaSpatzXDMA     = `SPATZ_XDMA;
-`else
-  localparam bit          MagiaSpatzXDMA     = 1'b0;
-`endif
-
   localparam spatz_cfg_t MagiaSpatzDefaultCfg = '{
-    RVD:      MagiaSpatzRVD,
-    RVF:      MagiaSpatzRVF,
-    RVV:      MagiaSpatzRVV,
-    NumIPU:   MagiaSpatzNumIPU,
-    NumFPU:   MagiaSpatzNumFPU,
-    XDivSqrt: MagiaSpatzXDivSqrt,
-    XDMA:     MagiaSpatzXDMA,
     ICacheL0LineCount: 8,
     ICacheLineWidth:   256,
     ICacheLineCount:   32,

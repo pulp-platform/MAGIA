@@ -33,8 +33,7 @@ MEMORY
     prog (rwxa)  : ORIGIN = 0x00000000, LENGTH = 0x10000  /* 64KB max - relative addressing */
 }
 
-/* Spatz stack: 0xA011C000-0xA0120000 (16KB), above the CV32/PULP slots of sw/kernel/link.ld */
-_stack_start = 0xA011FFF8;  /* Top of Spatz stack (grows downward) */
+/* Spatz stack: 0xA011C000-0xA0120000 (16KB), set by spatz_crt0.S above the CV32/PULP slots of sw/kernel/link.ld */
 
 SECTIONS
 {
@@ -73,10 +72,6 @@ SECTIONS
         . = ALIGN(4);
         __bss_end = .;
     } > prog
-
-    /* Stack symbol for spatz_crt0.S */
-    /* spatz_crt0.S uses: la sp, stack */
-    stack = _stack_start;
 
     /* Discard debug sections */
     /DISCARD/ : {

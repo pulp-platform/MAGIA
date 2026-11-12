@@ -248,8 +248,10 @@ spatz_tests:
     testbench: mesh
     sims: [questa, verilator]
     requires: []
+  # Atomics need the A extension, which the CV32E40PX of Spatz lacks
   atomic_mesh_spatz_test:
     testbench: mesh
+    cores: []
     sims: [questa, verilator]
     requires: []
   dotp_mesh_spatz_test:
@@ -277,6 +279,15 @@ spatz_tests:
     sims: [questa, verilator]
     requires: []
   vecsum_spatz_test:
+    testbench: tile
+    sims: [questa, verilator]
+    requires: []
+  instructions_sweep_spatz_test:
+    testbench: tile
+    sims: [questa, verilator]
+    requires: []
+  # One riscvTest of spatz_vpu (vadd by default); scripts/spatz_rvv_sweep.sh runs them all
+  rvv_riscv_test:
     testbench: tile
     sims: [questa, verilator]
     requires: []

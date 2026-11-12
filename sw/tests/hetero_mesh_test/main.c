@@ -145,7 +145,6 @@ static unsigned int run_spatz(void) {
         }
     }
 
-    spatz_clk_dis();
     return errors;
 }
 

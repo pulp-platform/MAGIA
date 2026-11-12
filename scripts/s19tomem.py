@@ -33,16 +33,17 @@ if len(sys.argv) >= 6:
 else:
     DATA_BASE = MEM_START + DEFAULT_DATA_OFFSET
 
+with open(sys.argv[1], "r") as f:
+    s = f.read()
+
 INSTR_SIZE = 0x8000
 INSTR_END  = MEM_START + INSTR_SIZE
-DATA_SIZE  = 0x40000
+# At least 256 KiB, more when the image's data go further (e.g. the magia-sdk ONNX test vectors)
+DATA_SIZE  = max([0x40000] + [int(l[0:8], 16) + 8 - DATA_BASE for l in s.split() if int(l[0:8], 16) >= DATA_BASE])
 DATA_END   = DATA_BASE + DATA_SIZE
 
 INSTR_MEM_SIZE = INSTR_SIZE
 DATA_MEM_SIZE  = DATA_SIZE
-
-with open(sys.argv[1], "r") as f:
-    s = f.read()
 
 if len(sys.argv) >= 4:
     instr_txt = sys.argv[2]

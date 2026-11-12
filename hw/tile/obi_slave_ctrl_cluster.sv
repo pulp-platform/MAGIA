@@ -23,7 +23,7 @@ module obi_slave_ctrl_cluster
 #(
    parameter magia_tile_pkg::magia_tile_cfg_t TileCfg = magia_tile_pkg::MagiaTileDefaultCfg,
    parameter logic [31:0] BaseAddr = magia_tile_pkg::CLUSTER_CTRL_ADDR_START,  // Base address for PULP cluster control registers
-   localparam int unsigned NumCores = TileCfg.Cluster.NumCores
+   parameter int unsigned NumCores = TileCfg.Cluster.NumCores  // 1 for the Spatz core
 )  (
   input  logic                                             clk_i,
   input  logic                                             rst_ni,
@@ -36,7 +36,8 @@ module obi_slave_ctrl_cluster
   output logic [31:0]         boot_addr_o [NumCores-1:0],
   output logic [NumCores-1:0] fetch_en_o,                // broadcast (replicated)
   output logic                done_o,                    // 1-cycle pulse on a DONE write
-  output logic                start_irq_o                // 1-cycle event pulse, wired directly into core 0's Cluster Event Unit Buffer
+  output logic                start_irq_o,               // 1-cycle event pulse, wired directly into core 0's Cluster Event Unit Buffer
+  output logic                start_o                    // START level, until core 0 ACKs: a wake-up interrupt for a core without EU
 );
 
 //-----------------------------------------------------------------------------
@@ -217,6 +218,7 @@ end
 assign fetch_en_o   = {NumCores{fetch_en_q}};
 assign done_o       = done_q;
 assign start_irq_o  = start_irq_q;
+assign start_o      = start_q;
 
 // All cores share the same boot address (PULP binary entry point)
 always_comb begin

@@ -25,7 +25,7 @@
  *   1) Fill FP16 input vectors X (= 1.0) and Y (= 2.0) in tile-local L1.
  *   2) Initialize Spatz + Event Unit; offload Z = X + Y (vecsum16) to Spatz.
  *   3) Sleep via WFE (EU bit 8 = spatz_done) until Spatz signals completion.
- *   4) Check Spatz exit code; disable Spatz clock.
+ *   4) Check Spatz exit code.
  *   5) Reset EU, boot PULP, arm PULP_DONE WFE and dispatch the cluster task.
  *   6) Each cluster core sums its 1/8th of Z (raw uint16 bit-patterns) → L2.
  *   7) CV32 wakes from WFE, collects per-core partial sums, verifies total.
@@ -140,8 +140,6 @@ int main(void) {
     } else {
         printf("[CV32] Spatz vecsum16 done OK.\n");
     }
-
-    spatz_clk_dis();
 
     /* ------------------------------------------------------------------
     * Step 4: boot PULP, dispatch the cluster task and wait for DONE via WFE.

@@ -39,7 +39,7 @@ int main(void) {
     eu_init();
     eu_enable_events(EU_SPATZ_DONE_MASK);  // Enable Spatz DONE event
 
-    // Enable clk and initialize Spatz (bootrom jumps to _start, does full init)
+    // Boot Spatz into its dispatcher loop
     printf("\n[CV32] Initializing Spatz...\n");
     spatz_init(SPATZ_BINARY_START);
     
@@ -58,8 +58,6 @@ int main(void) {
         printf("[CV32] SPATZ TASK ENDED successfully\n");
     }
 
-    // Disable Spatz clock
-    spatz_clk_dis();
     
     // Return error status for CV32
     return errors;

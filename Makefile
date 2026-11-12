@@ -125,6 +125,13 @@ INC += -Isw/utils
 INC += -Ispatz/sw/headers_bin
 INC += -Isw/kernel_pulp/headers_bin
 
+# sdk_spatz_test runs the magia-sdk Spatz test SDK_TEST (e.g. onnx_add) with its own task and header names
+SDK_TEST_DIR = magia-sdk/tests/spatz_on_magia/$(SDK_TEST)
+ifneq ($(SDK_TEST),)
+INC += -Isw/tests/spatz_tests/sdk_shim -I$(SDK_TEST_DIR) -I$(SDK_TEST_DIR)/include -I$(SDK_TEST_DIR)/test_data
+INC += -Imagia-sdk/tests/common
+endif
+
 # ----------------------------------------------------------------------------
 # Kernel runtime selection — magia-sdk single-binary flow.
 #
@@ -162,13 +169,13 @@ SPATZ_SW_DIR   := spatz/sw
 # Example: HELLO_WORLD_TASK -> hello_world_task.  PULP task macros use the same
 # naming scheme, so remove tasks backed by pulp_task/*.c from the Spatz list.
 # When PULP tasks are embedded, the actual CV32 source is main.c.
-_SPATZ_SRC_TO_GREP := $(if $(PULP_TASKS),$(TEST_DIR_PATH)/main.c,$(TEST_SRCS))
+_SPATZ_SRC_TO_GREP := $(if $(SDK_TEST),$(SDK_TEST_DIR)/main.c,$(if $(PULP_TASKS),$(TEST_DIR_PATH)/main.c,$(TEST_SRCS)))
 _AUTO_TASKS := $(shell grep -oP '\b(?!SPATZ_)[A-Z][A-Z0-9_]*_TASK\b' $(_SPATZ_SRC_TO_GREP) 2>/dev/null | tr '[:upper:]' '[:lower:]' | awk '!seen[$$0]++')
 SPATZ_TASKS := $(filter-out $(PULP_TASKS),$(_AUTO_TASKS))
 
 # Setup build object dirs
 # Spatz/PULP artifacts and generated headers are named after the bare test name
-TEST_NAME      = $(notdir $(test))
+TEST_NAME      = $(or $(SDK_TEST),$(notdir $(test)))
 TEST_BUILD_DIR = $(TEST_DIR)/$(if $(TEST_SUBDIR),$(TEST_SUBDIR)/)$(test)
 CRT=$(TEST_BUILD_DIR)/build/crt0.o
 OBJ=$(TEST_BUILD_DIR)/build/verif.o
@@ -199,7 +206,7 @@ $(STIM_INSTR) $(STIM_DATA): $(BIN)
 spatz-header:
 	@if [ -n "$(SPATZ_TASKS)" ]; then \
 		echo "[SPATZ] Auto-detected tasks: $(SPATZ_TASKS)"; \
-		$(MAKE) -C $(SPATZ_SW_DIR) task="$(SPATZ_TASKS)" TEST_NAME=$(TEST_NAME) SPATZ_RVD=$(SPATZ_RVD) SPATZ_VLEN=$(SPATZ_VLEN) SPATZ_N_IPU=$(SPATZ_N_IPU) SPATZ_N_FPU=$(SPATZ_N_FPU) SPATZ_XDIVSQRT=$(SPATZ_XDIVSQRT) SPATZ_XDMA=$(SPATZ_XDMA) SPATZ_RVF=$(SPATZ_RVF) SPATZ_RVV=$(SPATZ_RVV) all; \
+		$(MAKE) -C $(SPATZ_SW_DIR) task="$(SPATZ_TASKS)" TEST_NAME=$(TEST_NAME) $(if $(RVV_TEST),RVV_TEST=$(RVV_TEST)) all; \
 	else \
 		echo "[SPATZ] No Spatz tasks detected - skipping Spatz compilation"; \
 	fi
@@ -367,30 +374,6 @@ endif
 
 bender_targs += -t redmule_hwpe
 
-# Define for Spatz target
-bender_defs  += -D TARGET_SPATZ
-SPATZ_RVD      ?= 0   # 0: 32-bit TCDM (ELEN=32), 1: 64-bit TCDM (ELEN=64)
-SPATZ_VLEN     ?= 256 # Vector length in bits (128, 256, 512, ...)
-SPATZ_NRVREG   ?= 32  # Number of vector registers (RISC-V standard=32)
-SPATZ_NR_VRF_BANKS ?= 4  # Number of VRF banks (banking parallelism: 2, 4, 8)
-SPATZ_N_IPU    ?= 1   # Number of Integer Processing Units (1-8)
-SPATZ_N_FPU    ?= 4   # Number of Floating Point Units (1-8)
-SPATZ_NR_PARALLEL_INSTR ?= 4  # Number of parallel vector instructions (scoreboard depth)
-SPATZ_XDIVSQRT ?= 0   # 0: FP div/sqrt disabled, 1: enabled (increases area)
-SPATZ_XDMA     ?= 0   # 0: DMA disabled, 1: enabled
-SPATZ_RVF      ?= 1   # 0: single-precision FP disabled, 1: enabled
-SPATZ_RVV      ?= 1   # 0: vector extension disabled, 1: enabled
-bender_defs    += -D SPATZ_RVD=$(SPATZ_RVD)
-bender_defs    += -D SPATZ_VLEN=$(SPATZ_VLEN)
-bender_defs    += -D SPATZ_NRVREG=$(SPATZ_NRVREG)
-bender_defs    += -D SPATZ_NR_VRF_BANKS=$(SPATZ_NR_VRF_BANKS)
-bender_defs    += -D SPATZ_N_IPU=$(SPATZ_N_IPU)
-bender_defs    += -D SPATZ_N_FPU=$(SPATZ_N_FPU)
-bender_defs    += -D SPATZ_NR_PARALLEL_INSTR=$(SPATZ_NR_PARALLEL_INSTR)
-bender_defs    += -D SPATZ_XDIVSQRT=$(SPATZ_XDIVSQRT)
-bender_defs    += -D SPATZ_XDMA=$(SPATZ_XDMA)
-bender_defs    += -D SPATZ_RVF=$(SPATZ_RVF)
-bender_defs    += -D SPATZ_RVV=$(SPATZ_RVV)
 
 
 update-ips:

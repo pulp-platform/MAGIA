@@ -1,0 +1,44 @@
+/*
+ * Copyright (C) 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Author: Luca Balboni, Fondazione Chips-IT
+ *
+ * Runs one riscvTest of spatz_vpu on Spatz (make ... RVV_TEST=<name>, e.g. vadd); scripts/spatz_rvv_sweep.sh runs them all
+ */
+
+#include "magia_tile_utils.h"
+#include "magia_spatz_utils.h"
+#include "event_unit_utils.h"
+#include "rvv_riscv_test_task_bin.h"
+
+int main(void) {
+    eu_init();
+    eu_enable_events(EU_SPATZ_DONE_MASK);
+    spatz_init(SPATZ_BINARY_START);
+
+    spatz_run_task(RISCV_TEST_TASK);
+    eu_wait_spatz_wfe(EU_SPATZ_DONE_MASK);
+
+    uint32_t exit_code = spatz_get_exit_code();
+    if (exit_code & SPATZ_RETURN_CRASHED_BIT) {
+        printf("[CV32] Spatz trapped, mcause 0x%x\n", exit_code & ~SPATZ_RETURN_CRASHED_BIT);
+    } else if (exit_code != 0) {
+        printf("[CV32] %u riscvTest cases failed\n", exit_code);
+    } else {
+        printf("[CV32] riscvTest passed\n");
+    }
+    return exit_code;
+}

@@ -16,50 +16,16 @@
 # Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
 # Spatz Programs Makefile for MAGIA Tile
 
-ifdef SPATZ_LLVM_PATH
-    LLVM_PATH := $(SPATZ_LLVM_PATH)
-else
-    CLANG_FROM_PATH := $(shell dirname $$(dirname $$(which clang 2>/dev/null)) 2>/dev/null)
-    ifeq ($(shell test -x "$(CLANG_FROM_PATH)/bin/clang" && echo 1),1)
-        LLVM_PATH := $(CLANG_FROM_PATH)
-    else
-        LLVM_PATH := /srv/home/luca.balboni10/LLVM/install/llvm
-    endif
-endif
-
-# Configuration from top-level Makefile
-SPATZ_RVD      ?= 0   # 0: ELEN=32, 1: ELEN=64
-SPATZ_VLEN     ?= 256 # Vector length in bits
-SPATZ_N_IPU    ?= 1   # Number of Integer Processing Units (1-8)
-SPATZ_N_FPU    ?= 4   # Number of Floating Point Units (1-8)
-SPATZ_XDIVSQRT ?= 0   # 0: FP div/sqrt disabled, 1: enabled
-SPATZ_XDMA     ?= 0   # 0: DMA disabled, 1: enabled
-SPATZ_RVF      ?= 1   # 0: single-precision FP disabled, 1: enabled
-SPATZ_RVV      ?= 1   # 0: vector extension disabled, 1: enabled
+# The spatz-llvm module installation, unless SPATZ_LLVM_PATH points elsewhere
+SPATZ_LLVM_PATH ?= /opt/riscv/spatz-22-llvm
+LLVM_PATH       := $(SPATZ_LLVM_PATH)
 
 # Test name for generating specific header (passed from top Makefile)
 TEST_NAME      ?= base_spatz_test
 
-ISA      ?= riscv
-ARCH     ?= rv
-XLEN     ?= 32
-
-# Build ISA string dynamically based on configuration flags
-XTEN := ima
-ifeq ($(SPATZ_RVD),1)
-    XTEN := $(XTEN)fd
-    XABI ?= 32d
-else ifeq ($(SPATZ_RVF),1)
-    XTEN := $(XTEN)f
-    XABI ?= 32f
-else
-    XABI ?= 32
-endif
-ifeq ($(SPATZ_RVV),1)
-    XTEN := $(XTEN)v
-endif
-XTEN := $(XTEN)_zfh
-ABI  ?= ilp
+# CV32E40PX scalar ISA (no A, no D) plus the vector extension that Spatz executes over the XIF
+MARCH ?= rv32imf_zve64f_zfh
+MABI  ?= ilp32f
 
 # Toolchain paths
 CC      = $(LLVM_PATH)/bin/clang
@@ -67,23 +33,44 @@ OBJCOPY = $(LLVM_PATH)/bin/llvm-objcopy
 OBJDUMP = $(LLVM_PATH)/bin/llvm-objdump
 
 # Architecture flags  
-ARCH_FLAGS   = --target=riscv32 -march=$(ARCH)$(XLEN)$(XTEN) -mabi=$(ABI)$(XABI)
-ARCH_FLAGS  += -menable-experimental-extensions
+ARCH_FLAGS   = --target=riscv32 -march=$(MARCH) -mabi=$(MABI)
 
-# Compiler flags (RVD=$(SPATZ_RVD), VLEN=$(SPATZ_VLEN), N_IPU=$(SPATZ_N_IPU), N_FPU=$(SPATZ_N_FPU), XDivSqrt=$(SPATZ_XDIVSQRT), Xdma=$(SPATZ_XDMA), RVF=$(SPATZ_RVF), RVV=$(SPATZ_RVV))
+# -fPIE -fno-jump-tables -mno-relax: the binary runs where the CV32 ELF places it, with no loader to fix it up
 CFLAGS       = $(ARCH_FLAGS) -static -nostartfiles -nostdlib
 CFLAGS      += -O3 -g -Wall -Wextra
-CFLAGS      += -fno-common -ffunction-sections -fdata-sections -fPIC
+CFLAGS      += -fno-common -ffunction-sections -fdata-sections -fPIE -fno-jump-tables -mno-relax
 CFLAGS      += -fno-builtin-memset -fno-builtin-memcpy
+# No vector code the source did not write: the VLSU reaches only L1, and the kernels own the
+# vector state (same switches as spatz_vpu's sw/cmake/toolchain-llvm.cmake)
+CFLAGS      += -mno-implicit-float -fno-vectorize -fno-slp-vectorize -mllvm -scalable-vectorization=off
+CFLAGS      += -mllvm -combiner-store-merging=false -mllvm -disable-vector-combine
 CFLAGS      += -mcmodel=medany
-CFLAGS      += -DSPATZ_RVD=$(SPATZ_RVD) -DSPATZ_VLEN=$(SPATZ_VLEN) -DSPATZ_N_IPU=$(SPATZ_N_IPU) -DSPATZ_N_FPU=$(SPATZ_N_FPU) -DSPATZ_XDIVSQRT=$(SPATZ_XDIVSQRT) -DSPATZ_XDMA=$(SPATZ_XDMA) -DSPATZ_RVF=$(SPATZ_RVF) -DSPATZ_RVV=$(SPATZ_RVV)
 CFLAGS      += -I../../sw/utils -I../../hw/include -Ispatz_utils
+
+# riscv_test_task runs one riscvTest of spatz_vpu, e.g. RVV_TEST=vadd; ELEN=32 skips the
+# e64 cases, whose FP64 scalars need the D extension the CV32E40PX lacks
+RVV_TEST      ?= vadd
+RVV_TEST_ELEN ?= 32
+ifneq ($(filter riscv_test_task,$(task)),)
+RVV_TESTS_DIR ?= $(shell cd ../.. && $(or $(BENDER),bender) path spatz_vpu)/sw/riscvTests
+CFLAGS      += -Iriscv_tests -I$(RVV_TESTS_DIR)/isa/macros/vector -DELEN=$(RVV_TEST_ELEN)
+CFLAGS      += -DRVV_TEST_SRC='"$(RVV_TESTS_DIR)/isa/rv64uv/$(RVV_TEST).c"'
+CFLAGS      += -Os -Wno-unused-parameter -Wno-sign-compare -Wno-format
+endif
+
+# A magia-sdk Spatz test (SDK_TEST, see sdk_spatz_test) brings its own task and headers
+SDK_TEST_DIR  = ../../magia-sdk/tests/spatz_on_magia/$(SDK_TEST)
+ifneq ($(SDK_TEST),)
+CFLAGS      += -I../../sw/tests/spatz_tests/sdk_shim -I$(SDK_TEST_DIR)/include -I$(SDK_TEST_DIR)/test_data
+endif
 
 # Linker flags
 LDFLAGS      = -T $(KERNEL_DIR)/spatz_program.ld -fuse-ld=lld
 LDFLAGS     += -Wl,-z,norelro
 LDFLAGS     += -Wl,--allow-multiple-definition
 LDFLAGS     += $(ARCH_FLAGS)
+# Soft-float helpers (e.g. float to double for printf), as there is no libc or libgcc
+LDFLAGS     += $(LLVM_PATH)/ilp32f/compiler-rt/lib/riscv32-unknown-unknown-elf/libclang_rt.builtins-riscv32.a
 
 # Single binary with selected tests (passed via TESTS variable)
 # Binary and header names based on TEST_NAME
@@ -93,7 +80,7 @@ HEADER_NAME  = $(TEST_NAME)_task_bin
 # Directories
 BIN_DIR      = bin
 HEADER_DIR   = headers_bin
-TESTS_DIR    = tasks
+TESTS_DIR    = $(if $(SDK_TEST),$(SDK_TEST_DIR)/spatz_task,tasks)
 KERNEL_DIR   = kernel
 
 # Tasks to include (lowercase 'task' variable)
@@ -140,7 +127,6 @@ $(CRT0_OBJ): $(CRT0)
 	$(CC) $(ARCH_FLAGS) -c -o $@ $(CRT0)
 
 # Build ELF executable with crt0 + selected tasks
-# Tasks are launched by CV32 via interrupt-driven task switching
 $(ELF): $(CRT0_OBJ) $(TASK_SRCS) $(KERNEL_DIR)/spatz_program.ld
 	@mkdir -p $(BIN_DIR)
 	@if [ -z "$(TASK_SRCS)" ]; then \
@@ -148,7 +134,6 @@ $(ELF): $(CRT0_OBJ) $(TASK_SRCS) $(KERNEL_DIR)/spatz_program.ld
 		exit 1; \
 	fi
 	@echo "[SPATZ] Included tasks: $(task)"
-	@echo "[SPATZ] Tasks will be launched by CV32 via spatz_set_func() and interrupt"
 	@FIRST_TASK=$(word 1,$(task)); \
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(CRT0_OBJ) $(TASK_SRCS) \
 		-Wl,--defsym,__first_task=$${FIRST_TASK}
