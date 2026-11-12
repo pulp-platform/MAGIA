@@ -34,34 +34,13 @@ module reqrsp2obi
   input  magia_tile_pkg::core_obi_data_rsp_t obi_rsp_i
 );
 
-  // Convert reqrsp AMO to OBI ATOP encoding
-  function automatic logic [5:0] amo_to_atop(reqrsp_pkg::amo_op_e amo);
-    unique case (amo)
-      reqrsp_pkg::AMONone:  return 6'h00;
-      reqrsp_pkg::AMOSwap:  return 6'h21;
-      reqrsp_pkg::AMOAdd:   return 6'h20;
-      reqrsp_pkg::AMOAnd:   return 6'h2C;
-      reqrsp_pkg::AMOOr:    return 6'h28;
-      reqrsp_pkg::AMOXor:   return 6'h24;
-      reqrsp_pkg::AMOMax:   return 6'h34;
-      reqrsp_pkg::AMOMaxu:  return 6'h3C;
-      reqrsp_pkg::AMOMin:   return 6'h30;
-      reqrsp_pkg::AMOMinu:  return 6'h38;
-      reqrsp_pkg::AMOLR:    return 6'h22;
-      reqrsp_pkg::AMOSC:    return 6'h23;
-      default:              return 6'h00;
-    endcase
-  endfunction
-
   /*******************************************************************/
   /*               Direct reqrsp → OBI conversion                    */
   /*******************************************************************/
 
-  logic amo_detected;
-  assign amo_detected = (reqrsp_req_i.q.amo != reqrsp_pkg::AMONone);
   assign obi_req_o.req                  = reqrsp_req_i.q_valid;
   assign obi_req_o.a.addr               = reqrsp_req_i.q.addr;
-  assign obi_req_o.a.we                 = reqrsp_req_i.q.write | amo_detected;
+  assign obi_req_o.a.we                 = reqrsp_req_i.q.write | magia_tile_pkg::amo_writes(reqrsp_req_i.q.amo);
   assign obi_req_o.a.wdata              = reqrsp_req_i.q.data;
   assign obi_req_o.a.be                 = reqrsp_req_i.q.strb;
   assign obi_req_o.a.aid                = '0;
@@ -69,7 +48,7 @@ module reqrsp2obi
   // Optional request fields
   assign obi_req_o.a.a_optional.auser   = '0;
   assign obi_req_o.a.a_optional.wuser   = '0;
-  assign obi_req_o.a.a_optional.atop    = amo_to_atop(reqrsp_req_i.q.amo);
+  assign obi_req_o.a.a_optional.atop    = magia_tile_pkg::amo_to_atop(reqrsp_req_i.q.amo);
   assign obi_req_o.a.a_optional.memtype = 2'b00;
   assign obi_req_o.a.a_optional.mid     = '0;
   assign obi_req_o.a.a_optional.prot    = 3'b000;

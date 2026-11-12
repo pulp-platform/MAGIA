@@ -79,13 +79,13 @@ module magia_cluster_wrap
   // -------------------------------------------------------------------------
   logic [NClusterCores-1:0] cluster_core_sleep;
 
-  // Cluster core data interface (CV32E40P native channel type).
-  magia_tile_pkg::cv32e40p_core_data_req_t [NClusterCores-1:0] cluster_data_req;
-  magia_tile_pkg::cv32e40p_core_data_rsp_t [NClusterCores-1:0] cluster_data_rsp;
+  // Cluster core data interface
+  magia_tile_pkg::core_data_req_t [NClusterCores-1:0] cluster_data_req;
+  magia_tile_pkg::core_data_rsp_t [NClusterCores-1:0] cluster_data_rsp;
 
   // Per-core demux downstream ports ([i][TCDM], [i][OBI]).
-  magia_tile_pkg::cv32e40p_core_data_req_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_req;
-  magia_tile_pkg::cv32e40p_core_data_rsp_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_rsp;
+  magia_tile_pkg::core_data_req_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_req;
+  magia_tile_pkg::core_data_rsp_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_rsp;
 
   // Per-core 32-bit interrupt vector
   logic [NClusterCores-1:0][31:0]                                  cluster_irq_vec;
@@ -111,7 +111,7 @@ module magia_cluster_wrap
   assign cluster_irq_vec = '0;
 
   // ---------------------------------------------------------------------------
-  // Cluster cores (always CV32E40P)
+  // Cluster cores
   // ---------------------------------------------------------------------------
   for (genvar i = 0; i < NClusterCores; i++) begin : gen_core
     logic core_clk;
@@ -123,58 +123,54 @@ module magia_cluster_wrap
       .clk_o     ( core_clk               )
     );
 
-    `ifndef CORE_TRACES
-      cv32e40p_top #(
-    `else
-      cv32e40p_wrapper #(
-    `endif
-        .COREV_PULP          ( 1                                   ),
-        .COREV_CLUSTER       ( 1                                   ),
-        .FPU                 ( FPU                                 ),
-        .ZFINX               ( magia_tile_pkg::ZFINX_CLUSTER       ),
-        .FPU_ADDMUL_LAT      ( 1                                   ), // Match C_LAT_FP32=1 in fpnew wrapper
-        .FPU_OTHERS_LAT      ( 1                                   ), // Match C_LAT_NONCOMP=1 in fpnew wrapper
-        .NUM_MHPMCOUNTERS    ( 29                                  )
-      ) i_cv32e40p_core (
-        // Clock and Reset
-        .clk_i                  ( core_clk              ),  // Per-core EU-controlled clock
-        .rst_ni                 ( rst_ni                ),
-        .pulp_clock_en_i        ( cluster_eu_clock_en[i]      ),
-        .scan_cg_en_i           ( test_mode_i                 ),
-        .boot_addr_i            ( cluster_boot_addr_i[i]      ),  // From cluster CSR, dynamic per tile
-        .mtvec_addr_i           ( cluster_boot_addr_i[i]      ),  // mtvec defaults to boot vector; SW can override via csrw
-        .dm_halt_addr_i         ( magia_tile_pkg::DM_HALT_ADDR),
-        .hart_id_i              ( 32'(HartIdBase + 2 * InstanceCount) + mhartid_i * NClusterCores + i ),
-        .dm_exception_addr_i    ( magia_tile_pkg::DM_HALT_ADDR + 32'h000C), //to be checked
-        // Instruction interface (-> tile-level shared cluster i$)
-        .instr_req_o            ( cluster_instr_req_o[i].req         ),
-        .instr_addr_o           ( cluster_instr_req_o[i].addr        ),
-        .instr_gnt_i            ( cluster_instr_rsp_i[i].gnt         ),
-        .instr_rvalid_i         ( cluster_instr_rsp_i[i].rvalid      ),
-        .instr_rdata_i          ( cluster_instr_rsp_i[i].rdata       ),
-        // Data interface (goes through the per-core data demux below)
-        .data_req_o             ( cluster_data_req[i].req              ),
-        .data_addr_o            ( cluster_data_req[i].addr             ),
-        .data_be_o              ( cluster_data_req[i].be               ),
-        .data_wdata_o           ( cluster_data_req[i].wdata            ),
-        .data_we_o              ( cluster_data_req[i].we               ),
-        .data_gnt_i             ( cluster_data_rsp[i].gnt              ),
-        .data_rvalid_i          ( cluster_data_rsp[i].rvalid           ),
-        .data_rdata_i           ( cluster_data_rsp[i].rdata            ),
-        // CPU interrupt inputs are disabled; use EU event waits / polling
-        .irq_i                  ( cluster_irq_vec[i]                  ),
-        .irq_ack_o              (                                     ),
-        .irq_id_o               (                                     ),
-    
-        .debug_req_i            ( 1'b0                   ),
-        // Debug status outputs unused: no tile-level output exposes per-cluster-core debug status.
-        .debug_havereset_o      (                        ),
-        .debug_running_o        (                        ),
-        .debug_halted_o         (                        ),
-        // CPU control
-        .fetch_enable_i         ( cluster_fetch_enable_i[i]           ),
-        .core_sleep_o           ( cluster_core_sleep[i]               )
-      );
+    magia_cv32e40px_wrap #(
+      .COREV_PULP          ( 1                                   ),
+      .COREV_CLUSTER       ( 1                                   ),
+      .FPU                 ( FPU                                 ),
+      .ZFINX               ( magia_tile_pkg::ZFINX_CLUSTER       ),
+      .FPU_ADDMUL_LAT      ( 1                                   ), // Match C_LAT_FP32=1 in fpnew wrapper
+      .FPU_OTHERS_LAT      ( 1                                   ), // Match C_LAT_NONCOMP=1 in fpnew wrapper
+      .NUM_MHPMCOUNTERS    ( 29                                  )
+    ) i_core (
+      // Clock and Reset
+      .clk_i                  ( core_clk              ),  // Per-core EU-controlled clock
+      .rst_ni                 ( rst_ni                ),
+      .pulp_clock_en_i        ( cluster_eu_clock_en[i]      ),
+      .scan_cg_en_i           ( test_mode_i                 ),
+      .boot_addr_i            ( cluster_boot_addr_i[i]      ),  // From cluster CSR, dynamic per tile
+      .mtvec_addr_i           ( cluster_boot_addr_i[i]      ),  // mtvec defaults to boot vector; SW can override via csrw
+      .dm_halt_addr_i         ( magia_tile_pkg::DM_HALT_ADDR),
+      .hart_id_i              ( 32'(HartIdBase + 2 * InstanceCount) + mhartid_i * NClusterCores + i ),
+      .dm_exception_addr_i    ( magia_tile_pkg::DM_HALT_ADDR + 32'h000C), //to be checked
+      // Instruction interface (-> tile-level shared cluster i$)
+      .instr_req_o            ( cluster_instr_req_o[i].req         ),
+      .instr_addr_o           ( cluster_instr_req_o[i].addr        ),
+      .instr_gnt_i            ( cluster_instr_rsp_i[i].gnt         ),
+      .instr_rvalid_i         ( cluster_instr_rsp_i[i].rvalid      ),
+      .instr_rdata_i          ( cluster_instr_rsp_i[i].rdata       ),
+      // Data interface (goes through the per-core data demux below)
+      .data_req_o             ( cluster_data_req[i].req              ),
+      .data_addr_o            ( cluster_data_req[i].addr             ),
+      .data_be_o              ( cluster_data_req[i].be               ),
+      .data_wdata_o           ( cluster_data_req[i].wdata            ),
+      .data_we_o              ( cluster_data_req[i].we               ),
+      .data_gnt_i             ( cluster_data_rsp[i].gnt              ),
+      .data_rvalid_i          ( cluster_data_rsp[i].rvalid           ),
+      .data_rdata_i           ( cluster_data_rsp[i].rdata            ),
+      // CPU interrupt inputs are disabled; use EU event waits / polling
+      .irq_i                  ( cluster_irq_vec[i]                  ),
+      .irq_ack_o              (                                     ),
+      .irq_id_o               (                                     ),
+  
+      .debug_req_i            ( 1'b0                   ),
+      // Debug status outputs unused: no tile-level output exposes per-cluster-core debug status.
+      .debug_havereset_o      (                        ),
+      .debug_running_o        (                        ),
+      .debug_halted_o         (                        ),
+      // CPU control
+      .fetch_enable_i         ( cluster_fetch_enable_i[i]           ),
+      .core_sleep_o           ( cluster_core_sleep[i]               )
+    );
   end
 
   // ---------------------------------------------------------------------------
@@ -194,8 +190,8 @@ module magia_cluster_wrap
       .NumRules   ( magia_tile_pkg::NUM_TCDM_RULES + 1                ),
       .DefaultSlv ( CLUSTER_DATA_DEMUX_OBI_IDX                        ),
       .SerialSlv  ( CLUSTER_DATA_DEMUX_N_SLV'(1 << CLUSTER_DATA_DEMUX_EU_IDX) ),
-      .req_t      ( magia_tile_pkg::cv32e40p_core_data_req_t          ),
-      .rsp_t      ( magia_tile_pkg::cv32e40p_core_data_rsp_t          )
+      .req_t      ( magia_tile_pkg::core_data_req_t                   ),
+      .rsp_t      ( magia_tile_pkg::core_data_rsp_t                   )
     ) i_cluster_data_demux (
       .clk_i              ( clk_i                     ),
       .rst_ni             ( rst_ni                    ),
@@ -215,12 +211,12 @@ module magia_cluster_wrap
   for (genvar i = 0; i < NClusterCores; i++) begin : gen_cluster_data_obi
 
     // --- OBI (peripheral) path ---
-    cv32e40p_data2obi_req i_cluster_data2obi (
+    data2obi_req i_cluster_data2obi (
       .data_req_i ( cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_OBI_IDX] ),
       .obi_req_o  ( cluster_obi_data_req_o[i]                   )
     );
 
-    cv32e40p_obi2data_rsp i_cluster_obi2data (
+    obi2data_rsp i_cluster_obi2data (
       .obi_rsp_i  ( cluster_obi_data_rsp_i[i]                   ),
       .data_rsp_o ( cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_OBI_IDX] )
     );
@@ -229,12 +225,12 @@ module magia_cluster_wrap
     magia_tile_pkg::core_obi_data_req_t cluster_tcdm_obi_req;
     magia_tile_pkg::core_obi_data_rsp_t cluster_tcdm_obi_rsp;
 
-    cv32e40p_data2obi_req i_cluster_tcdm_data2obi (
+    data2obi_req i_cluster_tcdm_data2obi (
       .data_req_i ( cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_TCDM_IDX] ),
       .obi_req_o  ( cluster_tcdm_obi_req                         )
     );
 
-    cv32e40p_obi2data_rsp i_cluster_tcdm_obi2data (
+    obi2data_rsp i_cluster_tcdm_obi2data (
       .obi_rsp_i  ( cluster_tcdm_obi_rsp                         ),
       .data_rsp_o ( cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_TCDM_IDX] )
     );

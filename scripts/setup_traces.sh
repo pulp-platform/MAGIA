@@ -23,7 +23,7 @@
 #   <sim_dir>/traces/tile_N/cluster/    ← will receive PULP cores traces
 #
 # The actual trace files are moved in by sort_traces.sh after vsim exits
-# (the cv32e40p tracer writes them to <sim_dir>/trace_core_<hartid>.log).
+# (the cv32e40px tracer writes them to <sim_dir>/trace_core_<hartid>.log).
 #
 # Usage: setup_traces.sh <sim_dir> [num_clusters]
 

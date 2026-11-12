@@ -89,7 +89,7 @@ SECTIONS
     _spatz_binary_size = _spatz_binary_end - _spatz_binary_start;
 
     /* PULP embedded binary - inlined from header file (magia-sdk flow).
-       CV32E40P stores mtvec as mtvec_addr_i[31:8], so keep the PULP
+       CV32E40PX stores mtvec as mtvec_addr_i[31:8], so keep the PULP
        boot address and trap base in the same 256-byte page. */
     .pulp_binary ALIGN(256) : {
         _pulp_binary_start = .;

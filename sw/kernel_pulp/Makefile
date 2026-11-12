@@ -27,7 +27,7 @@
 ISA      ?= riscv
 ARCH     ?= rv
 XLEN     ?= 32
-core     ?= CV32E40P
+core     ?= CV32E40PX
 
 zfinx ?= 1
 XTEN_BASE := xcvalu_xcvbi_xcvbitmanip_xcvhwlp_xcvmac_xcvmem_xcvsimd_xcvelw
