@@ -27,14 +27,14 @@ package:
 dependencies:
   redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , rev: 2.2.1                                    }
   cv32e40px         : { git: "https://github.com/FondazioneChipsIT/cv32e40px.git"     , rev: 7dd10eb48f48368e506065153bbf5e46b6e4b490 } # branch: lb/magia_cv32e40px
-  spatz             : { git: "https://github.com/pulp-platform/spatz.git"             , rev: 3228a9077cb33b4ee235029e8fcace52ed327334 } # branch: lb/magia-spatz_cc
+  spatz             : { git: "https://github.com/pulp-platform/spatz.git"             , rev: 32ff862ad0c82db1671a8f4100188231d9b4c309 } # branch: lb/magia-snitch-spatz
   idma              : { git: "https://github.com/FondazioneChipsIT/iDMA.git"          , rev: 26ac2cd1c535851b14c9c508762203a180961cad } # branch: cc/mcast_magia
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , version: 3.1.1                                }
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , version: 2.6.1                                }
   cluster_icache    : { git: "https://github.com/pulp-platform/cluster_icache.git"    , version: 0.2.0                                }
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
-  obi               : { git: "https://github.com/pulp-platform/obi.git"               , rev: 528dc65303d5ffb02fbc254324c6b53eac0dd6e5 } # branch: lb/fix_atop_resolver                       
+  obi               : { git: "https://github.com/pulp-platform/obi.git"               , rev: b267a0b09af6d7a4f6d90d6b450af3268d9e8fdd } # branch: lb/magia_atop_resolver                       
   axi               : { git: "https://github.com/pulp-platform/axi.git"               , version: 0.39.5                               }
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: 0.4.7                                }
   axi_obi           : { git: "https://github.com/pulp-platform/axi_obi.git"           , rev: 3f29bd67369a093cf5be4ea3fdac3c6c216424cc } # branch: vi/magia
@@ -62,12 +62,9 @@ sources:
       - hw/tile/converters/hci2obi.sv
       - hw/tile/converters/obi2hwpe_ctrl.sv
       - hw/tile/converters/tcdm2hci.sv
-      - hw/tile/converters/tcdm2obi.sv
-      - hw/tile/converters/tcdm2hci_atomic.sv
       - hw/tile/converters/reqrsp2obi.sv
       - hw/tile/converters/tcdm64_to_dual_hci32.sv
       - hw/tile/converters/tcdm64_to_dual_tcdm32.sv
-      - hw/tile/converters/tcdm64_to_dual_hci32_atomic.sv
       - hw/tile/converters/reqrsp64_to_obi32.sv
       - hw/tile/xbar_periph_bus_if.sv
       - hw/tile/cluster_event_map.sv

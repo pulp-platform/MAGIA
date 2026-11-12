@@ -28,12 +28,12 @@ module ctrl_demux
   input  logic                                                   clk_i,
   input  logic                                                   rst_ni,
 
-  input  magia_tile_pkg::core_obi_data_req_t                     obi_req_i,
-  output magia_tile_pkg::core_obi_data_rsp_t                     obi_rsp_o,
+  input  magia_tile_pkg::obi_sbr_req_t                           obi_req_i,
+  output magia_tile_pkg::obi_sbr_rsp_t                           obi_rsp_o,
 
   // One port per enabled unit, indexed by CtrlMap
-  output magia_tile_pkg::core_obi_data_req_t[CtrlMap.num_units-1:0] unit_req_o,
-  input  magia_tile_pkg::core_obi_data_rsp_t[CtrlMap.num_units-1:0] unit_rsp_i
+  output magia_tile_pkg::obi_sbr_req_t[CtrlMap.num_units-1:0]       unit_req_o,
+  input  magia_tile_pkg::obi_sbr_rsp_t[CtrlMap.num_units-1:0]       unit_rsp_i
 );
 
   localparam magia_tile_pkg::ctrl_rules_t CtrlRules = magia_tile_pkg::gen_ctrl_rules(TileCfg);
@@ -41,16 +41,16 @@ module ctrl_demux
   localparam int unsigned                 SelW      = magia_tile_pkg::gen_idx_width(CtrlMap.num_units + 1);
 
   magia_tile_pkg::obi_xbar_rule_t[CtrlMap.num_units-1:0] ctrl_rule;
-  magia_tile_pkg::core_obi_data_req_t[CtrlMap.num_units:0] demux_req;
+  magia_tile_pkg::obi_sbr_req_t[CtrlMap.num_units:0]       demux_req;
   // Each element comes from a different unit: split it, or Verilator sees a false combinational loop
-  magia_tile_pkg::core_obi_data_rsp_t[CtrlMap.num_units:0] demux_rsp /* verilator split_var */;
+  magia_tile_pkg::obi_sbr_rsp_t[CtrlMap.num_units:0]       demux_rsp /* verilator split_var */;
 
   for (genvar i = 0; i < CtrlMap.num_units; i++) begin: gen_ctrl_rule
     assign ctrl_rule[i] = CtrlRules[i];
   end
 
   obi_demux_addr #(
-    .SbrPortObiCfg ( magia_tile_pkg::obi_amo_cfg ),
+    .SbrPortObiCfg ( magia_tile_pkg::obi_sbr_cfg ),
     .NumMgrPorts   ( CtrlMap.num_units + 1       ),
     .NumMaxTrans   ( magia_tile_pkg::N_MAX_TRAN  ),
     .NumAddrRules  ( CtrlMap.num_units           )
@@ -71,9 +71,9 @@ module ctrl_demux
 
   // Disabled units and holes in the control window get an error response
   obi_err_sbr #(
-    .ObiCfg    ( magia_tile_pkg::obi_amo_cfg         ),
-    .obi_req_t ( magia_tile_pkg::core_obi_data_req_t ),
-    .obi_rsp_t ( magia_tile_pkg::core_obi_data_rsp_t )
+    .ObiCfg    ( magia_tile_pkg::obi_sbr_cfg   ),
+    .obi_req_t ( magia_tile_pkg::obi_sbr_req_t ),
+    .obi_rsp_t ( magia_tile_pkg::obi_sbr_rsp_t )
   ) i_obi_err_sbr (
     .clk_i      ( clk_i             ),
     .rst_ni     ( rst_ni            ),

@@ -46,6 +46,11 @@ general:
     sims: [questa, verilator]
     requires: [MAGIA_ATOMICS]
     fast_sim: false
+  amo_ops_test:
+    testbench: mesh
+    sims: [questa, verilator]
+    requires: [MAGIA_ATOMICS]
+    fast_sim: false
   hello_world:
     testbench: tile
     sims: [questa, verilator]
@@ -238,6 +243,10 @@ spatz_tests:
     testbench: mesh
     sims: [questa, verilator]
     requires: []
+  amo_race_spatz_test:
+    testbench: mesh
+    sims: [questa, verilator]
+    requires: [MAGIA_ATOMICS]
   dotp_mesh_spatz_test:
     testbench: mesh
     sims: [questa, verilator]

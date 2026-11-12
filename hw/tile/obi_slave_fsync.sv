@@ -35,8 +35,8 @@ module obi_slave_fsync
   input  logic                 rst_ni,
   input  logic                 clear_i,
 
-  input  core_obi_data_req_t   obi_req_i,
-  output core_obi_data_rsp_t   obi_rsp_o,
+  input  obi_sbr_req_t         obi_req_i,
+  output obi_sbr_rsp_t         obi_rsp_o,
 
   fractal_sync_if.mst_port     ht_fsync_if_o,
   fractal_sync_if.mst_port     hn_fsync_if_o,
@@ -58,9 +58,9 @@ module obi_slave_fsync
   logic done;
   logic addr_match;
 
-  core_obi_data_rsp_t obi_rsp_d;  // Response computed in the address phase
+  obi_sbr_rsp_t       obi_rsp_d;  // Response computed in the address phase
   logic     rvalid_q;
-  core_obi_data_rsp_t obi_rsp_q;
+  obi_sbr_rsp_t       obi_rsp_q;
 
   logic[DATA_W-1:0] aggr_reg, id_reg, status_reg, control_reg;
   logic[DATA_W-1:0] aggr_reg_d, id_reg_d;

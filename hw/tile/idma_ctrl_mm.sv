@@ -37,8 +37,8 @@ module idma_ctrl_mm
   input  logic               clear_i,
 
   // OBI Slave Interface (CPU memory-mapped access)
-  input  core_obi_data_req_t obi_req_i,
-  output core_obi_data_rsp_t obi_rsp_o,
+  input  obi_sbr_req_t obi_req_i,
+  output obi_sbr_rsp_t obi_rsp_o,
 
   // AXI Master Interfaces (to L2 memory)
   output idma_axi_req_t      axi_read_req_o,   // AXI2OBI: L2 read

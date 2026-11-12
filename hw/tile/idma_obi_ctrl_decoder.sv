@@ -29,8 +29,8 @@ module idma_obi_ctrl_decoder
   input  logic               rst_ni,
 
   // OBI Slave Interface (CPU access)
-  input  core_obi_data_req_t obi_req_i,
-  output core_obi_data_rsp_t obi_rsp_o,
+  input  obi_sbr_req_t obi_req_i,
+  output obi_sbr_rsp_t obi_rsp_o,
 
   // iDMA Register Frontend Interface  
   output idma_fe_reg_req_t   idma_axi2obi_req_o,
@@ -90,6 +90,7 @@ module idma_obi_ctrl_decoder
   logic              rvalid_q;
   logic [DATA_W-1:0] rdata_q;
   logic              err_q;
+  logic [magia_tile_pkg::SBR_AID_WIDTH-1:0] rid_q;
 
 /*******************************************************/
 /**          Internal Signal Definitions End          **/
@@ -169,18 +170,22 @@ module idma_obi_ctrl_decoder
     selected_idma_req.valid = obi_req_i.req & is_valid_access;
   end
 
-  assign obi_gnt = obi_req_i.req & is_valid_access & selected_idma_rsp.ready;
+  logic err_d;
+  assign obi_gnt = obi_req_i.req & (~is_valid_access | selected_idma_rsp.ready);
+  assign err_d   = selected_idma_rsp.error | ~is_valid_access;
 
   always_ff @(posedge clk_i, negedge rst_ni) begin: obi_response
     if (~rst_ni) begin
       rvalid_q <= 1'b0;
       rdata_q  <= '0;
       err_q    <= 1'b0;
+      rid_q    <= '0;
     end else begin
       rvalid_q <= obi_gnt;
       if (obi_gnt) begin
         rdata_q <= selected_idma_rsp.rdata;
-        err_q   <= selected_idma_rsp.error;
+        err_q   <= err_d;
+        rid_q   <= obi_req_i.a.aid;
       end
     end
   end
@@ -191,7 +196,7 @@ module idma_obi_ctrl_decoder
     obi_rsp_o.r.rdata      = rdata_q;
     obi_rsp_o.r.r_optional = '0;
     obi_rsp_o.r.err        = err_q;
-    obi_rsp_o.r.rid        = '0;
+    obi_rsp_o.r.rid        = rid_q;
   end
 
 /*******************************************************/

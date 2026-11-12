@@ -197,6 +197,7 @@ typedef logic[31:0] collective_axi_narrow_data_mst_data_t;
 typedef logic[3:0] collective_axi_narrow_data_mst_strb_t;
 typedef logic[2:0] collective_axi_narrow_data_mst_id_t;
 typedef struct packed {
+    logic [2:0] src_id;
     logic [31:0] collective_mask;
     logic [3:0] collective_op;
 } collective_axi_narrow_data_mst_user_t;
@@ -208,7 +209,10 @@ typedef struct packed {
 typedef logic[31:0] axi_narrow_data_mst_data_t;
 typedef logic[3:0] axi_narrow_data_mst_strb_t;
 typedef logic[2:0] axi_narrow_data_mst_id_t;
-typedef logic[0:0] axi_narrow_data_mst_user_t;
+typedef struct packed {
+    logic [2:0] src_id;
+} axi_narrow_data_mst_user_t;
+
 `AXI_TYPEDEF_ALL_CT(axi_narrow_data_mst,             axi_narrow_data_mst_req_t,             axi_narrow_data_mst_rsp_t,             axi_narrow_data_mst_addr_t,             axi_narrow_data_mst_id_t,             axi_narrow_data_mst_data_t,             axi_narrow_data_mst_strb_t,             axi_narrow_data_mst_user_t)
 
 
@@ -217,6 +221,7 @@ typedef logic[31:0] collective_axi_narrow_data_slv_data_t;
 typedef logic[3:0] collective_axi_narrow_data_slv_strb_t;
 typedef logic[5:0] collective_axi_narrow_data_slv_id_t;
 typedef struct packed {
+    logic [2:0] src_id;
     logic [31:0] collective_mask;
     logic [3:0] collective_op;
 } collective_axi_narrow_data_slv_user_t;
@@ -228,7 +233,10 @@ typedef struct packed {
 typedef logic[31:0] axi_narrow_data_slv_data_t;
 typedef logic[3:0] axi_narrow_data_slv_strb_t;
 typedef logic[5:0] axi_narrow_data_slv_id_t;
-typedef logic[0:0] axi_narrow_data_slv_user_t;
+typedef struct packed {
+    logic [2:0] src_id;
+} axi_narrow_data_slv_user_t;
+
 `AXI_TYPEDEF_ALL_CT(axi_narrow_data_slv,             axi_narrow_data_slv_req_t,             axi_narrow_data_slv_rsp_t,             axi_narrow_data_slv_addr_t,             axi_narrow_data_slv_id_t,             axi_narrow_data_slv_data_t,             axi_narrow_data_slv_strb_t,             axi_narrow_data_slv_user_t)
 
 
@@ -237,6 +245,7 @@ typedef logic[255:0] collective_axi_wide_data_mst_data_t;
 typedef logic[31:0] collective_axi_wide_data_mst_strb_t;
 typedef logic[1:0] collective_axi_wide_data_mst_id_t;
 typedef struct packed {
+    logic [2:0] src_id;
     logic [31:0] collective_mask;
     logic [3:0] collective_op;
 } collective_axi_wide_data_mst_user_t;
@@ -248,7 +257,10 @@ typedef struct packed {
 typedef logic[255:0] axi_wide_data_mst_data_t;
 typedef logic[31:0] axi_wide_data_mst_strb_t;
 typedef logic[1:0] axi_wide_data_mst_id_t;
-typedef logic[0:0] axi_wide_data_mst_user_t;
+typedef struct packed {
+    logic [2:0] src_id;
+} axi_wide_data_mst_user_t;
+
 `AXI_TYPEDEF_ALL_CT(axi_wide_data_mst,             axi_wide_data_mst_req_t,             axi_wide_data_mst_rsp_t,             axi_wide_data_mst_addr_t,             axi_wide_data_mst_id_t,             axi_wide_data_mst_data_t,             axi_wide_data_mst_strb_t,             axi_wide_data_mst_user_t)
 
 
@@ -257,6 +269,7 @@ typedef logic[255:0] collective_axi_wide_data_slv_data_t;
 typedef logic[31:0] collective_axi_wide_data_slv_strb_t;
 typedef logic[1:0] collective_axi_wide_data_slv_id_t;
 typedef struct packed {
+    logic [2:0] src_id;
     logic [31:0] collective_mask;
     logic [3:0] collective_op;
 } collective_axi_wide_data_slv_user_t;
@@ -268,7 +281,10 @@ typedef struct packed {
 typedef logic[255:0] axi_wide_data_slv_data_t;
 typedef logic[31:0] axi_wide_data_slv_strb_t;
 typedef logic[1:0] axi_wide_data_slv_id_t;
-typedef logic[0:0] axi_wide_data_slv_user_t;
+typedef struct packed {
+    logic [2:0] src_id;
+} axi_wide_data_slv_user_t;
+
 `AXI_TYPEDEF_ALL_CT(axi_wide_data_slv,             axi_wide_data_slv_req_t,             axi_wide_data_slv_rsp_t,             axi_wide_data_slv_addr_t,             axi_wide_data_slv_id_t,             axi_wide_data_slv_data_t,             axi_wide_data_slv_strb_t,             axi_wide_data_slv_user_t)
 
 
@@ -278,12 +294,12 @@ typedef logic[0:0] axi_wide_data_slv_user_t;
     DataWidth: 32,
     InIdWidth: 6,
     OutIdWidth: 3,
-    UserWidth: 1};
+    UserWidth: 3};
 localparam axi_cfg_t AxiCfgW = '{    AddrWidth: 32,
     DataWidth: 256,
     InIdWidth: 2,
     OutIdWidth: 2,
-    UserWidth: 1};
+    UserWidth: 3};
 `FLOO_TYPEDEF_NW_CHAN_ALL(axi, req, rsp, wide,             axi_narrow_data_slv, axi_wide_data_slv, AxiCfgN, AxiCfgW, hdr_t)
 
 `FLOO_TYPEDEF_NW_LINK_ALL(req, rsp, wide, req, rsp, wide)

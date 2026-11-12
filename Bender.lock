@@ -187,7 +187,7 @@ packages:
       Git: https://github.com/pulp-platform/L2_tcdm_hybrid_interco.git
     dependencies: []
   obi:
-    revision: 528dc65303d5ffb02fbc254324c6b53eac0dd6e5
+    revision: b267a0b09af6d7a4f6d90d6b450af3268d9e8fdd
     version: null
     source:
       Git: https://github.com/pulp-platform/obi.git
@@ -245,7 +245,7 @@ packages:
     dependencies:
     - tech_cells_generic
   spatz:
-    revision: 3228a9077cb33b4ee235029e8fcace52ed327334
+    revision: 32ff862ad0c82db1671a8f4100188231d9b4c309
     version: null
     source:
       Git: https://github.com/pulp-platform/spatz.git

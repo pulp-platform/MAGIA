@@ -76,8 +76,8 @@ module spatz_cc_wrapper
   input  hci_rsp_t [HCIMasterPorts-1:0] hci_master_rsp_i,
   
   // OBI Master Interface - Single port for Snitch core
-  output magia_tile_pkg::core_obi_data_req_t      obi_master_req_o,
-  input  magia_tile_pkg::core_obi_data_rsp_t      obi_master_rsp_i,
+  output magia_tile_pkg::obi_mgr_req_t           obi_master_req_o,
+  input  magia_tile_pkg::obi_mgr_rsp_t           obi_master_rsp_i,
   
   // Core -> ICache signals (from hive_req)
   output logic                                    inst_req_o,        // Core wants instruction (inst_valid)
@@ -352,7 +352,7 @@ module spatz_cc_wrapper
     reqrsp64_to_obi32 #(
       .reqrsp_req_t ( magia_tile_pkg::spatz_reqrsp64_req_t ),
       .reqrsp_rsp_t ( magia_tile_pkg::spatz_reqrsp64_rsp_t ),
-      .ObiCfg       ( magia_tile_pkg::obi_amo_cfg          )
+      .ObiCfg       ( magia_tile_pkg::obi_mgr_cfg          )
     ) i_snitch_reqrsp_to_obi32 (
       .clk_i        ( clk_i                              ),
       .rst_ni       ( rst_ni                             ),
@@ -364,7 +364,7 @@ module spatz_cc_wrapper
   end else begin : gen_reqrsp32_to_obi32
     // RVD=0: Snitch data port 32-bit reqrsp → 32-bit OBI (for L2/peripherals)
     reqrsp2obi #(
-      .ObiCfg ( magia_tile_pkg::obi_amo_cfg )
+      .ObiCfg ( magia_tile_pkg::obi_mgr_cfg )
     ) i_snitch_reqrsp_to_obi32 (
       .clk_i        ( clk_i                              ),
       .rst_ni       ( rst_ni                             ),
@@ -382,8 +382,7 @@ module spatz_cc_wrapper
   if (RVD) begin : gen_tcdm64_to_hci
     // RVD=1: Each 64-bit TCDM port splits into 2×32-bit HCI ports
     
-    // Ports 0-3: Spatz vector memory ports (64-bit TCDM → 2×32-bit HCI)
-    for (genvar i = 0; i < NumMemPortsPerSpatz; i++) begin : gen_tcdm64_to_dual_hci32_spatz
+    for (genvar i = 0; i < TCDMPorts; i++) begin : gen_tcdm64_to_dual_hci32_spatz
       tcdm64_to_dual_hci32 #(
         .tcdm64_req_t ( magia_tile_pkg::spatz_tcdm64_req_t ),
         .tcdm64_rsp_t ( magia_tile_pkg::spatz_tcdm64_rsp_t ),
@@ -400,32 +399,11 @@ module spatz_cc_wrapper
         .hci_rsp_hi_i  ( hci_master_rsp_i[i*2+1]            )
       );
     end
-    
-    // Port 4: Snitch RV64 TCDM (with AMO) → Dual HCI32 (ports 8-9)
-    tcdm64_to_dual_hci32_atomic #(
-      .tcdm64_req_t ( magia_tile_pkg::spatz_tcdm64_req_t ),
-      .tcdm64_rsp_t ( magia_tile_pkg::spatz_tcdm64_rsp_t ),
-      .hci_req_t            ( hci_req_t        ),
-      .hci_rsp_t            ( hci_rsp_t        ),
-      .SbrPortObiCfg        ( magia_tile_pkg::obi_amo_cfg                ),
-      .MgrPortObiCfg        ( magia_tile_pkg::obi_no_amo_cfg             ),
-      .BypassCut            ( 1'b0                                       )
-    ) i_tcdm64_to_dual_hci32_atomic_snitch (
-      .clk_i         ( clk_i                                      ),
-      .rst_ni        ( rst_ni                                     ),
-      .tcdm_req_i    ( gen_signals.tcdm_req[NumMemPortsPerSpatz]  ),
-      .tcdm_rsp_o    ( gen_signals.tcdm_rsp[NumMemPortsPerSpatz]  ),
-      .hci_req_lo_o  ( hci_master_req_o[NumMemPortsPerSpatz*2]        ),
-      .hci_rsp_lo_i  ( hci_master_rsp_i[NumMemPortsPerSpatz*2]        ),
-      .hci_req_hi_o  ( hci_master_req_o[NumMemPortsPerSpatz*2+1]      ),
-      .hci_rsp_hi_i  ( hci_master_rsp_i[NumMemPortsPerSpatz*2+1]      )
-    );
-    
+
   end else begin : gen_tcdm32_to_hci
     // RVD=0: Each 32-bit TCDM port maps directly to 1×32-bit HCI port
     
-    // Ports 0-3: Spatz vector memory ports (32-bit TCDM → 32-bit HCI)
-    for (genvar i = 0; i < NumMemPortsPerSpatz; i++) begin : gen_tcdm32_to_hci32_spatz
+    for (genvar i = 0; i < TCDMPorts; i++) begin : gen_tcdm32_to_hci32_spatz
       tcdm2hci #(
         .tcdm_req_t  ( magia_tile_pkg::spatz_tcdm_req_t     ),
         .tcdm_rsp_t  ( magia_tile_pkg::spatz_tcdm_rsp_t     ),
@@ -440,30 +418,14 @@ module spatz_cc_wrapper
         .hci_rsp_i   ( hci_master_rsp_i[i]              )
       );
     end
-    
-    // Port 4: Snitch RV32 TCDM (with AMO) → HCI32
-    tcdm2hci_atomic #(
-      .tcdm_req_t         ( magia_tile_pkg::spatz_tcdm_req_t         ),
-      .tcdm_rsp_t         ( magia_tile_pkg::spatz_tcdm_rsp_t         ),
-      .obi_req_t          ( magia_tile_pkg::core_obi_data_req_t      ),
-      .obi_rsp_t          ( magia_tile_pkg::core_obi_data_rsp_t      ),
-      .obi_a_chan_t       ( magia_tile_pkg::core_data_obi_a_chan_t   ),
-      .obi_r_chan_t       ( magia_tile_pkg::core_data_obi_r_chan_t   ),
-      .hci_req_t          ( hci_req_t      ),
-      .hci_rsp_t          ( hci_rsp_t      ),
-      .obi_a_optional_t   ( magia_tile_pkg::core_data_obi_a_optional_t ),
-      .obi_r_optional_t   ( magia_tile_pkg::core_data_obi_r_optional_t ),
-      .SbrPortObiCfg      ( magia_tile_pkg::obi_amo_cfg              ),
-      .MgrPortObiCfg      ( magia_tile_pkg::obi_no_amo_cfg           ),
-      .BypassCut          ( 1'b0                                     )
-    ) i_tcdm32_to_hci32_atomic_snitch (
-      .clk_i       ( clk_i                                      ),
-      .rst_ni      ( rst_ni                                     ),
-      .tcdm_req_i  ( gen_signals.tcdm_req[NumMemPortsPerSpatz]  ),
-      .tcdm_rsp_o  ( gen_signals.tcdm_rsp[NumMemPortsPerSpatz]  ),
-      .hci_req_o   ( hci_master_req_o[NumMemPortsPerSpatz]             ),
-      .hci_rsp_i   ( hci_master_rsp_i[NumMemPortsPerSpatz]             )
-    );
   end
+
+`ifndef SYNTHESIS
+  for (genvar p = 0; p < TCDMPorts; p++) begin : gen_no_tcdm_amo
+    assert property (@(posedge clk_i) disable iff (!rst_ni)
+      !(gen_signals.tcdm_req[p].q_valid && gen_signals.tcdm_req[p].q.amo != reqrsp_pkg::AMONone))
+      else $fatal(1, "spatz_cc_wrapper: atomic on TCDM port %0d", p);
+  end
+`endif
 
 endmodule : spatz_cc_wrapper

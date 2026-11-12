@@ -36,8 +36,8 @@ module reqrsp64_to_obi32
   output reqrsp_rsp_t                         reqrsp_rsp_o,
   
   // OBI side (32-bit to peripherals/L2)
-  output magia_tile_pkg::core_obi_data_req_t  obi_req_o,
-  input  magia_tile_pkg::core_obi_data_rsp_t  obi_rsp_i
+  output magia_tile_pkg::obi_mgr_req_t       obi_req_o,
+  input  magia_tile_pkg::obi_mgr_rsp_t       obi_rsp_i
 );
 
   /*******************************************************************/

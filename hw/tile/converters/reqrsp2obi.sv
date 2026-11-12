@@ -30,8 +30,8 @@ module reqrsp2obi
   input  magia_tile_pkg::spatz_reqrsp_req_t  reqrsp_req_i,
   output magia_tile_pkg::spatz_reqrsp_rsp_t  reqrsp_rsp_o,
 
-  output magia_tile_pkg::core_obi_data_req_t obi_req_o,
-  input  magia_tile_pkg::core_obi_data_rsp_t obi_rsp_i
+  output magia_tile_pkg::obi_mgr_req_t      obi_req_o,
+  input  magia_tile_pkg::obi_mgr_rsp_t      obi_rsp_i
 );
 
   /*******************************************************************/

@@ -240,11 +240,11 @@ module magia_isle
 /**               Control Core Beginning              **/
 /*******************************************************/
 
-  magia_tile_pkg::core_instr_req_t    core_instr_req;
-  magia_tile_pkg::core_instr_rsp_t    core_instr_rsp;
-  magia_tile_pkg::core_obi_data_req_t core_data_req;
-  magia_tile_pkg::core_obi_data_rsp_t core_data_rsp;
-  logic[5:0]                          core_data_atop;
+  magia_tile_pkg::core_instr_req_t core_instr_req;
+  magia_tile_pkg::core_instr_rsp_t core_instr_rsp;
+  magia_tile_pkg::obi_mgr_req_t    core_data_req;
+  magia_tile_pkg::obi_mgr_rsp_t    core_data_rsp;
+  logic[5:0]                       core_data_atop;
 
   // The core drives only atop among the OBI optional signals
   assign core_data_req.a.aid        = '0;
@@ -387,10 +387,10 @@ module magia_isle
 /*******************************************************/
 
   // TCDM ranges take an HCI port, the EU the direct link, atomics and the rest the OBI crossbar
-  magia_tile_pkg::core_obi_data_req_t [magia_tile_pkg::CORE_DATA_DEMUX_N_SLV-1:0] core_data_demux_req;
-  magia_tile_pkg::core_obi_data_rsp_t [magia_tile_pkg::CORE_DATA_DEMUX_N_SLV-1:0] core_data_demux_rsp;
-  magia_tile_pkg::obi_xbar_rule_t     [magia_tile_pkg::NUM_TCDM_RULES:0]          core_data_rules;
-  logic                                                                           core_data_atomic;
+  magia_tile_pkg::obi_mgr_req_t   [magia_tile_pkg::CORE_DATA_DEMUX_N_SLV-1:0] core_data_demux_req;
+  magia_tile_pkg::obi_mgr_rsp_t   [magia_tile_pkg::CORE_DATA_DEMUX_N_SLV-1:0] core_data_demux_rsp;
+  magia_tile_pkg::obi_xbar_rule_t [magia_tile_pkg::NUM_TCDM_RULES:0]          core_data_rules;
+  logic                                                                       core_data_atomic;
 
   assign core_data_atomic = core_data_atop != '0;
 
@@ -406,8 +406,8 @@ module magia_isle
     .DefaultSlv ( magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX                                        ),
     .SerialSlv  ( magia_tile_pkg::CORE_DATA_DEMUX_N_SLV'(1 << magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX)   ),
     .BypassSlv  ( magia_tile_pkg::CORE_DATA_DEMUX_N_SLV'(1 << magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX) ),
-    .req_t      ( magia_tile_pkg::core_obi_data_req_t                                            ),
-    .rsp_t      ( magia_tile_pkg::core_obi_data_rsp_t                                            )
+    .req_t      ( magia_tile_pkg::obi_mgr_req_t                                                  ),
+    .rsp_t      ( magia_tile_pkg::obi_mgr_rsp_t                                                  )
   ) i_core_data_demux (
     .clk_i              ( sys_clk             ),
     .rst_ni             ( rst_ni              ),
@@ -458,10 +458,14 @@ module magia_isle
   assign eu_direct_rsp.err    = eu_direct_err_flat;
 
   // Control core L1 port, connected to HCI in the L1 section
-  magia_tile_pkg::core_obi_data_req_t core_l1_direct_obi_req;
-  magia_tile_pkg::core_obi_data_rsp_t core_l1_direct_obi_rsp;
+  magia_tile_pkg::obi_mgr_req_t       core_l1_direct_obi_req;
+  magia_tile_pkg::obi_mgr_rsp_t       core_l1_direct_obi_rsp;
   tile_hci_data_req_t                 core_l1_direct_req;
   tile_hci_data_rsp_t                 core_l1_direct_rsp;
+
+  logic[magia_pkg::SRC_ID_W-1:0] tile_src_id;
+
+  assign tile_src_id = magia_pkg::SRC_ID_W'(mhartid_i + 32'd1);
 
   assign core_l1_direct_obi_req                                        = core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX];
   assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX] = core_l1_direct_obi_rsp;
@@ -474,7 +478,7 @@ module magia_isle
 `endif
 
   obi2hci_req #(
-    .obi_req_t ( magia_tile_pkg::core_obi_data_req_t ),
+    .obi_req_t ( magia_tile_pkg::obi_mgr_req_t       ),
     .hci_req_t ( tile_hci_data_req_t                 )
   ) i_core_l1_direct_obi2hci_req (
     .obi_req_i ( core_l1_direct_obi_req ),
@@ -483,7 +487,7 @@ module magia_isle
 
   hci2obi_rsp #(
     .hci_rsp_t ( tile_hci_data_rsp_t                 ),
-    .obi_rsp_t ( magia_tile_pkg::core_obi_data_rsp_t )
+    .obi_rsp_t ( magia_tile_pkg::obi_mgr_rsp_t       )
   ) i_core_l1_direct_hci2obi_rsp (
     .hci_rsp_i ( core_l1_direct_rsp     ),
     .obi_rsp_o ( core_l1_direct_obi_rsp )
@@ -496,20 +500,20 @@ module magia_isle
 /*******************************************************/
 
   // Managers, indexed by ObiMgr: core, ext, spatz, cluster cores
-  magia_tile_pkg::core_obi_data_req_t[ObiMgr.num_mgr-1:0] obi_xbar_slv_req;
-  magia_tile_pkg::core_obi_data_rsp_t[ObiMgr.num_mgr-1:0] obi_xbar_slv_rsp;
-  magia_tile_pkg::core_obi_data_req_t[ObiMgr.num_mgr-1:0] obi_xbar_slv_cut_req;
-  magia_tile_pkg::core_obi_data_rsp_t[ObiMgr.num_mgr-1:0] obi_xbar_slv_cut_rsp;
+  magia_tile_pkg::obi_mgr_req_t[ObiMgr.num_mgr-1:0] obi_xbar_slv_req;
+  magia_tile_pkg::obi_mgr_rsp_t[ObiMgr.num_mgr-1:0] obi_xbar_slv_rsp;
+  magia_tile_pkg::obi_mgr_req_t[ObiMgr.num_mgr-1:0] obi_xbar_slv_cut_req;
+  magia_tile_pkg::obi_mgr_rsp_t[ObiMgr.num_mgr-1:0] obi_xbar_slv_cut_rsp;
 
   // Subordinates, indexed by ObiSbr: l2, l1, eu, ctrl, cluster_eu
-  magia_tile_pkg::core_obi_data_req_t[ObiSbr.num_sbr-1:0] core_mem_data_cut_req;
-  magia_tile_pkg::core_obi_data_rsp_t[ObiSbr.num_sbr-1:0] core_mem_data_cut_rsp;
-  magia_tile_pkg::core_obi_data_req_t[ObiSbr.num_sbr-1:0] core_mem_data_req;
-  magia_tile_pkg::core_obi_data_rsp_t[ObiSbr.num_sbr-1:0] core_mem_data_rsp;
+  magia_tile_pkg::obi_sbr_req_t[ObiSbr.num_sbr-1:0] core_mem_data_cut_req;
+  magia_tile_pkg::obi_sbr_rsp_t[ObiSbr.num_sbr-1:0] core_mem_data_cut_rsp;
+  magia_tile_pkg::obi_sbr_req_t[ObiSbr.num_sbr-1:0] core_mem_data_req;
+  magia_tile_pkg::obi_sbr_rsp_t[ObiSbr.num_sbr-1:0] core_mem_data_rsp;
 
   // Remote accesses from the AXI crossbar
-  magia_tile_pkg::core_obi_data_req_t ext_obi_data_req;
-  magia_tile_pkg::core_obi_data_rsp_t ext_obi_data_rsp;
+  magia_tile_pkg::obi_mgr_req_t ext_obi_data_req;
+  magia_tile_pkg::obi_mgr_rsp_t ext_obi_data_rsp;
 
   assign obi_xbar_slv_req[ObiMgr.core]                                = core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX];
   assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX] = obi_xbar_slv_rsp[ObiMgr.core];
@@ -548,11 +552,11 @@ module magia_isle
   assign obi_xbar_slv_rsp[ObiMgr.core]     = obi_xbar_slv_cut_rsp[ObiMgr.core];
 
   obi_cut #(
-    .ObiCfg       ( magia_tile_pkg::obi_amo_cfg            ),
-    .obi_a_chan_t ( magia_tile_pkg::core_data_obi_a_chan_t ),
-    .obi_r_chan_t ( magia_tile_pkg::core_data_obi_r_chan_t ),
-    .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t    ),
-    .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t    )
+    .ObiCfg       ( magia_tile_pkg::obi_mgr_cfg            ),
+    .obi_a_chan_t ( magia_tile_pkg::obi_mgr_a_chan_t       ),
+    .obi_r_chan_t ( magia_tile_pkg::obi_mgr_r_chan_t       ),
+    .obi_req_t    ( magia_tile_pkg::obi_mgr_req_t          ),
+    .obi_rsp_t    ( magia_tile_pkg::obi_mgr_rsp_t          )
   ) i_obi_cut_ext (
     .clk_i          ( sys_clk                          ),
     .rst_ni         ( rst_ni                           ),
@@ -564,11 +568,11 @@ module magia_isle
 
   if (TileCfg.EnSpatzCC) begin: gen_spatz_obi_cut
     obi_cut #(
-      .ObiCfg       ( magia_tile_pkg::obi_amo_cfg            ),
-      .obi_a_chan_t ( magia_tile_pkg::core_data_obi_a_chan_t ),
-      .obi_r_chan_t ( magia_tile_pkg::core_data_obi_r_chan_t ),
-      .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t    ),
-      .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t    )
+      .ObiCfg       ( magia_tile_pkg::obi_mgr_cfg            ),
+      .obi_a_chan_t ( magia_tile_pkg::obi_mgr_a_chan_t       ),
+      .obi_r_chan_t ( magia_tile_pkg::obi_mgr_r_chan_t       ),
+      .obi_req_t    ( magia_tile_pkg::obi_mgr_req_t          ),
+      .obi_rsp_t    ( magia_tile_pkg::obi_mgr_rsp_t          )
     ) i_obi_cut_spatz (
       .clk_i          ( sys_clk                            ),
       .rst_ni         ( rst_ni                             ),
@@ -587,14 +591,14 @@ module magia_isle
   end
 
   obi_xbar #(
-    .SbrPortObiCfg      ( magia_tile_pkg::obi_amo_cfg            ),
-    .MgrPortObiCfg      (                                        ),
-    .sbr_port_obi_req_t ( magia_tile_pkg::core_obi_data_req_t    ),
-    .sbr_port_a_chan_t  ( magia_tile_pkg::core_data_obi_a_chan_t ),
-    .sbr_port_obi_rsp_t ( magia_tile_pkg::core_obi_data_rsp_t    ),
-    .sbr_port_r_chan_t  ( magia_tile_pkg::core_data_obi_r_chan_t ),
-    .mgr_port_obi_req_t (                                        ),
-    .mgr_port_obi_rsp_t (                                        ),
+    .SbrPortObiCfg      ( magia_tile_pkg::obi_mgr_cfg            ),
+    .MgrPortObiCfg      ( magia_tile_pkg::obi_sbr_cfg            ),
+    .sbr_port_obi_req_t ( magia_tile_pkg::obi_mgr_req_t          ),
+    .sbr_port_a_chan_t  ( magia_tile_pkg::obi_mgr_a_chan_t       ),
+    .sbr_port_obi_rsp_t ( magia_tile_pkg::obi_mgr_rsp_t          ),
+    .sbr_port_r_chan_t  ( magia_tile_pkg::obi_mgr_r_chan_t       ),
+    .mgr_port_obi_req_t ( magia_tile_pkg::obi_sbr_req_t          ),
+    .mgr_port_obi_rsp_t ( magia_tile_pkg::obi_sbr_rsp_t          ),
     .NumSbrPorts        ( ObiMgr.num_mgr                         ),
     .NumMgrPorts        ( ObiSbr.num_sbr                         ),
     .NumMaxTrans        ( magia_tile_pkg::N_MAX_TRAN             ),
@@ -617,11 +621,11 @@ module magia_isle
 
   for (genvar i = 0; i < ObiSbr.num_sbr; i++) begin: gen_obi_xbar_mgr_cut
     obi_cut #(
-      .ObiCfg       ( magia_tile_pkg::obi_amo_cfg            ),
-      .obi_a_chan_t ( magia_tile_pkg::core_data_obi_a_chan_t ),
-      .obi_r_chan_t ( magia_tile_pkg::core_data_obi_r_chan_t ),
-      .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t    ),
-      .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t    )
+      .ObiCfg       ( magia_tile_pkg::obi_sbr_cfg      ),
+      .obi_a_chan_t ( magia_tile_pkg::obi_sbr_a_chan_t ),
+      .obi_r_chan_t ( magia_tile_pkg::obi_sbr_r_chan_t ),
+      .obi_req_t    ( magia_tile_pkg::obi_sbr_req_t    ),
+      .obi_rsp_t    ( magia_tile_pkg::obi_sbr_rsp_t    )
     ) i_obi_xbar_mgr_cut (
       .clk_i          ( sys_clk                  ),
       .rst_ni         ( rst_ni                   ),
@@ -708,8 +712,8 @@ module magia_isle
 /*******************************************************/
 
   // One port per enabled control unit, indexed by CtrlMap
-  magia_tile_pkg::core_obi_data_req_t[CtrlMap.num_units-1:0] ctrl_req;
-  magia_tile_pkg::core_obi_data_rsp_t[CtrlMap.num_units-1:0] ctrl_rsp;
+  magia_tile_pkg::obi_sbr_req_t[CtrlMap.num_units-1:0] ctrl_req;
+  magia_tile_pkg::obi_sbr_rsp_t[CtrlMap.num_units-1:0] ctrl_rsp;
 
   ctrl_demux #(
     .TileCfg ( TileCfg )
@@ -747,17 +751,27 @@ module magia_isle
 /**         AXI Crossbar and NoC Ports Beginning      **/
 /*******************************************************/
 
+  magia_tile_pkg::core_axi_data_req_t obi2axi_req;
   magia_tile_pkg::core_axi_data_req_t core_axi_data_req;
   magia_tile_pkg::core_axi_data_rsp_t core_axi_data_rsp;
-  magia_tile_pkg::core_obi_data_rsp_t obi2axi_rsp;
-  magia_tile_pkg::core_obi_data_rsp_t obi2axi_rsp_sc;
+  magia_tile_pkg::obi_sbr_rsp_t       obi2axi_rsp;
+  magia_tile_pkg::obi_sbr_rsp_t       obi2axi_rsp_sc;
   logic[1:0]                          obi2axi_rsp_chan;
 
   logic[magia_tile_pkg::AXI_DATA_U_W-1:0] axi_data_user;
   logic[magia_tile_pkg::RUSER_WIDTH-1:0]  obi_rsp_data_user;
 
-  assign axi_data_user     = '0;
   assign obi_rsp_data_user = '0;
+
+  always_comb begin
+    axi_data_user = '0;
+    axi_data_user[magia_tile_pkg::AXI_DATA_U_W-1 -: magia_pkg::SRC_ID_W] = tile_src_id;
+  end
+
+  always_comb begin
+    core_axi_data_req         = obi2axi_req;
+    core_axi_data_req.ar.user = axi_data_user;
+  end
 
   always_comb begin
     obi2axi_rsp_sc = obi2axi_rsp;
@@ -770,9 +784,9 @@ module magia_isle
   assign core_mem_data_rsp[ObiSbr.l2] = obi2axi_rsp_sc;
 
   obi_to_axi #(
-    .ObiCfg       ( magia_tile_pkg::obi_amo_cfg         ),
-    .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t ),
-    .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t ),
+    .ObiCfg       ( magia_tile_pkg::obi_sbr_cfg         ),
+    .obi_req_t    ( magia_tile_pkg::obi_sbr_req_t       ),
+    .obi_rsp_t    ( magia_tile_pkg::obi_sbr_rsp_t       ),
     .AxiLite      (                                     ),
     .AxiAddrWidth ( magia_pkg::ADDR_W                   ),
     .AxiDataWidth ( magia_pkg::DATA_W                   ),
@@ -787,7 +801,7 @@ module magia_isle
     .obi_req_i           ( core_mem_data_req[ObiSbr.l2] ),
     .obi_rsp_o           ( obi2axi_rsp                  ),
     .user_i              ( axi_data_user                ),
-    .axi_req_o           ( core_axi_data_req            ),
+    .axi_req_o           ( obi2axi_req                  ),
     .axi_rsp_i           ( core_axi_data_rsp            ),
     .axi_rsp_channel_sel ( obi2axi_rsp_chan             ),
     .axi_rsp_b_user_o    (                              ),
@@ -887,21 +901,27 @@ module magia_isle
   logic[magia_tile_pkg::AUSER_WIDTH-1:0] axi2obi_req_read_auser;
   logic[magia_pkg::AXI_NOC_U_W-1:0]      axi2obi_rsp_b_user;
   logic[magia_pkg::AXI_NOC_U_W-1:0]      axi2obi_rsp_r_user;
+  logic[magia_pkg::AXI_NOC_U_W-1:0]      axi2obi_req_aw_user;
+  logic[magia_pkg::AXI_NOC_U_W-1:0]      axi2obi_req_ar_user;
 
-  assign axi2obi_req_write_aid   = '0;
+  assign axi2obi_req_write_aid   = magia_tile_pkg::AID_WIDTH'(axi2obi_req_aw_user[magia_pkg::AXI_NOC_U_W-1 -: magia_pkg::SRC_ID_W]);
   assign axi2obi_req_write_auser = '0;
   assign axi2obi_req_write_wuser = '0;
-  assign axi2obi_req_read_aid    = '0;
+  assign axi2obi_req_read_aid    = magia_tile_pkg::AID_WIDTH'(axi2obi_req_ar_user[magia_pkg::AXI_NOC_U_W-1 -: magia_pkg::SRC_ID_W]);
+
+  logic unused_axi2obi_req_user;
+  assign unused_axi2obi_req_user = ^{axi2obi_req_aw_user[magia_pkg::AXI_NOC_U_W-magia_pkg::SRC_ID_W-1:0],
+                                     axi2obi_req_ar_user[magia_pkg::AXI_NOC_U_W-magia_pkg::SRC_ID_W-1:0]};
   assign axi2obi_req_read_auser  = '0;
   assign axi2obi_rsp_b_user      = '0;
   assign axi2obi_rsp_r_user      = '0;
 
   axi_to_obi #(
-    .ObiCfg       ( magia_tile_pkg::obi_amo_cfg            ),
-    .obi_req_t    ( magia_tile_pkg::core_obi_data_req_t    ),
-    .obi_rsp_t    ( magia_tile_pkg::core_obi_data_rsp_t    ),
-    .obi_a_chan_t ( magia_tile_pkg::core_data_obi_a_chan_t ),
-    .obi_r_chan_t ( magia_tile_pkg::core_data_obi_r_chan_t ),
+    .ObiCfg       ( magia_tile_pkg::obi_mgr_cfg            ),
+    .obi_req_t    ( magia_tile_pkg::obi_mgr_req_t          ),
+    .obi_rsp_t    ( magia_tile_pkg::obi_mgr_rsp_t          ),
+    .obi_a_chan_t ( magia_tile_pkg::obi_mgr_a_chan_t       ),
+    .obi_r_chan_t ( magia_tile_pkg::obi_mgr_r_chan_t       ),
     .AxiAddrWidth ( magia_pkg::ADDR_W                      ),
     .AxiDataWidth ( magia_pkg::DATA_W                      ),
     .AxiIdWidth   ( magia_pkg::AXI_NOC_ID_W                ),
@@ -918,13 +938,13 @@ module magia_isle
     .obi_req_o              ( ext_obi_data_req             ),
     .obi_rsp_i              ( ext_obi_data_rsp             ),
     .req_aw_id_o            (                              ),
-    .req_aw_user_o          (                              ),
+    .req_aw_user_o          ( axi2obi_req_aw_user          ),
     .req_w_user_o           (                              ),
     .req_write_aid_i        ( axi2obi_req_write_aid        ),
     .req_write_auser_i      ( axi2obi_req_write_auser      ),
     .req_write_wuser_i      ( axi2obi_req_write_wuser      ),
     .req_ar_id_o            (                              ),
-    .req_ar_user_o          (                              ),
+    .req_ar_user_o          ( axi2obi_req_ar_user          ),
     .req_read_aid_i         ( axi2obi_req_read_aid         ),
     .req_read_auser_i       ( axi2obi_req_read_auser       ),
     .rsp_write_aw_user_o    (                              ),
@@ -1008,20 +1028,20 @@ module magia_isle
   end
 
   // L1 accesses from the OBI crossbar, local core atomics included: atomics resolved before HCI
-  magia_tile_pkg::core_obi_data_req_t ext_l1_data_amo_req;
-  magia_tile_pkg::core_obi_data_rsp_t ext_l1_data_amo_rsp;
+  magia_tile_pkg::obi_sbr_req_t       ext_l1_data_amo_req;
+  magia_tile_pkg::obi_sbr_rsp_t       ext_l1_data_amo_rsp;
   tile_hci_data_req_t                 ext_l1_data_req;
   tile_hci_data_rsp_t                 ext_l1_data_rsp;
 
   obi_atop_resolver #(
-    .SbrPortObiCfg             ( magia_tile_pkg::obi_amo_cfg                ),
+    .SbrPortObiCfg             ( magia_tile_pkg::obi_sbr_cfg                ),
     .MgrPortObiCfg             ( obi_pkg::ObiDefaultConfig                  ),
-    .sbr_port_obi_req_t        ( magia_tile_pkg::core_obi_data_req_t        ),
-    .sbr_port_obi_rsp_t        ( magia_tile_pkg::core_obi_data_rsp_t        ),
+    .sbr_port_obi_req_t        ( magia_tile_pkg::obi_sbr_req_t              ),
+    .sbr_port_obi_rsp_t        ( magia_tile_pkg::obi_sbr_rsp_t              ),
     .mgr_port_obi_req_t        (                                            ),
     .mgr_port_obi_rsp_t        (                                            ),
-    .mgr_port_obi_a_optional_t ( magia_tile_pkg::core_data_obi_a_optional_t ),
-    .mgr_port_obi_r_optional_t ( magia_tile_pkg::core_data_obi_r_optional_t ),
+    .mgr_port_obi_a_optional_t ( magia_tile_pkg::obi_data_a_optional_t      ),
+    .mgr_port_obi_r_optional_t ( magia_tile_pkg::obi_data_r_optional_t      ),
     .LrScEnable                (                                            ),
     .RegisterAmo               ( magia_tile_pkg::RegisterAmo                )
   ) i_obi_atomics (
@@ -1035,7 +1055,7 @@ module magia_isle
   );
 
   obi2hci_req #(
-    .obi_req_t ( magia_tile_pkg::core_obi_data_req_t ),
+    .obi_req_t ( magia_tile_pkg::obi_sbr_req_t       ),
     .hci_req_t ( tile_hci_data_req_t                 )
   ) i_ext_l1_data_obi2hci_req (
     .obi_req_i ( ext_l1_data_amo_req ),
@@ -1044,7 +1064,7 @@ module magia_isle
 
   hci2obi_rsp #(
     .hci_rsp_t ( tile_hci_data_rsp_t                 ),
-    .obi_rsp_t ( magia_tile_pkg::core_obi_data_rsp_t )
+    .obi_rsp_t ( magia_tile_pkg::obi_sbr_rsp_t       )
   ) i_ext_l1_data_hci2obi_rsp (
     .hci_rsp_i ( ext_l1_data_rsp     ),
     .obi_rsp_o ( ext_l1_data_amo_rsp )
@@ -1417,6 +1437,8 @@ module magia_isle
     assign eu_events.acc[magia_tile_pkg::EU_ACC_REDMULE_EVT_1] = redmule_events.evt[1];
 
     obi2hwpe_ctrl obi2hwpe_ctrl_inst (
+      .clk_i      ( sys_clk                   ),
+      .rst_ni     ( rst_ni                    ),
       .obi_req_i  ( ctrl_req[CtrlMap.redmule] ),
       .obi_rsp_o  ( ctrl_rsp[CtrlMap.redmule] ),
       .ctrl_req_o ( redmule_ctrl_req          ),
@@ -1542,8 +1564,8 @@ module magia_isle
       .clk_o     ( spatz_clk    )
     );
 
-    magia_tile_pkg::core_obi_data_req_t spatz_obi_req;
-    magia_tile_pkg::core_obi_data_rsp_t spatz_obi_rsp;
+    magia_tile_pkg::obi_mgr_req_t spatz_obi_req;
+    magia_tile_pkg::obi_mgr_rsp_t spatz_obi_rsp;
 
     assign obi_xbar_slv_req[ObiMgr.spatz] = spatz_obi_req;
     assign spatz_obi_rsp                  = obi_xbar_slv_rsp[ObiMgr.spatz];
@@ -1746,8 +1768,8 @@ module magia_isle
     assign eu_events.other[magia_tile_pkg::EU_OTHER_CLUSTER_DONE] = cluster_done;
 
     // Each core reaches L1 through HCI and everything else through the OBI crossbar
-    magia_tile_pkg::core_obi_data_req_t [NClusterCores-1:0] cluster_obi_data_req;
-    magia_tile_pkg::core_obi_data_rsp_t [NClusterCores-1:0] cluster_obi_data_rsp;
+    magia_tile_pkg::obi_mgr_req_t       [NClusterCores-1:0] cluster_obi_data_req;
+    magia_tile_pkg::obi_mgr_rsp_t       [NClusterCores-1:0] cluster_obi_data_rsp;
     tile_hci_data_req_t                 [NClusterCores-1:0] cluster_hci_data_req;
     tile_hci_data_rsp_t                 [NClusterCores-1:0] cluster_hci_data_rsp;
     magia_tile_pkg::core_instr_req_t    [NClusterCores-1:0] cluster_instr_req;

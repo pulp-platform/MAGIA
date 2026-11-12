@@ -44,7 +44,9 @@ package magia_pkg;
   localparam int unsigned ID_W_OFFSET      = 1;                               // Offset to be added to ID Width
   localparam int unsigned ID_W             = 1;                               // Default ID Width
   localparam int unsigned COLLECTIVE_OP_W  = 4;                               // Collective operation encoding (0: Unicast, 1: Multicast)
-  localparam int unsigned USR_W            = ADDR_W+COLLECTIVE_OP_W;          // The User Width encodes the collective operation
+  localparam int unsigned SRC_ID_W         = $clog2(N_TILES+1);
+  localparam int unsigned COLL_USR_W       = ADDR_W+COLLECTIVE_OP_W;
+  localparam int unsigned USR_W            = SRC_ID_W+COLL_USR_W;             // The User Width encodes the collective operation
 
   // FractalSync is mesh-wide: MAGIA_FSYNC (make fsync=1) enables it in the mesh and in every tile
 `ifdef MAGIA_FSYNC

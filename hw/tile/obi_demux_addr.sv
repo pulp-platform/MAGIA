@@ -32,11 +32,11 @@ module obi_demux_addr #(
   input  logic                               clk_i,
   input  logic                               rst_ni,
 
-  input  magia_tile_pkg::core_obi_data_req_t                  sbr_ports_req_i,
-  output magia_tile_pkg::core_obi_data_rsp_t                  sbr_ports_rsp_o,
+  input  magia_tile_pkg::obi_sbr_req_t                        sbr_ports_req_i,
+  output magia_tile_pkg::obi_sbr_rsp_t                        sbr_ports_rsp_o,
 
-  output magia_tile_pkg::core_obi_data_req_t[NumMgrPorts-1:0] mgr_ports_req_o,
-  input  magia_tile_pkg::core_obi_data_rsp_t[NumMgrPorts-1:0] mgr_ports_rsp_i,
+  output magia_tile_pkg::obi_sbr_req_t[NumMgrPorts-1:0] mgr_ports_req_o,
+  input  magia_tile_pkg::obi_sbr_rsp_t[NumMgrPorts-1:0] mgr_ports_rsp_i,
 
   input  magia_tile_pkg::obi_xbar_rule_t[NumAddrRules-1:0]    addr_map_i,
   input  logic                                                en_default_idx_i,
@@ -62,8 +62,8 @@ module obi_demux_addr #(
 
   obi_demux #(
     .ObiCfg      ( SbrPortObiCfg      ),
-    .obi_req_t   ( magia_tile_pkg::core_obi_data_req_t ),
-    .obi_rsp_t   ( magia_tile_pkg::core_obi_data_rsp_t ),
+    .obi_req_t   ( magia_tile_pkg::obi_sbr_req_t ),
+    .obi_rsp_t   ( magia_tile_pkg::obi_sbr_rsp_t ),
     .NumMgrPorts ( NumMgrPorts        ),
     .NumMaxTrans ( NumMaxTrans        )
   ) i_demux (

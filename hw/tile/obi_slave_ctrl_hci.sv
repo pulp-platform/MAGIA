@@ -34,8 +34,8 @@ module obi_slave_ctrl_hci
   input  logic                                clk_i,
   input  logic                                rst_ni,
 
-  input  core_obi_data_req_t                  obi_req_i,
-  output core_obi_data_rsp_t                  obi_rsp_o,
+  input  obi_sbr_req_t                        obi_req_i,
+  output obi_sbr_rsp_t                        obi_rsp_o,
 
   output hci_package::hci_interconnect_ctrl_t ctrl_o  // To magia_hci_interconnect
 );
@@ -47,6 +47,7 @@ module obi_slave_ctrl_hci
   logic        rvalid_d, rvalid_q;
   logic        err_d,    err_q;
   logic [31:0] rdata_d,  rdata_q;
+  logic [magia_tile_pkg::SBR_AID_WIDTH-1:0] rid_q;
 
   // Every request of the window is granted: a wrong offset faults instead of hanging
   assign arb_ctrl_sel = (obi_req_i.a.addr[31:2] == BaseAddr[31:2]);
@@ -78,17 +79,19 @@ module obi_slave_ctrl_hci
       rvalid_q <= 1'b0;
       err_q    <= 1'b0;
       rdata_q  <= 32'h0;
+      rid_q    <= '0;
     end else begin
       rvalid_q <= rvalid_d;
       err_q    <= err_d;
       rdata_q  <= rdata_d;
+      rid_q    <= obi_req_i.a.aid;
     end
   end
 
   assign obi_rsp_o.gnt          = rvalid_d;
   assign obi_rsp_o.rvalid       = rvalid_q;
   assign obi_rsp_o.r.rdata      = rdata_q;
-  assign obi_rsp_o.r.rid        = '0;
+  assign obi_rsp_o.r.rid        = rid_q;
   assign obi_rsp_o.r.err        = err_q;
   assign obi_rsp_o.r.r_optional = '0;
 
