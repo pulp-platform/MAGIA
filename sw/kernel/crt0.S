@@ -66,7 +66,7 @@ _start:
   csrci   mstatus, 8
   csrw    mie, zero
 
-#if defined(__riscv_f) && defined(__cv32e40p__)
+#if defined(__riscv_f) && defined(__cv32e40px__)
   li      t0, 0x2000
   csrrs   zero, mstatus, t0
 #endif
@@ -118,12 +118,8 @@ exit:
  add     a1, a1, a0
  add     a1, a1, a0
  sh      s0, 0(a1)
-#ifdef CV32E40P
  li      a1, 0xA0000038   /* EU_CORE_EVENT_WAIT */
  cv.elw	 zero, 0(a1)
-#else
- wfi
-#endif
 
 .section .vectors, "ax"
 .option norvc;

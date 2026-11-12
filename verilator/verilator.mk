@@ -20,21 +20,20 @@ BASE_PYTHON ?= python3
 # below also go on the include path, ahead of Bender's -- see the raw flist rule.
 VERILATOR_SRC        := $(MAGIA_ROOT)/target/verilator/src
 # Headers that only exist to make third-party RTL compile here; currently the
-# uvm_macros.svh stand-in the cv32e40p tracer needs. Verilator-only on purpose:
+# uvm_macros.svh stand-in the cv32e40px tracer needs. Verilator-only on purpose:
 # putting it on any other flow's include path would shadow the real UVM.
 VERILATOR_INC        := $(MAGIA_ROOT)/target/verilator/include
 VERILATOR_SCRIPTS    := $(MAGIA_ROOT)/verilator/scripts
 
-# Separate build dirs per testbench and core, so building one model never invalidates another
-VERILATOR_CORE_SUFFIX := $(if $(filter CV32E40X,$(core)),-cv32e40x)
+# Separate build dirs per testbench, so building one model never invalidates the other
 ifeq ($(mesh_dv),0)
 VERILATOR_HIER              := 0
 VERILATOR_TOP               := magia_tile_tb
-VERILATOR_DEFAULT_BUILD_DIR := $(MAGIA_ROOT)/verilator/build-tile$(VERILATOR_CORE_SUFFIX)
+VERILATOR_DEFAULT_BUILD_DIR := $(MAGIA_ROOT)/verilator/build-tile
 else
 VERILATOR_HIER              := 1
 VERILATOR_TOP               := magia_tb
-VERILATOR_DEFAULT_BUILD_DIR := $(MAGIA_ROOT)/verilator/build$(VERILATOR_CORE_SUFFIX)
+VERILATOR_DEFAULT_BUILD_DIR := $(MAGIA_ROOT)/verilator/build
 endif
 VERILATOR_BUILD_DIR  ?= $(VERILATOR_DEFAULT_BUILD_DIR)
 VERILATOR_OBJ_DIR    := $(VERILATOR_BUILD_DIR)/obj_dir
@@ -135,7 +134,7 @@ VERILATOR_DPI := \
 
 VERILATOR_BENDER_TARGS := $(bender_targs) \
 	-t tech_cells_generic_include_deprecated -t verilator -t rtl_sim \
-	-t verilator_dpi -t magia_dv -t simulation -t cv32e40p_include_tracer
+	-t verilator_dpi -t magia_dv -t simulation -t cv32e40px_include_tracer
 ifeq ($(VERILATOR_HIER),0)
 VERILATOR_BENDER_TARGS += -t standalone_tile
 endif
@@ -183,8 +182,8 @@ $(VERILATOR_BENDER_STAMP): $(VERILATOR_BUILD_DIR)/.bender-check
 # Bender's raw file list, plus the JTAG DPI sources. Our two include dirs are
 # written before Bender's output on purpose: `include resolution follows
 # +incdir+ order and gives the including file's own directory no priority, so
-# this is what makes the vendorized cv32e40p_tracer.sv in target/verilator/src
-# win over the one in the cv32e40p checkout's bhv/.
+# this is what makes the vendorized cv32e40px_instr_trace.svh in target/verilator/src
+# win over the one in the cv32e40px checkout's bhv/.
 $(VERILATOR_RAW_FLIST): Bender.yml Bender.lock Makefile bender_common.mk \
 	bender_sim.mk bender_synth.mk bender_profile.mk $(MAGIA_ROOT)/verilator/verilator.mk \
 	$(VERILATOR_BENDER_STAMP) | $(VERILATOR_BUILD_DIR)

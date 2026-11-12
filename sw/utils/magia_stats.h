@@ -25,20 +25,11 @@
 #include <stdint.h>
 
 static inline void ccount_en(void){
-#if defined(CV32E40X) || defined(CV32E40P)
     asm volatile("csrrci zero, 0x320, 0x1" ::);
-#else
-    asm volatile("csrw 0x7E0, %0" :: "r"(0x1));
-    asm volatile("csrw 0x7E1, %0" :: "r"(0x1));
-#endif
 }
 
 static inline void ccount_dis(void){
-#if defined(CV32E40X) || defined(CV32E40P)
     asm volatile("csrrsi zero, 0x320, 0x1" ::);
-#else
-    asm volatile("csrw 0x7E1, %0" :: "r"(0x0));
-#endif
 }
 
 static inline uint32_t perf_csr_cycle(void){
@@ -65,8 +56,6 @@ static inline uint32_t perf_csr_instret(void){
 
 #define MHPMCTR_INHIBIT_MASK (0xFF8u)
 
-#if defined(CV32E40P)
-
 static inline void hpmcount_ext_en(void){
     uint32_t mask = MHPMCTR_INHIBIT_MASK;
     asm volatile("csrrc zero, 0x320, %0" :: "r"(mask));
@@ -89,18 +78,6 @@ static inline void hpmcount_ext_dis(void){
     static inline void hpmcounter_reset_##NAME(void) {                          \
         asm volatile("csrw " #COUNTER_CSR ", zero");                            \
     }
-
-#else
-
-static inline void hpmcount_ext_en(void){ }
-static inline void hpmcount_ext_dis(void){ }
-
-#define DECL_MHPMCTR(NAME, EVENT_CSR, COUNTER_CSR, EVENT_MASK)       \
-    static inline void hpmevent_set_##NAME(void) { }                \
-    static inline uint32_t hpmcounter_get_##NAME(void) { return 0; } \
-    static inline void hpmcounter_reset_##NAME(void) { }
-
-#endif
 
 DECL_MHPMCTR(ld_stall, 0x323, 0xB03, EVT_LD_STALL)
 DECL_MHPMCTR(jr_stall, 0x324, 0xB04, EVT_JR_STALL)
