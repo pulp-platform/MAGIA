@@ -31,9 +31,9 @@
 #define K_SIZE 64
 
 #define A_BASE      (L1_BASE + 0x00010000)
-#define B_BASE      (L1_BASE + 0x00020000)
-#define C_BASE      (L1_BASE + 0x00030000)
-#define PARAM_BASE  (L1_BASE + 0x00040000)
+#define B_BASE      (L1_BASE + 0x00014000)
+#define C_BASE      (L1_BASE + 0x00018000)
+#define PARAM_BASE  (L1_BASE + 0x0001C000)
 
 typedef uint16_t fp16_t;
 static const fp16_t fp16_one = 0x3C00;   // 1.0

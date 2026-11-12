@@ -40,7 +40,7 @@ module obi_slave_ctrl_cluster
 );
 
 //-----------------------------------------------------------------------------
-// Register map (offsets from BaseAddr; instantiated inside gen_pulp_cluster at CLUSTER_CTRL_ADDR_START = 0x1740)
+// Register map (offsets from BaseAddr; instantiated inside gen_pulp_cluster at CLUSTER_CTRL_ADDR_START)
 //   0x00 FETCH_EN        : RW broadcast fetch_enable, resets READY; sticky in cv32e40p, so 0 does not stop the cores
 //   0x04 BINARY          : RW PULP binary entry point (boot address)
 //   0x08 DONE            : W  the dispatcher core writes 1 after the task returns -> done_o pulses
@@ -163,7 +163,7 @@ end
 always_ff @(posedge clk_i or negedge rst_ni) begin
   if (!rst_ni) begin
     fetch_en_q           <= 1'b0;
-    entry_point_q        <= 32'hCC000080;
+    entry_point_q        <= INSTRRAM_ADDR_START + 32'h80;  // _start of the ELF, after .vectors
     done_q               <= 1'b0;
     taskbin_q            <= 32'h0;
     data_q               <= 32'h0;
