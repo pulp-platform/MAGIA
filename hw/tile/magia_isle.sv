@@ -135,7 +135,7 @@ module magia_isle
   localparam int unsigned NumWordsBank = TileCfg.L1.NumWordsBank;
   localparam int unsigned L1BankAddrW  = $clog2(NumWordsBank * magia_tile_pkg::DW_LIC / magia_tile_pkg::BW_LIC);  // Byte address within a bank
 
-  localparam int unsigned NumHwpe = magia_tile_pkg::N_HWPE;  // Stays 1 without RedMulE: local_interconnect is not 0-safe
+  localparam int unsigned NumHwpe = TileCfg.EnRedMule ? 1 : 0;  // 0 drops the RedMulE leaf of the HCI interconnect
   localparam int unsigned NumDma  = magia_tile_pkg::N_DMA;
   localparam int unsigned NumExt  = magia_tile_pkg::N_EXT;
   localparam int unsigned TileIW  = NumHwpe + NumHciCore + NumDma + NumExt;
@@ -143,8 +143,10 @@ module magia_isle
   localparam int unsigned RedmuleFpW   = 16;  // FP16
   localparam int unsigned RedmuleDataW = TileCfg.RedMule.Height * (TileCfg.RedMule.NumPipeRegs + 1) * RedmuleFpW;
 
-  `HCI_TYPEDEF_REQ_T(tile_redmule_data_req_t, logic[magia_tile_pkg::AWC-1:0], logic[RedmuleDataW-1:0], logic[RedmuleDataW/magia_tile_pkg::BWH-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
-  `HCI_TYPEDEF_RSP_T(tile_redmule_data_rsp_t, logic[RedmuleDataW-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
+  localparam int unsigned RedmuleHciW  = RedmuleDataW + (TileCfg.RedMule.MisalignedAccess ? magia_tile_pkg::DW_LIC : 0);
+
+  `HCI_TYPEDEF_REQ_T(tile_redmule_data_req_t, logic[magia_tile_pkg::AWC-1:0], logic[RedmuleHciW-1:0], logic[RedmuleHciW/magia_tile_pkg::BWH-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
+  `HCI_TYPEDEF_RSP_T(tile_redmule_data_rsp_t, logic[RedmuleHciW-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
 
   `HCI_TYPEDEF_REQ_T(tile_hci_data_req_t, logic[magia_tile_pkg::AWC-1:0], logic[magia_tile_pkg::DW_LIC-1:0], logic[magia_tile_pkg::SW_LIC-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
   `HCI_TYPEDEF_RSP_T(tile_hci_data_rsp_t, logic[magia_tile_pkg::DW_LIC-1:0], logic[magia_tile_pkg::UWH-1:0], logic[TileIW-1:0], logic[0:0], logic[0:0])
@@ -1225,7 +1227,7 @@ module magia_isle
   `HCI_INTF_ARRAY(hci_core_if, sys_clk, 0:NumHciCore-1);
 
   localparam hci_package::hci_size_parameter_t `HCI_SIZE_PARAM(hci_redmule_if) = '{
-    DW:  RedmuleDataW,
+    DW:  RedmuleHciW,
     AW:  magia_tile_pkg::AWH,
     BW:  hci_package::DEFAULT_BW,
     UW:  magia_tile_pkg::REDMULE_UW,
@@ -1233,7 +1235,8 @@ module magia_isle
     EW:  hci_package::DEFAULT_EW,
     EHW: hci_package::DEFAULT_EHW
   };
-  `HCI_INTF_ARRAY(hci_redmule_if, sys_clk, 0:NumHwpe-1);
+  // One element even without RedMulE: the tie-off drives it by name
+  `HCI_INTF_ARRAY(hci_redmule_if, sys_clk, 0:0);
 
   localparam hci_package::hci_size_parameter_t `HCI_SIZE_PARAM(hci_dma_if) = '{
     DW:  magia_tile_pkg::iDMA_DataWidth,
@@ -1309,24 +1312,31 @@ module magia_isle
   hci_package::hci_interconnect_ctrl_t hci_ctrl;
 
   assign hci_clear = 1'b0;
-  assign hci_ctrl  = '0;
 
-  local_interconnect #(
-    .N_HWPE        ( NumHwpe                          ),
-    .N_DMA         ( NumDma                           ),
-    .N_CORE        ( NumHciCore                       ),
-    .N_MEM         ( NumMemBanks                      ),
-    .EXPFIFO       ( magia_tile_pkg::EXPFIFO          ),
-    .MEM_DATA_W    ( magia_tile_pkg::DW_LIC           ),
-    .MEM_ADDR_W    ( L1BankAddrW                      ),
-    .MEM_BYTE_W    ( magia_tile_pkg::BW_LIC           ),
-    .MEM_USER_W    ( magia_tile_pkg::UW_LIC           ),
-    .MEM_ID_W      ( TileIW                           ),
-    .HCI_SIZE_hwpe ( `HCI_SIZE_PARAM(hci_redmule_if)  ),
-    .HCI_SIZE_dma  ( `HCI_SIZE_PARAM(hci_dma_if)      ),
-    .HCI_SIZE_core ( `HCI_SIZE_PARAM(hci_core_if)     ),
-    .HCI_SIZE_mem  ( `HCI_SIZE_PARAM(hci_tcdm_sram_if))
-  ) i_local_interconnect (
+  // Wide-vs-narrow arbitration policy of the HCI, set by software
+  obi_slave_ctrl_hci #(
+    .BaseAddr ( magia_tile_pkg::HCI_CTRL_ADDR_START )
+  ) i_hci_ctrl (
+    .clk_i     ( sys_clk               ),
+    .rst_ni    ( rst_ni                ),
+    .obi_req_i ( ctrl_req[CtrlMap.hci] ),
+    .obi_rsp_o ( ctrl_rsp[CtrlMap.hci] ),
+    .ctrl_o    ( hci_ctrl              )
+  );
+
+  magia_hci_interconnect #(
+    .NumHwpe         ( NumHwpe                           ),
+    .NumDma          ( NumDma                            ),
+    .NumCore         ( NumHciCore                        ),
+    .NumMem          ( NumMemBanks                       ),
+    .RouterFifoDepth ( magia_tile_pkg::EXPFIFO           ),
+    .WaiveRq3Assert  ( 1'b1                              ),
+    .WaiveRq4Assert  ( 1'b1                              ),
+    .HCI_SIZE_hwpe   ( `HCI_SIZE_PARAM(hci_redmule_if)   ),
+    .HCI_SIZE_dma    ( `HCI_SIZE_PARAM(hci_dma_if)       ),
+    .HCI_SIZE_core   ( `HCI_SIZE_PARAM(hci_core_if)      ),
+    .HCI_SIZE_mem    ( `HCI_SIZE_PARAM(hci_tcdm_sram_if) )
+  ) i_magia_hci_interconnect (
     .clk_i   ( sys_clk          ),
     .rst_ni  ( rst_ni           ),
     .clear_i ( hci_clear        ),
@@ -1654,14 +1664,15 @@ module magia_isle
     `HCI_ASSIGN_TO_INTF(hci_redmule_if[0], redmule_data_req, redmule_data_rsp)
 
     magia_redmule_wrap #(
-      .CtrlIntfConfig     ( redmule_pkg::HWPE_TARGET    ),
-      .DataW              ( RedmuleDataW                ),
-      .Height             ( TileCfg.RedMule.Height      ),
-      .Width              ( TileCfg.RedMule.Width       ),
-      .NumPipeRegs        ( TileCfg.RedMule.NumPipeRegs ),
-      .redmule_data_req_t ( tile_redmule_data_req_t     ),
-      .redmule_data_rsp_t ( tile_redmule_data_rsp_t     ),
-      .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(hci_redmule_if) )
+      .CtrlIntfConfig          ( redmule_pkg::HWPE_TARGET               ),
+      .DataW                   ( RedmuleDataW                           ),
+      .MisalignedAccessSupport ( int'(TileCfg.RedMule.MisalignedAccess) ),
+      .Height                  ( TileCfg.RedMule.Height                 ),
+      .Width                   ( TileCfg.RedMule.Width                  ),
+      .NumPipeRegs             ( TileCfg.RedMule.NumPipeRegs            ),
+      .redmule_data_req_t      ( tile_redmule_data_req_t                ),
+      .redmule_data_rsp_t      ( tile_redmule_data_rsp_t                ),
+      .`HCI_SIZE_PARAM(tcdm)   ( `HCI_SIZE_PARAM(hci_redmule_if)        )
     ) i_redmule_wrap (
       .clk_i              ( sys_clk               ),
       .rst_ni             ( rst_ni                ),
@@ -1693,7 +1704,7 @@ module magia_isle
     tile_redmule_data_req_t redmule_data_req_quiet;
     tile_redmule_data_rsp_t redmule_data_rsp_unused;
 
-    // The HWPE port stays: local_interconnect needs at least one
+    // The HCI interconnect keeps one HWPE port even when it has no RedMulE leaf
     assign redmule_data_req_quiet = '0;
     `HCI_ASSIGN_TO_INTF(hci_redmule_if[0], redmule_data_req_quiet, redmule_data_rsp_unused)
 
