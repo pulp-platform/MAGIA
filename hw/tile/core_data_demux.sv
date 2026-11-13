@@ -30,8 +30,8 @@ module core_data_demux
   parameter int unsigned       DefaultSlv = NumSlv-1,      // Unmapped addresses and atomics
   parameter logic [NumSlv-1:0] SerialSlv  = '0,            // Slaves whose accesses block later ones
   parameter logic [NumSlv-1:0] BypassSlv  = '0,            // Slaves that skip the AMO resolver
-  parameter type               req_t      = magia_tile_pkg::core_data_req_t,
-  parameter type               rsp_t      = magia_tile_pkg::core_data_rsp_t,
+  parameter type               req_t      = magia_tile_pkg::core_obi_data_req_t,
+  parameter type               rsp_t      = magia_tile_pkg::core_obi_data_rsp_t,
   localparam int unsigned      SelW       = magia_tile_pkg::gen_idx_width(NumSlv)
 )(
   input  logic clk_i,
@@ -81,13 +81,13 @@ module core_data_demux
     .addr_t    ( logic [magia_pkg::ADDR_W-1:0]   ),
     .rule_t    ( magia_tile_pkg::obi_xbar_rule_t )
   ) i_addr_decode (
-    .addr_i           ( core_data_req_i.addr ),
-    .addr_map_i       ( addr_map_i           ),
-    .idx_o            ( addr_slv             ),
-    .dec_valid_o      (                      ),
-    .dec_error_o      (                      ),
-    .en_default_idx_i ( 1'b1                 ),
-    .default_idx_i    ( SelW'(DefaultSlv)    )
+    .addr_i           ( core_data_req_i.a.addr ),
+    .addr_map_i       ( addr_map_i             ),
+    .idx_o            ( addr_slv               ),
+    .dec_valid_o      (                        ),
+    .dec_error_o      (                        ),
+    .en_default_idx_i ( 1'b1                   ),
+    .default_idx_i    ( SelW'(DefaultSlv)      )
   );
 
   // The resolver answers an AMO before its write-back: the next bypassing access queues behind it

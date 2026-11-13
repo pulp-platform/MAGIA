@@ -1,4 +1,4 @@
-// VENDORIZED COPY for the Verilator flow: cv32e40p bhv/cv32e40p_instr_trace.svh at rev 193270d plus the "MAGIA verilator:" members
+// VENDORIZED COPY for the Verilator flow: cv32e40px bhv/cv32e40px_instr_trace.svh at rev 3ef1c51 plus the "MAGIA verilator:" members
 // Copyright 2020 Silicon Labs, Inc.
 //
 // This file, and derivatives thereof are licensed under the
@@ -812,7 +812,7 @@ class instr_trace_t;
       else str_hb = ".h";
 
       // set mnemonic
-      casex (instr)
+      case (instr)
         INSTR_CVADDH   ,
         INSTR_CVADDSCH ,
         INSTR_CVADDSCIH,
