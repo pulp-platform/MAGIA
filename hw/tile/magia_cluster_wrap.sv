@@ -80,12 +80,12 @@ module magia_cluster_wrap
   logic [NClusterCores-1:0] cluster_core_sleep;
 
   // Cluster core data interface
-  magia_tile_pkg::core_data_req_t [NClusterCores-1:0] cluster_data_req;
-  magia_tile_pkg::core_data_rsp_t [NClusterCores-1:0] cluster_data_rsp;
+  magia_tile_pkg::core_obi_data_req_t [NClusterCores-1:0] cluster_data_req;
+  magia_tile_pkg::core_obi_data_rsp_t [NClusterCores-1:0] cluster_data_rsp;
 
   // Per-core demux downstream ports ([i][TCDM], [i][OBI]).
-  magia_tile_pkg::core_data_req_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_req;
-  magia_tile_pkg::core_data_rsp_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_rsp;
+  magia_tile_pkg::core_obi_data_req_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_req;
+  magia_tile_pkg::core_obi_data_rsp_t [NClusterCores-1:0][CLUSTER_DATA_DEMUX_N_SLV-1:0] cluster_data_demux_rsp;
 
   // Per-core 32-bit interrupt vector
   logic [NClusterCores-1:0][31:0]                                  cluster_irq_vec;
@@ -150,13 +150,13 @@ module magia_cluster_wrap
       .instr_rdata_i          ( cluster_instr_rsp_i[i].rdata       ),
       // Data interface (goes through the per-core data demux below)
       .data_req_o             ( cluster_data_req[i].req              ),
-      .data_addr_o            ( cluster_data_req[i].addr             ),
-      .data_be_o              ( cluster_data_req[i].be               ),
-      .data_wdata_o           ( cluster_data_req[i].wdata            ),
-      .data_we_o              ( cluster_data_req[i].we               ),
+      .data_addr_o            ( cluster_data_req[i].a.addr           ),
+      .data_be_o              ( cluster_data_req[i].a.be             ),
+      .data_wdata_o           ( cluster_data_req[i].a.wdata          ),
+      .data_we_o              ( cluster_data_req[i].a.we             ),
       .data_gnt_i             ( cluster_data_rsp[i].gnt              ),
       .data_rvalid_i          ( cluster_data_rsp[i].rvalid           ),
-      .data_rdata_i           ( cluster_data_rsp[i].rdata            ),
+      .data_rdata_i           ( cluster_data_rsp[i].r.rdata          ),
       // CPU interrupt inputs are disabled; use EU event waits / polling
       .irq_i                  ( cluster_irq_vec[i]                  ),
       .irq_ack_o              (                                     ),
@@ -171,6 +171,10 @@ module magia_cluster_wrap
       .fetch_enable_i         ( cluster_fetch_enable_i[i]           ),
       .core_sleep_o           ( cluster_core_sleep[i]               )
     );
+
+    // No atomics on the cluster cores: the OBI optional signals stay idle
+    assign cluster_data_req[i].a.aid        = '0;
+    assign cluster_data_req[i].a.a_optional = '0;
   end
 
   // ---------------------------------------------------------------------------
@@ -190,8 +194,8 @@ module magia_cluster_wrap
       .NumRules   ( magia_tile_pkg::NUM_TCDM_RULES + 1                ),
       .DefaultSlv ( CLUSTER_DATA_DEMUX_OBI_IDX                        ),
       .SerialSlv  ( CLUSTER_DATA_DEMUX_N_SLV'(1 << CLUSTER_DATA_DEMUX_EU_IDX) ),
-      .req_t      ( magia_tile_pkg::core_data_req_t                   ),
-      .rsp_t      ( magia_tile_pkg::core_data_rsp_t                   )
+      .req_t      ( magia_tile_pkg::core_obi_data_req_t               ),
+      .rsp_t      ( magia_tile_pkg::core_obi_data_rsp_t               )
     ) i_cluster_data_demux (
       .clk_i              ( clk_i                     ),
       .rst_ni             ( rst_ni                    ),
@@ -206,49 +210,29 @@ module magia_cluster_wrap
   end
 
   // ---------------------------------------------------------------------------
-  // Per-core converters: OBI path demux->xbar; TCDM path demux->OBI->HCI
+  // Per-core demux ports: OBI path -> xbar; TCDM path -> HCI
   // ---------------------------------------------------------------------------
   for (genvar i = 0; i < NClusterCores; i++) begin : gen_cluster_data_obi
 
     // --- OBI (peripheral) path ---
-    data2obi_req i_cluster_data2obi (
-      .data_req_i ( cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_OBI_IDX] ),
-      .obi_req_o  ( cluster_obi_data_req_o[i]                   )
-    );
+    assign cluster_obi_data_req_o[i]                             = cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_OBI_IDX];
+    assign cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_OBI_IDX] = cluster_obi_data_rsp_i[i];
 
-    obi2data_rsp i_cluster_obi2data (
-      .obi_rsp_i  ( cluster_obi_data_rsp_i[i]                   ),
-      .data_rsp_o ( cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_OBI_IDX] )
-    );
-
-    // --- TCDM (L1) path: native mem -> OBI -> HCI dedicated interconnect port ---
-    magia_tile_pkg::core_obi_data_req_t cluster_tcdm_obi_req;
-    magia_tile_pkg::core_obi_data_rsp_t cluster_tcdm_obi_rsp;
-
-    data2obi_req i_cluster_tcdm_data2obi (
-      .data_req_i ( cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_TCDM_IDX] ),
-      .obi_req_o  ( cluster_tcdm_obi_req                         )
-    );
-
-    obi2data_rsp i_cluster_tcdm_obi2data (
-      .obi_rsp_i  ( cluster_tcdm_obi_rsp                         ),
-      .data_rsp_o ( cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_TCDM_IDX] )
-    );
-
+    // --- TCDM (L1) path: OBI -> HCI dedicated interconnect port ---
     obi2hci_req #(
       .obi_req_t ( magia_tile_pkg::core_obi_data_req_t ),
       .hci_req_t ( hci_req_t )
     ) i_cluster_tcdm_obi2hci_req (
-      .obi_req_i ( cluster_tcdm_obi_req      ),
-      .hci_req_o ( cluster_hci_data_req_o[i] )
+      .obi_req_i ( cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_TCDM_IDX] ),
+      .hci_req_o ( cluster_hci_data_req_o[i]                            )
     );
 
     hci2obi_rsp #(
       .hci_rsp_t ( hci_rsp_t ),
       .obi_rsp_t ( magia_tile_pkg::core_obi_data_rsp_t )
     ) i_cluster_tcdm_hci2obi_rsp (
-      .hci_rsp_i ( cluster_hci_data_rsp_i[i] ),
-      .obi_rsp_o ( cluster_tcdm_obi_rsp      )
+      .hci_rsp_i ( cluster_hci_data_rsp_i[i]                            ),
+      .obi_rsp_o ( cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_TCDM_IDX] )
     );
   end
 
@@ -259,15 +243,17 @@ module magia_cluster_wrap
   // Demux EU port -> EU direct link, with the address made relative to the EU window
   for (genvar i = 0; i < NClusterCores; i++) begin : gen_cluster_eu_direct
     assign cluster_eu_direct_req[i]   = cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_EU_IDX].req;
-    assign cluster_eu_direct_addr[i]  = cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_EU_IDX].addr - magia_tile_pkg::CLUSTER_EU_DIRECT_START;
-    assign cluster_eu_direct_wen[i]   = ~cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_EU_IDX].we;
-    assign cluster_eu_direct_wdata[i] = cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_EU_IDX].wdata;
-    assign cluster_eu_direct_be[i]    = cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_EU_IDX].be;
+    assign cluster_eu_direct_addr[i]  = cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_EU_IDX].a.addr - magia_tile_pkg::CLUSTER_EU_DIRECT_START;
+    assign cluster_eu_direct_wen[i]   = ~cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_EU_IDX].a.we;
+    assign cluster_eu_direct_wdata[i] = cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_EU_IDX].a.wdata;
+    assign cluster_eu_direct_be[i]    = cluster_data_demux_req[i][CLUSTER_DATA_DEMUX_EU_IDX].a.be;
 
-    assign cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_EU_IDX].gnt    = cluster_eu_direct_gnt[i];
-    assign cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_EU_IDX].rvalid = cluster_eu_direct_rvalid[i];
-    assign cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_EU_IDX].rdata  = cluster_eu_direct_rdata[i];
-    assign cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_EU_IDX].err    = cluster_eu_direct_err[i];
+    assign cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_EU_IDX].gnt          = cluster_eu_direct_gnt[i];
+    assign cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_EU_IDX].rvalid       = cluster_eu_direct_rvalid[i];
+    assign cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_EU_IDX].r.rdata      = cluster_eu_direct_rdata[i];
+    assign cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_EU_IDX].r.err        = cluster_eu_direct_err[i];
+    assign cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_EU_IDX].r.rid        = '0;
+    assign cluster_data_demux_rsp[i][CLUSTER_DATA_DEMUX_EU_IDX].r.r_optional = '0;
 
     // Only event source wired from outside the cluster: the control-core pulse, which reaches core 0 only
     always_comb begin

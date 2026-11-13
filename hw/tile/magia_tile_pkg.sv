@@ -586,22 +586,6 @@ package magia_tile_pkg;
     logic                         err;
   } core_instr_rsp_t;
 
-  typedef struct packed {
-    logic                        req;
-    logic[magia_pkg::ADDR_W-1:0] addr;
-    logic[5                  :0] atop;
-    logic[3                  :0] be;
-    logic[magia_pkg::DATA_W-1:0] wdata;
-    logic                        we;
-  } core_data_req_t;
-
-  typedef struct packed {
-    logic                        gnt;
-    logic                        rvalid;
-    logic[magia_pkg::DATA_W-1:0] rdata;
-    logic                        err;
-  } core_data_rsp_t;
-
   // Core data demux signals: [0] = TCDM (L1) direct path, [1] = OBI xbar (default), [2] = EU direct link window
   localparam int unsigned CORE_DATA_DEMUX_N_SLV    = 3;
   localparam int unsigned CORE_DATA_DEMUX_TCDM_IDX = 0;

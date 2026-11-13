@@ -54,8 +54,6 @@ sources:
       - hw/mesh/magia_pkg.sv
       - hw/tile/magia_tile_pkg.sv
       # MAGIA Tile content
-      - hw/tile/converters/data2obi.sv
-      - hw/tile/converters/obi2data.sv
       - hw/tile/converters/instr2obi.sv
       - hw/tile/converters/obi2instr.sv
       - hw/tile/converters/instr2cache.sv
