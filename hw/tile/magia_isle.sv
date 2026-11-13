@@ -240,10 +240,15 @@ module magia_isle
 /**               Control Core Beginning              **/
 /*******************************************************/
 
-  magia_tile_pkg::core_instr_req_t core_instr_req;
-  magia_tile_pkg::core_instr_rsp_t core_instr_rsp;
-  magia_tile_pkg::core_data_req_t  core_data_req;
-  magia_tile_pkg::core_data_rsp_t  core_data_rsp;
+  magia_tile_pkg::core_instr_req_t    core_instr_req;
+  magia_tile_pkg::core_instr_rsp_t    core_instr_rsp;
+  magia_tile_pkg::core_obi_data_req_t core_data_req;
+  magia_tile_pkg::core_obi_data_rsp_t core_data_rsp;
+  logic[5:0]                          core_data_atop;
+
+  // The core drives only atop among the OBI optional signals
+  assign core_data_req.a.aid        = '0;
+  assign core_data_req.a.a_optional = '{atop: core_data_atop, default: '0};
 
   // No CPU interrupts: the control core waits on the Event Unit
   logic[31:0] core_irq_vec;
@@ -283,12 +288,12 @@ module magia_isle
     .data_req_o             ( core_data_req.req     ),
     .data_gnt_i             ( core_data_rsp.gnt     ),
     .data_rvalid_i          ( core_data_rsp.rvalid  ),
-    .data_addr_o            ( core_data_req.addr    ),
-    .data_be_o              ( core_data_req.be      ),
-    .data_wdata_o           ( core_data_req.wdata   ),
-    .data_atop_o            ( core_data_req.atop    ),
-    .data_we_o              ( core_data_req.we      ),
-    .data_rdata_i           ( core_data_rsp.rdata   ),
+    .data_addr_o            ( core_data_req.a.addr  ),
+    .data_be_o              ( core_data_req.a.be    ),
+    .data_wdata_o           ( core_data_req.a.wdata ),
+    .data_atop_o            ( core_data_atop        ),
+    .data_we_o              ( core_data_req.a.we    ),
+    .data_rdata_i           ( core_data_rsp.r.rdata ),
 
     .irq_i                  ( core_irq_vec          ),
     .irq_ack_o              (                       ),
@@ -382,12 +387,12 @@ module magia_isle
 /*******************************************************/
 
   // TCDM ranges take an HCI port, the EU the direct link, atomics and the rest the OBI crossbar
-  magia_tile_pkg::core_data_req_t [magia_tile_pkg::CORE_DATA_DEMUX_N_SLV-1:0] core_data_demux_req;
-  magia_tile_pkg::core_data_rsp_t [magia_tile_pkg::CORE_DATA_DEMUX_N_SLV-1:0] core_data_demux_rsp;
-  magia_tile_pkg::obi_xbar_rule_t [magia_tile_pkg::NUM_TCDM_RULES:0]          core_data_rules;
-  logic                                                                       core_data_atomic;
+  magia_tile_pkg::core_obi_data_req_t [magia_tile_pkg::CORE_DATA_DEMUX_N_SLV-1:0] core_data_demux_req;
+  magia_tile_pkg::core_obi_data_rsp_t [magia_tile_pkg::CORE_DATA_DEMUX_N_SLV-1:0] core_data_demux_rsp;
+  magia_tile_pkg::obi_xbar_rule_t     [magia_tile_pkg::NUM_TCDM_RULES:0]          core_data_rules;
+  logic                                                                           core_data_atomic;
 
-  assign core_data_atomic = core_data_req.atop != '0;
+  assign core_data_atomic = core_data_atop != '0;
 
   assign core_data_rules[magia_tile_pkg::NUM_TCDM_RULES-1:0] = tcdm_rules;
   assign core_data_rules[magia_tile_pkg::NUM_TCDM_RULES]     = '{idx:        magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX,
@@ -401,8 +406,8 @@ module magia_isle
     .DefaultSlv ( magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX                                        ),
     .SerialSlv  ( magia_tile_pkg::CORE_DATA_DEMUX_N_SLV'(1 << magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX)   ),
     .BypassSlv  ( magia_tile_pkg::CORE_DATA_DEMUX_N_SLV'(1 << magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX) ),
-    .req_t      ( magia_tile_pkg::core_data_req_t                                                ),
-    .rsp_t      ( magia_tile_pkg::core_data_rsp_t                                                )
+    .req_t      ( magia_tile_pkg::core_obi_data_req_t                                            ),
+    .rsp_t      ( magia_tile_pkg::core_obi_data_rsp_t                                            )
   ) i_core_data_demux (
     .clk_i              ( sys_clk             ),
     .rst_ni             ( rst_ni              ),
@@ -420,15 +425,17 @@ module magia_isle
   magia_tile_pkg::eu_direct_rsp_t eu_direct_rsp;
 
   assign eu_direct_req.req   = core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].req;
-  assign eu_direct_req.addr  = core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].addr - tile_event_unit_start_addr;
-  assign eu_direct_req.wen   = ~core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].we;
-  assign eu_direct_req.wdata = core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].wdata;
-  assign eu_direct_req.be    = core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].be;
+  assign eu_direct_req.addr  = core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].a.addr - tile_event_unit_start_addr;
+  assign eu_direct_req.wen   = ~core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].a.we;
+  assign eu_direct_req.wdata = core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].a.wdata;
+  assign eu_direct_req.be    = core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].a.be;
 
-  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].gnt    = eu_direct_rsp.gnt;
-  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].rvalid = eu_direct_rsp.rvalid;
-  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].rdata  = eu_direct_rsp.rdata;
-  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].err    = eu_direct_rsp.err;
+  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].gnt          = eu_direct_rsp.gnt;
+  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].rvalid       = eu_direct_rsp.rvalid;
+  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].r.rdata      = eu_direct_rsp.rdata;
+  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].r.err        = eu_direct_rsp.err;
+  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].r.rid        = '0;
+  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_EU_IDX].r.r_optional = '0;
 
   logic        eu_direct_req_flat;
   logic [31:0] eu_direct_addr_flat;
@@ -450,34 +457,14 @@ module magia_isle
   assign eu_direct_rsp.rdata  = eu_direct_rdata_flat;
   assign eu_direct_rsp.err    = eu_direct_err_flat;
 
-  magia_tile_pkg::core_obi_data_req_t core_obi_data_req;
-  magia_tile_pkg::core_obi_data_rsp_t core_obi_data_rsp;
-
   // Control core L1 port, connected to HCI in the L1 section
   magia_tile_pkg::core_obi_data_req_t core_l1_direct_obi_req;
   magia_tile_pkg::core_obi_data_rsp_t core_l1_direct_obi_rsp;
   tile_hci_data_req_t                 core_l1_direct_req;
   tile_hci_data_rsp_t                 core_l1_direct_rsp;
 
-  data2obi_req i_core_data2obi_req (
-    .data_req_i ( core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX] ),
-    .obi_req_o  ( core_obi_data_req                                            )
-  );
-
-  obi2data_rsp i_core_obi2data_rsp (
-    .obi_rsp_i  ( core_obi_data_rsp                                            ),
-    .data_rsp_o ( core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX] )
-  );
-
-  data2obi_req i_core_l1_direct_data2obi_req (
-    .data_req_i ( core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX] ),
-    .obi_req_o  ( core_l1_direct_obi_req                                        )
-  );
-
-  obi2data_rsp i_core_l1_direct_obi2data_rsp (
-    .obi_rsp_i  ( core_l1_direct_obi_rsp                                        ),
-    .data_rsp_o ( core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX] )
-  );
+  assign core_l1_direct_obi_req                                        = core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX];
+  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_TCDM_IDX] = core_l1_direct_obi_rsp;
 
 `ifndef SYNTHESIS
   assert property (@(posedge sys_clk) disable iff (!rst_ni)
@@ -524,10 +511,10 @@ module magia_isle
   magia_tile_pkg::core_obi_data_req_t ext_obi_data_req;
   magia_tile_pkg::core_obi_data_rsp_t ext_obi_data_rsp;
 
-  assign obi_xbar_slv_req[ObiMgr.core] = core_obi_data_req;
-  assign core_obi_data_rsp             = obi_xbar_slv_rsp[ObiMgr.core];
-  assign obi_xbar_slv_req[ObiMgr.ext]  = ext_obi_data_req;
-  assign ext_obi_data_rsp              = obi_xbar_slv_rsp[ObiMgr.ext];
+  assign obi_xbar_slv_req[ObiMgr.core]                                = core_data_demux_req[magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX];
+  assign core_data_demux_rsp[magia_tile_pkg::CORE_DATA_DEMUX_OBI_IDX] = obi_xbar_slv_rsp[ObiMgr.core];
+  assign obi_xbar_slv_req[ObiMgr.ext]                                 = ext_obi_data_req;
+  assign ext_obi_data_rsp                                             = obi_xbar_slv_rsp[ObiMgr.ext];
 
   // The last matching rule wins in addr_decode, so every rule after RuleCtrl overrides it
   localparam int unsigned RuleCtrl      = 0;
