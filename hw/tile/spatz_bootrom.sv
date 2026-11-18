@@ -21,8 +21,8 @@ module spatz_bootrom #(
   const logic [RomSize-1:0][DataWidth-1:0] mem = {
     32'h00030067,
     32'h0002a303,
-    32'h70c28293,
-    32'h000012b7
+    32'h20c28293,
+    32'ha00022b7
   };
 
   // Sequential read with registered address

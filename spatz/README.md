@@ -24,17 +24,17 @@ Spatz CC is controlled through an **OBI slave interface** (`obi_slave_ctrl_spatz
 
 ### Control Registers
 
-The OBI slave exposes the following registers (base address: `SPATZ_CTRL_BASE = 0x00001700`):
+The OBI slave exposes the following registers (base address: `SPATZ_CTRL_BASE = 0xA0002200`):
 
 | Register Name    | Offset | Address    | Description                                                                                              |
 |------------------|--------|------------|----------------------------------------------------------------------------------------------------------|
-| `SPATZ_CLK_EN`   | 0x00   | 0x00001700 | Clock enable (write 1 to enable, 0 to disable Spatz CC clock)                                           |
-| `SPATZ_READY`    | 0x04   | 0x00001704 | Ready flag: Spatz writes 1 when ready for interrupts, 0 after first task; CV32 polls before triggering  |
-| `SPATZ_START`    | 0x08   | 0x00001708 | Trigger register: write 1 to send interrupt to Spatz CC, Snitch clears it to 0                          |
-| `SPATZ_TASKBIN`  | 0x0C   | 0x0000170C | Task binary address: CV32 writes task entry point address, Snitch reads it                              |
-| `SPATZ_DATA`     | 0x10   | 0x00001710 | Data/parameter pointer: CV32 writes pointer to task parameters, Snitch reads it                          |
-| `SPATZ_RETURN`   | 0x14   | 0x00001714 | Return value: Snitch writes task exit code (0=success, non-zero=error/exception), CV32 reads it         |
-| `SPATZ_DONE`     | 0x18   | 0x00001718 | Done flag: Snitch writes 1 when task completes, generates 1-cycle pulse to Event Unit, auto-clears      |
+| `SPATZ_CLK_EN`   | 0x00   | 0xA0002200 | Clock enable (write 1 to enable, 0 to disable Spatz CC clock)                                           |
+| `SPATZ_READY`    | 0x04   | 0xA0002204 | Ready flag: Spatz writes 1 when ready for interrupts, 0 after first task; CV32 polls before triggering  |
+| `SPATZ_START`    | 0x08   | 0xA0002208 | Trigger register: write 1 to send interrupt to Spatz CC, Snitch clears it to 0                          |
+| `SPATZ_TASKBIN`  | 0x0C   | 0xA000220C | Task binary address: CV32 writes task entry point address, Snitch reads it                              |
+| `SPATZ_DATA`     | 0x10   | 0xA0002210 | Data/parameter pointer: CV32 writes pointer to task parameters, Snitch reads it                          |
+| `SPATZ_RETURN`   | 0x14   | 0xA0002214 | Return value: Snitch writes task exit code (0=success, non-zero=error/exception), CV32 reads it         |
+| `SPATZ_DONE`     | 0x18   | 0xA0002218 | Done flag: Snitch writes 1 when task completes, generates 1-cycle pulse to Event Unit, auto-clears      |
 
 **Register Behavior:**
 - **CLK_EN, START, READY, TASKBIN, DATA, RETURN**: Preserved registers - values persist until overwritten
@@ -178,7 +178,7 @@ Defined in `hw/tile/magia_tile_pkg.sv`. See [Spatz documentation](https://github
 
 3. **OBI Slave Interface (Control Registers):**
    - Spatz CC exposes an **OBI slave interface** (`obi_slave_ctrl_spatz`) for CV32 control
-   - Base address: `0x00001700`
+   - Base address: `0xA0002200`
    - Contains 7 control registers: `SPATZ_CLK_EN`, `SPATZ_READY`, `SPATZ_START`, `SPATZ_TASKBIN`, `SPATZ_DATA`, `SPATZ_RETURN`, `SPATZ_DONE`
    - CV32 accesses these registers via OBI to command Spatz CC operation
 ---
@@ -205,7 +205,7 @@ uint32_t spatz_get_exit_code(void);                      // Read exit code from 
 The bootROM is **extremely minimal** (only 3 instructions) to minimize hardware impact and ROM area. It performs only:
 ```assembly
 // Read dispatcher entry point from TASKBIN register (set by CV32)
-li      t0, TASKBIN_ADDR      // 0x0000170C
+li      t0, TASKBIN_ADDR      // 0xA000220C
 lw      t1, 0(t0)
 jr      t1  // Jump to spatz_crt0.S _start
 ```
@@ -217,7 +217,7 @@ The CV32 must write the Spatz CC binary's `_start` address to `SPATZ_TASKBIN` **
 The **spatz_crt0.S** runtime performs complete initialization and enters the task dispatcher loop. It is designed to be **completely transparent** to the programmer.
 
 **Initialization Steps:**
-1. **Stack Setup:** `sp = 0x0001FFF8` (128KB - 8 bytes, stack at top of Snitch local memory)
+1. **Stack Setup:** `sp = 0xA011FFF8` (top of the Spatz slot of the stacks, in the private L1 view)
 2. **Register Clearing:** All integer registers `x1-x31` cleared (except `sp`)
 3. **Vector Extension Enable:** Set `mstatus.VS = 0x200` (Initial state to enable Spatz vector coprocessor)
 4. **BSS Clearing:** Zero-initialize `.bss` section

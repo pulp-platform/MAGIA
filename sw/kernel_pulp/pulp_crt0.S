@@ -21,14 +21,14 @@
 #define PULP_CORE_COUNT  8
 #endif
 
-#define PULP_DONE_ADDR     0x00001748   /* PULP_CTRL_BASE + 0x08 */
-#define PULP_TASKBIN_ADDR  0x0000174C   /* PULP_CTRL_BASE + 0x0C */
-#define PULP_DATA_ADDR     0x00001750   /* PULP_CTRL_BASE + 0x10 */
-#define PULP_START_ADDR    0x00001754   /* PULP_CTRL_BASE + 0x14 */
-#define PULP_READY_ADDR    0x00001758   /* PULP_CTRL_BASE + 0x18 */
-#define PULP_RETURN_ADDR   0x0000175C   /* PULP_CTRL_BASE + 0x1C */
+#define PULP_DONE_ADDR     0xA0002308   /* PULP_CTRL_BASE + 0x08 */
+#define PULP_TASKBIN_ADDR  0xA000230C   /* PULP_CTRL_BASE + 0x0C */
+#define PULP_DATA_ADDR     0xA0002310   /* PULP_CTRL_BASE + 0x10 */
+#define PULP_START_ADDR    0xA0002314   /* PULP_CTRL_BASE + 0x14 */
+#define PULP_READY_ADDR    0xA0002318   /* PULP_CTRL_BASE + 0x18 */
+#define PULP_RETURN_ADDR   0xA000231C   /* PULP_CTRL_BASE + 0x1C */
 
-#define EU_DEMUX_BASE           0x00001900   /* CLUSTER_EU_DIRECT_BASE */
+#define EU_DEMUX_BASE           0xA0003000   /* CLUSTER_EU_DIRECT_BASE */
 #define EU_CORE_MASK_OR         (EU_DEMUX_BASE + 0x08)
 #define EU_EVENT_WAIT_CLR       (EU_DEMUX_BASE + 0x3C)
 #define EU_DISPATCH_FIFO        (EU_DEMUX_BASE + 0x80)
@@ -37,7 +37,7 @@
 #define EU_MASK_BAR_MUTEX_DISPATCH  ((1 << 16) | (1 << 17) | (1 << 18))
 
 /* PIC binary: MMIO and stack addresses are absolute, so they are loaded with li, not la */
-#define STACK_TOP        0x0001B800   /* 2KB below tile top (0x1C000): reserves CV32's slot */
+#define STACK_TOP        0xA011B800   /* 2KB below the stack top (0xA011C000): reserves CV32's slot */
 #define LOG2_SLICE       11           /* log2(2 KB) — each hart gets 2 KB */
 
 .section .text.start, "ax"
@@ -53,7 +53,7 @@ _start:
     slli    t0, a1, LOG2_SLICE
     sub     x2, x2, t0
 
-    /* Clear BSS (benign all-harts race); norelax keeps la PC-relative, relaxed to li it would zero tile MMIO */
+    /* Clear BSS (benign all-harts race); norelax keeps la PC-relative in this PIC binary */
     .option push
     .option norelax
     la      t0, __bss_start

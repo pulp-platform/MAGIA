@@ -19,17 +19,17 @@
  * Aligned with magia-sdk targets/magia_v3/pulp/src/pulp_program.ld.
  *
  * Memory layout when embedded:
- *   0xCC000000:               CV32 .text
- *   0xCC000000 + CV32_size:   .spatz_binary (Spatz code, if present)
- *   0xCC000000 + offset:      _pulp_binary_start (.pulp_binary, this binary)
+ *   0xC0000000:               CV32 .text
+ *   0xC0000000 + CV32_size:   .spatz_binary (Spatz code, if present)
+ *   0xC0000000 + offset:      _pulp_binary_start (.pulp_binary, this binary)
  *
  * Binary is position-independent (compiled with -fPIC -mcmodel=medany).
  * ORIGIN=0x0 means all section addresses are relative to load address.
  *
- * Local stack allocation (tile address space, absolute, set by each crt0):
- *   PULP  stack: 0x00017800 – 0x0001B800 (16 KB, 8 harts × 2 KB each, pulp_crt0.S)
- *   CV32  stack: 0x0001B800 – 0x0001C000 (2 KB, slot 0 of sw/kernel/link.ld)
- *   Spatz stack: 0x0001C000 – 0x00020000 (16 KB, spatz_crt0.S)
+ * Local stack allocation (private L1 view, absolute, set by each crt0):
+ *   PULP  stack: 0xA0117800 – 0xA011B800 (16 KB, 8 harts × 2 KB each, pulp_crt0.S)
+ *   CV32  stack: 0xA011B800 – 0xA011C000 (2 KB, slot 0 of sw/kernel/link.ld)
+ *   Spatz stack: 0xA011C000 – 0xA0120000 (16 KB, spatz_crt0.S)
  */
 
 OUTPUT_ARCH(riscv)

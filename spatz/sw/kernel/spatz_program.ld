@@ -17,12 +17,12 @@
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
  *
  * Memory Layout (when embedded in CV32 instrram):
- *   0xCC000000: CV32 .text
- *   0xCC000000 + CV32_size: .spatz_binary (Spatz code inline)
+ *   0xC0000000: CV32 .text
+ *   0xC0000000 + CV32_size: .spatz_binary (Spatz code inline)
  * 
- * Stack: Spatz uses the 16KB above the CV32/PULP stack region (0x0001C000-0x00020000)
- *   - CV32 and PULP: below 0x0001C000 (2KB slots, see sw/kernel/link.ld)
- *   - Spatz uses: 0x0001C000-0x00020000 (16KB)
+ * Stack: Spatz uses the 16KB above the CV32/PULP stacks (0xA011C000-0xA0120000, private L1)
+ *   - CV32 and PULP: below 0xA011C000 (2KB slots, see sw/kernel/link.ld)
+ *   - Spatz uses: 0xA011C000-0xA0120000 (16KB)
  */
 
 OUTPUT_ARCH(riscv)
@@ -33,8 +33,8 @@ MEMORY
     prog (rwxa)  : ORIGIN = 0x00000000, LENGTH = 0x10000  /* 64KB max - relative addressing */
 }
 
-/* Spatz stack: 0x0001C000-0x00020000 (16KB), above the CV32/PULP slots of sw/kernel/link.ld */
-_stack_start = 0x0001FFF8;  /* Top of Spatz stack (grows downward) */
+/* Spatz stack: 0xA011C000-0xA0120000 (16KB), above the CV32/PULP slots of sw/kernel/link.ld */
+_stack_start = 0xA011FFF8;  /* Top of Spatz stack (grows downward) */
 
 SECTIONS
 {

@@ -18,11 +18,10 @@
 import numpy as np
 import sys
 
-# Default memory layout: main-core ELF at 0xCC000000.
-# Override with optional argv[4] (instr base) and argv[5] (data base)
-# for the PULP cluster-core ELF which lives at 0xC0000000 / 0xC0100000.
-DEFAULT_MEM_START  = 0xcc000000
-DEFAULT_DATA_OFFSET = 0x10000  # data = instr_base + 0x10000 (main) or explicit
+# Default memory layout: main-core ELF at 0xC0000000, as in sw/kernel/link.ld.
+# Override with optional argv[4] (instr base) and argv[5] (data base).
+DEFAULT_MEM_START  = 0xc0000000
+DEFAULT_DATA_OFFSET = 0x8800  # dataram of sw/kernel/link.ld, after the exit codes
 
 if len(sys.argv) >= 5:
     MEM_START = int(sys.argv[4], 16)
@@ -36,14 +35,11 @@ else:
 
 INSTR_SIZE = 0x8000
 INSTR_END  = MEM_START + INSTR_SIZE
-DATA_SIZE  = 0x30000
+DATA_SIZE  = 0x40000
 DATA_END   = DATA_BASE + DATA_SIZE
-STACK_BASE = 0x10000
-STACK_SIZE = 0x10000
-STACK_END  = STACK_BASE + STACK_SIZE
 
 INSTR_MEM_SIZE = INSTR_SIZE
-DATA_MEM_SIZE  = DATA_SIZE + STACK_SIZE
+DATA_MEM_SIZE  = DATA_SIZE
 
 with open(sys.argv[1], "r") as f:
     s = f.read()
