@@ -129,7 +129,6 @@ module magia_hci_interconnect
     .AWM    ( LicBankAddrW            ),
     .DW     ( `HCI_SIZE_GET_DW(core)  ),
     .BW     ( `HCI_SIZE_GET_BW(core)  ),
-    .TS_BIT ( magia_tile_pkg::TS_BIT  ),
     .IW     ( NumCore                 ),
     .UW     ( `HCI_SIZE_GET_UW(core)  ),
     .EW     ( `HCI_SIZE_GET_EW(core)  )
