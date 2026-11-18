@@ -14,7 +14,11 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-common_targs += -t cv32e40p_exclude_tracer
+common_targs += -t cv32e40px_exclude_tracer
+
+# Only RedMulE's manifest depends on these cores, nothing in MAGIA instantiates them
+bender_excl  := -e cv32e40p -e cv32e40x
+common_targs += $(bender_excl)
 
 #ifeq ($(REDMULE_COMPLEX),1)
 #	common_targs += -t redmule_complex
@@ -22,12 +26,4 @@ common_targs += -t cv32e40p_exclude_tracer
 #	common_targs += -t redmule_hwpe
 #endif
 
-ifeq ($(core), CV32E40X)
-	sim_targs += -t cv32e40x
-else ifeq ($(core), CV32E40P)
-	sim_targs += -t cv32e40p
-endif
-
 common_targs += -t magia_tile
-
-common_defs  += -D COREV_ASSERT_OFF

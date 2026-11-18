@@ -64,7 +64,7 @@ static inline uint32_t l1(uint32_t off) {
 }
 
 /* Enable the FPU: set mstatus.FS to INITIAL (01).
- * Without this any FPU instruction faults. CV32E40P (and the cluster
+ * Without this any FPU instruction faults. CV32E40PX (and the cluster
  * cores) need this even though FP is enabled at compile time. */
 static inline void enable_fpu(void) {
   asm volatile (

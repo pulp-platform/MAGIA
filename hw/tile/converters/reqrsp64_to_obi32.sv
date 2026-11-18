@@ -57,13 +57,13 @@ module reqrsp64_to_obi32
   // OBI Request signals
   assign obi_req_o.req                  = reqrsp_req_i.q_valid;
   assign obi_req_o.a.addr               = reqrsp_req_i.q.addr;
-  assign obi_req_o.a.we                 = reqrsp_req_i.q.write;
+  assign obi_req_o.a.we                 = reqrsp_req_i.q.write | magia_tile_pkg::amo_writes(reqrsp_req_i.q.amo);
   assign obi_req_o.a.wdata              = wdata_32bit;
   assign obi_req_o.a.be                 = be_32bit;
   assign obi_req_o.a.aid                = '0;
   assign obi_req_o.a.a_optional.auser   = '0;
   assign obi_req_o.a.a_optional.wuser   = '0;
-  assign obi_req_o.a.a_optional.atop    = 6'h00;  // No atomics on this path
+  assign obi_req_o.a.a_optional.atop    = magia_tile_pkg::amo_to_atop(reqrsp_req_i.q.amo);
   assign obi_req_o.a.a_optional.memtype = 2'b00;
   assign obi_req_o.a.a_optional.mid     = '0;
   assign obi_req_o.a.a_optional.prot    = 3'b000;

@@ -18,8 +18,8 @@
 #
 # Run the MAGIA tests of sw/tests/tests.yml over several build configurations, one after the other.
 #
-# Usage: scripts/run_regression.py --sim SIM --core CORE --fsync on|off --test TEST [options]
-#   --sim/--core/--fsync take a value, a comma list or `all`; --test takes `all`, `mesh`, `tile`,
+# Usage: scripts/run_regression.py --sim SIM --core CORE --fsync on|off [--atomics off|on] --test TEST [options]
+#   --sim/--core/--fsync/--atomics take a value, a comma list or `all`; --test takes `all`, `mesh`, `tile`,
 #   a folder of sw/tests/ (`general` is sw/tests/ itself) or folder/test. See --help for the rest.
 #
 # Each configuration builds in its own worktree under .regression/, and its HW is rebuilt only when
@@ -31,8 +31,8 @@
 # and optionally MAGIA_QUESTA_SETUP / MAGIA_VERILATOR_SETUP to load the simulators.
 #
 # Examples:
-#   scripts/run_regression.py --sim questa --core CV32E40P --fsync on --test mm_tests/fsync_test_mm
-#   scripts/run_regression.py --sim verilator --core CV32E40P --fsync on --test collective_tests
+#   scripts/run_regression.py --sim questa --core CV32E40PX --fsync on --test mm_tests/fsync_test_mm
+#   scripts/run_regression.py --sim verilator --core CV32E40PX --fsync on --test collective_tests
 #   scripts/run_regression.py --sim all --core all --fsync all --test all
 
 import argparse
@@ -67,8 +67,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_YML = ['sw/tests/tests.yml']
 TESTBENCHES = ('mesh', 'tile')
 SIMS = ('questa', 'verilator')
-CORES = ('CV32E40P', 'CV32E40X')
+CORES = ('CV32E40PX',)
 FSYNC = ('on', 'off')
+ATOMICS = ('off', 'on')
 
 print_lock = threading.Lock()
 git_lock = threading.Lock()  # git worktree add/remove cannot run concurrently
@@ -283,24 +284,28 @@ def unsupported(sim, core, fsync):
 
 
 class Config:
-    """A build configuration: simulator, control core and FractalSync on/off."""
+    """A build configuration: simulator, control core, FractalSync and atomics on/off."""
 
-    def __init__(self, sim, core, fsync):
+    def __init__(self, sim, core, fsync, atomics):
         self.sim = sim
         self.core = core
         self.fsync = fsync == 'on'
-        self.defines = {core} | ({'MAGIA_FSYNC'} if self.fsync else set())
-        self.name = f"{self.sim}_{core}_{'fsync' if self.fsync else 'nofsync'}"
+        self.atomics = atomics == 'on'
+        self.defines = ({core} | ({'MAGIA_FSYNC'} if self.fsync else set())
+                        | ({'MAGIA_ATOMICS'} if self.atomics else set()))
+        self.tag = f"{'fsync' if self.fsync else 'nofsync'}{'_amo' if self.atomics else ''}"
+        self.name = f"{self.sim}_{core}_{self.tag}"
 
     def make_args(self, mesh_dv, fast):
-        return f"core={self.core} fsync={int(self.fsync)} mesh_dv={mesh_dv} fast_sim={int(fast)}"
+        return (f"core={self.core} fsync={int(self.fsync)} atomics={int(self.atomics)} "
+                f"mesh_dv={mesh_dv} fast_sim={int(fast)}")
 
     def reject(self, test):
         """Why the test does not run in this configuration, or None if it does."""
         if self.sim not in test['sims']:
             return f"runs only on {'/'.join(test['sims'])}"
         if self.core not in test['cores']:
-            return f"runs only on {'/'.join(test['cores'])}"
+            return f"runs only on {'/'.join(test['cores']) or 'no core'}"
         missing = set(test['requires']) - self.defines
         if missing:
             return f"requires {' '.join(sorted(missing))}"
@@ -439,7 +444,7 @@ def job_name(cfg, mesh_dv, fast):
 
 
 def job_label(cfg, mesh_dv, fast):
-    return (f"{cfg.sim:9s} {cfg.core:8s} {'fsync' if cfg.fsync else 'nofsync':7s} "
+    return (f"{cfg.sim:9s} {cfg.core:9s} {cfg.tag:11s} "
             f"{'mesh' if mesh_dv else 'tile'}{'' if fast else ' nofast'}")
 
 
@@ -470,7 +475,7 @@ def print_plan(jobs, skipped, verbose):
     if skipped:
         print(f"\nNot run")
         for cfg, why, names in skipped:
-            cfg_label = f"{cfg.sim} {cfg.core} {'fsync' if cfg.fsync else 'nofsync'}"
+            cfg_label = f"{cfg.sim} {cfg.core} {cfg.tag}"
             print(f"  {cfg_label:32s} {len(names):3d} test(s): {why}")
             if verbose:
                 print(f"      {' '.join(names)}")
@@ -613,6 +618,7 @@ def main():
     ap.add_argument('--sim', required=True, help=f"{', '.join(SIMS)} or all (comma list)")
     ap.add_argument('--core', required=True, help=f"{', '.join(CORES)} or all (comma list)")
     ap.add_argument('--fsync', required=True, help=f"{', '.join(FSYNC)} or all (comma list)")
+    ap.add_argument('--atomics', default='off', help=f"{', '.join(ATOMICS)} or all (comma list, default off)")
     ap.add_argument('--test', action='append', required=True,
                     help="all, mesh, tile, a folder of sw/tests/ ('general' = sw/tests/ itself) or "
                          "folder/test; repeatable, comma separated")
@@ -631,6 +637,7 @@ def main():
     sims, all_sims = parse_choice('--sim', args.sim, SIMS)
     cores, all_cores = parse_choice('--core', args.core, CORES)
     fsyncs, _ = parse_choice('--fsync', args.fsync, FSYNC)
+    atomicss, _ = parse_choice('--atomics', args.atomics, ATOMICS)
     configs = []
     for sim in sims:
         for core in cores:
@@ -641,7 +648,7 @@ def main():
                 if why:
                     print(f"skipping {sim} {core} fsync={fsync}: {why}")
                 else:
-                    configs.append(Config(sim, core, fsync))
+                    configs += [Config(sim, core, fsync, atomics) for atomics in atomicss]
 
     tests = load_tests(args.yml)
     tests = select_tests(tests, [v.strip('/') for arg in args.test for v in arg.split(',')])

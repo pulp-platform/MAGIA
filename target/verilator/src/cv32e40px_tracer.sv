@@ -1,17 +1,16 @@
 // ---------------------------------------------------------------------------
 // VENDORIZED COPY -- Verilator flow only.
 //
-// Byte-identical to cv32e40p's bhv/cv32e40p_tracer.sv at rev a8206ab except for
-// the removal of its two `#` delays. The tile is built as a hierarchical
+// Byte-identical to cv32e40px's bhv/cv32e40px_tracer.sv at rev 3ef1c51 except
+// for the removal of its two `#` delays. The tile is built as a hierarchical
 // block, and Verilator 5.046 rejects `--lib-create` combined with `--timing`
 // and delays ("Unsupported: --lib-create with --timing and delays"), so the
 // upstream file cannot be compiled here at all.
 //
-// It is picked up because the flow's makefile puts target/verilator/src on the
-// include path ahead of the cv32e40p checkout's bhv/, and cv32e40p_wrapper.sv
-// pulls the tracer in as `include "cv32e40p_tracer.sv"`. All changes are
-// marked "MAGIA verilator:" below; the trace class is vendorized next to it
-// (cv32e40p_instr_trace.svh). Re-vendorize both on any cv32e40p bump.
+// The flow's filter_filelist.py swaps it in for the checkout's copy in the
+// file list; the trace class next to it (cv32e40px_instr_trace.svh) wins
+// because target/verilator/src comes first on the include path. All changes
+// are marked "MAGIA verilator:" below. Re-vendorize both on any cv32e40px bump.
 // ---------------------------------------------------------------------------
 
 // Copyright 2018 ETH Zurich and University of Bologna.
@@ -38,12 +37,12 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-`ifdef CV32E40P_TRACE_EXECUTION
+`ifdef CV32E40PX_TRACE_EXECUTION
 
 `include "uvm_macros.svh"
 
-module cv32e40p_tracer
-  import cv32e40p_pkg::*;
+module cv32e40px_tracer
+  import cv32e40px_pkg::*;
   import uvm_pkg::*;
 #(
     parameter FPU   = 0,
@@ -121,7 +120,7 @@ module cv32e40p_tracer
 
 );
 
-  import cv32e40p_tracer_pkg::*;
+  import cv32e40px_tracer_pkg::*;
 
   // Make clock a bit to avoid x->0 transitions in tracer logic
   bit clk_i_d, eval_comb;
@@ -149,7 +148,7 @@ module cv32e40p_tracer
   logic [31:0] pc_wb_delay_stage;
   logic [31:0] pc_retire_head_q;
 
-  `include "cv32e40p_instr_trace.svh"
+  `include "cv32e40px_instr_trace.svh"
 
   string               info_tag;
 
@@ -270,7 +269,7 @@ module cv32e40p_tracer
     instr_trace_t trace;
 
     trace = new();
-    // MAGIA verilator: hand this instance's state to the object, see cv32e40p_instr_trace.svh
+    // MAGIA verilator: hand this instance's state to the object, see cv32e40px_instr_trace.svh
     trace.f                = f;
     trace.rd               = rd;
     trace.rs1              = rs1;
@@ -607,7 +606,7 @@ module cv32e40p_tracer
     end
   end
 
-endmodule : cv32e40p_tracer
+endmodule : cv32e40px_tracer
 
 
 `endif  // CV32E40P_TRACE_EXECUTION
