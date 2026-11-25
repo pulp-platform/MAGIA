@@ -137,6 +137,7 @@ module magia_isle
 
   localparam int unsigned NumHwpe = TileCfg.EnRedMule ? 1 : 0;  // 0 drops the RedMulE leaf of the HCI interconnect
   localparam int unsigned NumDma  = magia_tile_pkg::N_DMA;
+  localparam int unsigned NumHciArb = (NumHwpe + NumDma > 0) ? NumHwpe + NumDma : 1;  // Must match NumArb of magia_hci_interconnect
   localparam int unsigned NumExt  = magia_tile_pkg::N_EXT;
   localparam int unsigned TileIW  = NumHwpe + NumHciCore + NumDma + NumExt;
 
@@ -1210,7 +1211,8 @@ module magia_isle
     UW:  magia_tile_pkg::UW_LIC,
     IW:  TileIW,
     EW:  hci_package::DEFAULT_EW,
-    EHW: hci_package::DEFAULT_EHW
+    EHW: hci_package::DEFAULT_EHW,
+    FD:  hci_package::DEFAULT_FD
   };
   `HCI_INTF_ARRAY(hci_tcdm_sram_if, sys_clk, 0:NumMemBanks-1);
 
@@ -1222,7 +1224,8 @@ module magia_isle
     UW:  magia_tile_pkg::UW_LIC,
     IW:  TileIW,
     EW:  hci_package::DEFAULT_EW,
-    EHW: hci_package::DEFAULT_EHW
+    EHW: hci_package::DEFAULT_EHW,
+    FD:  hci_package::DEFAULT_FD
   };
   `HCI_INTF_ARRAY(hci_core_if, sys_clk, 0:NumHciCore-1);
 
@@ -1233,7 +1236,8 @@ module magia_isle
     UW:  magia_tile_pkg::REDMULE_UW,
     IW:  TileIW,
     EW:  hci_package::DEFAULT_EW,
-    EHW: hci_package::DEFAULT_EHW
+    EHW: hci_package::DEFAULT_EHW,
+    FD:  hci_package::DEFAULT_FD
   };
   // One element even without RedMulE: the tie-off drives it by name
   `HCI_INTF_ARRAY(hci_redmule_if, sys_clk, 0:0);
@@ -1245,7 +1249,8 @@ module magia_isle
     UW:  magia_tile_pkg::iDMA_UserWidth,
     IW:  TileIW,
     EW:  hci_package::DEFAULT_EW,
-    EHW: hci_package::DEFAULT_EHW
+    EHW: hci_package::DEFAULT_EHW,
+    FD:  hci_package::DEFAULT_FD
   };
   `HCI_INTF_ARRAY(hci_dma_if, sys_clk, 0:NumDma-1);
 
@@ -1256,7 +1261,8 @@ module magia_isle
     UW:  magia_tile_pkg::UW_LIC,
     IW:  hci_package::DEFAULT_IW,
     EW:  hci_package::DEFAULT_EW,
-    EHW: hci_package::DEFAULT_EHW
+    EHW: hci_package::DEFAULT_EHW,
+    FD:  hci_package::DEFAULT_FD
   };
   if (NumExt > 0) begin: gen_hci_ext_if
     `HCI_INTF_ARRAY(hci_ext_if, sys_clk, 0:NumExt-1);
@@ -1309,13 +1315,14 @@ module magia_isle
   `HCI_ASSIGN_TO_INTF(hci_core_if[NumHciCore-1], core_l1_direct_req, core_l1_direct_rsp)
 
   logic                                hci_clear;
-  hci_package::hci_interconnect_ctrl_t hci_ctrl;
+  hci_package::hci_interconnect_ctrl_t hci_ctrl [NumHciArb];
 
   assign hci_clear = 1'b0;
 
-  // Wide-vs-narrow arbitration policy of the HCI, set by software
+  // Arbitration policy of every HCI arbiter, set by software
   obi_slave_ctrl_hci #(
-    .BaseAddr ( magia_tile_pkg::HCI_CTRL_ADDR_START )
+    .BaseAddr ( magia_tile_pkg::HCI_CTRL_ADDR_START ),
+    .NumArb   ( NumHciArb                           )
   ) i_hci_ctrl (
     .clk_i     ( sys_clk               ),
     .rst_ni    ( rst_ni                ),

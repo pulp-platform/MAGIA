@@ -29,6 +29,11 @@
 
 # Tests in sw/tests/ itself
 general:
+  hci_arb_ctrl_test:
+    testbench: tile
+    cores: [CV32E40P, CV32E40X]
+    sims: [questa, verilator]
+    requires: []
   inter_l1_test:
     testbench: mesh
     cores: [CV32E40P, CV32E40X]
