@@ -132,8 +132,8 @@ packages:
       Git: https://github.com/VictorIsachi/fractal_sync
     dependencies: []
   hci:
-    revision: a8d8132b7f7839fd55f92df65cdc3e361ea80a6b
-    version: 2.6.1
+    revision: 384e80b131653ab7d68058cdc1a01f4fa36bf7eb
+    version: 2.6.3
     source:
       Git: https://github.com/pulp-platform/hci.git
     dependencies:
@@ -192,8 +192,8 @@ packages:
     - common_cells
     - common_verification
   redmule:
-    revision: babc299c15a508867930af5761646c5d4f932c68
-    version: 2.2.1
+    revision: be2eacf8acd48601ad8e6a85273942f5cd143484
+    version: 2.2.3
     source:
       Git: https://github.com/pulp-platform/redmule.git
     dependencies:

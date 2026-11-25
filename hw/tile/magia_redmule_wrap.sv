@@ -66,7 +66,8 @@ module magia_redmule_wrap
     UW:  magia_tile_pkg::REDMULE_UW,
     IW:  hci_package::DEFAULT_IW,
     EW:  hci_package::DEFAULT_EW,
-    EHW: hci_package::DEFAULT_EHW
+    EHW: hci_package::DEFAULT_EHW,
+    FD:  hci_package::DEFAULT_FD
   }
 )(
   input  logic                    clk_i,

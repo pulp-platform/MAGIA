@@ -55,9 +55,14 @@
 #define PULP_CTRL_END         (0x000017BF)
 #define PULP_CORE_COUNT       (8)
 #define PULP_HARTID_BASE      (32)
-// HCI arbiter control register (tile_csr + 0xC0)
+// HCI arbiter control registers (tile_csr + 0xC0), one word per arbiter
 #define HCI_ARB_CTRL_BASE     (0x000017C0)
-#define HCI_ARB_CTRL          (HCI_ARB_CTRL_BASE + 0x00)
+#define HCI_ARB_CTRL          (HCI_ARB_CTRL_BASE + 0x00)  /* Wide-vs-narrow arbiter */
+#define HCI_ARB_CTRL_TREE(n)  (HCI_ARB_CTRL_BASE + 0x04 + 4 * (n))  /* Wide tree node n, below */
+#define HCI_ARB_TREE_DMA_OUT  (0)  /* DMA out read (high) vs out write */
+#define HCI_ARB_TREE_DMA_IN   (1)  /* DMA in read (high) vs in write */
+#define HCI_ARB_TREE_DMA      (2)  /* DMA out channels (high) vs in channels */
+#define HCI_ARB_TREE_REDMULE  (3)  /* DMA (high) vs RedMulE, only with RedMulE */
 #define HCI_ARB_CTRL_END      (0x000017FF)
 #define HCI_ARB_CTRL_DEFAULT  (0x00000000u)  /* Denominator 0: default ratio of magia_hci_interconnect */
 #define HCI_ARB_INVERT_PRIO   (1u << 0)

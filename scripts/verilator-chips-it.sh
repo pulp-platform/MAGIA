@@ -19,7 +19,7 @@ if ! type module >/dev/null 2>&1; then
   source /usr/share/Modules/init/bash || return 1
 fi
 
-module load verilator/5.050 bender/ \
+module load verilator/5.052 bender/ \
   corev-gcc/ spatz-llvm/|| return 1
 source /opt/rh/gcc-toolset-13/enable || return 1
 

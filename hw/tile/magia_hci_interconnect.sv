@@ -36,14 +36,16 @@ module magia_hci_interconnect
   parameter hci_size_parameter_t `HCI_SIZE_PARAM(dma)  = '0,
   parameter hci_size_parameter_t `HCI_SIZE_PARAM(core) = '0,
   parameter hci_size_parameter_t `HCI_SIZE_PARAM(mem)  = '0,
-  // Interface arrays cannot be zero-sized
-  localparam int unsigned        NumHwpePort          = (NumHwpe > 0) ? NumHwpe : 1
+  // Interface and ctrl arrays cannot be zero-sized
+  localparam int unsigned        NumHwpePort          = (NumHwpe > 0) ? NumHwpe : 1,
+  // Wide-vs-narrow arbiter, then the NumHwpe + NumDma - 1 nodes of the wide tree
+  localparam int unsigned        NumArb               = (NumHwpe + NumDma > 0) ? NumHwpe + NumDma : 1
 ) (
   input logic                                clk_i,
   input logic                                rst_ni,
 
   input logic                                clear_i,
-  input hci_package::hci_interconnect_ctrl_t ctrl_i,
+  input hci_package::hci_interconnect_ctrl_t ctrl_i [NumArb],
 
   hci_core_intf.target                       hwpe[NumHwpePort],
   hci_core_intf.target                       dma [NumDma],
@@ -71,7 +73,8 @@ module magia_hci_interconnect
     UW:  `HCI_SIZE_GET_UW(mem),
     IW:  `HCI_SIZE_GET_IW(mem),
     EW:  `HCI_SIZE_GET_EW(mem),
-    EHW: `HCI_SIZE_GET_EHW(mem)
+    EHW: `HCI_SIZE_GET_EHW(mem),
+    FD:  `HCI_SIZE_GET_FD(mem)
   };
 
   // The control core always sits on the narrow branch
@@ -87,7 +90,8 @@ module magia_hci_interconnect
     .UW  ( `HCI_SIZE_GET_UW(lic_mem)  ),
     .IW  ( `HCI_SIZE_GET_IW(lic_mem)  ),
     .EW  ( `HCI_SIZE_GET_EW(lic_mem)  ),
-    .EHW ( `HCI_SIZE_GET_EHW(lic_mem) )
+    .EHW ( `HCI_SIZE_GET_EHW(lic_mem) ),
+    .FD  ( `HCI_SIZE_GET_FD(lic_mem)  )
 `ifndef SYNTHESIS
     ,
     .WAIVE_RQ3_ASSERT ( WaiveRq3Assert ),
@@ -104,7 +108,8 @@ module magia_hci_interconnect
     .UW  ( `HCI_SIZE_GET_UW(mem)  ),
     .IW  ( `HCI_SIZE_GET_IW(mem)  ),
     .EW  ( `HCI_SIZE_GET_EW(mem)  ),
-    .EHW ( `HCI_SIZE_GET_EHW(mem) )
+    .EHW ( `HCI_SIZE_GET_EHW(mem) ),
+    .FD  ( `HCI_SIZE_GET_FD(mem)  )
 `ifndef SYNTHESIS
     ,
     .WAIVE_RQ3_ASSERT ( WaiveRq3Assert ),
@@ -175,22 +180,27 @@ module magia_hci_interconnect
   end
 
   if (NumWide > 0) begin : gen_wide_branch
-    // ARB_CTRL steers only the wide-vs-narrow arbiter: the tree nodes keep the default ratio
-    localparam hci_package::hci_interconnect_ctrl_t TreeCtrl = '{
-      arb_policy:               2'b00,
-      invert_prio:              1'b0,
-      priority_cnt_numerator:   8'(magia_tile_pkg::HCI_QOS_NUM),
-      priority_cnt_denominator: 8'(magia_tile_pkg::HCI_QOS_DEN)
-    };
+    localparam int unsigned NumNodePort = (NumWide > 1) ? NumWide - 1 : 1;
 
-    hci_package::hci_interconnect_ctrl_t ctrl;  // Of the wide-vs-narrow arbiter
+    hci_package::hci_interconnect_ctrl_t ctrl      [NumArb];
+    hci_package::hci_interconnect_ctrl_t tree_ctrl [NumNodePort];
 
     // An unprogrammed ctrl_i (denominator 0) falls back to the default ratio
-    always_comb begin
-      ctrl = ctrl_i;
-      if (ctrl_i.priority_cnt_denominator == 8'd0) begin
-        ctrl.priority_cnt_numerator   = 8'(magia_tile_pkg::HCI_QOS_NUM);
-        ctrl.priority_cnt_denominator = 8'(magia_tile_pkg::HCI_QOS_DEN);
+    for (genvar a = 0; a < NumArb; a++) begin : gen_ctrl
+      always_comb begin
+        ctrl[a] = ctrl_i[a];
+        if (ctrl_i[a].priority_cnt_denominator == 8'd0) begin
+          ctrl[a].priority_cnt_numerator   = 8'(magia_tile_pkg::HCI_QOS_NUM);
+          ctrl[a].priority_cnt_denominator = 8'(magia_tile_pkg::HCI_QOS_DEN);
+        end
+      end
+    end
+
+    for (genvar n = 0; n < NumNodePort; n++) begin : gen_tree_ctrl
+      if (n + 1 < NumArb) begin : gen_node
+        assign tree_ctrl[n] = ctrl[n + 1];
+      end else begin : gen_no_node
+        assign tree_ctrl[n] = '0;
       end
     end
 
@@ -204,7 +214,8 @@ module magia_hci_interconnect
       .UW  ( `HCI_SIZE_GET_UW(mem)  ),
       .IW  ( `HCI_SIZE_GET_IW(mem)  ),
       .EW  ( `HCI_SIZE_GET_EW(mem)  ),
-      .EHW ( `HCI_SIZE_GET_EHW(mem) )
+      .EHW ( `HCI_SIZE_GET_EHW(mem) ),
+      .FD  ( `HCI_SIZE_GET_FD(mem)  )
 `ifndef SYNTHESIS
       ,
       .WAIVE_RQ3_ASSERT ( WaiveRq3Assert ),
@@ -246,17 +257,17 @@ module magia_hci_interconnect
       );
     end
 
-    hci_arbiter_tree #(
-      .NB_REQUESTS          ( NumWide                   ),
-      .NB_CHAN              ( NumMem                    ),
-      .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(wide_mem) ),
-      .WAIVE_RQ3_ASSERT     ( WaiveRq3Assert            ),
-      .WAIVE_RQ4_ASSERT     ( WaiveRq4Assert            )
+    magia_hci_arbiter_tree #(
+      .NumReq               ( NumWide                   ),
+      .NumChan              ( NumMem                    ),
+      .WaiveRq3Assert       ( WaiveRq3Assert            ),
+      .WaiveRq4Assert       ( WaiveRq4Assert            ),
+      .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(wide_mem) )
     ) i_wide_arbiter_tree (
       .clk_i   ( clk_i          ),
       .rst_ni  ( rst_ni         ),
       .clear_i ( clear_i        ),
-      .ctrl_i  ( TreeCtrl       ),
+      .ctrl_i  ( tree_ctrl      ),
       .in      ( wide_mem       ),
       .out     ( wide_mem_muxed )
     );
@@ -268,7 +279,7 @@ module magia_hci_interconnect
       .clk_i   ( clk_i          ),
       .rst_ni  ( rst_ni         ),
       .clear_i ( clear_i        ),
-      .ctrl_i  ( ctrl           ),
+      .ctrl_i  ( ctrl[0]        ),
       .in_high ( wide_mem_muxed ),
       .in_low  ( core_mem_muxed ),
       .out     ( mem            )
