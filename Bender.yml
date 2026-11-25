@@ -25,7 +25,7 @@ package:
     - "Luca Balboni (luca.balboni10@studio.unibo.it)"
 
 dependencies:
-  redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , version: 2.2.3                                }
+  redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , version: 2.2.4                                }
   cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: 8834f135214f8f25f710ebd77f48d9f03d9548e6 } # branch: lb/operand_forwarding
   cv32e40p          : { git: "https://github.com/FondazioneChipsIT/cv32e40p.git"      , rev: 193270df33f76f2728a364bd2d9b1865e0b7e4f9 } # branch: lb/PulpClusterCV32OHWFPU-divsqrt
   spatz             : { git: "https://github.com/pulp-platform/spatz.git"             , rev: 3228a9077cb33b4ee235029e8fcace52ed327334 } # branch: lb/magia-spatz_cc

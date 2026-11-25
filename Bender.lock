@@ -192,8 +192,8 @@ packages:
     - common_cells
     - common_verification
   redmule:
-    revision: be2eacf8acd48601ad8e6a85273942f5cd143484
-    version: 2.2.3
+    revision: 1e62785668eb1f21167c0105d3580cd2d94b7df9
+    version: 2.2.4
     source:
       Git: https://github.com/pulp-platform/redmule.git
     dependencies:
