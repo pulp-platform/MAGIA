@@ -49,9 +49,8 @@ int dotp32_task(void) {
     float *result = (float *)params->result_addr;
     uint32_t N = params->n_elements;
 
-    float result_inter = fdotp_v32b(A, B, N);
-
-    *result = result_inter;
+    // TODO: back to `*result = fdotp_v32b(A, B, N);` once spatz_vpu returns VFU scalar results
+    fdotp_v32b_st(A, B, N, result);
 
     return 0;
 }

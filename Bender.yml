@@ -28,7 +28,7 @@ dependencies:
   redmule           : { git: "https://github.com/pulp-platform/redmule.git"           , version: 2.2.3                                }
   cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: 8834f135214f8f25f710ebd77f48d9f03d9548e6 } # branch: lb/operand_forwarding
   cv32e40p          : { git: "https://github.com/FondazioneChipsIT/cv32e40p.git"      , rev: 193270df33f76f2728a364bd2d9b1865e0b7e4f9 } # branch: lb/PulpClusterCV32OHWFPU-divsqrt
-  cv32e40px_spatz   : { git: "git@gitlab.chips.it:dpala/cv32e40px_spatz.git"          , rev: e9f59c8a72a82b62967cb013832c3aa68200afa3 }
+  cv32e40px_spatz   : { git: "git@gitlab.chips.it:dpala/cv32e40px_spatz.git"          , rev: main                                     }
   idma              : { git: "https://github.com/FondazioneChipsIT/iDMA.git"          , rev: 26ac2cd1c535851b14c9c508762203a180961cad } # branch: cc/mcast_magia
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , version: 3.1.1                                }

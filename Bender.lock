@@ -90,7 +90,7 @@ packages:
     - fpnew
     - tech_cells_generic
   cv32e40px_spatz:
-    revision: e9f59c8a72a82b62967cb013832c3aa68200afa3
+    revision: 4419a07624f40630be77b264f0621015c46c6373
     version: null
     source:
       Git: git@gitlab.chips.it:dpala/cv32e40px_spatz.git

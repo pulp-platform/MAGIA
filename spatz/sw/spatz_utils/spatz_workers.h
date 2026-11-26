@@ -106,8 +106,49 @@ static inline float fdotp_v32b(const float *a, const float *b, unsigned int avl)
   // Reduce and return
   asm volatile("vsetvli zero, %0, e32, m8, ta, ma" ::"r"(orig_avl));
   asm volatile("vfredusum.vs v0, v24, v0");
-  asm volatile("vfmv.f.s %0, v0" : "=f"(red));
+  // cv32e40px writes XIF results only to the GPR file: vfmv.f.s would land in x[rd], not f[rd].
+  // Move the raw bits through a GPR instead.
+  uint32_t red_bits;
+  asm volatile("vmv.x.s %0, v0" : "=r"(red_bits));
+  __builtin_memcpy(&red, &red_bits, sizeof(red));
   return red;
+}
+
+// 32-bit dot-product: *res = a * b, result stored by the vector LSU
+// Temporary SW workaround for the current spatz_vpu: scalar results from the VFU
+// (vmv.x.s / vfmv.f.s) deadlock or are not waited for by the core, so the reduced
+// element is written to memory with vse32.v instead. Scalar loads/stores after this
+// call are held by the core until the vector store completes (outstanding_mem in x_disp).
+static inline void fdotp_v32b_st(const float *a, const float *b, unsigned int avl, float *res) {
+  const unsigned int orig_avl = avl;
+  unsigned int vl;
+
+  asm volatile("vsetvli %0, %1, e32, m8, ta, ma" : "=r"(vl) : "r"(avl));
+  asm volatile("vmv.s.x v0, zero");
+
+  // Stripmine and accumulate a partial reduced vector
+  do {
+    asm volatile("vsetvli %0, %1, e32, m8, ta, ma" : "=r"(vl) : "r"(avl));
+
+    asm volatile("vle32.v v8,  (%0)" ::"r"(a));
+    asm volatile("vle32.v v16, (%0)" ::"r"(b));
+
+    if (avl == orig_avl) {
+      asm volatile("vfmul.vv v24, v8, v16");
+    } else {
+      asm volatile("vfmacc.vv v24, v8, v16");
+    }
+
+    a += vl;
+    b += vl;
+    avl -= vl;
+  } while (avl > 0);
+
+  // Reduce, then store element 0 of v0 straight to memory
+  asm volatile("vsetvli zero, %0, e32, m8, ta, ma" ::"r"(orig_avl));
+  asm volatile("vfredusum.vs v0, v24, v0");
+  asm volatile("vsetivli zero, 1, e32, m1, ta, ma");
+  asm volatile("vse32.v v0, (%0)" ::"r"(res) : "memory");
 }
 
 // 16-bit dot-product: a * b
@@ -144,7 +185,12 @@ static inline float16_t fdotp_v16b(const float16_t *a, const float16_t *b, unsig
   // Reduce and return
   asm volatile("vsetvli zero, %0, e16, m8, ta, ma" ::"r"(orig_avl));
   asm volatile("vfredusum.vs v0, v24, v0");
-  asm volatile("vfmv.f.s %0, v0" : "=f"(red));
+  // cv32e40px writes XIF results only to the GPR file: vfmv.f.s would land in x[rd], not f[rd].
+  // Move the raw bits through a GPR instead (low 16 bits hold the FP16 value).
+  uint32_t red_bits;
+  asm volatile("vmv.x.s %0, v0" : "=r"(red_bits));
+  uint16_t red_bits16 = (uint16_t)red_bits;
+  __builtin_memcpy(&red, &red_bits16, sizeof(red));
   return red;
 }
 

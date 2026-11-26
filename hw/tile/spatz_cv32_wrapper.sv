@@ -67,6 +67,8 @@ module spatz_cv32_wrapper
   // L1 base as seen by the HCI ports (full ADDR_W address, like the other Spatz wrapper).
   // TODO: replace with the package constant if one exists for the tile-private L1 base.
   localparam magia_tile_pkg::spatz_tcdm32_addr_t SpatzL1Base = magia_tile_pkg::spatz_tcdm32_addr_t'(32'hA010_0000);
+  // FPU configuration, by default Snitch
+  localparam fpnew_pkg::fpu_implementation_t SPATZ_FPU_IMPL = fpnew_pkg::DEFAULT_SNITCH;
 
 `ifndef SYNTHESIS
   if (SpatzDataW != 32 || magia_tile_pkg::DW_LIC != 32) begin : gen_err_spatz_data_w
@@ -104,7 +106,8 @@ module spatz_cv32_wrapper
     .CV32_FPU            ( 1                ),
     .FPU_ADDMUL_LAT      ( 1                ),  
     .FPU_OTHERS_LAT      ( 1                ), 
-    .ZFINX               ( 1                ),
+    .ZFINX               ( 0                ),
+    .SpatzFPUImplementation (SPATZ_FPU_IMPL ),
     .NUM_MHPMCOUNTERS    ( 1                ),
     .SpatzDataWidth      ( SpatzDataW       ),
     .NumMemPortsPerSpatz ( NumMemPorts      ),
