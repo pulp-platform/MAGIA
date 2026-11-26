@@ -51,3 +51,5 @@ verilator/build*/
 
 # scripts/run_regression.py worktrees and results
 .regression/
+magia_env
+*.ini

@@ -15,32 +15,53 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
+ *          Luca Colombo <luca.colombo07@universitadipavia.it>
  *
- * Spatz Runtime
- * Entry: Bootrom should jumps here
+ * Spatz Runtime - IRQ dispatcher
  *
+ * READY = 1: runtime inizializzato
+ * MEI (irq 11): una nuova task è disponibile
+ * La task viene eseguita nel trap handler.
+ *
+ * Dopo la task:
+ *   RETURN = 0
+ *   DONE   = 1
+ *   mret   -> return to dispatcher WFI
  */
+
+#ifndef SPATZ_INIT_VRF
+#define SPATZ_INIT_VRF 0
+#endif
+
+#ifndef SPATZ_VRF_LMUL1
+#define SPATZ_VRF_LMUL1 0
+#endif
 
 #define READY_ADDR        0x00001704
 #define START_ADDR        0x00001708
 #define TASKBIN_ADDR      0x0000170C
-#define DATA_ADDR         0x00001710
 #define RETURN_ADDR       0x00001714
 #define DONE_ADDR         0x00001718
-#define MSTATUS_VS        0x200        // Vector Status [9:8] = 01
-#define MSTATUS_MIE       0x8          // Machine Interrupt Enable
-#define MIE_MEIE          0x800        // External interrupt enable
+
+#define MSTATUS_FS_VS_INIT 0x2200      /* FS and VS = Initial: with FS=Off the core offloads scalar FP ops to Spatz */
+#define MSTATUS_MIE       0x8
+#define MIE_MEIE          0x800
+
 
 .section .text.start, "ax"
 .global _start
 
 _start:
-    /* Init stack pointer */
+
+    /* ------------------------------------------------ */
+    /* 1. Stack initialization                          */
+    /* ------------------------------------------------ */
+
     li      sp, 0x0001FFF8
 
-    /* Clear ALL integer registers */
+    /* Clear integer registers */
     mv x1,  x0
-    // x2 = sp just initialized
+    /* x2 = sp */
     mv x3,  x0
     mv x4,  x0
     mv x5,  x0
@@ -71,107 +92,207 @@ _start:
     mv x30, x0
     mv x31, x0
 
-    /* Enable vector extension (VS=Initial for Spatz) */
-    li      t0, MSTATUS_VS
+
+    /* ------------------------------------------------ */
+    /* 2. Enable vector extension                       */
+    /* ------------------------------------------------ */
+
+    li      t0, MSTATUS_FS_VS_INIT
     csrs    mstatus, t0
 
-    /* Initialize ALL 32 Vector Registers (VRF) to zero */
+    vsetvli t0, zero, e32, m8, ta, ma
 
-    vsetvli t0, zero, e32, m8, ta, ma   // LMUL=8 → each vmv.v.i writes 8 registers
-    vmv.v.i v0,  0    // Initialize v0-v7   (register group 0)
-    vmv.v.i v8,  0    // Initialize v8-v15  (register group 1)
-    vmv.v.i v16, 0    // Initialize v16-v23 (register group 2)
-    vmv.v.i v24, 0    // Initialize v24-v31 (register group 3)
+    vmv.v.i v0,  0
+    vmv.v.i v8,  0
+    vmv.v.i v16, 0
+    vmv.v.i v24, 0
 
-    /* Clear BSS section */
+
+    /* ------------------------------------------------ */
+    /* 3. Clear BSS                                     */
+    /* ------------------------------------------------ */
+
     la      a0, __bss_start
     la      a1, __bss_end
-1:  bgeu    a0, a1, 2f
+
+1:
+    bgeu    a0, a1, 2f
     sw      zero, 0(a0)
     addi    a0, a0, 4
     j       1b
+
 2:
-    /* Setup trap handler for interrupt */
+
+
+    /* ------------------------------------------------ */
+    /* 4. Install trap handler                          */
+    /* ------------------------------------------------ */
+
     la      t0, _trap_handler
     csrw    mtvec, t0
-    
-    /* Enable external interrupts (MEIE) */
+
+
+    /* ------------------------------------------------ */
+    /* 5. Enable external interrupt (MEI = IRQ 11)     */
+    /* ------------------------------------------------ */
+
     li      t0, MIE_MEIE
     csrs    mie, t0
-    
-    /* Enable global interrupts (MIE bit in mstatus) */
+
+
+    /* ------------------------------------------------ */
+    /* 6. Enable global interrupts                      */
+    /* ------------------------------------------------ */
+
     li      t0, MSTATUS_MIE
     csrs    mstatus, t0
-    
-    /* Signal ready to CV32 - now ready to receive interrupts */
+
+
+    /* ------------------------------------------------ */
+    /* 7. Notify CV32 that Spatz is READY               */
+    /* ------------------------------------------------ */
+
     li      t0, READY_ADDR
     li      t1, 1
     sw      t1, 0(t0)
 
-    /* First WFI - after this we deassert READY */
-    wfi
-    
-    /* Deassert READY after first wakeup (only once) */
-    li      t0, READY_ADDR
-    sw      zero, 0(t0)
-    
-    /* Fall through to main dispatcher loop */
+    fence   iorw, iorw
+
+
+    /* ------------------------------------------------ */
+    /* 8. Main dispatcher                               */
+    /* ------------------------------------------------ */
 
 dispatcher_loop:
-    /* Wait for interrupt from CV32 */
+
     wfi
-    
-    /* After wakeup from interrupt, task has been executed */
-    /* Loop back */
     j       dispatcher_loop
 
-/* Trap handler - distinguishes interrupts from exceptions */
+
+/* ==================================================== */
+/* TRAP HANDLER                                         */
+/* ==================================================== */
+
+/*
+ * CV32E40P-compatible mtvec base alignment: 256 bytes.
+ * Direct mode because the two lowest address bits are zero.
+ */
+
+/* ==================================================== */
+/* TRAP HANDLER                                         */
+/* ==================================================== */
+
+/*
+ * Current runtime image base: 0xC0000714
+ *
+ * .balign 256 -> section offset 0x100
+ *
+ * Absolute address:
+ * 0xC0000900
+ */
+
+.balign 256
+
 _trap_handler:
     csrr    t0, mcause
-    bltz    t0, _handle_interrupt   // mcause[31]=1 → interrupt
+
+    li      t1, RETURN_ADDR
+    sw      t0, 0(t1)
+
+    bltz    t0, _handle_interrupt
+
+    j       _handle_exception
+
     
-    /* EXCEPTION: Write error code to RETURN_ADDR, signal DONE, halt */
+/* ---------------------------------------------------- */
+/* Exception handler                                    */
+/* ---------------------------------------------------- */
+
 _handle_exception:
-    csrr    t1, mcause      // Read full mcause
-    andi    t1, t1, 0xFF    // Extract exception code [7:0]
-    ori     t1, t1, 0x100   // Set bit 8 to distinguish from task errors
+
+    csrr    t1, mcause
+    andi    t1, t1, 0xFF
+    ori     t1, t1, 0x100
+
+    /* Report exception */
     li      t0, RETURN_ADDR
     sw      t1, 0(t0)
-    
+
+    /* Signal DONE */
     li      t0, DONE_ADDR
     li      t1, 1
     sw      t1, 0(t0)
-    
-    /* Halt */
-1:  wfi
+
+    fence   iorw, iorw
+
+    /* Halt on exception */
+1:
+    wfi
     j       1b
 
+
+/* ---------------------------------------------------- */
+/* Interrupt handler                                    */
+/* ---------------------------------------------------- */
+
 _handle_interrupt:
-    /* Check if external interrupt */
+
+    /* Extract interrupt ID */
     andi    t0, t0, 0x7FF
+
+    /* Only handle Machine External Interrupt (11) */
     li      t1, 11
     bne     t0, t1, _trap_ret
-    
-    /* Read task address from TASKBIN_ADDR and save it in t1 */
+
+
+    /* ----------------------------------------------- */
+    /* Wait until TASKBIN is valid                     */
+    /* ----------------------------------------------- */
+
     li      t0, TASKBIN_ADDR
+
+1:
     lw      t1, 0(t0)
-    beqz    t1, _trap_ret
-    
-    /* Clear START */
+    beqz    t1, 1b
+
+
+    /* ----------------------------------------------- */
+    /* Acknowledge START                               */
+    /* ----------------------------------------------- */
+
     li      t0, START_ADDR
     sw      zero, 0(t0)
-    
-    /* Jump to saved task address */
+
+    fence   iorw, iorw
+
+
+    /* ----------------------------------------------- */
+    /* Execute task                                     */
+    /* ----------------------------------------------- */
+
     jalr    ra, 0(t1)
-    
-    /* Task completed - write exit code 0 (success, no exceptions) */
+
+
+    /* ----------------------------------------------- */
+    /* Task completed                                  */
+    /* ----------------------------------------------- */
+
+    /* RETURN = 0 */
     li      t0, RETURN_ADDR
     sw      zero, 0(t0)
-    
-    /* Signal done */
+
+    /* DONE = 1 */
     li      t0, DONE_ADDR
     li      t1, 1
     sw      t1, 0(t0)
 
+    fence   iorw, iorw
+
+
+/* ---------------------------------------------------- */
+/* Return from interrupt                                */
+/* ---------------------------------------------------- */
+
 _trap_ret:
+
     mret

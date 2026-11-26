@@ -84,8 +84,10 @@ package magia_pkg;
     bit          RVV;       // Vector extension support
     int unsigned NumIPU;    // Number of integer processing units
     int unsigned NumFPU;    // Number of FP processing units
+    int unsigned NumPorts;  // Number of VLSU ports, equal to FPUs
     bit          XDivSqrt;  // FP division/sqrt enable
     bit          XDMA;      // DMA inside the Spatz CC
+    int unsigned VLEN;      // Vector length in bits (spatz_vpu)
     int unsigned ICacheL0LineCount; // private L0 tier lines, per core
     int unsigned ICacheLineWidth;   // cache line width in bits (both tiers)
     int unsigned ICacheLineCount;   // shared-tier set count
@@ -138,51 +140,21 @@ package magia_pkg;
     MisalignedAccess: 1'b1
   };
 
- // Derived from the MAGIA Makefile (Reflects on spatz_pkg.sv in spatz_cluster dep)
-`ifdef SPATZ_RVD
-  localparam bit          MagiaSpatzRVD      = `SPATZ_RVD;
-`else
-  localparam bit          MagiaSpatzRVD      = 1'b0;
-`endif
-`ifdef SPATZ_RVF
-  localparam bit          MagiaSpatzRVF      = `SPATZ_RVF;
-`else
-  localparam bit          MagiaSpatzRVF      = 1'b1;
-`endif
-`ifdef SPATZ_RVV
-  localparam bit          MagiaSpatzRVV      = `SPATZ_RVV;
-`else
-  localparam bit          MagiaSpatzRVV      = 1'b1;
-`endif
-`ifdef SPATZ_N_IPU
-  localparam int unsigned MagiaSpatzNumIPU   = `SPATZ_N_IPU;
-`else
-  localparam int unsigned MagiaSpatzNumIPU   = 1;
-`endif
-`ifdef SPATZ_N_FPU
-  localparam int unsigned MagiaSpatzNumFPU   = `SPATZ_N_FPU;
-`else
-  localparam int unsigned MagiaSpatzNumFPU   = 4;
-`endif
-`ifdef SPATZ_XDIVSQRT
-  localparam bit          MagiaSpatzXDivSqrt = `SPATZ_XDIVSQRT;
-`else
-  localparam bit          MagiaSpatzXDivSqrt = 1'b0;
-`endif
-`ifdef SPATZ_XDMA
-  localparam bit          MagiaSpatzXDMA     = `SPATZ_XDMA;
-`else
-  localparam bit          MagiaSpatzXDMA     = 1'b0;
-`endif
-
+ 
+  // Spatz configurations. These are the only source of the Spatz parameters: the Makefile
+  // selects one (spatz_cfg=default) and scripts/gen_spatz_vpu_pkg.py reads it from
+  // here to generate the spatz_vpu spatz_pkg.sv and the SPATZ_* flags of the Spatz SW build.
+  // Keep the field values plain literals, so that the script can parse them.
   localparam spatz_cfg_t MagiaSpatzDefaultCfg = '{
-    RVD:      MagiaSpatzRVD,
-    RVF:      MagiaSpatzRVF,
-    RVV:      MagiaSpatzRVV,
-    NumIPU:   MagiaSpatzNumIPU,
-    NumFPU:   MagiaSpatzNumFPU,
-    XDivSqrt: MagiaSpatzXDivSqrt,
-    XDMA:     MagiaSpatzXDMA,
+    RVD:      1'b0,
+    RVF:      1'b1,
+    RVV:      1'b1,
+    NumIPU:   1,
+    NumFPU:   4,
+    NumPorts: 4,
+    XDivSqrt: 1'b0,
+    XDMA:     1'b0,
+    VLEN:     256,
     ICacheL0LineCount: 8,
     ICacheLineWidth:   256,
     ICacheLineCount:   32,

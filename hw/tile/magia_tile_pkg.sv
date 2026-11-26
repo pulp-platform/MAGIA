@@ -120,38 +120,22 @@ package magia_tile_pkg;
 
   localparam logic [magia_pkg::ADDR_W-1:0] INSTRRAM_PMA_MASK        = 32'hFFFF_8000;
 
-  // Snitch PMA with one cacheable instruction region
-  function automatic snitch_pma_pkg::snitch_pma_t gen_spatz_pma_cfg(logic [magia_pkg::ADDR_W-1:0] base,
-                                                                   logic [magia_pkg::ADDR_W-1:0] mask);
-    snitch_pma_pkg::snitch_pma_t cfg;
-    cfg                     = '0;
-    cfg.NrCachedRegionRules = 1;
-    cfg.CachedRegion[0]     = '{base: 48'(base), mask: 48'(mask)};  // Snitch PMA rules are 48 bit
-    return cfg;
-  endfunction
-
-  localparam snitch_pma_pkg::snitch_pma_t SPATZ_SNITCH_PMA_CFG = gen_spatz_pma_cfg(INSTRRAM_ADDR_START, INSTRRAM_PMA_MASK);
-
   // Spatz parameters 
 
-  localparam bit          SPATZ_RVD_PARAM      = magia_pkg::MagiaSpatzRVD;
-  localparam int unsigned SPATZ_NUM_IPU        = magia_pkg::MagiaSpatzNumIPU;
-  localparam int unsigned SPATZ_NUM_FPU        = magia_pkg::MagiaSpatzNumFPU;
-  localparam bit          SPATZ_XDIVSQRT_PARAM = magia_pkg::MagiaSpatzXDivSqrt;
-  localparam bit          SPATZ_XDMA_PARAM     = magia_pkg::MagiaSpatzXDMA;
-  localparam bit          SPATZ_RVF_PARAM      = magia_pkg::MagiaSpatzRVF;
-  localparam bit          SPATZ_RVV_PARAM      = magia_pkg::MagiaSpatzRVV;
+  localparam bit          SPATZ_RVD_PARAM      = magia_pkg::MagiaSpatzDefaultCfg.RVD;
+  localparam int unsigned SPATZ_NUM_IPU        = magia_pkg::MagiaSpatzDefaultCfg.NumIPU;
+  localparam int unsigned SPATZ_NUM_FPU        = magia_pkg::MagiaSpatzDefaultCfg.NumFPU;
+  localparam bit          SPATZ_XDIVSQRT_PARAM = magia_pkg::MagiaSpatzDefaultCfg.XDivSqrt;
+  localparam bit          SPATZ_XDMA_PARAM     = magia_pkg::MagiaSpatzDefaultCfg.XDMA;
+  localparam bit          SPATZ_RVF_PARAM      = magia_pkg::MagiaSpatzDefaultCfg.RVF;
+  localparam bit          SPATZ_RVV_PARAM      = magia_pkg::MagiaSpatzDefaultCfg.RVV;
   
   function automatic int unsigned gen_spatz_num_fu(magia_pkg::spatz_cfg_t cfg);
     return (cfg.NumFPU > cfg.NumIPU) ? cfg.NumFPU : cfg.NumIPU;
   endfunction
 
-  function automatic int unsigned gen_spatz_tcdm_ports(magia_pkg::spatz_cfg_t cfg);
-    return cfg.RVV ? (gen_spatz_num_fu(cfg) + 1) : 1;
-  endfunction
-
   function automatic int unsigned gen_spatz_hci_ports(magia_pkg::spatz_cfg_t cfg);
-    return cfg.RVD ? (gen_spatz_tcdm_ports(cfg) * 2) : gen_spatz_tcdm_ports(cfg);
+    return cfg.RVD ? (gen_spatz_num_fu(cfg) * 2) : gen_spatz_num_fu(cfg);
   endfunction
 
   function automatic int unsigned gen_tile_spatz_hci_ports(magia_tile_cfg_t cfg);
@@ -165,8 +149,8 @@ package magia_tile_pkg;
   localparam int unsigned SPATZ_HCI_PORTS = gen_spatz_hci_ports(magia_pkg::MagiaSpatzDefaultCfg);
 
   // Spatz CC outstanding transactions and timing parameters
-  parameter int unsigned SPATZ_NUM_INT_OUTSTANDING_LOADS   = 1;   // Snitch core outstanding loads
-  parameter int unsigned SPATZ_NUM_INT_OUTSTANDING_MEM     = 4;   // Snitch core outstanding memory ops
+  parameter int unsigned SPATZ_NUM_INT_OUTSTANDING_LOADS   = 1;  
+  parameter int unsigned SPATZ_NUM_INT_OUTSTANDING_MEM     = 4;   
   parameter int unsigned SPATZ_NUM_SPATZ_OUTSTANDING_LOADS = 4;   // Spatz vector unit outstanding loads
   parameter bit          SPATZ_XDIVSQRT                    = SPATZ_XDIVSQRT_PARAM; // From Makefile define (0=disabled, 1=enabled)
   parameter bit          SPATZ_XDMA                        = SPATZ_XDMA_PARAM;     // From Makefile define (0=disabled, 1=enabled)
@@ -879,8 +863,8 @@ package magia_tile_pkg;
   typedef logic [SPATZ_TCDM_STRB_WIDTH-1:0]     spatz_strb64_t;
   
   `TCDM_TYPEDEF_ALL(spatz_tcdm, spatz_tcdm_addr_t, spatz_data_t, spatz_strb_t, spatz_tcdm_user_t)
-  `REQRSP_TYPEDEF_ALL(spatz_reqrsp, spatz_addr_t, spatz_data_t, spatz_strb_t)        // 32-bit for Snitch data port (RVD=0, DataWidth=32)
-  `REQRSP_TYPEDEF_ALL(spatz_reqrsp64, spatz_addr_t, spatz_data64_t, spatz_strb64_t)  // 64-bit for Snitch data port (RVD=1, DataWidth=64)
+  `REQRSP_TYPEDEF_ALL(spatz_reqrsp, spatz_addr_t, spatz_data_t, spatz_strb_t)        // 32-bit for CV32 data port (RVD=0, DataWidth=32)
+  `REQRSP_TYPEDEF_ALL(spatz_reqrsp64, spatz_addr_t, spatz_data64_t, spatz_strb64_t)  // 64-bit for CV32 data port (RVD=1, DataWidth=64)
 
   // TCDM64 types with AMO support (using TCDM_TYPEDEF_ALL macro which includes amo field)
   typedef logic [magia_pkg::ADDR_W-1:0]        spatz_tcdm64_addr_t;

@@ -225,6 +225,9 @@ $(STIM_INSTR) $(STIM_DATA): $(BIN)
 .PHONY: spatz-header
 spatz-header:
 	@if [ -n "$(SPATZ_TASKS)" ]; then \
+		if [ ! -f "$(SPATZ_CFG_MK)" ]; then \
+			echo "ERROR: $(SPATZ_CFG_MK) missing: run make vsim-scripts spatz_cfg=<cfg> first"; exit 1; \
+		fi; \
 		echo "[SPATZ] Auto-detected tasks: $(SPATZ_TASKS)"; \
 		$(MAKE) -C $(SPATZ_SW_DIR) task="$(SPATZ_TASKS)" TEST_NAME=$(TEST_NAME) SPATZ_RVD=$(SPATZ_RVD) SPATZ_VLEN=$(SPATZ_VLEN) SPATZ_N_IPU=$(SPATZ_N_IPU) SPATZ_N_FPU=$(SPATZ_N_FPU) SPATZ_XDIVSQRT=$(SPATZ_XDIVSQRT) SPATZ_XDMA=$(SPATZ_XDMA) SPATZ_RVF=$(SPATZ_RVF) SPATZ_RVV=$(SPATZ_RVV) all; \
 	else \
@@ -359,6 +362,29 @@ bender:
 	--tlsv1.2 https://pulp-platform.github.io/bender/init -sSf | sh -s -- --local
 	export PATH=$(pwd):$(PATH)
 
+# Spatz configuration: the parameters are the spatz_cfg_t localparams of hw/mesh/magia_pkg.sv,
+# here only the one to use is selected. It drives the spatz_vpu pkg and the Spatz SW build.
+#   default  -> MagiaSpatzDefaultCfg  (default for the mesh)
+#  
+spatz_cfg ?= $(if $(filter 1,$(strip $(mesh_dv))),default)
+SPATZ_CFG_NAME_default  := MagiaSpatzDefaultCfg
+MAGIA_PKG    := $(ROOT_DIR)/hw/mesh/magia_pkg.sv
+GEN_SPATZ_PY := $(ROOT_DIR)/scripts/gen_spatz_vpu_pkg.py
+
+# SPATZ_* variables of the selected configuration (used by the Spatz SW build). They are
+# generated together with spatz_vpu_pkg.sv by the targets that write the compile script
+# (vsim-scripts & co.): only there spatz_cfg is required, the other targets reuse them.
+SPATZ_CFG_MK    := $(ROOT_DIR)/hw/generated/spatz_cfg.mk
+SPATZ_GEN_GOALS := vsim-scripts update-ips synth-ips profile-ips spatz-vpu-pkg
+ifneq ($(filter $(SPATZ_GEN_GOALS),$(MAKECMDGOALS)),)
+  SPATZ_CFG_NAME := $(SPATZ_CFG_NAME_$(strip $(spatz_cfg)))
+  ifeq ($(SPATZ_CFG_NAME),)
+    $(error Unknown spatz_cfg='$(strip $(spatz_cfg))': use default)
+  endif
+else
+  -include $(SPATZ_CFG_MK)
+endif
+
 include bender_common.mk
 include bender_sim.mk
 include bender_synth.mk
@@ -395,7 +421,6 @@ bender_targs += -t cv32e40p_include_tracer
 
 
 # Targets needed to avoid error even though the module is not used
-bender_targs += -t snitch_cluster
 bender_targs += -t idma_test
 bender_targs += -t spatz
 
@@ -414,28 +439,28 @@ endif
 
 # Define for Spatz target
 bender_defs  += -D TARGET_SPATZ
-SPATZ_RVD      ?= 0   # 0: 32-bit TCDM (ELEN=32), 1: 64-bit TCDM (ELEN=64)
-SPATZ_VLEN     ?= 256 # Vector length in bits (128, 256, 512, ...)
-SPATZ_NRVREG   ?= 32  # Number of vector registers (RISC-V standard=32)
-SPATZ_NR_VRF_BANKS ?= 4  # Number of VRF banks (banking parallelism: 2, 4, 8)
-SPATZ_N_IPU    ?= 1   # Number of Integer Processing Units (1-8)
-SPATZ_N_FPU    ?= 4   # Number of Floating Point Units (1-8)
-SPATZ_NR_PARALLEL_INSTR ?= 4  # Number of parallel vector instructions (scoreboard depth)
-SPATZ_XDIVSQRT ?= 0   # 0: FP div/sqrt disabled, 1: enabled (increases area)
-SPATZ_XDMA     ?= 0   # 0: DMA disabled, 1: enabled
-SPATZ_RVF      ?= 1   # 0: single-precision FP disabled, 1: enabled
-SPATZ_RVV      ?= 1   # 0: vector extension disabled, 1: enabled
-bender_defs    += -D SPATZ_RVD=$(SPATZ_RVD)
-bender_defs    += -D SPATZ_VLEN=$(SPATZ_VLEN)
-bender_defs    += -D SPATZ_NRVREG=$(SPATZ_NRVREG)
-bender_defs    += -D SPATZ_NR_VRF_BANKS=$(SPATZ_NR_VRF_BANKS)
-bender_defs    += -D SPATZ_N_IPU=$(SPATZ_N_IPU)
-bender_defs    += -D SPATZ_N_FPU=$(SPATZ_N_FPU)
-bender_defs    += -D SPATZ_NR_PARALLEL_INSTR=$(SPATZ_NR_PARALLEL_INSTR)
-bender_defs    += -D SPATZ_XDIVSQRT=$(SPATZ_XDIVSQRT)
-bender_defs    += -D SPATZ_XDMA=$(SPATZ_XDMA)
-bender_defs    += -D SPATZ_RVF=$(SPATZ_RVF)
-bender_defs    += -D SPATZ_RVV=$(SPATZ_RVV)
+
+# spatz_vpu ships a pre-generated spatz_pkg.sv (RVD=1, VLEN=512). Render it from spatz_vpu's
+# template with the selected Spatz configuration of magia_pkg.sv (spatz_cfg) and swap it into
+# the compile script in place of the spatz_vpu one, so the configuration lives in MAGIA.
+SPATZ_VPU_PKG ?= $(ROOT_DIR)/hw/generated/spatz_vpu_pkg.sv
+
+spatz-vpu-pkg:
+	$(BASE_PYTHON) $(GEN_SPATZ_PY)                \
+	  --magia-pkg $(MAGIA_PKG)                    \
+	  --cfg $(SPATZ_CFG_NAME)                     \
+	  --vpu-dir "$$($(BENDER) path spatz_vpu)"   \
+	  --out $(SPATZ_VPU_PKG)                      \
+	  --out-mk $(SPATZ_CFG_MK)
+
+# $(1): compile script where the spatz_vpu spatz_pkg.sv is replaced by $(SPATZ_VPU_PKG)
+define spatz_vpu_pkg_swap
+	$(MAKE) spatz-vpu-pkg
+	sed -i 's|[^" ]*/spatz_vpu[^/" ]*/hw/src/generated/spatz_pkg\.sv|$(SPATZ_VPU_PKG)|' $(1)
+	@! grep -q 'spatz_vpu[^/" ]*/hw/src/generated/spatz_pkg' $(1) || { echo "ERROR: spatz_vpu spatz_pkg.sv still in $(1)"; exit 1; }
+endef
+
+.PHONY: spatz-vpu-pkg
 
 
 update-ips:
@@ -447,6 +472,7 @@ update-ips:
 	$(bender_targs) $(bender_defs) \
 	$(sim_targs)    $(sim_defs)    \
 	> ${compile_script}
+	$(call spatz_vpu_pkg_swap,$(compile_script))
 
 vsim-scripts:
 	$(BENDER) checkout
@@ -457,6 +483,7 @@ vsim-scripts:
 	$(bender_targs) $(bender_defs) \
 	$(sim_targs)    $(sim_defs)    \
 	> ${compile_script}
+	$(call spatz_vpu_pkg_swap,$(compile_script))
 
 synth-ips:
 	$(MAKE) -C $(IDMA_ROOT) idma_hw_all IDMA_ADD_IDS=$(IDMA_ADD_IDS)
@@ -464,6 +491,7 @@ synth-ips:
 	$(common_targs) $(common_defs) \
 	$(synth_targs)  $(synth_defs)  \
 	> ${compile_script_synth}
+	$(call spatz_vpu_pkg_swap,$(compile_script_synth))
 
 profile-ips:
 	$(BENDER) update
@@ -473,6 +501,7 @@ profile-ips:
 	$(bender_targs) $(bender_defs) 			\
 	$(profile_targs)    $(profile_defs)    	\
 	> ${compile_script}
+	$(call spatz_vpu_pkg_swap,$(compile_script))
 
 build-hw: hw-all
 

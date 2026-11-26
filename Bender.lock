@@ -80,6 +80,23 @@ packages:
     - common_cells
     - fpnew
     - tech_cells_generic
+  cv32e40px:
+    revision: 4461f9304dd8a138a84cc0ee49f507654fab19e6
+    version: null
+    source:
+      Git: https://github.com/FondazioneChipsIT/cv32e40px.git
+    dependencies:
+    - common_cells
+    - fpnew
+    - tech_cells_generic
+  cv32e40px_spatz:
+    revision: e9f59c8a72a82b62967cb013832c3aa68200afa3
+    version: null
+    source:
+      Git: git@gitlab.chips.it:dpala/cv32e40px_spatz.git
+    dependencies:
+    - cv32e40px
+    - spatz_vpu
   cv32e40x:
     revision: 8834f135214f8f25f710ebd77f48d9f03d9548e6
     version: null
@@ -95,7 +112,7 @@ packages:
     - common_cells
   floo_noc:
     revision: f3db5e76a5461f590e743e2583f1607ecbabc24e
-    version: 0.6.1
+    version: null
     source:
       Git: https://github.com/FondazioneChipsIT/FlooNoC.git
     dependencies:
@@ -103,7 +120,15 @@ packages:
     - axi_riscv_atomics
     - common_cells
     - common_verification
+    - floo_noc_pd
+    - fpnew
     - idma
+  floo_noc_pd:
+    revision: null
+    version: null
+    source:
+      Path: .bender/git/checkouts/floo_noc-e64fffb2a4a70a93/./pd
+    dependencies: []
   fpnew:
     revision: a8e0cba6dd50f357ece73c2c955d96efc3c6c315
     version: null
@@ -167,7 +192,7 @@ packages:
     - tech_cells_generic
   idma:
     revision: 26ac2cd1c535851b14c9c508762203a180961cad
-    version: 0.6.4
+    version: null
     source:
       Git: https://github.com/FondazioneChipsIT/iDMA.git
     dependencies:
@@ -192,8 +217,8 @@ packages:
     - common_cells
     - common_verification
   redmule:
-    revision: be2eacf8acd48601ad8e6a85273942f5cd143484
-    version: 2.2.3
+    revision: 1e62785668eb1f21167c0105d3580cd2d94b7df9
+    version: 2.2.4
     source:
       Git: https://github.com/pulp-platform/redmule.git
     dependencies:
@@ -226,6 +251,15 @@ packages:
     - axi
     - common_cells
     - common_verification
+  reqrsp_interface:
+    revision: null
+    version: null
+    source:
+      Path: .bender/git/checkouts/spatz_vpu-9240f86ee32af5c1/hw/ip/reqrsp_interface
+    dependencies:
+    - axi
+    - common_cells
+    - tech_cells_generic
   riscv-dbg:
     revision: 122510063a02e0d012f0497ffdbafca53d4e716b
     version: 0.7.0
@@ -241,20 +275,25 @@ packages:
       Git: https://github.com/pulp-platform/scm.git
     dependencies:
     - tech_cells_generic
-  spatz:
-    revision: 3228a9077cb33b4ee235029e8fcace52ed327334
+  snitch:
+    revision: null
     version: null
     source:
-      Git: https://github.com/pulp-platform/spatz.git
+      Path: .bender/git/checkouts/spatz_vpu-9240f86ee32af5c1/hw/ip/snitch
     dependencies:
-    - axi
-    - axi_riscv_atomics
-    - cluster_icache
+    - common_cells
+    - riscv-dbg
+    - tech_cells_generic
+  spatz_vpu:
+    revision: 163194be1060d77828c9f8f250cef24e9840504a
+    version: null
+    source:
+      Git: https://github.com/FondazioneChipsIT/spatz_vpu.git
+    dependencies:
     - common_cells
     - fpnew
-    - idma
-    - register_interface
-    - riscv-dbg
+    - reqrsp_interface
+    - snitch
     - tech_cells_generic
   tech_cells_generic:
     revision: 3a3de73632a06826b1bd9c65a0a2e92b32016845

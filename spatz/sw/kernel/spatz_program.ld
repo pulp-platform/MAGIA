@@ -20,7 +20,7 @@
  *   0xCC000000: CV32 .text
  *   0xCC000000 + CV32_size: .spatz_binary (Spatz code inline)
  * 
- * Stack: Spatz uses the 16KB above the CV32/PULP stack region (0x0001C000-0x00020000)
+ * Stack: Spatz uses the 16KB above the CV32/PULP stacks (0x0001C000-0x00020000, tile SPM)
  *   - CV32 and PULP: below 0x0001C000 (2KB slots, see sw/kernel/link.ld)
  *   - Spatz uses: 0x0001C000-0x00020000 (16KB)
  */
