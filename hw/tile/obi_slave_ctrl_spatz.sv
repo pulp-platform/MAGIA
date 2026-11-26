@@ -15,6 +15,7 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
+ *          Luca Colombo <luca.colombo07@universitadipavia.it>
  *
  * OBI Slave Control Registers for Spatz Core Complex
  *
@@ -34,6 +35,7 @@ module obi_slave_ctrl_spatz
   
   // Control outputs
   output logic              clk_en_o,
+  output logic [31:0]       boot_addr_o,
   output logic              start_o,
   output logic              done_o
 );
@@ -46,6 +48,7 @@ module obi_slave_ctrl_spatz
   localparam logic [4:0] DATA_OFFSET     = 5'h10; // +0x10
   localparam logic [4:0] RETURN_OFFSET   = 5'h14; // +0x14
   localparam logic [4:0] DONE_OFFSET     = 5'h18; // +0x18
+  localparam logic [4:0] BINARY_OFFSET   = 5'h1C; // +0x1C
 
   // Registers
   logic        clk_en_q;
@@ -55,6 +58,7 @@ module obi_slave_ctrl_spatz
   logic [31:0] data_q;
   logic [31:0] return_q;
   logic        done_q;
+  logic [31:0] entry_point_q, entry_point_d;
   
   // Response pipeline
   logic        rvalid_q, rvalid_d;
@@ -68,7 +72,7 @@ module obi_slave_ctrl_spatz
   
   // Check if address is in valid range
   assign addr_valid = (obi_req_i.a.addr >= BaseAddr) & 
-                      (obi_req_i.a.addr < (BaseAddr + 28));  // 7 registers * 4 bytes
+                      (obi_req_i.a.addr < (BaseAddr + 32));  // 8 registers * 4 bytes
   
   // Grant only if address is valid
   assign obi_rsp_o.gnt = obi_req_i.req & addr_valid;
@@ -94,6 +98,7 @@ module obi_slave_ctrl_spatz
     data_d    = data_q;
     return_d  = return_q;
     done_d    = 1'b0;  // Done is a pulse, auto-clears
+    entry_point_d = entry_point_q;
     
     // Update registers on write only if address is valid
     if (obi_req_i.req && obi_req_i.a.we && addr_valid) begin
@@ -105,6 +110,7 @@ module obi_slave_ctrl_spatz
         DATA_OFFSET:    data_d    = obi_req_i.a.wdata;     // Preserved register
         RETURN_OFFSET:  return_d  = obi_req_i.a.wdata;     // Preserved register
         DONE_OFFSET:    done_d    = obi_req_i.a.wdata[0];  // Spatz writes 1, creates pulse
+        BINARY_OFFSET:  entry_point_d = obi_req_i.a.wdata;
         default: ;
       endcase
     end
@@ -122,6 +128,7 @@ module obi_slave_ctrl_spatz
       data_q    <= 32'h0;
       return_q  <= 32'h0;
       done_q    <= 1'b0;
+      entry_point_q  <= 32'h0;
     end else begin
       clk_en_q  <= clk_en_d;
       start_q   <= start_d;
@@ -130,6 +137,7 @@ module obi_slave_ctrl_spatz
       data_q    <= data_d;
       return_q  <= return_d;
       done_q    <= done_d;
+      entry_point_q  <= entry_point_d;
     end
   end
   
@@ -149,6 +157,7 @@ module obi_slave_ctrl_spatz
         DATA_OFFSET:    rdata_d = data_q;
         RETURN_OFFSET:  rdata_d = return_q;
         DONE_OFFSET:    rdata_d = {31'h0, done_q};
+        BINARY_OFFSET:  rdata_d = entry_point_q;
         default:        rdata_d = 32'hDEADBEEF;
       endcase
     end
@@ -175,6 +184,6 @@ module obi_slave_ctrl_spatz
   assign clk_en_o = clk_en_q;
   assign start_o  = start_q;
   assign done_o   = done_q;
-  
+  assign boot_addr_o = entry_point_q;
 
 endmodule

@@ -30,17 +30,17 @@
 #define DMA_SIZE    64  // 64 bytes = 16 words
 
 int idma_simple_task(void) {
-    printf("[SNITCH] \n========================================\n");
-    printf("[SNITCH] IDMA TASK: DMA Transfers + Event Unit\n");
-    printf("[SNITCH] ========================================\n");
+    printf("[Spatz-CV32] \n========================================\n");
+    printf("[Spatz-CV32] IDMA TASK: DMA Transfers + Event Unit\n");
+    printf("[Spatz-CV32] ========================================\n");
     int errors = 0;
     
     // Enable iDMA events (keep EU_SPATZ_DONE enabled for CV32)
-    printf("[SNITCH] Enabling iDMA events...\n");
+    printf("[Spatz-CV32] Enabling iDMA events...\n");
     eu_enable_events(EU_IDMA_ALL_DONE_MASK);
     
     // 1. Test iDMA transfer L1→L2
-    printf("[SNITCH] Testing iDMA L1 to L2 transfer...\n");
+    printf("[Spatz-CV32] Testing iDMA L1 to L2 transfer...\n");
     
     // Initialize source data in L1
     for (int i = 0; i < (DMA_SIZE/4); i++) {
@@ -54,14 +54,14 @@ int idma_simple_task(void) {
     uint32_t events = eu_idma_wait_o2a_completion(EU_WAIT_MODE_POLLING);
     
     if (events & EU_IDMA_O2A_DONE_MASK) {
-        printf("[SNITCH] DMA L1 to L2 complete (O2A event detected)\n");
+        printf("[Spatz-CV32] DMA L1 to L2 complete (O2A event detected)\n");
     } else {
-        printf("[SNITCH] DMA L1 to L2 TIMEOUT\n");
+        printf("[Spatz-CV32] DMA L1 to L2 TIMEOUT\n");
         errors++;
     }
     
     // 2. Test iDMA transfer L2→L1
-    printf("[SNITCH] Testing iDMA L2 to L1 transfer...\n");
+    printf("[Spatz-CV32] Testing iDMA L2 to L1 transfer...\n");
     
     // Clear destination
     for (int i = 0; i < (DMA_SIZE/4); i++) {
@@ -74,23 +74,23 @@ int idma_simple_task(void) {
     events = eu_idma_wait_a2o_completion(EU_WAIT_MODE_POLLING);
     
     if (events & EU_IDMA_A2O_DONE_MASK) {
-        printf("[SNITCH] DMA L2 to L1 complete (A2O event detected)\n");
+        printf("[Spatz-CV32] DMA L2 to L1 complete (A2O event detected)\n");
     } else {
-        printf("[SNITCH] DMA L2 to L1 TIMEOUT\n");
+        printf("[Spatz-CV32] DMA L2 to L1 TIMEOUT\n");
         errors++;
     }
     
     // Verify transferred data (using mmio32)
-    printf("[SNITCH] Verifying transferred data...\n");
+    printf("[Spatz-CV32] Verifying transferred data...\n");
     for (int i = 0; i < (DMA_SIZE/4); i++) {
         uint32_t expected = 0xA0000000 + i;
         uint32_t computed = mmio32((uint32_t)L1_DMA_DST + 4*i);
         if (computed != expected) {
-            printf("[SNITCH] [%d] FAIL: computed=0x%08x, expected=0x%08x\n", 
+            printf("[Spatz-CV32] [%d] FAIL: computed=0x%08x, expected=0x%08x\n", 
                    i, computed, expected);
             errors++;
         }
     }
-    if (errors == 0) printf("[SNITCH] Data verification: OK\n");
+    if (errors == 0) printf("[Spatz-CV32] Data verification: OK\n");
     return 0;
 }

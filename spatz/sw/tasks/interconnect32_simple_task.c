@@ -28,13 +28,13 @@
 
 int interconnect32_simple_task(void) {
     
-    printf("[SNITCH] Testing 32-bit accesses\n");
-    printf("[SNITCH] Using L1 memory at 0x%08x\n", TEST_MEM32_BASE);
+    printf("[Spatz-CV32] Testing 32-bit accesses\n");
+    printf("[Spatz-CV32] Using L1 memory at 0x%08x\n", TEST_MEM32_BASE);
     
     // =============================================
     // Test 1: Sequential 32-bit stores and loads
     // =============================================
-    printf("[SNITCH] Sequential 32-bit store/load\n");
+    printf("[Spatz-CV32] Sequential 32-bit store/load\n");
     
     for (int i = 0; i < 16; i++) {
         test_mem32[i] = 0x10000000 + i;
@@ -42,14 +42,14 @@ int interconnect32_simple_task(void) {
     
     for (int i = 0; i < 16; i++) {
         if (test_mem32[i] != (uint32_t)(0x10000000 + i)) {
-            printf("[SNITCH] ERROR: 32-bit store/load failed at [%d]\n", i);
+            printf("[Spatz-CV32] ERROR: 32-bit store/load failed at [%d]\n", i);
         }
     }
     
     // =============================================
     // Test 2: Strided 32-bit access pattern
     // =============================================
-    printf("[SNITCH] Strided 32-bit access\n");
+    printf("[Spatz-CV32] Strided 32-bit access\n");
     
     test_mem32[0] = 0xAAAAAAAA;
     test_mem32[2] = 0xBBBBBBBB;
@@ -57,26 +57,26 @@ int interconnect32_simple_task(void) {
     test_mem32[6] = 0xDDDDDDDD;
     
     if (test_mem32[0] != 0xAAAAAAAA || test_mem32[4] != 0xCCCCCCCC) {
-        printf("[SNITCH] ERROR: Strided access failed\n");
+        printf("[Spatz-CV32] ERROR: Strided access failed\n");
     }
     
     // =============================================
     // Test 3: Reverse order stores
     // =============================================
-    printf("[SNITCH] Reverse order stores\n");
+    printf("[Spatz-CV32] Reverse order stores\n");
     
     for (int i = 7; i >= 0; i--) {
         test_mem32[i] = 0x30000000 + (7 - i);
     }
     
     if (test_mem32[0] != 0x30000007 || test_mem32[7] != 0x30000000) {
-        printf("[SNITCH] ERROR: Reverse order failed\n");
+        printf("[Spatz-CV32] ERROR: Reverse order failed\n");
     }
     
     // =============================================
     // Test 4: Alternating read/write pattern
     // =============================================
-    printf("[SNITCH] Alternating read/write\n");
+    printf("[Spatz-CV32] Alternating read/write\n");
     
     uint32_t accumulator = 0;
     for (int i = 0; i < 8; i++) {
@@ -85,13 +85,13 @@ int interconnect32_simple_task(void) {
     }
     
     if (accumulator != 0x0000001C + (8 * 0x40000000)) {
-        printf("[SNITCH] ERROR: Alternating pattern failed\n");
+        printf("[Spatz-CV32] ERROR: Alternating pattern failed\n");
     }
     
     // =============================================
     // Test 7: Vector load/store 32-bit (vle32.v/vse32.v)
     // =============================================
-    printf("[SNITCH] Vector load/store e32\n");
+    printf("[Spatz-CV32] Vector load/store e32\n");
     
     // Initialize pattern for vector operations
     for (int i = 0; i < 16; i++) {
@@ -122,7 +122,7 @@ int interconnect32_simple_task(void) {
     // Verify vector store
     for (int i = 0; i < 8; i++) {
         if (test_mem32[16 + i] != test_mem32[i]) {
-            printf("[SNITCH] ERROR: Vector store failed at [%d], got 0x%08x expected 0x%08x\n",
+            printf("[Spatz-CV32] ERROR: Vector store failed at [%d], got 0x%08x expected 0x%08x\n",
                    i, test_mem32[16 + i], test_mem32[i]);
         }
     }

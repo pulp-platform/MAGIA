@@ -183,12 +183,7 @@ dispatcher_loop:
 /* ==================================================== */
 
 /*
- * Current runtime image base: 0xC0000714
- *
- * .balign 256 -> section offset 0x100
- *
- * Absolute address:
- * 0xC0000900
+ * Aligned to 256 B within the binary; link.ld aligns .spatz_binary to 256 B
  */
 
 .balign 256

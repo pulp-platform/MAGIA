@@ -107,7 +107,7 @@ package magia_pkg;
     ctrl_core_cfg_t CtrlCore;  // Control core (cv32e40x) ISA extensions
     idma_cfg_t      IDma;      // iDMA parameters
     bit             EnRedMule; // RedMulE HWPE: engine + HCI HWPE port + OBI control port
-    bit             EnSpatzCC; // Spatz CC: core complex + bootrom + dedicated I$ + HCI/OBI master ports
+    bit             EnSpatzCC; // Spatz CV32 + dedicated I$ + HCI/OBI master ports
     bit             EnCluster; // PULP cluster: cv32e40p cores + shared I$ + OBI master ports
     bit             EnCollective; // Narrow collectives: control registers + collective_gen on the narrow master port
     redmule_cfg_t   RedMule;   // RedMulE parameters (valid iff EnRedMule)

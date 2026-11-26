@@ -280,7 +280,6 @@ Private map: the same range in every tile, each tile maps it to its own copy:
 | *Cluster Event Unit (SoC-side)* | `0x0000_2900-0x0000_38FF` |
 | *Reserved*        | `0x0000_3900-0x0000_FFFF` |
 | *Stack*           | `0x0001_0000-0x0001_FFFF` |
-| *Spatz BootROM*   | `0x1000_0000-0x1000_00FF` |
 
 Shared/global map:
 

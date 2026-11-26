@@ -31,6 +31,7 @@
 #define SPATZ_DATA     (SPATZ_CTRL_BASE + 0x10)
 #define SPATZ_RETURN   (SPATZ_CTRL_BASE + 0x14)
 #define SPATZ_DONE     (SPATZ_CTRL_BASE + 0x18)
+#define SPATZ_BINARY   (SPATZ_CTRL_BASE + 0x1C)
 
 #define mmio32(x) (*(volatile uint32_t *)(x))
 
@@ -78,7 +79,7 @@ static inline void spatz_run_task_with_params(uint32_t spatz_task_addr, uint32_t
 }
 
 static inline void spatz_init(uint32_t spatz_start_addr) {
-    spatz_set_func(spatz_start_addr);
+    mmio32(SPATZ_BINARY) = spatz_start_addr;
     spatz_clk_en();
     while (mmio32(SPATZ_READY) == 0){
         printf("Waiting for Spatz to be ready...\n");

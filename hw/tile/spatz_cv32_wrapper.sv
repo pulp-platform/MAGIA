@@ -14,7 +14,7 @@
  * limitations under the License.
  * SPDX-License-Identifier: SHL-0.51
  *
- * Authors: Luca Colombo, 2026 Fondazione Chips-IT
+ * Authors: Luca Colombo, 2026 Fondazione Chips-IT <luca.colombo07@universitadipavia.it>
  * 
  * Wrapper for Spatz with CV32 control core
  * Obi interfaces for CV32 data memory accesses and HCI for Spatz memory access
@@ -52,6 +52,8 @@ module spatz_cv32_wrapper
   input  logic [31:0] irq_i,
   output logic        irq_ack_o,
   output logic [4:0]  irq_id_o,
+  // Boot address from CSRs
+  input  logic [31:0] boot_addr_i,
 
   // Scalar core data: every access goes through the tile OBI crossbar
   output magia_tile_pkg::core_obi_data_req_t             spatz_obi_data_req_o,
@@ -107,7 +109,7 @@ module spatz_cv32_wrapper
     .FPU_ADDMUL_LAT      ( 1                ),  
     .FPU_OTHERS_LAT      ( 1                ), 
     .ZFINX               ( 0                ),
-    .SpatzFPUImplementation (SPATZ_FPU_IMPL ),
+    .SpatzFPUImplementation ( SPATZ_FPUImplementation ),
     .NUM_MHPMCOUNTERS    ( 1                ),
     .SpatzDataWidth      ( SpatzDataW       ),
     .NumMemPortsPerSpatz ( NumMemPorts      ),
@@ -117,8 +119,8 @@ module spatz_cv32_wrapper
     .rst_ni                ( rst_ni                          ),
     .pulp_clock_en_i       ( spatz_clk_en                    ),
     .scan_cg_en_i          ( test_mode_i                     ),
-    .boot_addr_i           ( magia_tile_pkg::SPATZ_BOOT_ADDR ),
-    .mtvec_addr_i          ( magia_tile_pkg::SPATZ_BOOT_ADDR ),
+    .boot_addr_i           ( boot_addr_i                     ),
+    .mtvec_addr_i          ( boot_addr_i                     ),
     .dm_halt_addr_i        ( '0                              ),
     .dm_exception_addr_i   ( '0                              ),
     .hart_id_i             ( mhartid_i                       ),

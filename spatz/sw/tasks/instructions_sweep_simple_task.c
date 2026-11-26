@@ -37,16 +37,16 @@
 
 int instructions_sweep_simple_task(void) {
     
-    printf("[SNITCH] 32-bit Instructions Test - Spatz Full Coverage\n");
-    printf("[SNITCH] Testing: RVF, Vector Int/FP (e8/e16/e32)\n");
-    printf("[SNITCH] Using L1 memory at 0x%08x\n", L1_BASE);
-    printf("[SNITCH] ========================================\n");
+    printf("[Spatz-CV32] 32-bit Instructions Test - Spatz Full Coverage\n");
+    printf("[Spatz-CV32] Testing: RVF, Vector Int/FP (e8/e16/e32)\n");
+    printf("[Spatz-CV32] Using L1 memory at 0x%08x\n", L1_BASE);
+    printf("[Spatz-CV32] ========================================\n");
     
     float a_f, b_f, c_f, result_f;
     int32_t iresult;
     
     // ==================== SCALAR RVF (Single Precision) ====================
-    printf("[SNITCH] Testing Scalar RVF Instructions:\n");
+    printf("[Spatz-CV32] Testing Scalar RVF Instructions:\n");
     a_f = 3.5f; b_f = 2.0f; c_f = 1.5f;
     
     // Arithmetic
@@ -86,7 +86,7 @@ int instructions_sweep_simple_task(void) {
     
     
     // ==================== SCALAR M-EXTENSION (Integer Mul/Div) ====================
-    printf("[SNITCH] Testing Scalar M-Extension Instructions:\n");
+    printf("[Spatz-CV32] Testing Scalar M-Extension Instructions:\n");
     int32_t a_i = 15, b_i = 4, result_i;
     
     asm volatile("mul %0, %1, %2" : "=r"(result_i) : "r"(a_i), "r"(b_i)); printf("  MUL\n");
@@ -99,7 +99,7 @@ int instructions_sweep_simple_task(void) {
     asm volatile("remu %0, %1, %2" : "=r"(result_i) : "r"(a_i), "r"(b_i)); printf("  REMU\n");
     
     // ==================== VECTOR INTEGER (e32) ====================
-    printf("[SNITCH] Testing Vector Integer Instructions (e32):\n");
+    printf("[Spatz-CV32] Testing Vector Integer Instructions (e32):\n");
     
     volatile int32_t *vec_ia = (volatile int32_t *)VEC_A_BASE;
     volatile int32_t *vec_ib = (volatile int32_t *)VEC_B_BASE;
@@ -273,7 +273,7 @@ int instructions_sweep_simple_task(void) {
     asm volatile("vsuxei32.v v4, (%0), v0" ::"r"(vec_ic)); printf("  VSUXEI32.V (indexed)\n");
     
     // ==================== VECTOR INTEGER (e16) ====================
-    printf("[SNITCH] Testing Vector Integer Instructions (e16):\n");
+    printf("[Spatz-CV32] Testing Vector Integer Instructions (e16):\n");
     asm volatile("vsetvli zero, %0, e16, m2, ta, ma" ::"r"(VEC_SIZE*2));
     for (int i = 0; i < VEC_SIZE*2; i++) {
         vec_i16a[i] = i + 1;
@@ -286,7 +286,7 @@ int instructions_sweep_simple_task(void) {
     asm volatile("vse16.v v4, (%0)" ::"r"(vec_i16a)); printf("  VSE16.V\n");
     
     // ==================== VECTOR INTEGER (e8) ====================
-    printf("[SNITCH] Testing Vector Integer Instructions (e8):\n");
+    printf("[Spatz-CV32] Testing Vector Integer Instructions (e8):\n");
     asm volatile("vsetvli zero, %0, e8, m2, ta, ma" ::"r"(VEC_SIZE*4));
     volatile int8_t *vec_i8a = (volatile int8_t *)VEC_A_BASE;
     volatile int8_t *vec_i8b = (volatile int8_t *)VEC_B_BASE;
@@ -304,7 +304,7 @@ int instructions_sweep_simple_task(void) {
     asm volatile("vsetvli zero, %0, e32, m4, ta, ma" ::"r"(VEC_SIZE));
     
     // ==================== VECTOR FP (e32 - single precision) ====================
-    printf("[SNITCH] Testing Vector FP Instructions (e32):\n");
+    printf("[Spatz-CV32] Testing Vector FP Instructions (e32):\n");
     
     // Riusa gli stessi buffer L1
     for (int i = 0; i < VEC_SIZE; i++) {
@@ -391,7 +391,7 @@ int instructions_sweep_simple_task(void) {
     printf("  [SKIPPED] Vector FP comparisons and VFCLASS.V not supported\n");
     
     // ==================== VECTOR FP (e16 - half precision) ====================
-    printf("[SNITCH] Testing Vector FP Instructions (e16):\n");
+    printf("[Spatz-CV32] Testing Vector FP Instructions (e16):\n");
     asm volatile("vsetvli zero, %0, e16, m2, ta, ma" ::"r"(VEC_SIZE*2));
     volatile __fp16 *vec_h = (volatile __fp16 *)VEC_A_BASE;
     for (int i = 0; i < VEC_SIZE*2; i++) vec_h[i] = (__fp16)(i + 1);
@@ -421,6 +421,6 @@ int instructions_sweep_simple_task(void) {
     asm volatile("vfncvt.rtz.xu.f.w v8, v0"); printf("  VFNCVT.RTZ.XU.F.W (e32->e16)\n");
     asm volatile("vfncvt.rtz.x.f.w v8, v0"); printf("  VFNCVT.RTZ.X.F.W (e32->e16)\n");
     
-    printf("[SNITCH] ==== Test completed ====\n");
+    printf("[Spatz-CV32] ==== Test completed ====\n");
     return 0;
 }

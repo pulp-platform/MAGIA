@@ -39,7 +39,7 @@ int main(void) {
     eu_init();
     eu_enable_events(EU_SPATZ_DONE_MASK);  // Enable Spatz DONE event
 
-    // Enable clk and initialize Spatz (bootrom jumps to _start, does full init)
+    // Enable clk and initialize Spatz (CV32 jumps to taskbin, does full init)
     printf("\n[CV32] Initializing Spatz...\n");
     spatz_init(SPATZ_BINARY_START);
     

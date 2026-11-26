@@ -16,7 +16,7 @@
  *
  * Authors: Luca Balboni <luca.balboni10@studio.unibo.it>
  * 
- * MAGIA Mesh Atomic Test with Spatz (Snitch)
+ * MAGIA Mesh Atomic Test with Spatz (Spatz-CV32)
  * 
  */
 

@@ -90,7 +90,6 @@ sources:
       - hw/tile/obi_slave_ctrl_spatz.sv
       - hw/tile/obi_slave_ctrl_cluster.sv
       - hw/tile/obi_slave_ctrl_hci.sv
-      - hw/tile/spatz_bootrom.sv
       - hw/tile/spatz_cv32_wrapper.sv
       - hw/tile/core_data_demux.sv
       - hw/tile/eu_direct_cut.sv

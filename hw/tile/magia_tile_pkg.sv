@@ -208,14 +208,6 @@ package magia_tile_pkg;
                   fpnew_pkg::MERGED}},           // DOTP 
     PipeConfig: fpnew_pkg::BEFORE 
   };
-
-  // Spatz bootrom parameters
-`ifdef MAGIA_SPATZ_BOOT_ADDR
-  parameter logic [31:0] SPATZ_BOOT_ADDR          = `MAGIA_SPATZ_BOOT_ADDR;  // Spatz bootrom base address
-`else
-  parameter logic [31:0] SPATZ_BOOT_ADDR          = 32'h1000_0000;  // Spatz bootrom base address
-`endif
-  parameter logic [31:0] SPATZ_BOOTROM_SIZE       = 32'h0000_0100;
   
   // Spatz TCDM parameters
   parameter int unsigned SPATZ_TCDM_ADDR_WIDTH = $clog2(magia_pkg::N_MEM_BANKS * magia_pkg::N_WORDS_BANK * magia_pkg::DATA_W / 8);  
@@ -677,7 +669,6 @@ package magia_tile_pkg;
     AXI_XBAR_STACK_IDX    = 4,
     AXI_XBAR_RESERVED_IDX = 3,
     AXI_XBAR_L1SPM_IDX    = 2,
-    AXI_XBAR_BOOTROM_IDX  = 1, 
     AXI_XBAR_L2_IDX       = 0
   } axi_mem_array_idx_e;
 
@@ -692,8 +683,7 @@ package magia_tile_pkg;
   
   typedef enum logic[1:0]{
     AXI_MST_EXT_IDX     = 0,
-    AXI_MST_OBI_IDX     = 1,
-    AXI_MST_BOOTROM_IDX = 2
+    AXI_MST_OBI_IDX     = 1
   } axi_xbar_mst_idx_e;
 
 
@@ -792,7 +782,6 @@ package magia_tile_pkg;
     int unsigned num_mst;   // Number of AXI xbar master ports
     int unsigned ext;       // to NoC          (always, index 0)
     int unsigned obi;       // to internal OBI (always, index 1)
-    int unsigned bootrom;   // to Spatz bootrom (valid iff EnSpatzCC)
   } axi_xbar_mst_map_t;
 
   function automatic axi_xbar_mst_map_t gen_axi_xbar_mst_map(magia_tile_cfg_t cfg);
@@ -804,16 +793,12 @@ package magia_tile_pkg;
     idx = idx + 1;
     ret.obi = idx;
     idx = idx + 1;
-    if (cfg.EnSpatzCC) begin
-      ret.bootrom = idx;
-      idx = idx + 1;
-    end
     ret.num_mst = idx;
     return ret;
   endfunction
 
   function automatic int unsigned gen_axi_xbar_num_rules(magia_tile_cfg_t cfg);
-    return 1 + 32'(cfg.EnSpatzCC);
+    return 1;
   endfunction
 
   function automatic axi_pkg::xbar_cfg_t gen_axi_xbar_cfg(magia_tile_cfg_t cfg);
